@@ -55,10 +55,10 @@ bool test(int a, int a2) {
             b2 = b2 << 1 | b2 >> 63;
 
             d = __builtin_popcountll(low(b2) ^ low(b));
-            if (!(9 <= d && d <= 23)) { return false; }
+            if (!(8 <= d && d <= 24)) { return false; }
 
             d = __builtin_popcountll(high(b2) ^ high(b));
-            if (!(9 <= d && d <= 23)) { return false; }
+            if (!(8 <= d && d <= 24)) { return false; }
 
             o = flip(b2);
 
@@ -79,13 +79,15 @@ void findCombi() {
             if (!test(b, a)) { continue; }
             for (int c = b+1; c < size; ++c) {
                 if (!test(c, b) || !test(c, a)) { continue; }
+
                 for (int d = c+1; d < size; ++d) {
                     if (!test(d, c) || !test(d, b) || !test(d, a)) { continue; }
+
                     for (int e = d+1; e < size; ++e) {
                         if (!test(e, d) || !test(e, c) || !test(e, b) || !test(e, a)) { continue; }
+
                         for (int f = e+1; f < size; ++f) {
                             if (!test(f, e) || !test(f, d) || !test(f, c) || !test(f, b) || !test(f, a)) { continue; }
-
                             cout << hex << "0x" << deBruijn[a] << "ull,\n";
                             cout << hex << "0x" << deBruijn[b] << "ull,\n";
                             cout << hex << "0x" << deBruijn[c] << "ull,\n";
@@ -94,8 +96,8 @@ void findCombi() {
                             cout << hex << "0x" << deBruijn[f] << "ull,\n\n";
 
                             for (int g = f+1; g < size; ++g) {
-                                if (!test(g, f) || test(g, e) || !test(g, d) || !test(g, c) || !test(g, b) || !test(g, a)) { continue; }
-                                cout << "*********************\n";
+                                if (!test(g, f) || !test(g, e) || !test(g, d) || !test(g, c) || !test(g, b) || !test(g, a)) { continue; }
+                                cout << "**********************\n";
                                 cout << hex << "0x" << deBruijn[a] << "ull,\n";
                                 cout << hex << "0x" << deBruijn[b] << "ull,\n";
                                 cout << hex << "0x" << deBruijn[c] << "ull,\n";
@@ -103,7 +105,21 @@ void findCombi() {
                                 cout << hex << "0x" << deBruijn[e] << "ull,\n";
                                 cout << hex << "0x" << deBruijn[f] << "ull,\n";
                                 cout << hex << "0x" << deBruijn[g] << "ull,\n";
-                                cout << "*********************\n\n";
+                                cout << "**********************\n\n";
+
+                                for (int h = g+1; h < size; ++h) {
+                                    if (!test(h, g) || !test(h, f) || !test(h, e) || !test(h, d) || !test(g, c) || !test(g, b) || !test(g, a)) { continue; }
+                                    cout << "!!!!!!!!!!!!!!!!!!!!!!\n";
+                                    cout << hex << "0x" << deBruijn[a] << "ull,\n";
+                                    cout << hex << "0x" << deBruijn[b] << "ull,\n";
+                                    cout << hex << "0x" << deBruijn[c] << "ull,\n";
+                                    cout << hex << "0x" << deBruijn[d] << "ull,\n";
+                                    cout << hex << "0x" << deBruijn[e] << "ull,\n";
+                                    cout << hex << "0x" << deBruijn[f] << "ull,\n";
+                                    cout << hex << "0x" << deBruijn[g] << "ull,\n";
+                                    cout << hex << "0x" << deBruijn[h] << "ull,\n";
+                                    cout << "!!!!!!!!!!!!!!!!!!!!!!\n\n";
+                                }
                             }
                         }
                     }
@@ -222,21 +238,8 @@ int main(int, const char** ) {
     }
     for (int j=0; j < 6; ++j) {
         for (int k=0; k < 64; ++k) {
-            //zobrist[1][j][k] = random();
-            zobrist[1][j][k] = ~(zobrist[0][j][k]);
+            zobrist[1][j][k] = flip(zobrist[0][j][k]);
         }
-    }
-
-    for (int k=0; k < 64; ++k) {
-        bit64_t n = 0x1;
-
-        cout << hex << k << " ";
-        cout << (n >> (64-k) | n << k) << " ";
-        cout << static_cast<bit64_t>(__builtin_bswap64(n >> (64-k) | n << k)) << " ";
-        bit64_t r = n >> (64-(070^k)) | n << (070^k);
-        cout << r << " ";
-        cout << static_cast<bit64_t>(__builtin_bswap64(r)) << "\n";
-
     }
 
     bit64_t * z = reinterpret_cast<bit64_t*>(zobrist);
