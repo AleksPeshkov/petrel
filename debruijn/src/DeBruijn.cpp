@@ -25,11 +25,10 @@ vector<bit64_t> deBruijn;
 typedef bit64_t U64;
 
 U64 zobrist[64];
-U64 first;
 U64 pow2[64];
-int d;
 
 bool test(int a, int a2) {
+    int d;
     bit64_t b = deBruijn[a];
     bit64_t x = deBruijn[a2];
     for (int i = 1; i < 64; ++i) {
@@ -73,38 +72,38 @@ bool test(int a, int a2) {
 }
 
 void findCombi() {
-    int d = deBruijn.size();
-    for (int i1 = 0;    i1 < d; ++i1) {
-        for (int i2 = i1+1; i2 < d; ++i2) {
-            if (!test(i2, i1)) { continue; }
-            //cout << hex << "0x" << deBruijn[i1] << "ull,\n";
-            //cout << hex << "0x" << deBruijn[i2] << "ull,\n\n";
-            for (int i3 = i2+1; i3 < d; ++i3) {
-                if (!test(i3, i1) || !test(i3, i2)) { continue; }
-                //cout << hex << "0x" << deBruijn[i1] << "ull,\n";
-                //cout << hex << "0x" << deBruijn[i2] << "ull,\n";
-                //cout << hex << "0x" << deBruijn[i3] << "ull,\n\n";
-                for (int i4 = i3+1; i4 < d; ++i4) {
-                    if (!test(i4, i1) || !test(i4, i2) || !test(i4, i3)) { continue; }
-                    //cout << hex << "0x" << deBruijn[i1] << "ull,\n";
-                    //cout << hex << "0x" << deBruijn[i2] << "ull,\n";
-                    //cout << hex << "0x" << deBruijn[i3] << "ull,\n";
-                    //cout << hex << "0x" << deBruijn[i4] << "ull,\n\n";
-                    for (int i5 = i4+1; i5 < d; ++i5) {
-                        if (!test(i5, i1) || !test(i5, i2) || !test(i5, i3) || !test(i5, i4)) { continue; }
-                        cout << hex << "0x" << deBruijn[i1] << "ull,\n";
-                        cout << hex << "0x" << deBruijn[i2] << "ull,\n";
-                        cout << hex << "0x" << deBruijn[i3] << "ull,\n";
-                        cout << hex << "0x" << deBruijn[i4] << "ull,\n";
-                        cout << hex << "0x" << deBruijn[i5] << "ull,\n\n";
-                        for (int i6 = i5+1; i6 < d; ++i6) {
-                            if (!test(i6, i1) || !test(i6, i2) || !test(i6, i3) || !test(i6, i4) || !test(i6, i5)) { continue; }
-                            cout << hex << "0x" << deBruijn[i1] << "ull,\n";
-                            cout << hex << "0x" << deBruijn[i2] << "ull,\n";
-                            cout << hex << "0x" << deBruijn[i3] << "ull,\n";
-                            cout << hex << "0x" << deBruijn[i4] << "ull,\n";
-                            cout << hex << "0x" << deBruijn[i5] << "ull,\n";
-                            cout << hex << "0x" << deBruijn[i6] << "ull,\n\n";
+    int size = deBruijn.size();
+    for (int a = 0; a < size; ++a) {
+        for (int b = a+1; b < size; ++b) {
+            if (!test(b, a)) { continue; }
+            for (int c = b+1; c < size; ++c) {
+                if (!test(c, b) || !test(c, a)) { continue; }
+                for (int d = c+1; d < size; ++d) {
+                    if (!test(d, c) || !test(d, b) || !test(d, a)) { continue; }
+                    for (int e = d+1; e < size; ++e) {
+                        if (!test(e, d) || !test(e, c) || !test(e, b) || !test(e, a)) { continue; }
+                        for (int f = e+1; f < size; ++f) {
+                            if (!test(f, e) || !test(f, d) || !test(f, c) || !test(f, b) || !test(f, a)) { continue; }
+
+                            cout << hex << "0x" << deBruijn[a] << "ull,\n";
+                            cout << hex << "0x" << deBruijn[b] << "ull,\n";
+                            cout << hex << "0x" << deBruijn[c] << "ull,\n";
+                            cout << hex << "0x" << deBruijn[d] << "ull,\n";
+                            cout << hex << "0x" << deBruijn[e] << "ull,\n";
+                            cout << hex << "0x" << deBruijn[f] << "ull,\n\n";
+
+                            for (int g = f+1; g < size; ++g) {
+                                if (!test(g, f) || test(g, e) || !test(g, d) || !test(g, c) || !test(g, b) || !test(g, a)) { continue; }
+                                cout << "*********************\n";
+                                cout << hex << "0x" << deBruijn[a] << "ull,\n";
+                                cout << hex << "0x" << deBruijn[b] << "ull,\n";
+                                cout << hex << "0x" << deBruijn[c] << "ull,\n";
+                                cout << hex << "0x" << deBruijn[d] << "ull,\n";
+                                cout << hex << "0x" << deBruijn[e] << "ull,\n";
+                                cout << hex << "0x" << deBruijn[f] << "ull,\n";
+                                cout << hex << "0x" << deBruijn[g] << "ull,\n";
+                                cout << "*********************\n\n";
+                            }
                         }
                     }
                 }
@@ -114,6 +113,7 @@ void findCombi() {
 }
 
 void found(U64 seq) {
+    int d;
     bit64_t b = seq;
     for (int i = 1; i < 64; ++i) {
         b = b << 63 | b >> 1;
