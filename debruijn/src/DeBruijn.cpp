@@ -3,6 +3,7 @@
 #include <iostream>
 #include <random>
 #include <iomanip>
+#include <cassert>
 
 typedef unsigned index_t;
 typedef std::uint32_t bit32_t;
@@ -33,7 +34,7 @@ bool test(int a, int a2) {
     bit64_t x = deBruijn[a2];
     for (int i = 1; i < 64; ++i) {
 
-        b = b << 63 | b >> 1;
+        b = b << 1 | b >> 63;
 
         d = __builtin_popcountll(low(b) ^ low(x));
         if (!(9 <= d && d <= 23)) { return false; }
@@ -51,13 +52,13 @@ bool test(int a, int a2) {
 
         bit64_t b2 = x;
         for (int j = 1; j < 64; ++j) {
-            b2 = b2 << 63 | b2 >> 1;
+            b2 = b2 << 1 | b2 >> 63;
 
             d = __builtin_popcountll(low(b2) ^ low(b));
-            if (!(8 <= d && d <= 24)) { return false; }
+            if (!(9 <= d && d <= 23)) { return false; }
 
             d = __builtin_popcountll(high(b2) ^ high(b));
-            if (!(8 <= d && d <= 24)) { return false; }
+            if (!(9 <= d && d <= 23)) { return false; }
 
             o = flip(b2);
 
@@ -116,7 +117,7 @@ void found(U64 seq) {
     int d;
     bit64_t b = seq;
     for (int i = 1; i < 64; ++i) {
-        b = b << 63 | b >> 1;
+        b = b << 1 | b >> 63;
 
         d = __builtin_popcountll(low(b) ^ low(seq));
         if (!(11 <= d && d <= 21)) { return; }
@@ -134,7 +135,7 @@ void found(U64 seq) {
 
         bit64_t b2 = b;
         for (int j = 1; j < 64; ++j) {
-            b2 = b2 << 63 | b2 >> 1;
+            b2 = b2 << 1 | b2 >> 63;
 
             d = __builtin_popcountll(low(b2) ^ low(b));
             if (!(9 <= d && d <= 23)) { return; }
@@ -216,7 +217,7 @@ int main(int, const char** ) {
         for (int k=0; k < 64; ++k) {
             zobrist[0][j][k] = b;
             //zobrist[0][j][k] = random();
-            b = b << 63 | b >> 1;
+            b = b << 1 | b >> 63;
         }
     }
     for (int j=0; j < 6; ++j) {
@@ -224,6 +225,18 @@ int main(int, const char** ) {
             //zobrist[1][j][k] = random();
             zobrist[1][j][k] = ~(zobrist[0][j][k]);
         }
+    }
+
+    for (int k=0; k < 64; ++k) {
+        bit64_t n = 0x1;
+
+        cout << hex << k << " ";
+        cout << (n >> (64-k) | n << k) << " ";
+        cout << static_cast<bit64_t>(__builtin_bswap64(n >> (64-k) | n << k)) << " ";
+        bit64_t r = n >> (64-(070^k)) | n << (070^k);
+        cout << r << " ";
+        cout << static_cast<bit64_t>(__builtin_bswap64(r)) << "\n";
+
     }
 
     bit64_t * z = reinterpret_cast<bit64_t*>(zobrist);
