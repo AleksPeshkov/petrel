@@ -42,14 +42,6 @@ bool test(int a, int a2) {
         d = __builtin_popcountll(high(b) ^ high(x));
         if (!(9 <= d && d <= 23)) { return false; }
 
-        bit64_t o = flip(b);
-
-        d = __builtin_popcountll(low(o) ^ low(x));
-        if (!(9 <= d && d <= 23)) { return false; }
-
-        d = __builtin_popcountll(high(o) ^ high(x));
-        if (!(9 <= d && d <= 23)) { return false; }
-
         bit64_t b2 = x;
         for (int j = 1; j < 64; ++j) {
             b2 = b2 << 1 | b2 >> 63;
@@ -59,17 +51,13 @@ bool test(int a, int a2) {
 
             d = __builtin_popcountll(high(b2) ^ high(b));
             if (!(8 <= d && d <= 24)) { return false; }
-
-            o = flip(b2);
-
-            d = __builtin_popcountll(low(o) ^ low(b));
-            if (!(8 <= d && d <= 24)) { return false; }
-
-            d = __builtin_popcountll(high(o) ^ high(b));
-            if (!(8 <= d && d <= 24)) { return false; }
         }
     }
     return true;
+}
+
+void show(int i) {
+    cout << right << setfill(' ') << setw(6) << dec << i << " 0x" << setfill('0') << hex << setw(16) << deBruijn[i] << "ull,\n";
 }
 
 void findCombi() {
@@ -77,6 +65,7 @@ void findCombi() {
     for (int a = 0; a < size; ++a) {
         for (int b = a+1; b < size; ++b) {
             if (!test(b, a)) { continue; }
+
             for (int c = b+1; c < size; ++c) {
                 if (!test(c, b) || !test(c, a)) { continue; }
 
@@ -88,43 +77,42 @@ void findCombi() {
 
                         for (int f = e+1; f < size; ++f) {
                             if (!test(f, e) || !test(f, d) || !test(f, c) || !test(f, b) || !test(f, a)) { continue; }
-                            cout << hex << "0x" << deBruijn[a] << "ull,\n";
-                            cout << hex << "0x" << deBruijn[b] << "ull,\n";
-                            cout << hex << "0x" << deBruijn[c] << "ull,\n";
-                            cout << hex << "0x" << deBruijn[d] << "ull,\n";
-                            cout << hex << "0x" << deBruijn[e] << "ull,\n";
-                            cout << hex << "0x" << deBruijn[f] << "ull,\n\n";
 
                             for (int g = f+1; g < size; ++g) {
                                 if (!test(g, f) || !test(g, e) || !test(g, d) || !test(g, c) || !test(g, b) || !test(g, a)) { continue; }
-                                cout << "**********************\n";
-                                cout << hex << "0x" << deBruijn[a] << "ull,\n";
-                                cout << hex << "0x" << deBruijn[b] << "ull,\n";
-                                cout << hex << "0x" << deBruijn[c] << "ull,\n";
-                                cout << hex << "0x" << deBruijn[d] << "ull,\n";
-                                cout << hex << "0x" << deBruijn[e] << "ull,\n";
-                                cout << hex << "0x" << deBruijn[f] << "ull,\n";
-                                cout << hex << "0x" << deBruijn[g] << "ull,\n";
-                                cout << "**********************\n\n";
+                                //show(a); show(b); show(c); show(d); show(e); show(f); show(g);
+                                //cout << endl;
 
                                 for (int h = g+1; h < size; ++h) {
-                                    if (!test(h, g) || !test(h, f) || !test(h, e) || !test(h, d) || !test(g, c) || !test(g, b) || !test(g, a)) { continue; }
+                                    if (!test(h, g) || !test(h, f) || !test(h, e) || !test(h, d) || !test(h, c) || !test(h, b) || !test(h, a)) { continue; }
                                     cout << "!!!!!!!!!!!!!!!!!!!!!!\n";
-                                    cout << hex << "0x" << deBruijn[a] << "ull,\n";
-                                    cout << hex << "0x" << deBruijn[b] << "ull,\n";
-                                    cout << hex << "0x" << deBruijn[c] << "ull,\n";
-                                    cout << hex << "0x" << deBruijn[d] << "ull,\n";
-                                    cout << hex << "0x" << deBruijn[e] << "ull,\n";
-                                    cout << hex << "0x" << deBruijn[f] << "ull,\n";
-                                    cout << hex << "0x" << deBruijn[g] << "ull,\n";
-                                    cout << hex << "0x" << deBruijn[h] << "ull,\n";
-                                    cout << "!!!!!!!!!!!!!!!!!!!!!!\n\n";
+                                    show(a); show(b); show(c); show(d); show(e); show(f); show(g); show(h);
+                                    cout << endl;
+                                    return;
+
+                                    /*for (int i = h+1; i < size; ++i) {
+                                        if (!test(i, h) || !test(i, g) || !test(i, f) || !test(i, e) || !test(i, d) || !test(i, c) || !test(i, b) || !test(i, a)) { continue; }
+                                        cout << "######################\n";
+                                        show(a); show(b); show(c); show(d); show(e); show(f); show(g); show(h); show(i);
+                                        cout << endl;
+
+                                        for (int j = i+1; j < size; ++j) {
+                                            if (!test(j, i) || !test(j, h) || !test(j, g) || !test(j, f) || !test(j, e) || !test(j, d) || !test(j, c) || !test(j, b) || !test(j, a)) { continue; }
+                                            cout << "######################\n";
+                                            show(a); show(b); show(c); show(d); show(e); show(f); show(g); show(h); show(i); show(j);
+                                            cout << endl;
+                                        }
+
+                                    }*/
+
                                 }
                             }
                         }
                     }
                 }
             }
+            show(a); show(b);
+            cout << endl;
         }
     }
 }
@@ -141,14 +129,6 @@ void found(U64 seq) {
         d = __builtin_popcountll(high(b) ^ high(seq));
         if (!(11 <= d && d <= 21)) { return; }
 
-        bit64_t o = flip(b);
-
-        d = __builtin_popcountll(low(o) ^ low(seq));
-        if (!(9 <= d && d <= 23)) { return; }
-
-        d = __builtin_popcountll(high(o) ^ high(seq));
-        if (!(9 <= d && d <= 23)) { return; }
-
         bit64_t b2 = b;
         for (int j = 1; j < 64; ++j) {
             b2 = b2 << 1 | b2 >> 63;
@@ -159,13 +139,6 @@ void found(U64 seq) {
             d = __builtin_popcountll(high(b2) ^ high(b));
             if (!(9 <= d && d <= 23)) { return; }
 
-            o = flip(b2);
-
-            d = __builtin_popcountll(low(o) ^ low(b));
-            if (!(9 <= d && d <= 23)) { return; }
-
-            d = __builtin_popcountll(high(o) ^ high(b));
-            if (!(9 <= d && d <= 23)) { return; }
         }
 
     }
@@ -211,87 +184,102 @@ void run() {
 }
 
 int main(int, const char** ) {
-    run();
-    return 0;
+    //run();
+    //return 0;
 
     int d;
 
     bit64_t table[] = {
-//11 9 9 9 9 9 8 8
-0x218a392d367abbfull,
-0x218fd49de59b457ull,
-0x21b2a4fd16bc773ull,
-0x21b5fa77254598full,
-0x23db8bf2a4d0cebull,
-0x2a1ac898f3b7e97ull,
+//11 9 9 8
+0x0218a392d367abbfull,
+0x0218fd49de59b457ull,
+0x021b2a4fd16bc773ull,
+0x026763d5c37e5a45ull,
+0x0323dba73562fc25ull,
+0x032fc73dbac2a4d1ull,
+0x03422eadec73253full,
      };
 
     std::mt19937_64 random;
-    bit64_t zobrist[2][6][64];
-    for (int j=0; j < 6; ++j) {
+    bit64_t zobrist[2][7][64];
+    for (int j=0; j < 7; ++j) {
         bit64_t b = table[j];
         for (int k=0; k < 64; ++k) {
             zobrist[0][j][k] = b;
-            //zobrist[0][j][k] = random();
+            zobrist[1][j][k] = flip(b);
             b = b << 1 | b >> 63;
-        }
-    }
-    for (int j=0; j < 6; ++j) {
-        for (int k=0; k < 64; ++k) {
-            zobrist[1][j][k] = flip(zobrist[0][j][k]);
+
+            zobrist[0][j][k] = random();
+            //zobrist[1][j][k] = random();
         }
     }
 
     bit64_t * z = reinterpret_cast<bit64_t*>(zobrist);
-    const int Size = 2 * 6 * 64;
+    int Size = 2 * 7 * 64;
 
-    unsigned min = 64;
-    unsigned minLo = 64;
-    unsigned minHi = 64;
+    unsigned min = 32;
+    unsigned minLo = 16;
+    unsigned ave = 0;
+    unsigned aveLo = 0;
+    unsigned count = 0;
+
     for (int i = 0; i < Size; ++i) {
         for (int j = 0; j < i; ++j) {
             if (i%64 == j%64) { continue; }
 
             d = __builtin_popcountll(z[i] ^ z[j]);
+            //if (d > 32) { d = 64 - d; }
             if (d < min) { min = d; }
+            ave += d;
 
             d = __builtin_popcountll(low(z[i]) ^ low(z[j]));
+            //if (d > 16) { d = 32 - d; }
             if (d < minLo) { minLo = d; }
+            aveLo += d;
 
-            d = __builtin_popcountll(high(z[i]) ^ high(z[j]));
-            if (d < minHi) { minHi = d; }
+            count++;
         }
     }
     std::cout << std::dec << "2 = " << min << ", ";
     std::cout << std::dec << "2Lo = " << minLo << ", ";
-    std::cout << std::dec << "2Hi = " << minHi << "\n";
+    std::cout << std::dec << "2Ave = " << float(ave) / count << ", ";
+    std::cout << std::dec << "2AveLo = " << float(aveLo) / count << std::endl;
 
-    min = 64;
-    minLo = 64;
-    minHi = 64;
+    min = 32;
+    minLo = 16;
+    ave = 0;
+    aveLo = 0;
+    count = 0;
+    Size = Size/2;
     for (int i = 0; i < Size; ++i) {
         for (int j = 0; j < i; ++j) {
             if (i%64 == j%64) { continue; }
             for (int k = 0; k < j; ++k) {
                 if (k%64 == j%64 || k%64 == i%64) { continue; }
                 d = __builtin_popcountll(z[i] ^ z[j] ^ z[k]);
+                //if (d > 32) { d = 64 - d; }
                 if (d < min) { min = d; }
+                ave += d;
 
                 d = __builtin_popcountll(low(z[i]) ^ low(z[j]) ^ low(z[k]));
+                //if (d > 16) { d = 32 - d; }
                 if (d < minLo) { minLo = d; }
+                aveLo += d;
 
-                d = __builtin_popcountll(high(z[i]) ^ high(z[j]) ^ high(z[k]));
-                if (d < minHi) { minHi = d; }
+                count++;
             }
         }
     }
     std::cout << std::dec << "3 = " << min << ", ";
     std::cout << std::dec << "3Lo = " << minLo << ", ";
-    std::cout << std::dec << "3Hi = " << minHi << "\n";
+    std::cout << std::dec << "3Ave = " << float(ave) / count << ", ";
+    std::cout << std::dec << "3AveLo = " << float(aveLo) / count << std::endl;
 
-    min = 64;
-    minLo = 64;
-    minHi = 64;
+    min = 32;
+    minLo = 16;
+    ave = 0;
+    aveLo = 0;
+    count = 0;
     for (int i = 0; i < Size; ++i) {
         for (int j = 0; j < i; ++j) {
             if (i%64 == j%64) { continue; }
@@ -301,24 +289,30 @@ int main(int, const char** ) {
                     if (n%64 == k%64 || n%64 == j%64 || n%64 == i%64) { continue; }
 
                     d = __builtin_popcountll(z[i] ^ z[j] ^ z[k] ^ z[n]);
+                    //if (d > 32) { d = 64 - d; }
                     if (d < min) { min = d; }
+                    ave += d;
 
                     d = __builtin_popcountll(low(z[i]) ^ low(z[j]) ^ low(z[k]) ^ low(z[n]));
+                    //if (d > 16) { d = 32 - d; }
                     if (d < minLo) { minLo = d; }
+                    aveLo += d;
 
-                    d = __builtin_popcountll(high(z[i]) ^ high(z[j]) ^ high(z[k]) ^ high(z[n]));
-                    if (d < minHi) { minHi = d; }
+                    count++;
                 }
             }
         }
     }
     std::cout << std::dec << "4 = " << min << ", ";
     std::cout << std::dec << "4Lo = " << minLo << ", ";
-    std::cout << std::dec << "4Hi = " << minHi << "\n";
+    std::cout << std::dec << "4Ave = " << float(ave) / count << ", ";
+    std::cout << std::dec << "4AveLo = " << float(aveLo) / count << std::endl;
 
-    min = 64;
-    minLo = 64;
-    minHi = 64;
+    min = 32;
+    minLo = 16;
+    ave = 0;
+    aveLo = 0;
+    count = 0;
     for (int i = 0; i < Size; ++i) {
         for (int j = 0; j < i; ++j) {
             if (i%64 == j%64) { continue; }
@@ -330,13 +324,16 @@ int main(int, const char** ) {
                         if (m%64 == n%64 || m%64 == k%64 || m%64 == j%64 || m%64 == i%64) { continue; }
 
                         d = __builtin_popcountll(z[i] ^ z[j] ^ z[k] ^ z[n] ^ z[m]);
+                        if (d > 32) { d = 64 - d; }
                         if (d < min) { min = d; }
+                        ave += d;
 
                         d = __builtin_popcountll(low(z[i]) ^ low(z[j]) ^ low(z[k]) ^ low(z[n]) ^ low(z[m]));
+                        if (d > 16) { d = 32 - d; }
                         if (d < minLo) { minLo = d; }
+                        aveLo += d;
 
-                        d = __builtin_popcountll(high(z[i]) ^ high(z[j]) ^ high(z[k]) ^ high(z[n]) ^ low(z[m]));
-                        if (d < minHi) { minHi = d; }
+                        count++;
                     }
                 }
             }
@@ -344,6 +341,8 @@ int main(int, const char** ) {
     }
     std::cout << std::dec << "5 = " << min << ", ";
     std::cout << std::dec << "5Lo = " << minLo << ", ";
-    std::cout << std::dec << "5Hi = " << minHi << "\n";
+    std::cout << std::dec << "5Ave = " << float(ave) / count << ", ";
+    std::cout << std::dec << "5AveLo = " << float(aveLo) / count << std::endl;
+
 
 }
