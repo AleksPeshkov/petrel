@@ -39,8 +39,8 @@ bool test(int a, int a2) {
         d = __builtin_popcountll(low(b) ^ low(x));
         if (!(9 <= d && d <= 23)) { return false; }
 
-        d = __builtin_popcountll(high(b) ^ high(x));
-        if (!(9 <= d && d <= 23)) { return false; }
+        d = __builtin_popcountll((b&0xfff) ^ (x&0xfff));
+        if (!(1 <= d && d <= 11)) { return false; }
 
         bit64_t b2 = x;
         for (int j = 1; j < 64; ++j) {
@@ -49,15 +49,44 @@ bool test(int a, int a2) {
             d = __builtin_popcountll(low(b2) ^ low(b));
             if (!(8 <= d && d <= 24)) { return false; }
 
-            d = __builtin_popcountll(high(b2) ^ high(b));
-            if (!(8 <= d && d <= 24)) { return false; }
+            d = __builtin_popcountll((b2&0xfff) ^ (b&0xfff));
+            if (!(1 <= d && d <= 11)) { return false; }
         }
     }
     return true;
 }
 
+void found(U64 seq) {
+    int d;
+    bit64_t b = seq;
+    for (int i = 1; i < 64; ++i) {
+        b = b << 1 | b >> 63;
+
+        d = __builtin_popcountll(low(b) ^ low(seq));
+        if (!(11 <= d && d <= 21)) { return; }
+
+        d = __builtin_popcountll((b&0xfff) ^ (seq&0xfff));
+        if (!(3 <= d && d <= 9)) { return; }
+
+        bit64_t b2 = b;
+        for (int j = 1; j < 64; ++j) {
+            b2 = b2 << 1 | b2 >> 63;
+
+            d = __builtin_popcountll(low(b2) ^ low(b));
+            if (!(9 <= d && d <= 23)) { return; }
+
+            d = __builtin_popcountll((b2&0xfff) ^ (b&0xfff));
+            if (!(1 <= d && d <= 11)) { return; }
+
+        }
+
+    }
+    deBruijn.push_back(seq);
+    //cout << hex << "0x" << seq << "ull,\n";
+}
+
 void show(int i) {
-    cout << right << setfill(' ') << setw(6) << dec << i << " 0x" << setfill('0') << hex << setw(16) << deBruijn[i] << "ull,\n";
+    cout << right << setfill(' ') << setw(7) << dec << i << " 0x" << setfill('0') << hex << setw(16) << deBruijn[i] << "ull,\n";
 }
 
 void findCombi() {
@@ -77,20 +106,22 @@ void findCombi() {
 
                         for (int f = e+1; f < size; ++f) {
                             if (!test(f, e) || !test(f, d) || !test(f, c) || !test(f, b) || !test(f, a)) { continue; }
+                            show(a); show(b); show(c); show(d); show(e); show(f);
+                            cout << endl;
 
                             for (int g = f+1; g < size; ++g) {
                                 if (!test(g, f) || !test(g, e) || !test(g, d) || !test(g, c) || !test(g, b) || !test(g, a)) { continue; }
-                                //show(a); show(b); show(c); show(d); show(e); show(f); show(g);
-                                //cout << endl;
+                                cout << "!!!!!!!!!!!!!!!!!!!!!!\n";
+                                show(a); show(b); show(c); show(d); show(e); show(f); show(g);
+                                cout << endl;
+                                return;
 
-                                for (int h = g+1; h < size; ++h) {
+                                /*for (int h = g+1; h < size; ++h) {
                                     if (!test(h, g) || !test(h, f) || !test(h, e) || !test(h, d) || !test(h, c) || !test(h, b) || !test(h, a)) { continue; }
-                                    cout << "!!!!!!!!!!!!!!!!!!!!!!\n";
                                     show(a); show(b); show(c); show(d); show(e); show(f); show(g); show(h);
                                     cout << endl;
-                                    return;
 
-                                    /*for (int i = h+1; i < size; ++i) {
+                                    for (int i = h+1; i < size; ++i) {
                                         if (!test(i, h) || !test(i, g) || !test(i, f) || !test(i, e) || !test(i, d) || !test(i, c) || !test(i, b) || !test(i, a)) { continue; }
                                         cout << "######################\n";
                                         show(a); show(b); show(c); show(d); show(e); show(f); show(g); show(h); show(i);
@@ -103,47 +134,18 @@ void findCombi() {
                                             cout << endl;
                                         }
 
-                                    }*/
+                                    }
 
-                                }
+                                }*/
                             }
                         }
                     }
                 }
             }
-            show(a); show(b);
-            cout << endl;
+            //show(a); show(b);
+            //cout << endl;
         }
     }
-}
-
-void found(U64 seq) {
-    int d;
-    bit64_t b = seq;
-    for (int i = 1; i < 64; ++i) {
-        b = b << 1 | b >> 63;
-
-        d = __builtin_popcountll(low(b) ^ low(seq));
-        if (!(11 <= d && d <= 21)) { return; }
-
-        d = __builtin_popcountll(high(b) ^ high(seq));
-        if (!(11 <= d && d <= 21)) { return; }
-
-        bit64_t b2 = b;
-        for (int j = 1; j < 64; ++j) {
-            b2 = b2 << 1 | b2 >> 63;
-
-            d = __builtin_popcountll(low(b2) ^ low(b));
-            if (!(9 <= d && d <= 23)) { return; }
-
-            d = __builtin_popcountll(high(b2) ^ high(b));
-            if (!(9 <= d && d <= 23)) { return; }
-
-        }
-
-    }
-    deBruijn.push_back(seq);
-    //cout << hex << "0x" << seq << "ull,\n";
 }
 
 void findDeBruijn(U64 seq, int depth, int vtx, int nz) {
@@ -184,20 +186,29 @@ void run() {
 }
 
 int main(int, const char** ) {
-    //run();
-    //return 0;
+    run();
+    return 0;
 
     int d;
 
     bit64_t table[] = {
 //11 9 9 8
-0x0218a392d367abbfull,
-0x0218fd49de59b457ull,
-0x021b2a4fd16bc773ull,
-0x026763d5c37e5a45ull,
-0x0323dba73562fc25ull,
-0x032fc73dbac2a4d1ull,
-0x03422eadec73253full,
+//0x0218a392d367abbfull,
+//0x0218fd49de59b457ull,
+//0x021b2a4fd16bc773ull,
+//0x026763d5c37e5a45ull,
+//0x0323dba73562fc25ull,
+//0x032fc73dbac2a4d1ull,
+//0x03422eadec73253full,
+
+3 1 1 1
+0x0218a392cd3f6eafull,
+0x022930d5976f1cfdull,
+0x0262a5ae77e1e8d9ull,
+0x028644b1d36afcf7ull,
+0x02d2277ab863f365ull,
+0x03422df9338f52bbull,
+0x03f12b7a17646a73ull,
      };
 
     std::mt19937_64 random;
