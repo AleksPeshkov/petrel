@@ -5,6 +5,12 @@
 #include <iomanip>
 #include <cassert>
 
+#if defined _WIN32
+#   define BB(number) number##ull
+#else
+#   define BB(number) number##ul
+#endif
+
 typedef unsigned index_t;
 typedef std::uint32_t bit32_t;
 typedef std::uint64_t bit64_t;
@@ -27,46 +33,104 @@ typedef bit64_t U64;
 
 U64 zobrist[64];
 U64 pow2[64];
-
-bool test(int a, int a2) {
+/*
+bool test(int i1, int i2) {
     int d;
-    bit64_t b = deBruijn[a];
-    bit64_t x = deBruijn[a2];
+    bit64_t a = deBruijn[i2];
+    bit64_t b = deBruijn[i1];
+
+    for (int i = 0; i < 64; ++i) {
+
+        d = __builtin_popcountll(low(b) ^ low(a));
+        if (!(8 <= d && d <= 24)) { return false; }
+
+        d = __builtin_popcountll((b >> 53) ^ (a >> 53));
+        if (!(1 <= d && d <= 10)) { return false; }
+
+        a = a << 1 | a >> 63;
+        b = b << 1 | b >> 63;
+    }
+
     for (int i = 1; i < 64; ++i) {
 
         b = b << 1 | b >> 63;
 
-        d = __builtin_popcountll(low(b) ^ low(x));
-        if (!(9 <= d && d <= 23)) { return false; }
+        d = __builtin_popcountll(low(b) ^ low(a));
+        if (!(8 <= d && d <= 24)) { return false; }
 
-        d = __builtin_popcountll((b&0xfff) ^ (x&0xfff));
-        if (!(1 <= d && d <= 11)) { return false; }
+        d = __builtin_popcountll((b >> 50) ^ (a >> 50));
+        if (!(1 <= d && d <= 13)) { return false; }
 
-        bit64_t b2 = x;
+        bit64_t b2 = a;
         for (int j = 1; j < 64; ++j) {
             b2 = b2 << 1 | b2 >> 63;
 
             d = __builtin_popcountll(low(b2) ^ low(b));
             if (!(8 <= d && d <= 24)) { return false; }
 
-            d = __builtin_popcountll((b2&0xfff) ^ (b&0xfff));
-            if (!(1 <= d && d <= 11)) { return false; }
+            d = __builtin_popcountll((b2 >> 50) ^ (b >> 50));
+            if (!(1 <= d && d <= 13)) { return false; }
+        }
+    }
+    return true;
+}
+*/
+bool test_d(bit64_t v, int d) {
+    for (int i = 0; i < 64; ++i) {
+        int c = __builtin_popcountll(v >> (64-d));
+        if (!(1 <= c && c <= (d-1))) { return false; }
+        v = v << 1 | v >> 63;
+    }
+    return true;
+}
+
+bool test(int i1, int i2) {
+    bit64_t a = deBruijn[i1];
+    bit64_t b = deBruijn[i2];
+    for (int i = 1; i < 64; ++i) {
+        a = a << 1 | a >> 63;
+        b = b << 1 | b >> 63;
+
+        if (!test_d(deBruijn[i1]^b, 12)) { return false; }
+
+        bit64_t a2 = a;
+        bit64_t b2 = b;
+        for (int j = i+1; j < 64; ++j) {
+            a2 = a2 << 1 | a2 >> 63;
+            b2 = b2 << 1 | b2 >> 63;
+            if (!test_d(deBruijn[i1]^b^b2, 16)) { return false; }
+            if (!test_d(deBruijn[i2]^a^a2, 16)) { return false; }
         }
     }
     return true;
 }
 
-void found(U64 seq) {
+void found(bit64_t a) {
+    bit64_t b = a;
+    for (int i = 1; i < 64; ++i) {
+        b = b << 1 | b >> 63;
+        if (!test_d(a^b, 12)) { return; }
+
+        bit64_t c = b;
+        for (int j = i+1; j < 64; ++j) {
+            c = c << 1 | c >> 63;
+            if (!test_d(a^b^c, 16)) { return; }
+        }
+    }
+    deBruijn.push_back(a);
+    //cout << hex << "0x" << a << "ull,\n";
+}
+/*void found(U64 seq) {
     int d;
     bit64_t b = seq;
     for (int i = 1; i < 64; ++i) {
         b = b << 1 | b >> 63;
 
         d = __builtin_popcountll(low(b) ^ low(seq));
-        if (!(11 <= d && d <= 21)) { return; }
+        if (!(10 <= d && d <= 22)) { return; }
 
-        d = __builtin_popcountll((b&0xfff) ^ (seq&0xfff));
-        if (!(3 <= d && d <= 9)) { return; }
+        d = __builtin_popcountll((b >> 56) ^ (seq >> 56));
+        if (!(1 <= d && d <= 7)) { return; }
 
         bit64_t b2 = b;
         for (int j = 1; j < 64; ++j) {
@@ -75,18 +139,28 @@ void found(U64 seq) {
             d = __builtin_popcountll(low(b2) ^ low(b));
             if (!(9 <= d && d <= 23)) { return; }
 
-            d = __builtin_popcountll((b2&0xfff) ^ (b&0xfff));
-            if (!(1 <= d && d <= 11)) { return; }
+            d = __builtin_popcountll((b2 >> 55) ^ (b >> 55));
+            if (!(1 <= d && d <= 8)) { return; }
 
+            for (int k = j; k < 64; ++k) {
+                b2 = b2 << 1 | b2 >> 63;
+
+                d = __builtin_popcountll(low(b2) ^ low(b));
+                if (!(9 <= d && d <= 23)) { return; }
+
+                d = __builtin_popcountll((b2 >> 55) ^ (b >> 55));
+                if (!(1 <= d && d <= 8)) { return; }
+
+            }
         }
 
     }
     deBruijn.push_back(seq);
     //cout << hex << "0x" << seq << "ull,\n";
-}
+}*/
 
 void show(int i) {
-    cout << right << setfill(' ') << setw(7) << dec << i << " 0x" << setfill('0') << hex << setw(16) << deBruijn[i] << "ull,\n";
+    cout << right << setfill(' ') << setw(8) << dec << i << " 0x" << setfill('0') << hex << setw(16) << deBruijn[i] << "ull,\n";
 }
 
 void findCombi() {
@@ -176,39 +250,33 @@ void run() {
     for (int i=0; i < 64; i++) { pow2[i] = (U64)1 << i; }
     findDeBruijn(0, 64-6, 0, 6);
     cout << dec << deBruijn.size() << endl;
-//deBruijn.push_back(0x218a392d367abbfull);
-//deBruijn.push_back(0x218fd49de59b457ull);
-//deBruijn.push_back(0x21b2a4fd16bc773ull);
-//deBruijn.push_back(0x21b5fa77254598full);
-//deBruijn.push_back(0x23db8bf2a4d0cebull);
-//deBruijn.push_back(0x2a1ac898f3b7e97ull);
     findCombi();
 }
 
 int main(int, const char** ) {
-    run();
-    return 0;
+    //run();
+    //return 0;
 
     int d;
 
     bit64_t table[] = {
-//11 9 9 8
-//0x0218a392d367abbfull,
-//0x0218fd49de59b457ull,
-//0x021b2a4fd16bc773ull,
-//0x026763d5c37e5a45ull,
-//0x0323dba73562fc25ull,
-//0x032fc73dbac2a4d1ull,
-//0x03422eadec73253full,
+//10/32-1/8-9/32-1/9; 8/32-1/11 8/32-1/16-8/32-1/16
+//0x0218a392cd5d3dbfull,
+//0x024530decb9f8eadull,
+//0x02896e9abd8e19f9ull,
+//0x02d0d9129eaefc73ull,
+//0x034fd784b731d915ull,
+//0x03b27e8a5bcc6ae1ull,
+//0x03ca242d98d3bf57ull,
 
-3 1 1 1
-0x0218a392cd3f6eafull,
-0x022930d5976f1cfdull,
-0x0262a5ae77e1e8d9ull,
-0x028644b1d36afcf7ull,
-0x02d2277ab863f365ull,
-0x03422df9338f52bbull,
-0x03f12b7a17646a73ull,
+//10/32-1/8-9/32-1/9; 8/32-1/11 8/32-1/14-8/32-1/14
+0x0218a392cd5d3dbfull,
+0x024530decb9f8eadull,
+0x02b91efc4b53a1b3ull,
+0x02dc61d5ecfc9a51ull,
+0x031faf09dcda2ca9ull,
+0x0352138afdd1e65bull,
+0x03ac4dfb48546797ull,
      };
 
     std::mt19937_64 random;
@@ -220,62 +288,77 @@ int main(int, const char** ) {
             zobrist[1][j][k] = flip(b);
             b = b << 1 | b >> 63;
 
-            zobrist[0][j][k] = random();
+            //zobrist[0][j][k] = random();
             //zobrist[1][j][k] = random();
         }
     }
 
     bit64_t * z = reinterpret_cast<bit64_t*>(zobrist);
-    int Size = 2 * 7 * 64;
+    int Size = 7 * 64;
 
     unsigned min = 32;
     unsigned minLo = 16;
-    unsigned ave = 0;
-    unsigned aveLo = 0;
-    unsigned count = 0;
+    unsigned minLo16 = 8;
+    bit64_t ave = 0;
+    bit64_t aveLo = 0;
+    bit64_t aveLo16 = 0;
+    bit64_t count = 0;
 
     for (int i = 0; i < Size; ++i) {
         for (int j = 0; j < i; ++j) {
             if (i%64 == j%64) { continue; }
 
             d = __builtin_popcountll(z[i] ^ z[j]);
-            //if (d > 32) { d = 64 - d; }
+            if (d > 32) { d = 64 - d; }
             if (d < min) { min = d; }
             ave += d;
 
             d = __builtin_popcountll(low(z[i]) ^ low(z[j]));
-            //if (d > 16) { d = 32 - d; }
+            if (d > 16) { d = 32 - d; }
             if (d < minLo) { minLo = d; }
             aveLo += d;
+
+            d = __builtin_popcountll((z[i] >> 48) ^ (z[j] >> 48));
+            if (d > 8) { d = 16 - d; }
+            if (d < minLo16) { minLo16 = d; }
+            aveLo16 += d;
 
             count++;
         }
     }
     std::cout << std::dec << "2 = " << min << ", ";
     std::cout << std::dec << "2Lo = " << minLo << ", ";
+    std::cout << std::dec << "2Lo16 = " << minLo16 << ", ";
     std::cout << std::dec << "2Ave = " << float(ave) / count << ", ";
-    std::cout << std::dec << "2AveLo = " << float(aveLo) / count << std::endl;
+    std::cout << std::dec << "2AveLo = " << float(aveLo) / count << ", ";
+    std::cout << std::dec << "2AveLo16 = " << float(aveLo16) / count << std::endl;
 
     min = 32;
     minLo = 16;
+    minLo16 = 8;
     ave = 0;
     aveLo = 0;
+    aveLo16 = 0;
     count = 0;
-    Size = Size/2;
     for (int i = 0; i < Size; ++i) {
         for (int j = 0; j < i; ++j) {
             if (i%64 == j%64) { continue; }
             for (int k = 0; k < j; ++k) {
                 if (k%64 == j%64 || k%64 == i%64) { continue; }
                 d = __builtin_popcountll(z[i] ^ z[j] ^ z[k]);
-                //if (d > 32) { d = 64 - d; }
+                if (d > 32) { d = 64 - d; }
                 if (d < min) { min = d; }
                 ave += d;
 
                 d = __builtin_popcountll(low(z[i]) ^ low(z[j]) ^ low(z[k]));
-                //if (d > 16) { d = 32 - d; }
+                if (d > 16) { d = 32 - d; }
                 if (d < minLo) { minLo = d; }
                 aveLo += d;
+
+                d = __builtin_popcountll((z[i] >> 48) ^ (z[j] >> 48) ^ (z[k] >> 48));
+                if (d > 8) { d = 16 - d; }
+                if (d < minLo16) { minLo16 = d; }
+                aveLo16 += d;
 
                 count++;
             }
@@ -283,13 +366,17 @@ int main(int, const char** ) {
     }
     std::cout << std::dec << "3 = " << min << ", ";
     std::cout << std::dec << "3Lo = " << minLo << ", ";
+    std::cout << std::dec << "3Lo16 = " << minLo16 << ", ";
     std::cout << std::dec << "3Ave = " << float(ave) / count << ", ";
-    std::cout << std::dec << "3AveLo = " << float(aveLo) / count << std::endl;
+    std::cout << std::dec << "3AveLo = " << float(aveLo) / count << ", ";
+    std::cout << std::dec << "3AveLo16 = " << float(aveLo16) / count << std::endl;
 
     min = 32;
     minLo = 16;
+    minLo16 = 8;
     ave = 0;
     aveLo = 0;
+    aveLo16 = 0;
     count = 0;
     for (int i = 0; i < Size; ++i) {
         for (int j = 0; j < i; ++j) {
@@ -300,14 +387,19 @@ int main(int, const char** ) {
                     if (n%64 == k%64 || n%64 == j%64 || n%64 == i%64) { continue; }
 
                     d = __builtin_popcountll(z[i] ^ z[j] ^ z[k] ^ z[n]);
-                    //if (d > 32) { d = 64 - d; }
+                    if (d > 32) { d = 64 - d; }
                     if (d < min) { min = d; }
                     ave += d;
 
                     d = __builtin_popcountll(low(z[i]) ^ low(z[j]) ^ low(z[k]) ^ low(z[n]));
-                    //if (d > 16) { d = 32 - d; }
+                    if (d > 16) { d = 32 - d; }
                     if (d < minLo) { minLo = d; }
                     aveLo += d;
+
+                    d = __builtin_popcountll((z[i] >> 48) ^ (z[j] >> 48) ^ (z[k] >> 48) ^ (z[k] >> 48));
+                    if (d > 8) { d = 16 - d; }
+                    if (d < minLo16) { minLo16 = d; }
+                    aveLo16 += d;
 
                     count++;
                 }
@@ -316,8 +408,10 @@ int main(int, const char** ) {
     }
     std::cout << std::dec << "4 = " << min << ", ";
     std::cout << std::dec << "4Lo = " << minLo << ", ";
+    std::cout << std::dec << "4Lo16 = " << minLo16 << ", ";
     std::cout << std::dec << "4Ave = " << float(ave) / count << ", ";
-    std::cout << std::dec << "4AveLo = " << float(aveLo) / count << std::endl;
+    std::cout << std::dec << "4AveLo = " << float(aveLo) / count <<  ", ";
+    std::cout << std::dec << "4AveLo16 = " << float(aveLo16) / count << std::endl;
 
     min = 32;
     minLo = 16;
