@@ -23,6 +23,9 @@ inline bit32_t high(bit64_t b) { return static_cast<bit32_t>(b >> 32); }
 
 using namespace std;
 
+constexpr bit64_t r(bit64_t n, index_t sq) { return n << sq | n >> (64-sq); }
+constexpr bit64_t o(bit64_t n) { return ~__builtin_bswap64(n); }
+
 bit64_t flip(bit64_t b) {
     return ~(b);
 }
@@ -75,12 +78,68 @@ bool test(int i1, int i2) {
     return true;
 }
 */
-bool test_d(bit64_t v, int d) {
+
+bool test_d(int d, bit64_t a, bit64_t b) {
+    auto c1 =    a ^ b;
+    auto c2 = o(a) ^ b;
+    auto c3 =    a ^ o(b);
+    auto c4 = o(a) ^ o(b);
+
     for (int i = 0; i < 64; ++i) {
-        int c = __builtin_popcountll(v >> (64-d));
-        if (!(1 <= c && c <= (d-1))) { return false; }
-        v = v << 1 | v >> 63;
+        int p1 = __builtin_popcountll(c1 >> (64-d));
+        int p2 = __builtin_popcountll(c2 >> (64-d));
+        int p3 = __builtin_popcountll(c3 >> (64-d));
+        int p4 = __builtin_popcountll(c4 >> (64-d));
+        if (!(1 <= p1 && p1 <= (d-1))) { return false; }
+        if (!(1 <= p2 && p2 <= (d-1))) { return false; }
+        if (!(1 <= p3 && p3 <= (d-1))) { return false; }
+        if (!(1 <= p4 && p4 <= (d-1))) { return false; }
+        c1 = r(c1, 1);
+        c2 = r(c2, 1);
+        c3 = r(c3, 1);
+        c4 = r(c4, 1);
     }
+
+    return true;
+}
+
+bool test_d(int d, bit64_t a, bit64_t b, bit64_t c) {
+    auto c1 =    a ^  b   ^ c;
+    auto c2 = o(a) ^  b   ^ c;
+    auto c3 =    a ^ o(b) ^ c;
+    auto c4 = o(a) ^ o(b) ^ c;
+    auto c5 =    a ^  b   ^ o(c);
+    auto c6 = o(a) ^  b   ^ o(c);
+    auto c7 =    a ^ o(b) ^ o(c);
+    auto c8 = o(a) ^ o(b) ^ o(c);
+
+    for (int i = 0; i < 64; ++i) {
+        int p1 = __builtin_popcountll(c1 >> (64-d));
+        int p2 = __builtin_popcountll(c2 >> (64-d));
+        int p3 = __builtin_popcountll(c3 >> (64-d));
+        int p4 = __builtin_popcountll(c4 >> (64-d));
+        int p5 = __builtin_popcountll(c5 >> (64-d));
+        int p6 = __builtin_popcountll(c6 >> (64-d));
+        int p7 = __builtin_popcountll(c7 >> (64-d));
+        int p8 = __builtin_popcountll(c8 >> (64-d));
+        if (!(1 <= p1 && p1 <= (d-1))) { return false; }
+        if (!(1 <= p2 && p2 <= (d-1))) { return false; }
+        if (!(1 <= p3 && p3 <= (d-1))) { return false; }
+        if (!(1 <= p4 && p4 <= (d-1))) { return false; }
+        if (!(1 <= p5 && p5 <= (d-1))) { return false; }
+        if (!(1 <= p6 && p6 <= (d-1))) { return false; }
+        if (!(1 <= p7 && p7 <= (d-1))) { return false; }
+        if (!(1 <= p8 && p8 <= (d-1))) { return false; }
+        c1 = r(c1, 1);
+        c2 = r(c2, 1);
+        c3 = r(c3, 1);
+        c4 = r(c4, 1);
+        c5 = r(c5, 1);
+        c6 = r(c6, 1);
+        c7 = r(c7, 1);
+        c8 = r(c8, 1);
+    }
+
     return true;
 }
 
@@ -91,73 +150,19 @@ bool test(int i1, int i2) {
         a = a << 1 | a >> 63;
         b = b << 1 | b >> 63;
 
-        if (!test_d(deBruijn[i1]^b, 12)) { return false; }
+        if (!test_d(a, b, 12)) { return false; }
 
-        bit64_t a2 = a;
+        /*bit64_t a2 = a;
         bit64_t b2 = b;
         for (int j = i+1; j < 64; ++j) {
             a2 = a2 << 1 | a2 >> 63;
             b2 = b2 << 1 | b2 >> 63;
             if (!test_d(deBruijn[i1]^b^b2, 16)) { return false; }
             if (!test_d(deBruijn[i2]^a^a2, 16)) { return false; }
-        }
+        }*/
     }
     return true;
 }
-
-void found(bit64_t a) {
-    bit64_t b = a;
-    for (int i = 1; i < 64; ++i) {
-        b = b << 1 | b >> 63;
-        if (!test_d(a^b, 12)) { return; }
-
-        bit64_t c = b;
-        for (int j = i+1; j < 64; ++j) {
-            c = c << 1 | c >> 63;
-            if (!test_d(a^b^c, 16)) { return; }
-        }
-    }
-    deBruijn.push_back(a);
-    //cout << hex << "0x" << a << "ull,\n";
-}
-/*void found(U64 seq) {
-    int d;
-    bit64_t b = seq;
-    for (int i = 1; i < 64; ++i) {
-        b = b << 1 | b >> 63;
-
-        d = __builtin_popcountll(low(b) ^ low(seq));
-        if (!(10 <= d && d <= 22)) { return; }
-
-        d = __builtin_popcountll((b >> 56) ^ (seq >> 56));
-        if (!(1 <= d && d <= 7)) { return; }
-
-        bit64_t b2 = b;
-        for (int j = 1; j < 64; ++j) {
-            b2 = b2 << 1 | b2 >> 63;
-
-            d = __builtin_popcountll(low(b2) ^ low(b));
-            if (!(9 <= d && d <= 23)) { return; }
-
-            d = __builtin_popcountll((b2 >> 55) ^ (b >> 55));
-            if (!(1 <= d && d <= 8)) { return; }
-
-            for (int k = j; k < 64; ++k) {
-                b2 = b2 << 1 | b2 >> 63;
-
-                d = __builtin_popcountll(low(b2) ^ low(b));
-                if (!(9 <= d && d <= 23)) { return; }
-
-                d = __builtin_popcountll((b2 >> 55) ^ (b >> 55));
-                if (!(1 <= d && d <= 8)) { return; }
-
-            }
-        }
-
-    }
-    deBruijn.push_back(seq);
-    //cout << hex << "0x" << seq << "ull,\n";
-}*/
 
 void show(int i) {
     cout << right << setfill(' ') << setw(8) << dec << i << " 0x" << setfill('0') << hex << setw(16) << deBruijn[i] << "ull,\n";
@@ -190,7 +195,7 @@ void findCombi() {
                                 cout << endl;
                                 return;
 
-                                /*for (int h = g+1; h < size; ++h) {
+                                for (int h = g+1; h < size; ++h) {
                                     if (!test(h, g) || !test(h, f) || !test(h, e) || !test(h, d) || !test(h, c) || !test(h, b) || !test(h, a)) { continue; }
                                     show(a); show(b); show(c); show(d); show(e); show(f); show(g); show(h);
                                     cout << endl;
@@ -210,7 +215,7 @@ void findCombi() {
 
                                     }
 
-                                }*/
+                                }
                             }
                         }
                     }
@@ -220,6 +225,21 @@ void findCombi() {
             //cout << endl;
         }
     }
+}
+
+void found(bit64_t a) {
+    //cout << '.';
+    for (index_t i = 1; i < 64; ++i) {
+        auto b = r(a, i);
+        if (!test_d(12, a, b)) { return; }
+
+        for (int j = i+1; j < 64; ++j) {
+            auto c = r(a, j);
+            if (!test_d(16, a, b, c)) { return; }
+        }
+    }
+    deBruijn.push_back(a);
+    //cout << right << setfill(' ') /*<< setw(8) << dec << i*/ << " 0x" << setfill('0') << hex << setw(16) << a << "ull,\n" << std::flush;
 }
 
 void findDeBruijn(U64 seq, int depth, int vtx, int nz) {
@@ -254,8 +274,8 @@ void run() {
 }
 
 int main(int, const char** ) {
-    //run();
-    //return 0;
+    run();
+    return 0;
 
     int d;
 
