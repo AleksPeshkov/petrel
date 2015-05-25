@@ -24,7 +24,7 @@ inline bit32_t high(bit64_t b) { return static_cast<bit32_t>(b >> 32); }
 using namespace std;
 
 constexpr bit64_t r(bit64_t n, index_t sq) { return n << sq | n >> (64-sq); }
-constexpr bit64_t o(bit64_t n) { return ~__builtin_bswap64(n); }
+constexpr bit64_t o(bit64_t n) { return ~n; } //__builtin_bswap64(n)
 
 bit64_t flip(bit64_t b) {
     return ~(b);
@@ -80,64 +80,79 @@ bool test(int i1, int i2) {
 */
 
 bool test_d(int d, bit64_t a, bit64_t b) {
-    auto c1 =    a ^ b;
-    auto c2 = o(a) ^ b;
-    auto c3 =    a ^ o(b);
-    auto c4 = o(a) ^ o(b);
-
     for (int i = 0; i < 64; ++i) {
-        int p1 = __builtin_popcountll(c1 >> (64-d));
-        int p2 = __builtin_popcountll(c2 >> (64-d));
-        int p3 = __builtin_popcountll(c3 >> (64-d));
-        int p4 = __builtin_popcountll(c4 >> (64-d));
-        if (!(1 <= p1 && p1 <= (d-1))) { return false; }
-        if (!(1 <= p2 && p2 <= (d-1))) { return false; }
-        if (!(1 <= p3 && p3 <= (d-1))) { return false; }
-        if (!(1 <= p4 && p4 <= (d-1))) { return false; }
-        c1 = r(c1, 1);
-        c2 = r(c2, 1);
-        c3 = r(c3, 1);
-        c4 = r(c4, 1);
+        auto a1 = r(a, i);
+        for (int j = i+1; j < 64; ++j) {
+            auto b1 = r(b, j);
+
+            for (int x = 0; x < 64; ++x) {
+                if (!(r( (a1)^ (b1),x) >> (64-d))) { return false; }
+                if (!(r(o(a1)^ (b1),x) >> (64-d))) { return false; }
+                if (!(r( (a1)^o(b1),x) >> (64-d))) { return false; }
+                if (!(r(o(a1)^o(b1),x) >> (64-d))) { return false; }
+            }
+        }
     }
 
     return true;
 }
 
 bool test_d(int d, bit64_t a, bit64_t b, bit64_t c) {
-    auto c1 =    a ^  b   ^ c;
-    auto c2 = o(a) ^  b   ^ c;
-    auto c3 =    a ^ o(b) ^ c;
-    auto c4 = o(a) ^ o(b) ^ c;
-    auto c5 =    a ^  b   ^ o(c);
-    auto c6 = o(a) ^  b   ^ o(c);
-    auto c7 =    a ^ o(b) ^ o(c);
-    auto c8 = o(a) ^ o(b) ^ o(c);
-
     for (int i = 0; i < 64; ++i) {
-        int p1 = __builtin_popcountll(c1 >> (64-d));
-        int p2 = __builtin_popcountll(c2 >> (64-d));
-        int p3 = __builtin_popcountll(c3 >> (64-d));
-        int p4 = __builtin_popcountll(c4 >> (64-d));
-        int p5 = __builtin_popcountll(c5 >> (64-d));
-        int p6 = __builtin_popcountll(c6 >> (64-d));
-        int p7 = __builtin_popcountll(c7 >> (64-d));
-        int p8 = __builtin_popcountll(c8 >> (64-d));
-        if (!(1 <= p1 && p1 <= (d-1))) { return false; }
-        if (!(1 <= p2 && p2 <= (d-1))) { return false; }
-        if (!(1 <= p3 && p3 <= (d-1))) { return false; }
-        if (!(1 <= p4 && p4 <= (d-1))) { return false; }
-        if (!(1 <= p5 && p5 <= (d-1))) { return false; }
-        if (!(1 <= p6 && p6 <= (d-1))) { return false; }
-        if (!(1 <= p7 && p7 <= (d-1))) { return false; }
-        if (!(1 <= p8 && p8 <= (d-1))) { return false; }
-        c1 = r(c1, 1);
-        c2 = r(c2, 1);
-        c3 = r(c3, 1);
-        c4 = r(c4, 1);
-        c5 = r(c5, 1);
-        c6 = r(c6, 1);
-        c7 = r(c7, 1);
-        c8 = r(c8, 1);
+        auto a1 = r(a, i);
+        for (int j = i+1; j < 64; ++j) {
+            auto b1 = r(b, j);
+            for (int k = j+1; k < 64; ++k) {
+                auto c1 = r(c, k);
+
+                for (int x = 0; x < 64; ++x) {
+                    if (!(r( (a1)^ (b1)^ (c1),x) >> (64-d))) { return false; }
+                    if (!(r(o(a1)^ (b1)^ (c1),x) >> (64-d))) { return false; }
+                    if (!(r( (a1)^o(b1)^ (c1),x) >> (64-d))) { return false; }
+                    if (!(r(o(a1)^o(b1)^ (c1),x) >> (64-d))) { return false; }
+                    if (!(r( (a1)^ (b1)^o(c1),x) >> (64-d))) { return false; }
+                    if (!(r(o(a1)^ (b1)^o(c1),x) >> (64-d))) { return false; }
+                    if (!(r( (a1)^o(b1)^o(c1),x) >> (64-d))) { return false; }
+                    if (!(r(o(a1)^o(b1)^o(c1),x) >> (64-d))) { return false; }
+                }
+            }
+        }
+    }
+
+    return true;
+}
+
+bool test_d(int z, bit64_t a, bit64_t b, bit64_t c, bit64_t d) {
+    for (int i = 0; i < 64; ++i) {
+        auto a1 = r(a, i);
+        for (int j = i+1; j < 64; ++j) {
+            auto b1 = r(b, j);
+            for (int k = j+1; k < 64; ++k) {
+                auto c1 = r(c, k);
+                for (int m = k+1; m < 64; ++m) {
+                    auto d1 = r(d, m);
+
+                    for (int x = 0; x < 64; ++x) {
+                        if (!(r( (a1)^ (b1)^ (c1)^ (d1),x) >> (64-z))) { return false; }
+                        if (!(r(o(a1)^ (b1)^ (c1)^ (d1),x) >> (64-z))) { return false; }
+                        if (!(r( (a1)^o(b1)^ (c1)^ (d1),x) >> (64-z))) { return false; }
+                        if (!(r(o(a1)^o(b1)^ (c1)^ (d1),x) >> (64-z))) { return false; }
+                        if (!(r( (a1)^ (b1)^o(c1)^ (d1),x) >> (64-z))) { return false; }
+                        if (!(r(o(a1)^ (b1)^o(c1)^ (d1),x) >> (64-z))) { return false; }
+                        if (!(r( (a1)^o(b1)^o(c1)^ (d1),x) >> (64-z))) { return false; }
+                        if (!(r(o(a1)^o(b1)^o(c1)^ (d1),x) >> (64-z))) { return false; }
+                        if (!(r( (a1)^ (b1)^ (c1)^o(d1),x) >> (64-z))) { return false; }
+                        if (!(r(o(a1)^ (b1)^ (c1)^o(d1),x) >> (64-z))) { return false; }
+                        if (!(r( (a1)^o(b1)^ (c1)^o(d1),x) >> (64-z))) { return false; }
+                        if (!(r(o(a1)^o(b1)^ (c1)^o(d1),x) >> (64-z))) { return false; }
+                        if (!(r( (a1)^ (b1)^o(c1)^o(d1),x) >> (64-z))) { return false; }
+                        if (!(r(o(a1)^ (b1)^o(c1)^o(d1),x) >> (64-z))) { return false; }
+                        if (!(r( (a1)^o(b1)^o(c1)^o(d1),x) >> (64-z))) { return false; }
+                        if (!(r(o(a1)^o(b1)^o(c1)^o(d1),x) >> (64-z))) { return false; }
+                    }
+                }
+            }
+        }
     }
 
     return true;
@@ -172,13 +187,19 @@ void findCombi() {
     int size = deBruijn.size();
     for (int a = 0; a < size; ++a) {
         for (int b = a+1; b < size; ++b) {
-            if (!test(b, a)) { continue; }
+            if (!test_d(16,deBruijn[a], deBruijn[b])) { continue; }
 
             for (int c = b+1; c < size; ++c) {
-                if (!test(c, b) || !test(c, a)) { continue; }
+                if (!test_d(16,deBruijn[a], deBruijn[c]) || !test_d(16,deBruijn[b], deBruijn[c]) || !test_d(24,deBruijn[a], deBruijn[b], deBruijn[c])) { continue; }
 
                 for (int d = c+1; d < size; ++d) {
-                    if (!test(d, c) || !test(d, b) || !test(d, a)) { continue; }
+                    if (!test_d(16,deBruijn[a], deBruijn[d]) || !test_d(16,deBruijn[b], deBruijn[d]) || !test_d(16,deBruijn[c], deBruijn[d])
+                        || !test_d(24,deBruijn[a], deBruijn[b], deBruijn[d]) || !test_d(24,deBruijn[a], deBruijn[c], deBruijn[d]) || !test_d(24,deBruijn[b], deBruijn[c], deBruijn[d])
+                        || !test_d(32,deBruijn[a], deBruijn[b], deBruijn[c], deBruijn[d])
+                    ) { continue; }
+
+                    show(a); show(b); show(c); show(d);
+                    cout << endl;
 
                     for (int e = d+1; e < size; ++e) {
                         if (!test(e, d) || !test(e, c) || !test(e, b) || !test(e, a)) { continue; }
@@ -228,16 +249,9 @@ void findCombi() {
 }
 
 void found(bit64_t a) {
-    //cout << '.';
-    for (index_t i = 1; i < 64; ++i) {
-        auto b = r(a, i);
-        if (!test_d(12, a, b)) { return; }
-
-        for (int j = i+1; j < 64; ++j) {
-            auto c = r(a, j);
-            if (!test_d(16, a, b, c)) { return; }
-        }
-    }
+    if (!test_d(10, a, a)) { return; }
+    if (!test_d(13, a, a, a)) { return; }
+    if (!test_d(18, a, a, a, a)) { return; }
     deBruijn.push_back(a);
     //cout << right << setfill(' ') /*<< setw(8) << dec << i*/ << " 0x" << setfill('0') << hex << setw(16) << a << "ull,\n" << std::flush;
 }
