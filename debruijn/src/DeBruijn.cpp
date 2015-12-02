@@ -258,25 +258,24 @@ int main(int, const char** ) {
 
     bit64_t table[] = {
 //10/32-1/8-9/32-1/9; 8/32-1/11 8/32-1/14-8/32-1/14
-0x0218a392cd5d3dbfull,
-0x024530decb9f8eadull,
-0x02b91efc4b53a1b3ull,
-0x02dc61d5ecfc9a51ull,
-0x031faf09dcda2ca9ull,
-0x0352138afdd1e65bull,
-0x03ac4dfb48546797ull,
+//0x0218a392cd5d3dbfull,
+//0x024530decb9f8eadull,
+//0x02b91efc4b53a1b3ull,
+//0x02dc61d5ecfc9a51ull,
+//0x031faf09dcda2ca9ull,
+//0x0352138afdd1e65bull,
+//0x03ac4dfb48546797ull,
 
-//9/12/20 14/20/28
-//0x0219bf251c5a7abbull,
-//0x0230e2a4d67e5eddull,
-//0x026e7b57e3a1948bull,
-//0x031cd422b765fa4full,
-//0x03c4efd5c8cda50bull,
-//0x03c85a312bf66ea7ull,
-//0x03ca91b316bf4277ull,
+//10/12/18 14/21*
+0x0243165737b4753full,
+0x0243b46e658afd4full,
+0x026a57a3f3b71643ull,
+0x034a845b93d98ebfull,
+0x0384f229756337edull,
+0x0397ecf137518569ull,
+0x03af325442d8d3f7ull
+};
 
-//10/12/18 14/20*
-          };
 
     std::mt19937_64 random;
     bit64_t zobrist[2][7][64];
