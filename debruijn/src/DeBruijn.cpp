@@ -138,7 +138,7 @@ bool test(int i1, int i2, int i3, int i4) {
     bit64_t b = deBruijn[i2];
     bit64_t c = deBruijn[i3];
     bit64_t d = deBruijn[i4];
-    return test_d(28, a, b, c, d);
+    return test_d(32, a, b, c, d);
 }
 
 void show(int i) {
@@ -150,33 +150,44 @@ void findCombi() {
     for (int a = 0; a < size; ++a) {
         cout << dec << a << endl;
         for (int b = a+1; b < size; ++b) {
-            if (!test(a, b)) { continue; }
+            if (!test(a, b) || !test(a, a, b) || !test(a, b, b)
+                || !test(a, a, a, b) || !test(a, a, b, b) || !test(a, b, b, b)
+            ) { continue; }
 
             for (int c = b+1; c < size; ++c) {
                 if (!test(a, c) || !test(b, c)
-                    || !test(a, a, c) || !test(a, b, c) || !test(a, c, c)
-                    || !test(b, b, c)|| !test(b, c, c)
+                    || !test(a, a, c) || !test(a, b, c) || !test(b, b, c)|| !test(b, c, c) || !test(a, c, c)
+                    || !test(a, a, a, c) || !test(a, a, b, c) || !test(a, b, b, c) || !test(b, b, b, c)
+                    || !test(a, a, c, c) || !test(a, b, c, c) || !test(b, b, c, c) || !test(a, c, c, c) || !test(b, c, c, c)
                 ) { continue; }
 
                 for (int d = c+1; d < size; ++d) {
                     if (!test(a, d) || !test(b, d) || !test(c, d)
-                        || !test(a, a, d) || !test(a, b, d) || !test(a, c, d) || !test(a, d, d)
-                        || !test(b, b, d) || !test(b, c, d) || !test(b, d, d)
-                        || !test(c, c, d) || !test(c, d, d)
-                        //|| !test(a, a, a, d) || !test(a, a, b, d) || !test(a, a, c, d) || !test(a, b, b, d) || !test(a, b, c, d) || !test(a, c, c, d) || !test(a, c, d, d) || !test(a, d, d, d)
-                        //|| !test(b, b, b, d) || !test(b, b, c, d) || !test(b, b, d, d) || !test(b, c, c, d) || !test(b, c, d, d) || !test(b, d, d, d)
+                        || !test(a, a, d) || !test(a, b, d) || !test(a, c, d) || !test(b, b, d) || !test(b, c, d) || !test(c, c, d)
+                        || !test(a, d, d) || !test(b, d, d) || !test(c, d, d)
+                        || !test(a, a, a, d) || !test(a, a, b, d) || !test(a, a, c, d) || !test(a, b, b, d) || !test(a, b, c, d) || !test(a, c, c, d)
+                        || !test(b, b, b, d) || !test(b, b, c, d) || !test(b, c, c, d) || !test(c, c, c, d)
+                        || !test(a, a, d, d) || !test(a, b, d, d) || !test(a, c, d, d) || !test(b, b, d, d) || !test(b, c, d, d) || !test(c, c, d, d)
+                        || !test(a, d, d, d) || !test(b, d, d, d) || !test(c, d, d, d)
                     ) { continue; }
 
                     for (int e = d+1; e < size; ++e) {
                         if (!test(a, e) || !test(b, e) || !test(c, e) || !test(d, e)
-                            || !test(a, a, e) || !test(a, b, e) || !test(a, c, e) || !test(a, d, e) || !test(a, e, e)
-                            || !test(b, b, e) || !test(b, c, e) || !test(b, d, e) || !test(b, e, e)
-                            || !test(c, c, e) || !test(c, d, e) || !test(c, e, e)
-                            || !test(d, d, e) || !test(d, e, e)
+                            || !test(a, a, e) || !test(a, b, e) || !test(a, c, e) || !test(a, d, e)
+                            || !test(b, b, e) || !test(b, c, e) || !test(b, d, e)
+                            || !test(c, c, e) || !test(c, d, e) || !test(d, d, e)
+                            || !test(a, e, e) || !test(b, e, e) || !test(c, e, e) || !test(d, e, e)
+                            || !test(a, a, a, e) || !test(a, a, b, e) || !test(a, a, c, e) || !test(a, a, d, e)
+                            || !test(a, b, b, e) || !test(a, b, c, e) || !test(a, b, d, e) || !test(a, c, c, e) || !test(a, c, d, e) || !test(a, d, d, e)
+                            || !test(b, b, b, e) || !test(b, b, c, e) || !test(b, b, d, e) || !test(b, c, c, e) || !test(b, c, d, e) || !test(b, d, d, e)
+                            || !test(c, c, c, e) || !test(c, c, d, e) || !test(c, d, d, e) || !test(d, d, d, e)
+                            || !test(a, a, e, e) || !test(a, b, e, e) || !test(a, c, e, e) || !test(a, d, e, e)
+                            || !test(b, b, e, e) || !test(b, c, e, e) || !test(b, d, e, e) || !test(c, c, e, e) || !test(c, d, e, e) || !test(d, d, e, e)
+                            || !test(a, e, e, e) || !test(b, e, e, e) || !test(c, e, e, e) || !test(d, e, e, e)
                         ) { continue; }
 
-                        //show(a); show(b); show(c); show(d); show(e);
-                        //cout << endl;
+                        show(a); show(b); show(c); show(d); show(e);
+                        cout << endl;
 
                         for (int f = e+1; f < size; ++f) {
                             if (!test(a, f) || !test(b, f) || !test(c, f) || !test(d, f) || !test(e, f)
@@ -185,7 +196,23 @@ void findCombi() {
                                 || !test(c, c, f) || !test(c, d, f) || !test(c, e, f) || !test(c, f, f)
                                 || !test(d, d, f) || !test(d, e, f) || !test(d, f, f)
                                 || !test(e, e, f) || !test(e, f, f)
+                                || !test(a, a, a, f) || !test(a, a, b, f) || !test(a, a, c, f) || !test(a, a, d, f) || !test(a, a, e, f)
+                                || !test(a, b, b, f) || !test(a, b, c, f) || !test(a, b, d, f) || !test(a, b, e, f)
+                                || !test(a, c, c, f) || !test(a, c, d, f) || !test(a, c, e, f)
+                                || !test(a, d, d, f) || !test(a, d, e, f) || !test(a, e, e, f)
+                                || !test(b, b, b, f) || !test(b, b, c, f) || !test(b, b, d, f) || !test(b, b, e, f)
+                                || !test(b, c, c, f) || !test(b, c, d, f) || !test(b, c, e, f)
+                                || !test(b, d, d, f) || !test(b, d, e, f) || !test(b, e, e, f)
+                                || !test(c, c, c, f) || !test(c, c, d, f) || !test(c, c, e, f)
+                                || !test(c, d, d, f) || !test(c, d, e, f) || !test(c, e, e, f)
+                                || !test(d, d, d, f) || !test(d, d, e, f) || !test(d, e, e, f) || !test(e, e, e, f)
+                                || !test(a, a, f, f) || !test(a, b, f, f) || !test(a, c, f, f) || !test(a, d, f, f) || !test(a, e, f, f) || !test(a, f, f, f)
+                                || !test(b, b, f, f) || !test(b, c, f, f) || !test(b, d, f, f) || !test(b, e, f, f) || !test(b, f, f, f)
+                                || !test(c, c, f, f) || !test(c, d, f, f) || !test(c, e, f, f) || !test(c, f, f, f)
+                                || !test(d, d, f, f) || !test(d, e, f, f) || !test(d, f, f, f)
+                                || !test(e, e, f, f) || !test(e, f, f, f)
                             ) { continue; }
+                            cout << "*****\n";
                             show(a); show(b); show(c); show(d); show(e); show(f);
                             cout << endl;
 
@@ -197,6 +224,23 @@ void findCombi() {
                                     || !test(d, d, g) || !test(d, e, g) || !test(d, f, g) || !test(d, g, g)
                                     || !test(e, e, g) || !test(e, f, g) || !test(e, g, g)
                                     || !test(f, f, g) || !test(f, g, g)
+                                    || !test(a, a, a, g) || !test(a, a, b, g) || !test(a, a, c, g) || !test(a, a, d, g) || !test(a, a, e, g) || !test(a, a, f, g)
+                                    || !test(a, b, b, g) || !test(a, b, c, g) || !test(a, b, d, g) || !test(a, b, e, g) || !test(a, b, f, g)
+                                    || !test(a, c, c, g) || !test(a, c, d, g) || !test(a, c, e, g) || !test(a, c, f, g)
+                                    || !test(a, d, d, g) || !test(a, d, e, g) || !test(a, d, f, g) || !test(a, e, e, g) || !test(a, e, f, g) || !test(a, f, f, g)
+                                    || !test(b, b, b, g) || !test(b, b, c, g) || !test(b, b, d, g) || !test(b, b, e, g) || !test(b, b, f, g)
+                                    || !test(b, c, c, g) || !test(b, c, d, g) || !test(b, c, e, g) || !test(b, c, f, g)
+                                    || !test(b, d, d, g) || !test(b, d, e, g) || !test(b, d, f, g) || !test(b, e, e, g) || !test(b, e, f, g) || !test(b, f, f, g)
+                                    || !test(c, c, c, g) || !test(c, c, d, g) || !test(c, c, e, g) || !test(c, c, f, g)
+                                    || !test(c, d, d, g) || !test(c, d, e, g) || !test(c, d, f, g) || !test(c, e, e, g) || !test(c, e, f, g) || !test(c, f, f, g)
+                                    || !test(d, d, d, g) || !test(d, d, e, g) || !test(d, d, f, g) || !test(d, e, e, g) || !test(d, e, f, g) || !test(d, f, f, g)
+                                    || !test(e, e, e, g) || !test(e, e, f, g) || !test(e, f, f, g) || !test(f, f, f, g)
+                                    || !test(a, a, g, g) || !test(a, b, g, g) || !test(a, c, g, g) || !test(a, d, g, g) || !test(a, e, g, g) || !test(a, f, g, g) || !test(a, g, g, g)
+                                    || !test(b, b, g, g) || !test(b, c, g, g) || !test(b, d, g, g) || !test(b, e, g, g) || !test(b, f, g, g) || !test(b, g, g, g)
+                                    || !test(c, c, g, g) || !test(c, d, g, g) || !test(c, e, g, g) || !test(c, f, g, g) || !test(c, g, g, g)
+                                    || !test(d, d, g, g) || !test(d, e, g, g) || !test(d, f, g, g) || !test(d, g, g, g)
+                                    || !test(e, e, g, g) || !test(e, f, g, g) || !test(e, g, g, g)
+                                    || !test(f, f, g, g) || !test(f, g, g, g)
                                 ) { continue; }
                                 cout << "!!!!!!!!!!!!!!!!!!!!!!\n";
                                 show(a); show(b); show(c); show(d); show(e); show(f); show(g);
@@ -266,14 +310,22 @@ int main(int, const char** ) {
 //0x0352138afdd1e65bull,
 //0x03ac4dfb48546797ull,
 
-//10/12/18 14/21*
+0x023f14336aef49cbull,
 0x0243165737b4753full,
 0x0243b46e658afd4full,
-0x026a57a3f3b71643ull,
-0x034a845b93d98ebfull,
-0x0384f229756337edull,
-0x0397ecf137518569ull,
-0x03af325442d8d3f7ull
+0x02458dafd33b950full,
+0x025a862bb23cdfa7ull,
+0x025f8f61bad15399ull,
+0x0261d915cf52df8dull,
+
+//10/12/18 14/21*
+//0x0243165737b4753full,
+//0x0243b46e658afd4full,
+//0x026a57a3f3b71643ull,
+//0x034a845b93d98ebfull,
+//0x0384f229756337edull,
+//0x0397ecf137518569ull,
+//0x03af325442d8d3f7ull
 };
 
 
@@ -431,7 +483,7 @@ int main(int, const char** ) {
                         if (d < min) { min = d; }
                         ave += d;
 
-                        d = __builtin_popcountll(low(z[i]) ^ low(z[j]) ^ low(z[k]) ^ low(z[n]) ^ low(z[m]));
+                        d = __builtin_popcountll(low(z[i] ^ z[j] ^ z[k] ^ z[n] ^ z[m]));
                         if (d > 16) { d = 32 - d; }
                         if (d < minLo) { minLo = d; }
                         aveLo += d;
