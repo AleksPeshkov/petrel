@@ -24,11 +24,7 @@ inline bit32_t high(bit64_t b) { return static_cast<bit32_t>(b >> 32); }
 using namespace std;
 
 constexpr bit64_t r(bit64_t n, index_t sq) { return n << sq | n >> (64-sq); }
-constexpr bit64_t o(bit64_t n) { return ~n; } //__builtin_bswap64(n)
-
-bit64_t flip(bit64_t b) {
-    return ~(b);
-}
+constexpr bit64_t o(bit64_t n) { return __builtin_bswap64(n); } //__builtin_bswap64(n)
 
 #ifdef _INCLUDE
     vector<bit64_t> deBruijn;
@@ -328,7 +324,7 @@ int main(int, const char** ) {
         bit64_t b = table[j];
         for (int k=0; k < 64; ++k) {
             zobrist[0][j][k] = b;
-            zobrist[1][j][k] = flip(b);
+            zobrist[1][j][k] = o(b);
             b = b << 1 | b >> 63;
 
             //zobrist[0][j][k] = random();
