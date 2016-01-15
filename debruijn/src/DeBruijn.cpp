@@ -138,7 +138,7 @@ bool test(int i1, int i2, int i3, int i4) {
     bit64_t b = deBruijn[i2];
     bit64_t c = deBruijn[i3];
     bit64_t d = deBruijn[i4];
-    return test_d(32, a, b, c, d);
+    return test_d(30, a, b, c, d);
 }
 
 void show(int i) {
@@ -257,8 +257,8 @@ void findCombi() {
 
 void found(bit64_t a) {
     if (!test_d(9, a, a)) { return; }
-    if (!test_d(12, a, a, a)) { return; }
-    if (!test_d(19, a, a, a, a)) { return; }
+    if (!test_d(13, a, a, a)) { return; }
+    if (!test_d(17, a, a, a, a)) { return; }
     //deBruijn.push_back(a);
     cout /*<< right << setfill(' ') << setw(8) << dec << deBruijn.size()*/ << " 0x" << setfill('0') << hex << setw(16) << a << "ull,\n" << std::flush;
 }
@@ -290,42 +290,35 @@ void findDeBruijn(U64 seq, int depth, int vtx, int nz) {
 void run() {
     for (int i=0; i < 64; i++) { pow2[i] = (U64)1 << i; }
     //findDeBruijn(0, 64-6, 0, 6);
-    cout << dec << deBruijn.size() << endl;
+    //cout << dec << deBruijn.size() << endl;
     findCombi();
 }
 
 int main(int, const char** ) {
-    run();
-    return 0;
+    //run();
+    //return 0;
 
     int d;
 
     bit64_t table[] = {
 //10/32-1/8-9/32-1/9; 8/32-1/11 8/32-1/14-8/32-1/14
-//0x0218a392cd5d3dbfull,
-//0x024530decb9f8eadull,
-//0x02b91efc4b53a1b3ull,
-//0x02dc61d5ecfc9a51ull,
-//0x031faf09dcda2ca9ull,
-//0x0352138afdd1e65bull,
-//0x03ac4dfb48546797ull,
+0x0218a392cd5d3dbfull,
+0x024530decb9f8eadull,
+0x02b91efc4b53a1b3ull,
+0x02dc61d5ecfc9a51ull,
+0x031faf09dcda2ca9ull,
+0x0352138afdd1e65bull,
+0x03ac4dfb48546797ull,
 
-0x023f14336aef49cbull,
-0x0243165737b4753full,
-0x0243b46e658afd4full,
-0x02458dafd33b950full,
-0x025a862bb23cdfa7ull,
-0x025f8f61bad15399ull,
-0x0261d915cf52df8dull,
+//9/13/17 14/20/30
+//0x021b25a98f73a2bfull,
+//0x030a4ecdcb47eaf1ull,
+//0x0317929a3ab67ee1ull,
+//0x035c76613f4b7915ull,
+//0x035fa11533c963b7ull,
+//0x0376b31509e5fa47ull,
+//0x03ac2a5cfdbc644dull,
 
-//10/12/18 14/21*
-//0x0243165737b4753full,
-//0x0243b46e658afd4full,
-//0x026a57a3f3b71643ull,
-//0x034a845b93d98ebfull,
-//0x0384f229756337edull,
-//0x0397ecf137518569ull,
-//0x03af325442d8d3f7ull
 };
 
 

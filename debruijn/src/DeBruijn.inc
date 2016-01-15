@@ -1,5 +1,63 @@
 #include <array>
 
+//9/13/17
+std::array<bit64_t, 52> deBruijn
+{
+    0x021b25a98f73a2bfull,
+    0x021df9b5716527a3ull,
+    0x023d5f8b4ecdc943ull,
+    0x023df9d0dacb8a93ull,
+    0x02439bb2fc53d5a3ull,
+    0x02470cde9f96aec5ull,
+    0x02471432e9ab7e7bull,
+    0x0254d167ae3b7e43ull,
+    0x028dd5a7e5ecc389ull,
+    0x0290edc6689eafcbull,
+    0x029dc8f436afc4b3ull,
+    0x029f891cb619abbdull,
+    0x02a1ba67123dafcbull,
+    0x02a1df9eb6264697ull,
+    0x02a21b25f9dc7ad3ull,
+    0x02a27b4bf219b8ebull,
+    0x02a4f43b11afccb7ull,
+    0x02ba310e6a5b27bfull,
+    0x02bdcfc35312d91dull,
+    0x02c37ab99489f8edull,
+    0x02c898f6fce950d7ull,
+    0x02d21babf28e267bull,
+    0x02d93dd5f9a50e23ull,
+    0x02dc7e44a6757b0dull,
+    0x02e26d232b0fcef5ull,
+    0x02f75661b4e247e5ull,
+    0x0309fb71d79a2ca9ull,
+    0x030a4ecdcb47eaf1ull,
+    0x0310afd1d92dcd4full,
+    0x0311c2967eaef26dull,
+    0x0316af28fd376709ull,
+    0x0317929a3ab67ee1ull,
+    0x0325474d6c2e7ef1ull,
+    0x032d78ee7e936115ull,
+    0x03348fd5b0bc4ee5ull,
+    0x0342678edfae454bull,
+    0x034a89d7edc7990bull,
+    0x034fd5e4598edc25ull,
+    0x034fd6f123997615ull,
+    0x035c76613f4b7915ull,
+    0x035fa11533c963b7ull,
+    0x0376b31509e5fa47ull,
+    0x037991c53f57612dull,
+    0x0379fb565d30a389ull,
+    0x03897e9e42a335bbull,
+    0x03a58991b5e7ee15ull,
+    0x03ac2a5cfdbc644dull,
+    0x03b4cfd62370bc95ull,
+    0x03b71a4f32a217ebull,
+    0x03caced26e2fd423ull,
+    0x03f5173bc6569361ull,
+    0x03f7936959c23175ull,
+};
+
+/*
 //10/12/18
 std::array<bit64_t, 44> deBruijn
 {
@@ -48,3 +106,4 @@ std::array<bit64_t, 44> deBruijn
  0x03f5c66f2768854bull,
  0x03f6f3a6a3212e2bull,
 };
+*/
