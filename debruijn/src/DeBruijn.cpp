@@ -252,9 +252,9 @@ void findCombi() {
 }
 
 void found(bit64_t a) {
-    if (!test_d(9, a, a)) { return; }
-    if (!test_d(13, a, a, a)) { return; }
-    if (!test_d(17, a, a, a, a)) { return; }
+    if (!test_d(12, a, a)) { return; }
+    if (!test_d(16, a, a, a)) { return; }
+    if (!test_d(32, a, a, a, a)) { return; }
     //deBruijn.push_back(a);
     cout /*<< right << setfill(' ') << setw(8) << dec << deBruijn.size()*/ << " 0x" << setfill('0') << hex << setw(16) << a << "ull,\n" << std::flush;
 }
@@ -285,14 +285,14 @@ void findDeBruijn(U64 seq, int depth, int vtx, int nz) {
 
 void run() {
     for (int i=0; i < 64; i++) { pow2[i] = (U64)1 << i; }
-    //findDeBruijn(0, 64-6, 0, 6);
+    findDeBruijn(0, 64-6, 0, 6);
     //cout << dec << deBruijn.size() << endl;
     findCombi();
 }
 
 int main(int, const char** ) {
-    //run();
-    //return 0;
+    run();
+    return 0;
 
     int d;
 
