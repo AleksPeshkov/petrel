@@ -1,6 +1,6 @@
 #debug = yes
 
-TARGET = debruijn
+TARGET = zobrist
 
 srcdir ?= .
 debugdir = ../debug
