@@ -1,5 +1,7 @@
 #include <array>
 
+//15/19/23 (bswap)
+
 //9/13/17
 std::array<bit64_t, 52> deBruijn
 {
