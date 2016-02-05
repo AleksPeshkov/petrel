@@ -11,10 +11,29 @@
 #define PACKED __attribute__((packed))
 
 template <typename T>
-constexpr T universe() { return static_cast<T>(~static_cast<T>(0)); }
+constexpr typename std::enable_if<std::is_integral<T>::value, T>::type
+universe() { return static_cast<T>(~static_cast<T>(0)); }
 
+#include <type_traits>
 template <typename T, typename N>
-constexpr T small_cast(N n) { return static_cast<T>(n & static_cast<N>(universe<T>())); }
+constexpr typename std::enable_if
+    <std::is_integral<T>::value && (std::is_integral<N>::value || std::is_enum<N>::value), T>::type
+small_cast(N n) { return static_cast<T>(n & universe<T>()); }
+
+#ifdef NDEBUG
+    template <typename T, typename N>
+    constexpr T narrow_cast(N n) { return small_cast<T>(n); }
+#else
+#   include <stdexcept>
+    template <typename T, typename N>
+    T narrow_cast(N n) {
+        auto r = static_cast<T>(n);
+        if (static_cast<N>(r) != n) {
+            throw std::runtime_error("narrow_cast<>() failed");
+        }
+        return r;
+    }
+#endif
 
 template <typename T, typename N>
 constexpr T singleton(N n) { return static_cast<T>(static_cast<T>(1u) << static_cast<T>(n)); }
