@@ -119,14 +119,14 @@ bool test_d(int z, bit64_t a, bit64_t b, bit64_t c, bit64_t d) {
 bool test(int i1, int i2) {
     bit64_t a = deBruijn[i1];
     bit64_t b = deBruijn[i2];
-    return test_d(16, a, b);
+    return test_d(18, a, b);
 }
 
 bool test(int i1, int i2, int i3) {
     bit64_t a = deBruijn[i1];
     bit64_t b = deBruijn[i2];
     bit64_t c = deBruijn[i3];
-    return test_d(22, a, b, c);
+    return test_d(24, a, b, c);
 }
 
 bool test(int i1, int i2, int i3, int i4) {
@@ -134,7 +134,7 @@ bool test(int i1, int i2, int i3, int i4) {
     bit64_t b = deBruijn[i2];
     bit64_t c = deBruijn[i3];
     bit64_t d = deBruijn[i4];
-    return test_d(26, a, b, c, d);
+    return test_d(32, a, b, c, d);
 }
 
 void show(int i) {
@@ -253,7 +253,7 @@ void findCombi() {
 
 void found(bit64_t a) {
     if (!test_d(14, a, a)) { /*cout <<  '2';*/ return; }
-    if (!test_d(19, a, a, a)) {  /*cout <<  '3';*/ return; }
+    if (!test_d(18, a, a, a)) {  /*cout <<  '3';*/ return; }
     if (!test_d(23, a, a, a, a)) {  /*cout <<  '4';*/ return; }
     //deBruijn.push_back(a);
     cout /*<< right << setfill(' ') << setw(8) << dec << deBruijn.size()*/ << " 0x" << setfill('0') << hex << setw(16) << a << "ull,\n" << std::flush;
@@ -285,9 +285,9 @@ void findDeBruijn(U64 seq, int depth, int vtx, int nz) {
 
 void run() {
     for (int i=0; i < 64; i++) { pow2[i] = (U64)1 << i; }
-    findDeBruijn(0, 64-6, 0, 6);
+    //findDeBruijn(0, 64-6, 0, 6);
     //cout << dec << deBruijn.size() << endl;
-    //findCombi();
+    findCombi();
 }
 
 int main(int, const char** ) {
