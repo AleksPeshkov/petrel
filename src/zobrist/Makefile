@@ -3,8 +3,8 @@
 TARGET = zobrist
 
 srcdir ?= .
-debugdir = ../debug
-releasedir = ../release
+debugdir = ../../debug
+releasedir = ../../release
 
 ifeq ($(debug),yes)
 	builddir ?= $(debugdir)
@@ -34,7 +34,12 @@ SOURCES := $(wildcard $(srcdir)/*.cpp)
 OBJECTS := $(patsubst $(srcdir)/%.cpp, $(builddir)/%.o, $(SOURCES))
 DEPS := $(patsubst %.o, %.d, $(OBJECTS))
 
--include $(DEPS)
+.PHONY: all clean
+
+all: $(builddir)/$(TARGET)
+
+clean:
+	$(RM) -r *.o *.gch *.d $(debugdir) $(releasedir)
 
 $(builddir)/$(TARGET): $(PRECOMP) $(OBJECTS)
 	$(CXX) -o $@ $(LDFLAGS) $(OBJECTS)
@@ -45,9 +50,4 @@ $(builddir)/%.o: $(srcdir)/%.cpp | $(builddir)
 $(builddir):
 	mkdir -p $@
 
-.PHONY: all clean
-
-all: $(builddir)/$(TARGET)
-
-clean:
-	$(RM) -r *.o *.gch *.d $(debugdir) $(releasedir)
+-include $(DEPS)

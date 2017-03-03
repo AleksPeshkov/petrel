@@ -29,7 +29,7 @@ constexpr bit64_t o(bit64_t n) { return __builtin_bswap64(n); } //__builtin_bswa
 #ifdef _INCLUDE
     vector<bit64_t> deBruijn;
 #else
-#include "DeBruijn.inc"
+#include "zobrist.inc"
 #endif
 
 typedef bit64_t U64;
