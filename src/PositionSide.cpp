@@ -46,7 +46,7 @@ void PositionSide::swap(PositionSide& MY, PositionSide& OP) {
     swap(MY.squares, OP.squares);
     swap(MY.piecesBb, OP.piecesBb);
     swap(MY.pawnsBb, OP.pawnsBb);
-    swap(MY.occupiedBb, OP.occupiedBb);
+    /* swap(MY.occupiedBb, OP.occupiedBb); // not needed */
     swap(MY.evaluation, OP.evaluation);
     swap(MY.opKing, OP.opKing);
 }
@@ -225,13 +225,13 @@ void PositionSide::setOpKing(Square king) {
     }
 }
 
-void PositionSide::setSliderAttacks(PiMask affectedSliders, Bb occupied) {
+void PositionSide::updateSliderAttacks(PiMask affectedSliders) {
     assert ((traits.checkers() & types.sliders()).none());
 
-    affectedSliders &= types.sliders();
-    if (affectedSliders.none()) { return; }
+    //TRICK: attacks calculated without opponent's king for implicit out of check king moves generation
+    AttackBb blockers{ occupiedBb - opKing };
 
-    AttackBb blockers{ occupied };
+    assert (affectedSliders.any());
     for (Pi pi : affectedSliders) {
         Bb attack = blockers.attack(SliderType{typeOf(pi)}, squareOf(pi));
         attacks.set(pi, attack);

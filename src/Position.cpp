@@ -147,20 +147,27 @@ void Position::playCastling(Pi rook, Square rookFrom, Square kingFrom) {
 }
 
 template <Side::_t My>
-void Position::updateSliderAttacks(PiMask affected) {
+void Position::updateSliderAttacks(PiMask myAffected) {
     constexpr Side Op{~My};
 
     PositionSide::syncOccupied(MY, OP);
-    MY.setSliderAttacks(affected);
+
+    myAffected &= MY.sliders();
+    if (myAffected.any()) {
+        MY.updateSliderAttacks(myAffected);
+    }
 }
 
 template <Side::_t My>
 void Position::updateSliderAttacks(PiMask myAffected, PiMask opAffected) {
     constexpr Side Op{~My};
 
-    PositionSide::syncOccupied(MY, OP);
-    MY.setSliderAttacks(myAffected);
-    OP.setSliderAttacks(opAffected);
+    updateSliderAttacks<My>(myAffected);
+
+    opAffected &= OP.sliders();
+    if (opAffected.any()) {
+        OP.updateSliderAttacks(opAffected);
+    }
 }
 
 template <Side::_t My>
