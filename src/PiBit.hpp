@@ -36,16 +36,16 @@ public:
 
     PiMask anyOf(index_type _Bit) const {
         _t mask = singleVector(_Bit);
-        return PiMask(mask, this->v & mask);
+        return PiMask::equals(mask, this->v & mask);
     }
 
     PiMask anyOf(element_type bitmask) const {
         _t mask = ::vectorOfAll[bitmask];
-        return PiMask::negate(PiMask(this->v & mask, _t{0,0}));
+        return PiMask::negate(PiMask::equals(this->v & mask, _t{0,0}));
     }
 
     PiMask notEmpty() const {
-        return PiMask::negate(PiMask(this->v, _t{0,0}));
+        return PiMask::negate(PiMask::equals(this->v, _t{0,0}));
     }
 
     void clear(index_type _Bit) {

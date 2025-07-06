@@ -30,7 +30,7 @@ struct PiRank : PiBit<PiRank, File> {
 
     PiMask operator [] (File file) const {
         _t file_vector = ::vectorOfAll[BitRank{file}];
-        return PiMask(file_vector, this->v & file_vector);
+        return PiMask::equals(file_vector, this->v & file_vector);
     }
 
 };

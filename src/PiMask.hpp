@@ -36,11 +36,11 @@ public:
 
     constexpr PiMask () : v{0,0} {}
     constexpr PiMask (Pi pi) : v( ::piSingle[pi] ) {}
-    PiMask (_t a, _t b) : v( _mm_cmpeq_epi8(a, b) ) {}
 
     static PiMask all() { return PiMask{ ::vectorOfAll[0xff] }; }
+    static PiMask equals(_t a, _t b) { return PiMask { _mm_cmpeq_epi8(a, b) }; }
     static PiMask cmpgt(_t a, _t b) { return PiMask { _mm_cmpgt_epi8(a, b) }; }
-    static PiMask negate(_t a) { return PiMask(a, ::vectorOfAll[0]); }
+    static PiMask negate(_t a) { return PiMask::equals(a, _t{0,0}); }
 
     operator PieceSet() const {
         assertValid();
@@ -52,8 +52,13 @@ public:
     bool isSingleton() const { return PieceSet(*this).isSingleton(); }
 
     Pi index() const { return PieceSet(*this).index(); }
-    Pi smallestOne() const { return PieceSet(*this).smallestOne(); }
-    Pi largestOne() const { return PieceSet(*this).largestOne(); }
+
+    // most valuable pieces are smallest bits
+    Pi most() const { return PieceSet(*this).smallestOne(); }
+
+    // most valuable pieces are largest bits
+    Pi least() const { return PieceSet(*this).largestOne(); }
+
     Pi seekVacant() const { return PieceSet(*this).seekVacant(); }
 
     index_t count() const { return PieceSet(*this).count(); }

@@ -37,8 +37,7 @@ public:
     }
     {}
 
-    constexpr const _t& operator[] (unsigned i) const { assert (i < ByteIndex::Size); return v[i].i128; }
-    constexpr const _t& operator[] (signed i) const { return (*this)[static_cast<unsigned>(i)]; }
+    constexpr const _t& operator[] (u8_t i) const { return v[i].i128; }
     constexpr const _t& operator[] (BitRank br) const { return v[static_cast<BitRank::_t>(br)].i128; }
     constexpr const _t& operator[] (Pi pi) const { return v[pi].i128; }
 

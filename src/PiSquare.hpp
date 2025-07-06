@@ -12,7 +12,7 @@ class PiSquare : protected PiVector {
     bool isEmpty(Pi pi) const { return PiVector::get(pi) == EmptySquare; }
     Square get(Pi pi) const { return static_cast<Square::_t>(PiVector::get(pi)); }
 
-    PiMask piecesOn(Square sq) const { return PiMask(v, ::vectorOfAll[sq]); }
+    PiMask piecesOn(Square sq) const { return PiMask::equals(v, ::vectorOfAll[sq]); }
     bool none(Square sq) { return piecesOn(sq).none(); }
 
 #ifdef NDEBUG
@@ -28,7 +28,10 @@ public:
     constexpr PiSquare () : PiVector(::vectorOfAll[EmptySquare]) {}
 
     PiMask pieces() const { return PiMask::cmpgt(v, ::vectorOfAll[EmptySquare]); }
-    PiMask piecesOn(Rank rank) const { return PiMask( v & ::vectorOfAll[0xff ^ File::Mask], ::vectorOfAll[rank << 3]); }
+    PiMask piecesOn(Rank rank) const { return PiMask::equals(
+        v & ::vectorOfAll[0xff ^ File::Mask],
+        ::vectorOfAll[static_cast<Square::_t>(rank << Square::RankShift)]);
+    }
 
     Square squareOf(Pi pi) const { assertValid(pi); return get(pi); }
     bool has(Square sq) const { return piecesOn(sq).any(); }
