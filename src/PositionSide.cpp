@@ -154,10 +154,10 @@ void PositionSide::promote(Pi pi, Square from, PromoType ty, Square to) {
         setLeaperAttack(pi, Knight, to);
     }
     else {
-        setPinner(pi, static_cast<PieceType>(ty), to);
+        setPinner(pi, PieceType{ty}, to);
     }
 
-    assertValid(pi, static_cast<PieceType>(ty), to);
+    assertValid(pi, PieceType{ty}, to);
 }
 
 void PositionSide::updateMovedKing(Square to) {
@@ -233,7 +233,7 @@ void PositionSide::setSliderAttacks(PiMask affectedSliders, Bb occupied) {
 
     AttackBb blockers{ occupied };
     for (Pi pi : affectedSliders) {
-        Bb attack = blockers.attack(static_cast<SliderType>(typeOf(pi)), squareOf(pi));
+        Bb attack = blockers.attack(SliderType{typeOf(pi)}, squareOf(pi));
         attacks.set(pi, attack);
         if (attack.has(opKing)) {
             traits.setChecker(pi);

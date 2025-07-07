@@ -20,18 +20,22 @@ struct Square : Index<64, square_t, Square> {
     enum { RankShift = 3, RankMask = (Rank::Mask << RankShift) };
 
     using Index::Index;
-    constexpr Square () = default;
+
+protected:
+    using Index::v;
+
+public:
     constexpr Square (File file, Rank rank) : Index{static_cast<_t>(file + (rank << RankShift))} {}
 
-    constexpr explicit operator File() const { return static_cast<File::_t>(this->v & File::Mask); }
-    constexpr explicit operator Rank() const { return static_cast<Rank::_t>(static_cast<unsigned>(this->v) >> RankShift); }
+    constexpr explicit operator File() const { return static_cast<File::_t>(v & File::Mask); }
+    constexpr explicit operator Rank() const { return static_cast<Rank::_t>(static_cast<unsigned>(v) >> RankShift); }
 
     /// flip side of the board
-    Square& flip() { this->v = static_cast<_t>(this->v ^ RankMask); return *this; }
-    constexpr Square operator ~ () const { return static_cast<_t>(this->v ^ RankMask); }
+    Square& flip() { v = static_cast<_t>(v ^ RankMask); return *this; }
+    constexpr Square operator ~ () const { return static_cast<_t>(v ^ RankMask); }
 
     /// move pawn forward
-    constexpr Square rankForward() const { return static_cast<_t>(this->v + A8 - A7); }
+    constexpr Square rankForward() const { return static_cast<_t>(v + A8 - A7); }
 
     constexpr bool on(Rank rank) const { return Rank{*this} == rank; }
     constexpr bool on(File file) const { return File{*this} == file; }
@@ -42,16 +46,6 @@ struct Square : Index<64, square_t, Square> {
     constexpr Bb diagonal() const;
     constexpr Bb antidiag() const;
     constexpr Bb operator() (signed fileOffset, signed rankOffset) const;
-
-    // https://www.chessprogramming.org/0x88
-    constexpr bool isValidOffset(signed f, signed r) const {
-        return ((static_cast<signed>(this->v + (this->v & 070)) + f + 16*r) & 0x88) == 0;
-    }
-
-    constexpr Square offset(signed f, signed r) const {
-        assert (isValidOffset(f, r));
-        return static_cast<_t>(static_cast<signed>(this->v) + f + (r << RankShift));
-    }
 
     friend io::ostream& operator << (io::ostream& out, Square sq) { return out << File(sq) << Rank(sq); }
 

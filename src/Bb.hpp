@@ -32,7 +32,7 @@ public:
     constexpr explicit Bb (Rank::_t r) : Bb{BB(0xff) << 8*r} {}
 
     //bidirectional signed shift
-    constexpr Bb (_t bb, signed offset) : Bb( (offset >= 0) ? (bb << offset) : (bb >> -offset) ) {}
+    constexpr Bb (_t bb, signed offset) : Bb{ offset >= 0 ? (bb << 8*offset) : (bb >> -8*offset) } {}
 
     constexpr explicit operator _t () const { return static_cast<_t>(this->v); }
 
@@ -62,10 +62,20 @@ public:
 
 };
 
-constexpr Bb Square::operator() (signed f, signed r) const { return isValidOffset(f, r) ? Bb{offset(f, r)} : Bb{}; }
 constexpr Bb Square::horizont() const { return Bb{Rank(*this)} - *this; }
 constexpr Bb Square::vertical() const { return Bb{File(*this)} - *this; }
-constexpr Bb Square::diagonal() const { return Bb{BB(0x0102040810204080), 8*(Rank(*this) + +File(*this) - 7)} - *this; }
-constexpr Bb Square::antidiag() const { return Bb{BB(0x8040201008040201), 8*(Rank(*this) - +File(*this))} - *this; }
+constexpr Bb Square::diagonal() const { return Bb{BB(0x0102040810204080), Rank(*this) + +File(*this) - 7} - *this; }
+constexpr Bb Square::antidiag() const { return Bb{BB(0x8040201008040201), Rank(*this) - +File(*this)} - *this; }
+
+// https://www.chessprogramming.org/0x88
+constexpr Bb Square::operator() (signed df, signed dr) const {
+    auto sq0x88 = this->v + (this->v & 070) + df + 16*dr;
+
+    if (sq0x88 & 0x88) {
+        return {}; //out of chess board
+    }
+
+    return Bb{ static_cast<square_t>((sq0x88 + (sq0x88 & 7)) >> 1) };
+}
 
 #endif
