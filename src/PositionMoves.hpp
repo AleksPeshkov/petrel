@@ -36,8 +36,6 @@ protected:
     void makeMoves();
     bool isLegalMove(Move move) const { return move && isLegalMove(move.from(), move.to()); }
     bool isLegalMove(Square from, Square to) const;
-    void clearMove(Move move);
-    void clearMove(Pi pi, Square to);
 
     bool inCheck() const;
 
