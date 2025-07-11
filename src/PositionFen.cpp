@@ -396,20 +396,15 @@ istream& PositionFen::readCastling(istream& in) {
 }
 
 bool PositionFen::setEnPassant(File file) {
-    if (MY.hasEnPassant() || OP.hasEnPassant()) { return false; }
-    if (MY.occupied().has(Square{file, Rank7})) { return false; }
-    if (MY.occupied().has(Square{file, Rank6})) { return false; }
+    Square to{file, Rank4};
+    if (!OP.has(to)) { return false; }
 
-    Square victimSquare(file, Rank4);
-    if (!OP.has(victimSquare)) { return false; }
-
-    Pi victim = OP.pieceOn(victimSquare);
+    Pi victim = OP.pieceOn(to);
     if (!OP.isPawn(victim)) { return false; }
 
-    //check against illegal en passant set field like "8/5bk1/8/2Pp4/8/1K6/8/8 w - d6"
-    if (OP.isPinned(OP.occupied() - victimSquare)) { return false; }
+    if (MY.occupied().has(~Square{file, Rank3})) { return false; }
 
-    setLegalEnPassant<Op>(victim, victimSquare);
+    setLegalEnPassant<Op>(victim, to);
     return true;
 }
 

@@ -171,30 +171,32 @@ void Position::updateSliderAttacks(PiMask myAffected, PiMask opAffected) {
 }
 
 template <Side::_t My>
-void Position::setLegalEnPassant(Pi pi, Square to) {
+void Position::setLegalEnPassant(Pi victim, Square to) {
     constexpr Side Op{~My};
+
+    assert (MY.isPawn(victim));
+    assert (MY.squareOf(victim).is(to));
+    assert (to.on(Rank4));
 
     assert (!MY.hasEnPassant());
     assert (!OP.hasEnPassant());
-    assert (MY.squareOf(pi) == to);
-    assert (to.on(Rank4));
 
-    Square from(File(to), Rank2);
-    Square ep(File(to), Rank3);
+    Square ep{File(to), Rank3};
 
+    // check if there are any pawns to capture ep victim
     Bb killers = ~OP.pawnsSquares() & ::attacksFrom(Pawn, ep);
     if (killers.none()) { return; }
 
-    //discovered check
-    if (MY.isPinned(MY.occupied())) { assert ((MY.checkers() % pi).any()); return; }
-    assert ((MY.checkers() % pi).none());
+    // discovered check
+    if (MY.isPinned(MY.occupied())) { assert ((MY.checkers() % victim).any()); return; }
+    assert ((MY.checkers() % victim).none());
 
-    for (Square killer : killers) {
-        assert (killer.on(Rank4));
+    for (Square from : killers) {
+        assert (from.on(Rank4));
 
-        if (!MY.isPinned(MY.occupied() - killer + ep - to)) {
-            MY.setEnPassantVictim(pi);
-            OP.setEnPassantKiller(OP.pieceOn(~killer));
+        if (!MY.isPinned(MY.occupied() - from + ep - to)) {
+            MY.setEnPassantVictim(victim);
+            OP.setEnPassantKiller(OP.pieceOn(~from));
         }
     }
 }
