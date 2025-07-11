@@ -1,35 +1,33 @@
 #ifndef NODE_HPP
 #define NODE_HPP
 
-#include "Score.hpp"
 #include "PositionMoves.hpp"
 
-enum class NodeControl : bool {
-    Continue = false,
-    Abort = true
+enum class NodeControl {
+    Continue,
+    Abort,
+    BetaCutoff,
 };
 
-#define RETURN_IF_ABORT(control) { NodeControl c{control}; if (c != NodeControl::Continue) { return c; } } ((void)0)
+#define RETURN_IF_ABORT(visit) { if (visit == NodeControl::Abort) { return NodeControl::Abort; } } ((void)0)
+#define BREAK_IF_ABORT(visit) { if (visit == NodeControl::Abort) { break; } } ((void)0)
+#define CUTOFF(visit) { NodeControl result = visit; \
+    if (result == NodeControl::Abort) { return NodeControl::Abort; } \
+    if (result == NodeControl::BetaCutoff) { return NodeControl::BetaCutoff; }} ((void)0)
 
 class SearchControl;
 
 class Node : public PositionMoves {
 protected:
     Node& parent; //virtual
-
-public:
     SearchControl& control;
-    ply_t draft; //remaining distance to leaves
 
-protected:
-    Node (Node& n, ply_t r = 1);
-    Node (const PositionMoves& p, SearchControl& c, ply_t d) : PositionMoves{p}, parent{*this}, control{c}, draft{d} {}
+    Node (Node& n) : PositionMoves{}, parent{n}, control{n.control} {}
+    Node (const PositionMoves& p, SearchControl& c) : PositionMoves{p}, parent{*this}, control{c} {}
 
 public:
     virtual ~Node() = default;
-    virtual NodeControl beforeVisit();
-    virtual NodeControl visit(Square, Square) { return NodeControl::Continue; }
-    virtual NodeControl visitChildren();
+    virtual NodeControl visitChildren() = 0;
 };
 
 #endif

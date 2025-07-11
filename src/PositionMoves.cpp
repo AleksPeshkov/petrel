@@ -195,6 +195,22 @@ void PositionMoves::generateMoves() {
     _staticEval = (_movesCount == 0) ? Score::None : evaluate();
 }
 
+void PositionMoves::setMoves(const PiBb& m, index_t n) {
+    moves = m; //copy matrix
+    _movesCount = n;
+    assert (moves.count() == n);
+}
+
+void PositionMoves::clearMove(Move move) {
+    isLegalMove(move);
+    clearMove(MY.pieceAt(move.from()), move.to());
+}
+
+void PositionMoves::clearMove(Pi pi, Square to) {
+    moves.clear(pi, to);
+    --_movesCount;
+}
+
 bool PositionMoves::isLegalMove(Square from, Square to) const {
     return MY.has(from) && moves.has(MY.pieceAt(from), to);
 }
@@ -208,6 +224,7 @@ void PositionMoves::makeMove(Square from, Square to) {
 }
 
 void PositionMoves::makeMove(PositionMoves& parent, Square from, Square to) {
+    parent.clearMove(parent[My].pieceAt(from), to);
     Position::makeMove(parent, from, to);
     generateMoves();
     // assert (zobrist == Zobrist{0} || zobrist == generateZobrist()); // true, but slow to compute

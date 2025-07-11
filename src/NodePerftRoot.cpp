@@ -1,18 +1,18 @@
 #include "NodePerftRoot.hpp"
 #include "NodePerftTT.hpp"
-#include "NodePerftLeaf.hpp"
+#include "NodePerft.hpp"
 #include "Move.hpp"
 #include "SearchControl.hpp"
 #include "SearchLimit.hpp"
 
-NodeControl NodePerftRoot::visitChildren() {
+NodeControl NodePerftRoot::visitRoot() {
     switch (draft) {
         case 1:
             perft = movesCount();
             break;
 
         case 2:
-            RETURN_IF_ABORT ( static_cast<NodePerftLeaf>(*this).visitChildren() );
+            RETURN_IF_ABORT ( static_cast<NodePerft>(*this).visitChildren() );
             break;
 
         default:
@@ -25,18 +25,20 @@ NodeControl NodePerftRoot::visitChildren() {
 }
 
 NodeControl NodePerftRootDepth::visitChildren() {
-    NodePerftRoot::visitChildren();
+    NodePerftRoot::visitRoot();
 
     control.perft_finish();
     return NodeControl::Continue;
 }
 
 NodeControl NodePerftRootIterative::visitChildren() {
-    for (draft = 1; draft <= MaxDepth; ++draft) {
-        auto c = NodePerftRoot(*this, control, draft).visitChildren();
-        if (c != NodeControl::Continue) { break; }
+    auto rootMoves = cloneMoves();
+    auto rootMovesCount = movesCount();
 
+    for (draft = 1; draft <= MaxDepth; ++draft) {
         control.newIteration();
+        setMoves(rootMoves, rootMovesCount);
+        BREAK_IF_ABORT (( NodePerftRoot(*this, control, draft).visitRoot() ));
     }
 
     control.perft_finish();
@@ -67,7 +69,7 @@ NodeControl NodePerftDivide::visit(Square from, Square to) {
 
                 switch (draft) {
                     case 2:
-                        RETURN_IF_ABORT ( static_cast<NodePerftLeaf>(*this).visitChildren() );
+                        RETURN_IF_ABORT ( static_cast<NodePerft>(*this).visitChildren() );
                         break;
 
                     default:
@@ -87,19 +89,14 @@ NodeControl NodePerftDivide::visit(Square from, Square to) {
     return NodeControl::Continue;
 }
 
-NodeControl NodePerftDivide::visitChildren() {
+NodeControl NodePerftDivide::divideChildren() {
     perft = 0;
-
-    auto _moves = cloneMoves();
-    auto child = NodePerftDivide(*this);
+    NodePerftDivide child{*this};
 
     for (Pi pi : MY.pieces()) {
         Square from = MY.squareOf(pi);
 
-        for (Square to : _moves[pi]) {
-            RETURN_IF_ABORT (beforeVisit());
-            _moves.clear(pi, to);
-
+        for (Square to : moves[pi]) {
             RETURN_IF_ABORT (child.visit(from, to));
         }
     }
@@ -109,18 +106,21 @@ NodeControl NodePerftDivide::visitChildren() {
 }
 
 NodeControl NodePerftDivideDepth::visitChildren() {
-    NodePerftDivide::visitChildren();
+    control.newIteration();
+    NodePerftDivide::divideChildren();
 
     control.perft_finish();
     return NodeControl::Continue;
 }
 
 NodeControl NodePerftDivideIterative::visitChildren() {
-    for (draft = 1; draft <= MaxDepth; ++draft) {
-        auto c = NodePerftDivide(*this, control, draft).visitChildren();
-        if (c != NodeControl::Continue) { break; }
+    auto rootMoves = cloneMoves();
+    auto rootMovesCount = movesCount();
 
+    for (draft = 1; draft <= MaxDepth; ++draft) {
         control.newIteration();
+        setMoves(rootMoves, rootMovesCount);
+        BREAK_IF_ABORT (( NodePerftDivide(*this, control, draft).divideChildren() ));
     }
 
     control.perft_finish();

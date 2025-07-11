@@ -20,10 +20,8 @@ class Position {
     template <Side::_t> void playCastling(Pi, Square, Square);
     template <Side::_t> void makeMove(Square, Square);
 
-protected:
-    constexpr PositionSide& operator[] (Side side) { return positionSide[side]; }
-
 public:
+    constexpr PositionSide& operator[] (Side side) { return positionSide[side]; }
     constexpr const PositionSide& operator[] (Side side) const { return positionSide[side]; }
 
     Score evaluate() const { return PositionSide::evaluate(MY, OP); }
