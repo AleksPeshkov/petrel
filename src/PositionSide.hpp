@@ -58,6 +58,9 @@ public:
     PiMask pawns() const { return types.piecesOfType(Pawn); }
     bool isPawn(Pi pi) const { assertOk(pi); return types.isPawn(pi); }
 
+    PiMask goodKillers(PieceType ty) const { return types.goodKillers(ty); }
+    PiMask notBadKillers(PieceType ty) const { return types.notBadKillers(ty); }
+
     PiMask castlingRooks() const { return traits.castlingRooks(); }
     bool isCastling(Pi pi) const { assertOk(pi); return traits.isCastling(pi); }
     bool isCastling(Square sq) const { return isCastling(pieceAt(sq)); }
