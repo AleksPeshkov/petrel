@@ -192,15 +192,6 @@ void PositionMoves::makeMoves() {
     generateMoves<My>();
 }
 
-void PositionMoves::clearMove(Move move) {
-    isLegalMove(move);
-    clearMove(MY.pieceAt(move.from()), move.to());
-}
-
-void PositionMoves::clearMove(Pi pi, Square to) {
-    moves.clear(pi, to);
-}
-
 bool PositionMoves::isLegalMove(Square from, Square to) const {
     return MY.has(from) && moves.has(MY.pieceAt(from), to);
 }
@@ -212,7 +203,7 @@ void PositionMoves::makeMove(Square from, Square to) {
 }
 
 void PositionMoves::makeMove(PositionMoves& parent, Square from, Square to) {
-    parent.clearMove(parent[My].pieceAt(from), to);
+    parent.moves.clear(parent[My].pieceAt(from), to);
     Position::makeMove(parent, from, to);
     makeMoves();
 }

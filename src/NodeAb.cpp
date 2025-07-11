@@ -1,43 +1,51 @@
 #include "NodeAb.hpp"
 #include "out.hpp"
+#include "AttacksFrom.hpp"
 #include "SearchControl.hpp"
 #include "PositionFen.hpp"
 
 NodeControl NodeAb::visit(Move move) {
-    RETURN_IF_ABORT (control.countNode());
-
-    score = NoScore;
     alpha = -parent.beta;
     beta = -parent.alpha;
+    assert (MinusInfinity <= alpha && alpha < beta && beta <= PlusInfinity);
 
+    // mate-distance pruning
+    alpha = std::max(alpha, Score::checkmated(ply));
+    if (alpha >= beta) { return NodeControl::BetaCutoff; }
+
+    score = NoScore;
     draft = parent.draft > 0 ? parent.draft-1 : 0;
+
+    RETURN_IF_ABORT (control.countNode());
+    parent.currentMove = move;
     makeMove(parent, move);
+    control.pvMoves.set(ply, Move{});
+    ++parent.movesMade;
 
     bool inCheck = NodeAb::inCheck();
 
-    if (moves.popcount() == 0) {
-        //checkmated or stalemated
-        score = inCheck ? Score::checkmated(ply) : Score{DrawScore};
-        return parent.negamax(score, move);
-    }
-
     if (ply == MaxPly) {
         // no room to search deeper
-        score = staticEval();
-        return parent.negamax(score, move);
+        return parent.negamax(staticEval());
     }
 
     if (draft == 0 && !inCheck) {
-        score = staticEval();
+        RETURN_IF_ABORT (quiescence());
     }
     else {
         RETURN_IF_ABORT (visitChildren());
+        if (movesMade == 0) {
+            //checkmated or stalemated
+            return parent.negamax(inCheck ? Score::checkmated(ply) : Score{DrawScore});
+        }
     }
 
-    return parent.negamax(score, move);
+    return parent.negamax(score);
 }
 
-NodeControl NodeAb::negamax(Score childScore, Move move) {
+NodeControl NodeAb::negamax(Score childScore) {
+    assert (MinusInfinity <= alpha && alpha < beta && beta <= PlusInfinity);
+
     if (score < -childScore) {
         score = -childScore;
 
@@ -49,13 +57,14 @@ NodeControl NodeAb::negamax(Score childScore, Move move) {
         if (alpha < score) {
             alpha = score;
 
-            control.pvMoves.set(ply, createFullMove(move));
+            control.pvMoves.set(ply, createFullMove(currentMove));
             if (ply == 0) {
                 control.infoNewPv(draft, score);
             }
         }
     }
 
+    assert (MinusInfinity <= alpha && alpha < beta && beta <= PlusInfinity);
     return NodeControl::Continue;
 }
 
@@ -64,11 +73,11 @@ NodeControl NodeAb::visitChildren() {
 
     NodeAb child{*this};
 
-    const Move& move = control.pvMoves[ply];
-    if (isLegalMove(move)) {
-        CUTOFF (child.visit(move));
-    }
+    CUTOFF (child.visitIfLegal(control.pvMoves[ply]));
 
+    CUTOFF (goodCaptures(child));
+
+    // the rest of the remaining unsorted moves
     for (Pi pi : MY.pieces()) {
         Square from = MY.squareOf(pi);
 
@@ -80,9 +89,77 @@ NodeControl NodeAb::visitChildren() {
     return NodeControl::Continue;
 }
 
-Score NodeAb::staticEval()
-{
-    return Position::evaluate().clamp();
+NodeControl NodeAb::quiescence() {
+    assert (MinusInfinity <= alpha && alpha < beta && beta <= PlusInfinity);
+    assert (!inCheck());
+
+    //stand pat
+    score = staticEval();
+    if (beta <= score) {
+        return NodeControl::BetaCutoff;
+    }
+    if (alpha < score) {
+        alpha = score;
+    }
+
+    NodeAb child{*this};
+    CUTOFF (goodCaptures(child));
+
+    return NodeControl::Continue;
+}
+
+NodeControl NodeAb::goodCaptures(NodeAb& child) {
+    // MVV (most valuable victim)
+    for (Pi victim : OP.pieces() % PiMask{TheKing}) {
+        Square to = ~OP.squareOf(victim);
+        PiMask attackers = moves[to];
+        if (attackers.none()) { continue; }
+
+        bool isVictimProtected = isOpAttacks(to);
+        if (!isVictimProtected) {
+            assert (OP.attackersTo(~to).none());
+        }
+        else {
+            assert (OP.attackersTo(~to).any());
+            // BLIND static exchange evaluation
+            // filter out more valuable attackers than the victim
+            attackers &= MY.goodKillers(OP.typeOf(victim));
+        }
+
+        //LVA (least valuable attacker)
+        while (attackers.any()) {
+            Pi attacker = attackers.least(); attackers -= attacker;
+
+            Square from = MY.squareOf(attacker);
+
+            if (MY.isPromotable(attacker) && !to.on(Rank8)) {
+                // skip underpromotion pseudo moves
+                continue;
+            }
+
+            CUTOFF (child.visit(Move{from, to}));
+        }
+    }
+
+    // non capture promotions
+    for (Pi pi : MY.promotables()) {
+        for (Square to : moves[pi] & Bb{Rank8}) {
+            // skip move to the defended square
+            if (isOpAttacks(to)) { continue; }
+
+            Square from = MY.squareOf(pi);
+            // to the queen
+            CUTOFF( child.visit({from, to}) );
+
+            // underpromotion to the knight only if it makes check
+            if (attacksFrom(Knight, ~OP.squareOf(TheKing)).has(to)) {
+                Square toKnight{ File{to}, ::rankOf(Knight) };
+                CUTOFF( child.visit({from, toKnight}) );
+            }
+        }
+    }
+
+    return NodeControl::Continue;
 }
 
 Move NodeAb::createFullMove(Square from, Square to) const {
@@ -91,4 +168,9 @@ Move NodeAb::createFullMove(Square from, Square to) const {
 
 Color NodeAb::colorToMove() const {
     return control.position.getColorToMove(ply);
+}
+
+Score NodeAb::staticEval()
+{
+    return Position::evaluate().clamp();
 }

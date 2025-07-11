@@ -14,7 +14,6 @@ void SearchControl::newGame() {
 void SearchControl::newSearch() {
     tt.newSearch();
     pvMoves.clear();
-    tt.counter ={0,0,0};
     lastInfoNodes = 0;
     fromSearchStart = {};
 }
@@ -154,11 +153,11 @@ ostream& SearchControl::nps(ostream& o, node_count_t nodes) const {
         }
     }
 
-    if (tt.counter.reads > 0) {
-        o << " hwrites " << tt.counter.writes;
-        o << " hhits " << tt.counter.hits;
-        o << " hreads " << tt.counter.reads;
-        o << " hhitratio " << permil(tt.counter.hits, tt.counter.reads);
+    if (tt.reads > 0) {
+        o << " hwrites " << tt.writes;
+        o << " hhits " << tt.hits;
+        o << " hreads " << tt.reads;
+        o << " hhitratio " << permil(tt.hits, tt.reads);
     }
     return o;
 }

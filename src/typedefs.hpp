@@ -17,6 +17,8 @@ struct Ply : Index<64> {
 };
 constexpr Ply::_t MaxPly = Ply::Size - 1; // Ply is limited to [0 .. MaxPly]
 
+typedef u8_t MovesNumber; // number of (legal) moves in the position
+
 typedef u64_t node_count_t;
 enum : node_count_t {
     NodeCountNone = std::numeric_limits<node_count_t>::max(),

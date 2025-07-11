@@ -17,7 +17,6 @@ public:
     }
 
     void set(Ply ply, Move move) {
-        assert (move.isExternal());
         pv[ply][0] = move;
         Move* target = &pv[ply][1];
         Move* source = &pv[ply+1][0];
