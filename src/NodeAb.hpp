@@ -15,19 +15,24 @@ protected:
     Score alpha = MinusInfinity;
     Score beta = PlusInfinity;
 
+    Move currentMove = {};
+
+    NodeAb (NodeAb& n) : Node{n.control}, parent{n}, ply{n.ply + 1} {}
     NodeAb (const PositionMoves& p, SearchControl& c) : Node{p, c}, parent{*this} {}
 
-    Score staticEval();
+    NodeControl visitIfLegal(Move move) { if (parent.isLegalMove(move)) { return visit(move); } return NodeControl::Continue; }
     NodeControl visit(Move);
-    NodeControl negamax(Score, Move);
+    NodeControl negamax(Score);
+
+    NodeControl visitChildren() override;
+    NodeControl quiescence();
+
+    NodeControl goodCaptures(NodeAb&);
 
     Move createFullMove(Move move) const { return createFullMove(move.from(), move.to()); }
     Move createFullMove(Square from, Square to) const;
 
-public:
-    NodeAb (NodeAb& n) : Node{n.control}, parent{n}, ply{n.ply + 1} {}
-    NodeControl visitChildren() override;
-
+    Score staticEval();
 };
 
 #endif
