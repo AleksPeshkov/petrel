@@ -1,14 +1,14 @@
 #ifndef NODE_PERFT_ROOT_HPP
 #define NODE_PERFT_ROOT_HPP
 
-#include "NodePerft.hpp"
+#include "NodePerftTT.hpp"
 #include "SearchLimit.hpp"
 #include "SearchControl.hpp"
 
-class NodePerftRoot : public NodePerft {
+class NodePerftRoot : public NodePerftTT {
 public:
-    NodePerftRoot (const PositionMoves& p, SearchControl& c, ply_t d): NodePerft(p, c, d) {}
-    NodeControl visitChildren() override;
+    NodePerftRoot (const PositionMoves& p, SearchControl& c, ply_t d): NodePerftTT{p, c, d} {}
+    NodeControl visitRoot();
 };
 
 class NodePerftRootDepth : public NodePerftRoot {
@@ -27,7 +27,7 @@ class NodePerftDivide : public NodePerftRoot {
     index_t moveCount = 0;
 public:
     NodePerftDivide (const PositionMoves& p, SearchControl& c, ply_t d): NodePerftRoot(p, c, d) {}
-    NodeControl visitChildren() override;
+    NodeControl divideChildren();
     NodeControl visit(Square, Square) override;
 };
 

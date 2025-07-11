@@ -4,20 +4,11 @@
 #include "Node.hpp"
 
 class NodePerft : public Node {
-public:
-    node_count_t perft = 0;
-
 protected:
-    void updateParentPerft() {
-        assert (&parent != this);
-        auto& p = static_cast<NodePerft&>(parent);
-        p.perft += perft;
-        perft = 0;
-    }
-
+    using Node::Node;
+    virtual NodeControl visit(Square from, Square to);
 public:
-    NodePerft (NodePerft& n) : Node{n} {}
-    NodePerft (const PositionMoves& p, SearchControl& c, ply_t d) : Node(p, c, d) {}
+    NodeControl visitChildren() override;
 };
 
 #endif

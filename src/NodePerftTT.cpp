@@ -1,5 +1,4 @@
 #include "NodePerftTT.hpp"
-#include "NodePerftLeaf.hpp"
 #include "PerftTT.hpp"
 #include "SearchControl.hpp"
 
@@ -16,7 +15,7 @@ NodeControl NodePerftTT::visit(Square from, Square to) {
 
         switch (draft) {
             case 2:
-                RETURN_IF_ABORT ( static_cast<NodePerftLeaf>(*this).visitChildren() );
+                RETURN_IF_ABORT ( static_cast<NodePerft>(*this).visitChildren() );
                 break;
 
             default:

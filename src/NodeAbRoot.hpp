@@ -1,15 +1,12 @@
 #ifndef NODE_AB_ROOT_HPP
 #define NODE_AB_ROOT_HPP
 
-#include "NodeAbPv.hpp"
+#include "NodeAb.hpp"
 
 class SearchLimit;
 
-class NodeAbRoot : public NodeAbPv {
+class NodeAbRoot : public NodeAb {
     ply_t depthLimit;
-
-    NodeControl searchIteration();
-    NodeControl iterativeDeepening();
 
 public:
     NodeAbRoot (const SearchLimit&, SearchControl&);

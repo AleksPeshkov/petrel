@@ -1,32 +1,26 @@
 #include "NodeAbRoot.hpp"
-#include "NodeAbPv.hpp"
 #include "Move.hpp"
 #include "SearchControl.hpp"
 #include "SearchLimit.hpp"
 
 NodeAbRoot::NodeAbRoot (const SearchLimit& limit, SearchControl& searchControl):
-    NodeAbPv(limit.positionMoves, searchControl, 1), depthLimit(limit.depth ? limit.depth : MaxDepth)
+    NodeAb{limit.positionMoves, searchControl, 1}, depthLimit{limit.depth ? limit.depth : MaxDepth}
 {}
 
-NodeControl NodeAbRoot::searchIteration() {
-    RETURN_IF_ABORT ( NodeAbPv(*this).visitChildren() );
-    control.infoDepth(draft, bestScore);
-    return NodeControl::Continue;
-}
+NodeControl NodeAbRoot::visitChildren() {
+    auto rootMoves = cloneMoves();
+    auto rootMovesCount = movesCount();
 
-NodeControl NodeAbRoot::iterativeDeepening() {
     for (draft = 1; draft <= depthLimit; ++draft) {
-        bestScore = Score::None;
         control.newIteration();
-        RETURN_IF_ABORT ( searchIteration() );
+        setMoves(rootMoves, rootMovesCount);
+        score = Score::None;
+        alpha = Score::Minimum;
+        beta = Score::Maximum;
+        BREAK_IF_ABORT ( NodeAb::visitChildren() );
+        control.infoDepth(draft, score);;
     }
 
-    return NodeControl::Continue;
-}
-
-NodeControl NodeAbRoot::visitChildren() {
-    iterativeDeepening();
-
-    control.bestmove(bestScore);
+    control.bestmove(score);
     return NodeControl::Abort;
 }

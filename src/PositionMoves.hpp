@@ -2,18 +2,21 @@
 #define POSITION_MOVES_HPP
 
 #include "Position.hpp"
+#include "Move.hpp"
 #include "PiBb.hpp"
 #include "Zobrist.hpp"
 
 class PositionMoves : public Position {
+protected:
     PiBb moves; //generated moves from My side
+
+private:
     Bb attackedSquares; //squares attacked by all opponent pieces
 
     Zobrist zobrist{0};
     Score _staticEval = Score::None;
     index_t _movesCount = 0;
 
-private:
     //legal move generation helpers
     template <Side::_t> void excludePinnedMoves(PiMask);
     template <Side::_t> void correctCheckEvasionsByPawns(Bb, Square);
@@ -31,11 +34,15 @@ private:
 protected:
     void makeMove(Square, Square);
     void makeMove(PositionMoves& parent, Square, Square);
+    void makeMove(Move move) { return makeMove(move.from(), move.to()); }
+    void makeMove(PositionMoves& parent, Move move) { return makeMove(parent, move.from(), move.to()); }
 
     void generateMoves();
-
-    void clearMove(Pi pi, Square sq) { moves.clear(pi, sq); }
-    void setMoves(const PiBb& m, index_t n) { moves = m; _movesCount = n; assert (moves.count() == n);  }
+    bool isLegalMove(Move move) const { return move && isLegalMove(move.from(), move.to()); }
+    bool isLegalMove(Square from, Square to) const;
+    void clearMove(Move move);
+    void clearMove(Pi pi, Square to);
+    void setMoves(const PiBb& m, index_t n);
 
     void setZobrist(const PositionMoves& parent, Square from, Square to) { zobrist = parent.createZobrist(from, to); }
     void setZobrist() { zobrist = generateZobrist(); }
@@ -45,8 +52,6 @@ public:
     index_t movesCount() const { return _movesCount; }
     Score staticEval() const { return _staticEval; }
     PiBb cloneMoves() const { return PiBb{moves}; }
-
-    bool isLegalMove(Square from, Square to) const;
 };
 
 #endif

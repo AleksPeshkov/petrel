@@ -13,8 +13,10 @@ class SearchLimit;
 class UciSearchInfo;
 
 class SearchControl {
+public:
     UciSearchInfo& info; //virtual
 
+protected:
     NodeCounter nodeCounter;
     SearchThread searchThread;
 
@@ -23,10 +25,6 @@ class SearchControl {
 
     PvMoves pvMoves;
 
-public:
-    ply_t ply = 0; //distance to root of the current node
-
-private:
     SearchControl (const SearchControl&) = delete;
     SearchControl& operator = (const SearchControl&) = delete;
 
@@ -52,7 +50,8 @@ public:
     const PerftTT& tt() const { return transpositionTable; }
     PerftTT& tt() { return transpositionTable; }
 
-    void createPv(const Move&);
+    const Move* getPv(ply_t = 0) const;
+    void setPv(ply_t ply, const Move&);
 
     void readyok() const;
     void bestmove(Score) const;
@@ -64,13 +63,6 @@ public:
 
     NodeControl countNode();
 
-};
-
-class SearchControlPly {
-    ply_t& ply;
-public:
-    SearchControlPly (SearchControl& c) : ply{c.ply} { ++ply; }
-    ~SearchControlPly () { --ply; }
 };
 
 #endif
