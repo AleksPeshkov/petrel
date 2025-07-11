@@ -20,6 +20,8 @@ protected:
     Score staticEval();
     NodeControl visit(Move);
     NodeControl negamax(Score, Move);
+    NodeControl goodCaptures(NodeAb&);
+    NodeControl quiescence(Move);
 
     Move createFullMove(Move move) const { return createFullMove(move.from(), move.to()); }
     Move createFullMove(Square from, Square to) const;

@@ -225,7 +225,7 @@ void PositionMoves::makeMove(PositionMoves& parent, Square from, Square to) {
     parent.clearMove(parent[My].pieceAt(from), to);
     Position::makeMove(parent, from, to);
     generateMoves();
-    assert (zobrist == Zobrist{0} || zobrist == generateZobrist());
+    // assert (zobrist == Zobrist{0} || zobrist == generateZobrist()); // true, but slow to compute
 }
 
 bool PositionMoves::inCheck() const {

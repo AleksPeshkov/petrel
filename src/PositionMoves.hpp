@@ -48,6 +48,8 @@ protected:
     void setZobrist(const PositionMoves& parent, Square from, Square to) { zobrist = parent.createZobrist(from, to); }
     void setZobrist() { zobrist = generateZobrist(); }
 
+    bool isOpAttacks(Square sq) const { return attackedSquares.has(sq); }
+
     const Zobrist& getZobrist() const { return zobrist; }
     index_t movesCount() const { return _movesCount; }
     PiBb cloneMoves() const { return PiBb{moves}; }
