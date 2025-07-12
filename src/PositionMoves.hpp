@@ -29,8 +29,8 @@ private:
     Zobrist generateZobrist() const;
 
 protected:
-    void playMove(Square, Square);
-    void playMove(const Position&, Square, Square);
+    void makeMove(Square, Square);
+    void makeMove(PositionMoves& parent, Square, Square);
 
     void generateMoves();
 

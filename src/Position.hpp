@@ -12,7 +12,7 @@ class Position {
     template <Side::_t> void playKingMove(Square, Square);
     template <Side::_t> void playPawnMove(Pi, Square, Square);
     template <Side::_t> void playCastling(Pi, Square, Square);
-    template <Side::_t> void playMove(Square, Square);
+    template <Side::_t> void makeMove(Square, Square);
 
 protected:
     constexpr PositionSide& operator[] (Side side) { return positionSide[side]; }
@@ -22,8 +22,8 @@ public:
 
     Score evaluate() const { return PositionSide::evaluate((*this)[My], (*this)[Op]); }
 
-    void playMove(const Position&, Square, Square);
-    void playMove(Square, Square);
+    void makeMove(const Position&, Square, Square);
+    void makeMove(Square, Square);
 
     //initial position setup
     bool dropValid(Side, PieceType, Square);

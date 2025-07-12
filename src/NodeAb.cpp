@@ -4,7 +4,8 @@
 NodeControl NodeAb::visit(Square from, Square to) {
     auto& p = static_cast<NodeAb&>(parent);
 
-    playMove(p, from, to);
+    RETURN_IF_ABORT (control.countNode());
+    makeMove(p, from, to);
 
     if (movesCount() == 0 || draft == 0) {
         bestScore = staticEval();

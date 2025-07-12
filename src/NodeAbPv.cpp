@@ -5,7 +5,7 @@
 NodeControl NodeAbPv::visit(Square from, Square to) {
     auto& p = static_cast<NodeAbPv&>(parent);
 
-    playMove(p, from, to);
+    makeMove(p, from, to);
 
     if (movesCount() == 0) {
         //mated or stalemated

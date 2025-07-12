@@ -202,15 +202,16 @@ bool PositionMoves::isLegalMove(Square from, Square to) const {
     return MY.has(from) && moves.has(MY.pieceAt(from), to);
 }
 
-void PositionMoves::playMove(Square from, Square to) {
+// make irreversible move in this position itself
+void PositionMoves::makeMove(Square from, Square to) {
     setZobrist(*this, from, to);
-    Position::playMove(from, to);
+    Position::makeMove(from, to);
     generateMoves();
     // assert (zobrist == generateZobrist()); // true, but slow to compute
 }
 
-void PositionMoves::playMove(const Position& parent, Square from, Square to) {
-    Position::playMove(parent, from, to);
+void PositionMoves::makeMove(PositionMoves& parent, Square from, Square to) {
+    Position::makeMove(parent, from, to);
     generateMoves();
     // assert (zobrist == Zobrist{0} || zobrist == generateZobrist()); // true, but slow to compute
 }

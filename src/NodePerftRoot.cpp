@@ -50,7 +50,7 @@ NodeControl NodePerftDivide::visit(Square from, Square to) {
             break;
 
         case 1:
-            playMove(parent, from, to);
+            makeMove(parent, from, to);
             perft = movesCount();
             break;
 
@@ -63,7 +63,7 @@ NodeControl NodePerftDivide::visit(Square from, Square to) {
                 perft = n;
             }
             else {
-                playMove(parent, from, to);
+                makeMove(parent, from, to);
 
                 switch (draft) {
                     case 2:
@@ -81,8 +81,7 @@ NodeControl NodePerftDivide::visit(Square from, Square to) {
     }
 
     ++moveCount;
-    Move move{parent, from, to};
-    control.perft_currmove(moveCount, move, perft);
+    control.perft_currmove(moveCount, {parent, from, to}, perft);
 
     updateParentPerft();
     return NodeControl::Continue;

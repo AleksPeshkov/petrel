@@ -335,7 +335,7 @@ void PositionFen::playMoves(istream& in) {
             return;
         }
 
-        playMove(from, to);
+        makeMove(from, to);
         colorToMove.flip();
     }
 }

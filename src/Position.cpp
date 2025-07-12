@@ -5,30 +5,30 @@
 #define MY (*this)[My]
 #define OP (*this)[Op]
 
-void Position::playMove(Square from, Square to) {
+void Position::makeMove(Square from, Square to) {
     PositionSide::swap(MY, OP);
 
     //the position just swapped its sides, so we make the move for the Op
-    playMove<Op>(from, to);
+    makeMove<Op>(from, to);
 
     //king cannot be left in check
     assert (MY.checkers().none());
 }
 
-void Position::playMove(const Position& parent, Square from, Square to) {
+void Position::makeMove(const Position& parent, Square from, Square to) {
     assert (this != &parent);
     MY = parent[Op];
     OP = parent[My];
 
     //current position flipped its sides relative to parent, so we make the move inplace for the Op
-    playMove<Op>(from, to);
+    makeMove<Op>(from, to);
 
     //king cannot be left in check
     assert (MY.checkers().none());
 }
 
 template <Side::_t My>
-void Position::playMove(Square from, Square to) {
+void Position::makeMove(Square from, Square to) {
     constexpr Side Op{~My};
 
     //Assumes that the given move is valid and legal

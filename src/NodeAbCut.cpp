@@ -5,7 +5,7 @@
 NodeControl NodeAbCut::visit(Square from, Square to) {
     auto& p = static_cast<NodeAbAll&>(parent);
 
-    playMove(p, from, to);
+    makeMove(p, from, to);
 
     if (movesCount() == 0 || draft == 0) {
         bestScore = staticEval();
