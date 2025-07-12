@@ -9,7 +9,7 @@ Move::Move(const Position& pos, Square from, Square to) : v{from, to, Simple} {
         return;
     }
 
-    if (my.isPawn(my.pieceOn(from))) {
+    if (my.isPawn(my.pieceAt(from))) {
         if (from.on(Rank7)) {
             v.special = Special;
             return;

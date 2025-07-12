@@ -77,7 +77,7 @@ Score PositionSide::evaluate(const PositionSide& MY, const PositionSide& OP) {
 }
 
 void PositionSide::capture(Square from) {
-    Pi pi = pieceOn(from);
+    Pi pi = pieceAt(from);
     PieceType ty = typeOf(pi);
     assert (!ty.is(King));
 
@@ -307,7 +307,7 @@ bool PositionSide::setValidCastling(CastlingSide castlingSide) {
     }
     if (outerSquare == kingSquare()) { return false; } //no rook found
 
-    Pi rook = pieceOn(outerSquare);
+    Pi rook = pieceAt(outerSquare);
     if (isCastling(rook)) { return false; }
 
     traits.setCastling(rook);
@@ -320,7 +320,7 @@ bool PositionSide::setValidCastling(File file) {
     Square rookFrom(file, Rank1);
     if (!has(rookFrom)) { return false; }
 
-    Pi rook = pieceOn(rookFrom);
+    Pi rook = pieceAt(rookFrom);
     if (!types.isRook(rook)) { return false; }
     if (isCastling(rook)) { return false; }
 

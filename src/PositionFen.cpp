@@ -247,7 +247,7 @@ istream& PositionFen::readMove(istream& in, Square& from, Square& to) const {
     if (colorToMove.is(Black)) { from.flip(); to.flip(); }
 
     if (!MY.has(from)) { return io::fail(in); }
-    Pi pi = MY.pieceOn(from);
+    Pi pi = MY.pieceAt(from);
 
     //convert special moves (castling, promotion, ep) to the internal move format
     if (MY.isPawn(pi)) {
@@ -308,7 +308,7 @@ void PositionFen::limitMoves(istream& in) {
             return;
         }
 
-        Pi pi = MY.pieceOn(from);
+        Pi pi = MY.pieceAt(from);
         if (!movesMatrix.has(pi, to)) {
             movesMatrix.set(pi, to);
             ++n;
@@ -399,7 +399,7 @@ bool PositionFen::setEnPassant(File file) {
     Square to{file, Rank4};
     if (!OP.has(to)) { return false; }
 
-    Pi victim = OP.pieceOn(to);
+    Pi victim = OP.pieceAt(to);
     if (!OP.isPawn(victim)) { return false; }
 
     if (MY.occupied().has(~Square{file, Rank3})) { return false; }

@@ -93,13 +93,13 @@ void PositionMoves::correctCheckEvasionsByPawns(Bb checkLine, Square checkFrom) 
     for (Square from : affectedPawns) {
         Bb bb = (Bb{from.rankForward()} & checkLine) + (::attacksFrom(Pawn, from) & checkFrom);
         Rank rankTo = ::rankForward(Rank(from));
-        moves.set(MY.pieceOn(from), rankTo, bb[rankTo]);
+        moves.set(MY.pieceAt(from), rankTo, bb[rankTo]);
     }
 
     //pawns double push over check line
     Bb pawnJumpEvasions = MY.pawnsSquares() & Bb{Rank2} & (checkLine << 16) % (MY.occupied() << 8);
     for (Square from : pawnJumpEvasions) {
-        moves.add(MY.pieceOn(from), Rank4, File(from));
+        moves.add(MY.pieceAt(from), Rank4, File(from));
     }
 
 }
@@ -120,7 +120,7 @@ void PositionMoves::excludePinnedMoves(PiMask opPinners) {
 
         if (piecesOnPinLine.isSingleton() && (piecesOnPinLine & MY.piecesSquares()).any()) {
             //we discovered a true pinned piece
-            Pi pinned = MY.pieceOn(piecesOnPinLine.index());
+            Pi pinned = MY.pieceAt(piecesOnPinLine.index());
 
             //exclude all pinned piece moves except those over the pin line
             moves.filter(pinned, pinLine + pinFrom);
@@ -199,7 +199,7 @@ void PositionMoves::generateMoves() {
 }
 
 bool PositionMoves::isLegalMove(Square from, Square to) const {
-    return MY.has(from) && moves.has(MY.pieceOn(from), to);
+    return MY.has(from) && moves.has(MY.pieceAt(from), to);
 }
 
 void PositionMoves::playMove(Square from, Square to) {
@@ -233,7 +233,7 @@ Zobrist PositionMoves::createZobrist(Square from, Square to) const {
     // opponet side pieces encoding
     Zobrist oz{0};
 
-    Pi pi = MY.pieceOn(from);
+    Pi pi = MY.pieceAt(from);
     PieceType ty = MY.typeOf(pi);
 
     if (OP.hasEnPassant()) {
@@ -312,7 +312,7 @@ Zobrist PositionMoves::createZobrist(Square from, Square to) const {
 
 capture:
     if (OP.has(~to)) {
-        Pi victim = OP.pieceOn(~to);
+        Pi victim = OP.pieceAt(~to);
         oz.clear(OP.typeOf(victim), ~to);
 
         if (OP.isCastling(victim)) {

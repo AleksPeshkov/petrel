@@ -35,7 +35,7 @@ void Position::playMove(Square from, Square to) {
     OP.clearCheckers();
     assert (MY.checkers().none());
 
-    Pi pi = MY.pieceOn(from);
+    Pi pi = MY.pieceAt(from);
 
     //clear en passant status from the previous move
     if (OP.hasEnPassant()) {
@@ -196,7 +196,7 @@ void Position::setLegalEnPassant(Pi victim, Square to) {
 
         if (!MY.isPinned(MY.occupied() - from + ep - to)) {
             MY.setEnPassantVictim(victim);
-            OP.setEnPassantKiller(OP.pieceOn(~from));
+            OP.setEnPassantKiller(OP.pieceAt(~from));
         }
     }
 }

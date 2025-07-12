@@ -51,19 +51,19 @@ public:
     Square squareOf(Pi pi) const { assertOk(pi); return squares.squareOf(pi); }
     Square kingSquare() const { return squareOf(TheKing); }
 
-    Pi pieceOn(Square sq) const { Pi pi = squares.pieceOn(sq); assertOk(pi); return pi; }
+    Pi pieceAt(Square sq) const { Pi pi = squares.pieceAt(sq); assertOk(pi); return pi; }
     PiMask piecesOn(Rank rank) const { return squares.piecesOn(rank); }
 
     PiMask piecesOfType(PieceType ty) const { return types.piecesOfType(ty); }
     PieceType typeOf(Pi pi) const { assertOk(pi); return types.typeOf(pi); }
-    PieceType typeOf(Square sq) const { return typeOf(pieceOn(sq)); }
+    PieceType typeOf(Square sq) const { return typeOf(pieceAt(sq)); }
 
     PiMask pawns() const { return types.piecesOfType(Pawn); }
     bool isPawn(Pi pi) const { assertOk(pi); return types.isPawn(pi); }
 
     PiMask castlingRooks() const { return traits.castlingRooks(); }
     bool isCastling(Pi pi) const { assertOk(pi); return traits.isCastling(pi); }
-    bool isCastling(Square sq) const { return isCastling(pieceOn(sq)); }
+    bool isCastling(Square sq) const { return isCastling(pieceAt(sq)); }
 
     PiMask enPassantPawns() const { return traits.enPassantPawns(); }
     bool hasEnPassant() const { return enPassantPawns().any(); }

@@ -12,15 +12,15 @@ class PiSquare : protected PiVector {
     bool isEmpty(Pi pi) const { return PiVector::get(pi) == EmptySquare; }
     Square get(Pi pi) const { return static_cast<Square::_t>(PiVector::get(pi)); }
 
-    PiMask piecesOn(Square sq) const { return PiMask::equals(v, ::vectorOfAll[sq]); }
-    bool none(Square sq) { return piecesOn(sq).none(); }
+    PiMask piecesAt(Square sq) const { return PiMask::equals(v, ::vectorOfAll[sq]); }
+    bool none(Square sq) { return piecesAt(sq).none(); }
 
 #ifdef NDEBUG
     void assertOk(Pi) const {}
 #else
     void assertOk(Pi pi) const {
         assert (!isEmpty(pi));
-        assert (pieceOn(get(pi)) == pi);
+        assert (pieceAt(get(pi)) == pi);
     }
 #endif
 
@@ -34,8 +34,8 @@ public:
     }
 
     Square squareOf(Pi pi) const { assertOk(pi); return get(pi); }
-    bool has(Square sq) const { return piecesOn(sq).any(); }
-    Pi pieceOn(Square sq) const { assert (has(sq)); return piecesOn(sq).index(); }
+    bool has(Square sq) const { return piecesAt(sq).any(); }
+    Pi pieceAt(Square sq) const { assert (has(sq)); return piecesAt(sq).index(); }
 
     void clear(Pi pi) { assertOk(pi); set(pi, EmptySquare); }
     void drop(Pi pi, Square sq) { assert (isEmpty(pi)); assert (none(sq)); set(pi, sq); }
