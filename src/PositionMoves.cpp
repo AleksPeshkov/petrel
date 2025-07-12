@@ -194,14 +194,8 @@ void PositionMoves::generateMoves() {
 void PositionMoves::generateMoves() {
     generateMoves<My>();
 
-    movesCount = moves.count();
-    if (movesCount > 0) {
-        staticEval = evaluate();
-    }
-    else {
-        staticEval = OP.checkers().any() ? Score::Checkmated : Score::Draw;
-    }
-
+    _movesCount = moves.count();
+    _staticEval = (_movesCount == 0) ? Score::None : evaluate();
 }
 
 bool PositionMoves::isLegalMove(Square from, Square to) const {

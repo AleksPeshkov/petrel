@@ -7,7 +7,7 @@ NodeControl NodePerftLeaf::visit(Square from, Square to) {
 
     //updateParentPerft:
     auto& p = static_cast<NodePerft&>(parent);
-    p.perft += getMovesCount();
+    p.perft += movesCount();
 
     return NodeControl::Continue;
 }

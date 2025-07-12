@@ -7,8 +7,8 @@ NodeControl NodeAbCut::visit(Square from, Square to) {
 
     playMove(p, from, to);
 
-    if (getMovesCount() == 0 || draft == 0) {
-        bestScore = getStaticEval();
+    if (movesCount() == 0 || draft == 0) {
+        bestScore = staticEval();
     }
     else {
         bestScore = Score::Minimum;

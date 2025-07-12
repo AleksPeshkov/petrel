@@ -7,12 +7,12 @@ NodeControl NodeAbPv::visit(Square from, Square to) {
 
     playMove(p, from, to);
 
-    if (getMovesCount() == 0) {
+    if (movesCount() == 0) {
         //mated or stalemated
-        bestScore = getStaticEval();
+        bestScore = staticEval();
     }
     else if (draft == 0) {
-        bestScore = getStaticEval();
+        bestScore = staticEval();
     }
     else {
         bestScore = Score::Minimum;

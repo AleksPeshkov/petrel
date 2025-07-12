@@ -10,8 +10,8 @@ class PositionMoves : public Position {
     Bb attackedSquares; //squares attacked by all opponent pieces
 
     Zobrist zobrist{0};
-    Score staticEval = Score::None;
-    index_t movesCount = 0;
+    Score _staticEval = Score::None;
+    index_t _movesCount = 0;
 
 private:
     //legal move generation helpers
@@ -35,16 +35,15 @@ protected:
     void generateMoves();
 
     void clearMove(Pi pi, Square sq) { moves.clear(pi, sq); }
-    void setMoves(const PiBb& m, index_t n) { moves = m; movesCount = n; assert (moves.count() == n);  }
+    void setMoves(const PiBb& m, index_t n) { moves = m; _movesCount = n; assert (moves.count() == n);  }
 
     void setZobrist(const PositionMoves& parent, Square from, Square to) { zobrist = parent.createZobrist(from, to); }
     void setZobrist() { zobrist = generateZobrist(); }
 
 public:
     const Zobrist& getZobrist() const { return zobrist; }
-    index_t getMovesCount() const { return movesCount; }
-    Score getStaticEval() const { return staticEval; }
-
+    index_t movesCount() const { return _movesCount; }
+    Score staticEval() const { return _staticEval; }
     PiBb cloneMoves() const { return PiBb{moves}; }
 
     bool isLegalMove(Square from, Square to) const;

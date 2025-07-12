@@ -8,7 +8,7 @@
 NodeControl NodePerftRoot::visitChildren() {
     switch (draft) {
         case 1:
-            perft = getMovesCount();
+            perft = movesCount();
             break;
 
         case 2:
@@ -51,7 +51,7 @@ NodeControl NodePerftDivide::visit(Square from, Square to) {
 
         case 1:
             playMove(parent, from, to);
-            perft = getMovesCount();
+            perft = movesCount();
             break;
 
         default: {
