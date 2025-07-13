@@ -12,13 +12,13 @@ void SearchControl::newGame() {
 }
 
 void SearchControl::newSearch() {
+    pvMoves.clear();
     newIteration();
     transpositionTable.clearCounter();
     info.clear();
 }
 
 void SearchControl::newIteration() {
-    pvMoves.clear();
     transpositionTable.nextAge();
 }
 

@@ -5,7 +5,7 @@
 #include "Move.hpp"
 
 class PvMoves {
-    enum { N = ::MaxDepth + 1 };
+    enum { N = ::MaxDepth };
     std::array< std::array<Move, N>, N> pv;
 
 public:
@@ -21,8 +21,9 @@ public:
         assert (ply < N-1);
         pv[ply][0] = move;
         Move* target = &pv[ply][1];
-        Move* source = &pv[ply + 1][0];
+        Move* source = &pv[ply+1][0];
         while ((*target++ = *source++));
+        pv[ply+1][0] = Move{};
     }
 
     operator const Move* () const { return &pv[0][0]; }
