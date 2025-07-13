@@ -11,7 +11,7 @@ class NodeCounter {
     node_count_t nodesLimit; // search limit
 
     typedef unsigned nodes_quota_t;
-    enum : nodes_quota_t { QuotaLimit = 5000 }; // ~1 msec
+    enum : nodes_quota_t { QuotaLimit = 1000 }; // ~0.1 msec
 
     //number of remaining nodes before slow checking for search abort
     nodes_quota_t nodesQuota = 0; // (0 <= nodesQuota && nodesQuota <= QuotaLimit)
