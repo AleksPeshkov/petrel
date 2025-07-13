@@ -4,9 +4,6 @@
 #include "AttacksFrom.hpp"
 #include "SquaresInBetween.hpp"
 
-#define MY (*this)[My]
-#define OP (*this)[Op]
-
 template <Side::_t My>
 void PositionMoves::generateEnPassantMoves() {
     constexpr Side Op{~My};
@@ -324,6 +321,3 @@ capture:
 zobrist:
     return Zobrist{oz, mz};
 }
-
-#undef MY
-#undef OP

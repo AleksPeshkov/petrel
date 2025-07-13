@@ -2,8 +2,6 @@
 #include "CastlingRules.hpp"
 #include "AttacksFrom.hpp"
 
-#define MY (*this)[My]
-#define OP (*this)[Op]
 
 void Position::makeMove(Square from, Square to) {
     PositionSide::swap(MY, OP);
@@ -212,6 +210,3 @@ bool Position::afterDrop() {
     //should be not in check
     return MY.checkers().none();
 }
-
-#undef MY
-#undef OP

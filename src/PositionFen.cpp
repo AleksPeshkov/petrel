@@ -3,9 +3,6 @@
 #include "PositionFen.hpp"
 #include "CastlingRules.hpp"
 
-#define MY (*this)[My]
-#define OP (*this)[Op]
-
 namespace {
 
 /** Setup a chess position from a FEN string with chess legality validation */
@@ -445,6 +442,3 @@ void PositionFen::setStartpos() {
     std::istringstream startpos{"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"};
     readFen(startpos);
 }
-
-#undef MY
-#undef OP

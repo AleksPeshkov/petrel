@@ -4,6 +4,12 @@
 #include "PositionSide.hpp"
 #include "Score.hpp"
 
+// side to move
+#define MY ((*this)[My])
+
+// opponent side
+#define OP ((*this)[Op])
+
 class Position {
     Side::arrayOf<PositionSide> positionSide;
 
@@ -20,7 +26,7 @@ protected:
 public:
     constexpr const PositionSide& operator[] (Side side) const { return positionSide[side]; }
 
-    Score evaluate() const { return PositionSide::evaluate((*this)[My], (*this)[Op]); }
+    Score evaluate() const { return PositionSide::evaluate(MY, OP); }
 
     void makeMove(const Position&, Square, Square);
     void makeMove(Square, Square);
