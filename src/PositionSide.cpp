@@ -5,8 +5,8 @@
 #include "SquaresInBetween.hpp"
 
 #ifndef NDEBUG
-    void PositionSide::assertValid(Pi pi) const {
-        types.assertValid(pi);
+    void PositionSide::assertOk(Pi pi) const {
+        types.assertOk(pi);
 
         Square sq = squares.squareOf(pi);
         assert (has(sq));
@@ -17,8 +17,8 @@
         assert (!types.isRook(pi) || !traits.isCastling(pi) || sq.on(Rank1));
     }
 
-    void PositionSide::assertValid(Pi pi, PieceType ty, Square sq) const {
-        assertValid(pi);
+    void PositionSide::assertOk(Pi pi, PieceType ty, Square sq) const {
+        assertOk(pi);
         assert (squares.squareOf(pi) == sq);
         assert (types.typeOf(pi) == ty);
     }
@@ -81,7 +81,7 @@ void PositionSide::capture(Square from) {
     PieceType ty = typeOf(pi);
     assert (!ty.is(King));
 
-    assertValid(pi, ty, from);
+    assertOk(pi, ty, from);
 
     piecesBb -= from;
     pawnsBb &= piecesBb; //clear if pawn
@@ -95,7 +95,7 @@ void PositionSide::capture(Square from) {
 
 void PositionSide::move(Pi pi, PieceType ty, Square from, Square to) {
     assert (from != to);
-    assertValid(pi, ty, from);
+    assertOk(pi, ty, from);
 
     squares.move(pi, to);
     piecesBb.move(from, to);
@@ -119,7 +119,7 @@ void PositionSide::move(Pi pi, Square from, Square to) {
         setPinner(pi, ty, to);
     }
 
-    assertValid(pi, ty, to);
+    assertOk(pi, ty, to);
 }
 
 void PositionSide::moveKing(Square from, Square to) {
@@ -134,13 +134,13 @@ void PositionSide::movePawn(Pi pi, Square from, Square to) {
     assert (traits.isEmpty(pi));
     setLeaperAttack(pi, Pawn, to);
 
-    assertValid(pi, Pawn, to);
+    assertOk(pi, Pawn, to);
 }
 
 void PositionSide::promote(Pi pi, Square from, PromoType ty, Square to) {
     assert (from.on(Rank7));
     assert (to.on(Rank8));
-    assertValid(pi, Pawn, from);
+    assertOk(pi, Pawn, from);
 
     squares.move(pi, to);
     piecesBb.move(from, to);
@@ -157,7 +157,7 @@ void PositionSide::promote(Pi pi, Square from, PromoType ty, Square to) {
         setPinner(pi, PieceType{ty}, to);
     }
 
-    assertValid(pi, PieceType{ty}, to);
+    assertOk(pi, PieceType{ty}, to);
 }
 
 void PositionSide::updateMovedKing(Square to) {
@@ -167,12 +167,12 @@ void PositionSide::updateMovedKing(Square to) {
     attacks.set(TheKing, ::attacksFrom(King, to));
     traits.clearCastlings();
 
-    assertValid(TheKing, King, to);
+    assertOk(TheKing, King, to);
 }
 
 void PositionSide::castle(Square kingFrom, Square kingTo, Pi rook, Square rookFrom, Square rookTo) {
-    assertValid(TheKing, King, kingFrom);
-    assertValid(rook, Rook, rookFrom);
+    assertOk(TheKing, King, kingFrom);
+    assertOk(rook, Rook, rookFrom);
 
     //possible overlap in Chess960
     squares.castle(kingTo, rook, rookTo);
@@ -187,11 +187,11 @@ void PositionSide::castle(Square kingFrom, Square kingTo, Pi rook, Square rookFr
     setPinner(rook, Rook, rookTo);
 
     updateMovedKing(kingTo);
-    assertValid(rook, Rook, rookTo);
+    assertOk(rook, Rook, rookTo);
 }
 
 void PositionSide::setLeaperAttack(Pi pi, PieceType ty, Square sq) {
-    assertValid(pi, ty, sq);
+    assertOk(pi, ty, sq);
     assert (isLeaper(ty));
     assert (traits.isEmpty(pi));
 
@@ -292,7 +292,7 @@ bool PositionSide::dropValid(PieceType ty, Square to) {
     types.drop(pi, ty);
     squares.drop(pi, to);
 
-    assertValid(pi, ty, to);
+    assertOk(pi, ty, to);
     return true;
 }
 

@@ -23,7 +23,7 @@ constexpr io::char_type File::to_char() const { return static_cast<io::char_type
 template <> inline
 bool File::from_char(io::char_type c) {
     File file{ static_cast<File::_t>(c - 'a') };
-    if (!file.isValid()) { return false; }
+    if (!file.isOk()) { return false; }
     this->v = file;
     return true;
 }
@@ -39,7 +39,7 @@ constexpr io::char_type Rank::to_char() const { return static_cast<io::char_type
 template <> inline
 bool Rank::from_char(io::char_type c) {
     Rank rank{ static_cast<Rank::_t>('8' - c) };
-    if (!rank.isValid()) { return false; }
+    if (!rank.isOk()) { return false; }
     this->v = rank;
     return true;
 }

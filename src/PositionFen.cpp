@@ -37,7 +37,7 @@ istream& read(istream& in, FenToBoard& board) {
     File file{FileA}; Rank rank{Rank8};
 
     for (io::char_type c; in.get(c); ) {
-        if (std::isalpha(c) && rank.isValid() && file.isValid()) {
+        if (std::isalpha(c) && rank.isOk() && file.isOk()) {
             Color color = std::isupper(c) ? White : Black;
             c = static_cast<io::char_type>(std::tolower(c));
 
@@ -50,7 +50,7 @@ istream& read(istream& in, FenToBoard& board) {
             continue;
         }
 
-        if ('1' <= c && c <= '8' && rank.isValid() && file.isValid()) {
+        if ('1' <= c && c <= '8' && rank.isOk() && file.isOk()) {
             //convert digit symbol to offset and skip blank squares
             auto  f = file + (c - '0');
             if (f > static_cast<int>(File::Size)) {
@@ -63,7 +63,7 @@ istream& read(istream& in, FenToBoard& board) {
             continue;
         }
 
-        if (c == '/' && rank.isValid()) {
+        if (c == '/' && rank.isOk()) {
             ++rank;
             file = FileA;
             continue;

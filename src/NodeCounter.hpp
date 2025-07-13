@@ -16,7 +16,7 @@ class NodeCounter {
     //number of remaining nodes before slow checking for search abort
     nodes_quota_t nodesQuota = 0; // (0 <= nodesQuota && nodesQuota <= QuotaLimit)
 
-    constexpr void assertValid() const {
+    constexpr void assertOk() const {
         assert (nodesQuota <= nodes && nodes <= nodesLimit);
         assert (/* 0 <= nodesQuota && */ nodesQuota < QuotaLimit);
     }
@@ -26,18 +26,18 @@ public:
 
     /// exact number of visited nodes
     constexpr operator node_count_t () const {
-        assertValid();
+        assertOk();
         return nodes - nodesQuota;
     }
 
     constexpr bool isAborted() const {
-        assertValid();
+        assertOk();
         assert (nodes - nodesQuota < nodesLimit || nodesQuota == 0);
         return nodes == nodesLimit;
     }
 
     NodeControl count(const SearchControl& search) {
-        assertValid();
+        assertOk();
 
         if (nodesQuota == 0) {
             return refreshQuota(search);
@@ -46,7 +46,7 @@ public:
         assert (nodesQuota > 0);
         --nodesQuota;
 
-        assertValid();
+        assertOk();
         return NodeControl::Continue;
     }
 

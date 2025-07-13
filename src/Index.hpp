@@ -23,19 +23,19 @@ protected:
 
 public:
     constexpr Index () : v{} {}
-    constexpr Index (_t i) : v{i} { assertValid(); }
+    constexpr Index (_t i) : v{i} { assertOk(); }
 
     constexpr operator _t () const { return v; }
 
-    constexpr void assertValid() const { assert (isValid()); }
-    constexpr bool isValid() const { return static_cast<index_t>(v) < Size; }
+    constexpr void assertOk() const { assert (isOk()); }
+    constexpr bool isOk() const { return static_cast<index_t>(v) < Size; }
 
     constexpr bool is(_t i) const { return v == i; }
 
-    constexpr Index& operator ++ () { assertValid(); v = static_cast<_t>(v+1); return *this; }
-    constexpr Index& operator -- () { v = static_cast<_t>(v-1); assertValid(); return *this; }
+    constexpr Index& operator ++ () { assertOk(); v = static_cast<_t>(v+1); return *this; }
+    constexpr Index& operator -- () { v = static_cast<_t>(v-1); assertOk(); return *this; }
 
-    constexpr Index& flip() { assertValid(); v = static_cast<_t>(v ^ Mask); return *this; }
+    constexpr Index& flip() { assertOk(); v = static_cast<_t>(v ^ Mask); return *this; }
     constexpr Index operator ~ () const { return Index{v}.flip(); }
 
     constexpr io::char_type to_char() const { return The_string[v]; }
@@ -45,7 +45,7 @@ public:
         auto p = std::memchr(The_string, c, Size);
         if (!p) { return false; }
         this->v = static_cast<_t>(static_cast<io::czstring>(p) - The_string);
-        assertValid();
+        assertOk();
         assert (c == to_char());
         return true;
     }

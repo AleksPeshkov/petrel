@@ -27,11 +27,11 @@ class PositionSide {
 
 public:
     #ifdef NDEBUG
-        void assertValid(Pi) const {}
-        void assertValid(Pi, PieceType, Square) const {}
+        void assertOk(Pi) const {}
+        void assertOk(Pi, PieceType, Square) const {}
     #else
-        void assertValid(Pi) const;
-        void assertValid(Pi, PieceType, Square) const;
+        void assertOk(Pi) const;
+        void assertOk(Pi, PieceType, Square) const;
     #endif
 
     // bitboard of squares occupied by current side
@@ -48,21 +48,21 @@ public:
     PiMask pieces() const { assert (squares.pieces() == types.pieces()); return squares.pieces(); }
     PiMask sliders() const { return types.sliders(); }
 
-    Square squareOf(Pi pi) const { assertValid(pi); return squares.squareOf(pi); }
+    Square squareOf(Pi pi) const { assertOk(pi); return squares.squareOf(pi); }
     Square kingSquare() const { return squareOf(TheKing); }
 
-    Pi pieceOn(Square sq) const { Pi pi = squares.pieceOn(sq); assertValid(pi); return pi; }
+    Pi pieceOn(Square sq) const { Pi pi = squares.pieceOn(sq); assertOk(pi); return pi; }
     PiMask piecesOn(Rank rank) const { return squares.piecesOn(rank); }
 
     PiMask piecesOfType(PieceType ty) const { return types.piecesOfType(ty); }
-    PieceType typeOf(Pi pi) const { assertValid(pi); return types.typeOf(pi); }
+    PieceType typeOf(Pi pi) const { assertOk(pi); return types.typeOf(pi); }
     PieceType typeOf(Square sq) const { return typeOf(pieceOn(sq)); }
 
     PiMask pawns() const { return types.piecesOfType(Pawn); }
-    bool isPawn(Pi pi) const { assertValid(pi); return types.isPawn(pi); }
+    bool isPawn(Pi pi) const { assertOk(pi); return types.isPawn(pi); }
 
     PiMask castlingRooks() const { return traits.castlingRooks(); }
-    bool isCastling(Pi pi) const { assertValid(pi); return traits.isCastling(pi); }
+    bool isCastling(Pi pi) const { assertOk(pi); return traits.isCastling(pi); }
     bool isCastling(Square sq) const { return isCastling(pieceOn(sq)); }
 
     PiMask enPassantPawns() const { return traits.enPassantPawns(); }

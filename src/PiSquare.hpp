@@ -16,9 +16,9 @@ class PiSquare : protected PiVector {
     bool none(Square sq) { return piecesOn(sq).none(); }
 
 #ifdef NDEBUG
-    void assertValid(Pi) const {}
+    void assertOk(Pi) const {}
 #else
-    void assertValid(Pi pi) const {
+    void assertOk(Pi pi) const {
         assert (!isEmpty(pi));
         assert (pieceOn(get(pi)) == pi);
     }
@@ -33,18 +33,18 @@ public:
         ::vectorOfAll[static_cast<Square::_t>(rank << Square::RankShift)]);
     }
 
-    Square squareOf(Pi pi) const { assertValid(pi); return get(pi); }
+    Square squareOf(Pi pi) const { assertOk(pi); return get(pi); }
     bool has(Square sq) const { return piecesOn(sq).any(); }
     Pi pieceOn(Square sq) const { assert (has(sq)); return piecesOn(sq).index(); }
 
-    void clear(Pi pi) { assertValid(pi); set(pi, EmptySquare); }
+    void clear(Pi pi) { assertOk(pi); set(pi, EmptySquare); }
     void drop(Pi pi, Square sq) { assert (isEmpty(pi)); assert (none(sq)); set(pi, sq); }
-    void move(Pi pi, Square sq) { assertValid(pi); assert (none(sq)); set(pi, sq); }
+    void move(Pi pi, Square sq) { assertOk(pi); assert (none(sq)); set(pi, sq); }
 
     void castle(Square kingTo, Pi theRook, Square rookTo) {
         assert (TheKing != theRook);
-        assertValid(TheKing);
-        assertValid(theRook);
+        assertOk(TheKing);
+        assertOk(theRook);
 
         assert (squareOf(TheKing).on(Rank1));
         assert (squareOf(theRook).on(Rank1));
@@ -55,8 +55,8 @@ public:
         set(TheKing, kingTo);
         set(theRook, rookTo);
 
-        assertValid(TheKing);
-        assertValid(theRook);
+        assertOk(TheKing);
+        assertOk(theRook);
     }
 
 };

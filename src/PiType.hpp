@@ -14,14 +14,14 @@ class PiType : protected PiBit<PiType, PieceType> {
         Minor  = ::singleton<_t>(Bishop)|::singleton<_t>(Knight),
     };
 
-    bool is(Pi pi, PieceType ty) const { assertValid(pi); assert (!ty.is(King)); return Base::is(pi, ty); }
+    bool is(Pi pi, PieceType ty) const { assertOk(pi); assert (!ty.is(King)); return Base::is(pi, ty); }
 
 public:
 
 #ifdef NDEBUG
-    void assertValid(Pi) const {}
+    void assertOk(Pi) const {}
 #else
-    void assertValid(Pi pi) const {
+    void assertOk(Pi pi) const {
         assert ( !isEmpty(pi) );
         assert ( ::isSingleton(get(pi)) );
     }
@@ -33,13 +33,13 @@ public:
     PiMask sliders() const { return anyOf(Slider); }
     PiMask leapers() const { return anyOf(Leaper); }
 
-    PieceType typeOf(Pi pi) const { assertValid(pi); return static_cast<PieceType::_t>( ::bsf(static_cast<unsigned>(get(pi))) ); }
+    PieceType typeOf(Pi pi) const { assertOk(pi); return static_cast<PieceType::_t>( ::bsf(static_cast<unsigned>(get(pi))) ); }
 
     bool isPawn(Pi pi) const { return is(pi, Pawn); }
     bool isRook(Pi pi) const { return is(pi, Rook); }
-    bool isSlider(Pi pi) const { assertValid(pi); return (get(pi) & Slider) != 0; }
+    bool isSlider(Pi pi) const { assertOk(pi); return (get(pi) & Slider) != 0; }
 
-    void clear(Pi pi) { assertValid(pi); assert (pi != TheKing); assert (!Base::is(pi, King)); Base::clear(pi); }
+    void clear(Pi pi) { assertOk(pi); assert (pi != TheKing); assert (!Base::is(pi, King)); Base::clear(pi); }
     void drop(Pi pi, PieceType ty) { assert (isEmpty(pi)); assert (pi != TheKing || ty == King); set(pi, ty); }
     void promote(Pi pi, PromoType ty) { assert (isPawn(pi)); clear(pi); set(pi, ty); }
 };

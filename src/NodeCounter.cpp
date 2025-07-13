@@ -2,7 +2,7 @@
 #include "SearchControl.hpp"
 
 NodeControl NodeCounter::refreshQuota(const SearchControl& search) {
-    assertValid();
+    assertOk();
     assert (nodesQuota == 0);
     //nodes -= nodesQuota;
 
@@ -13,7 +13,7 @@ NodeControl NodeCounter::refreshQuota(const SearchControl& search) {
     else {
         nodesQuota = static_cast<decltype(nodesQuota)>(nodesRemaining);
         if (nodesQuota == 0) {
-            assertValid();
+            assertOk();
             return NodeControl::Abort;
         }
     }
@@ -22,14 +22,14 @@ NodeControl NodeCounter::refreshQuota(const SearchControl& search) {
         nodesLimit = nodes;
         nodesQuota = 0;
 
-        assertValid();
+        assertOk();
         return NodeControl::Abort;
     }
 
     assert (0 < nodesQuota && nodesQuota <= QuotaLimit);
     nodes += nodesQuota;
     --nodesQuota; //count current node
-    assertValid();
+    assertOk();
 
     //inform UCI that search is responsive
     search.readyok();

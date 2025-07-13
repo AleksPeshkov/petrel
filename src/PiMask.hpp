@@ -20,16 +20,16 @@ private:
     typedef const self_type& self_cref;
 
 #ifdef NDEBUG
-    void assertValid() const {}
+    void assertOk() const {}
 #else
-    void assertValid() const {
+    void assertOk() const {
         auto n = _mm_cmpgt_epi8(_t{0,0}, v);
         assert (_mm_movemask_epi8(_mm_cmpeq_epi8(v, n)) == 0xffffu);
     }
 #endif
 
     friend class PiOrder;
-    explicit PiMask (_t a) : v{a} { assertValid(); }
+    explicit PiMask (_t a) : v{a} { assertOk(); }
 
 public:
     constexpr operator _t () const { return v; }
@@ -43,7 +43,7 @@ public:
     static PiMask negate(_t a) { return PiMask::equals(a, _t{0,0}); }
 
     operator PieceSet() const {
-        assertValid();
+        assertOk();
         return PieceSet( static_cast<PieceSet::_t>(_mm_movemask_epi8(v)) );
     }
 
