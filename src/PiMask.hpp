@@ -53,11 +53,11 @@ public:
 
     Pi index() const { return PieceSet(*this).index(); }
 
-    // most valuable pieces are smallest bits
-    Pi most() const { return PieceSet(*this).smallestOne(); }
+    // most valuable piece in the first (lowest) set bit
+    Pi most() const { return PieceSet(*this).first(); }
 
-    // most valuable pieces are largest bits
-    Pi least() const { return PieceSet(*this).largestOne(); }
+    // least valuable pieces in the last (highest) set bit
+    Pi least() const { return PieceSet(*this).last(); }
 
     Pi seekVacant() const { return PieceSet(*this).seekVacant(); }
 

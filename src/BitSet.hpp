@@ -20,18 +20,29 @@ public:
     constexpr BitSet (Index i) : BitSet{::singleton<_t>(i)} {}
     constexpr BitSet (typename Index::_t i) : BitSet{::singleton<_t>(i)} {}
 
-    constexpr _t withoutLsb() const { return ::withoutLsb(this->v); }
+    // clear the first (lowest) set bit
+    constexpr _t clearFirst() const { return ::clearFirst(this->v); }
 
+    // check if the index bit is set
     constexpr bool has(Index i) const { return (self() & Self{i}).any(); }
-    bool isSingleton() const { assert (self().any()); return withoutLsb() == 0; }
 
-    constexpr Index smallestOne() const { return static_cast<typename Index::_t>(::bsf(this->v)); }
-    constexpr Index largestOne()  const { return static_cast<typename Index::_t>(::bsr(this->v)); }
+    // one and only one bit sets
+    bool isSingleton() const { assert (self().any()); return clearFirst() == 0; }
 
+    // get the first (lowest) bit set
+    constexpr Index first() const { return static_cast<typename Index::_t>(::bsf(this->v)); }
+
+    // get the last (highest) bit set
+    constexpr Index last()  const { return static_cast<typename Index::_t>(::bsr(this->v)); }
+
+    // get the singleton bit set
     Index index() const { assert (self().any() && self().isSingleton()); return *self(); }
 
-    constexpr Index operator * () const { return self().smallestOne(); }
-    Self& operator ++ () { *this = Self(withoutLsb()); return self(); }
+    // get the lowest bit set
+    constexpr Index operator * () const { return self().first(); }
+
+    // unset the lowest bit set
+    Self& operator ++ () { *this = Self(clearFirst()); return self(); }
 
     constexpr Self begin() const { return self(); }
     constexpr Self end() const { return Self{}; }

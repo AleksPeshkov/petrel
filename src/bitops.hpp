@@ -53,12 +53,12 @@ constexpr T small_cast(N n) { return static_cast<T>(n & static_cast<N>(universe<
 template <typename T, typename N>
 constexpr T singleton(N n) { return static_cast<T>(static_cast<T>(1) << n); }
 
-//TRICK: "v & (v-1)" clears the lowest unset bit
+// clears the lowest unset bit
 template <typename T>
-constexpr T withoutLsb(T n) { return n & static_cast<T>(n-1); }
+constexpr T clearFirst(T n) { return n & static_cast<T>(n-1); }
 
 template <typename T>
-constexpr bool isSingleton(T n) { return (n != 0) && (::withoutLsb(n) == 0); }
+constexpr bool isSingleton(T n) { return (n != 0) && (::clearFirst(n) == 0); }
 
 #if defined __GNUC__
     INLINE index_t bsf(u32_t b) {
