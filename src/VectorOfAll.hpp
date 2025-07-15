@@ -38,7 +38,6 @@ public:
     {}
 
     constexpr const _t& operator[] (u8_t i) const { return v[i]; }
-    constexpr const _t& operator[] (BitRank br) const { return v[static_cast<BitRank::_t>(br)]; }
     constexpr const _t& operator[] (Pi pi) const { return v[pi]; }
 
 };

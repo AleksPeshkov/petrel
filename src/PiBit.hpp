@@ -45,7 +45,7 @@ public:
     }
 
     PiMask notEmpty() const {
-        return ~PiMask::equals(v.i128, i128_t{0,0});
+        return ~PiMask::equals(v, i128_t{0,0});
     }
 
     void clear(index_type _Bit) {

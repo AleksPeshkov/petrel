@@ -20,7 +20,7 @@ public:
     PiOrder (_t o) : v(o) { assert (isOk()); }
 
     PiMask order(PiMask a) const {
-        return PiMask{_mm_shuffle_epi8(static_cast<PiMask::_t>(a), v)};
+        return PiMask{_mm_shuffle_epi8(a, v)};
     }
     Pi operator[] (Pi pi) const { return static_cast<Pi::_t>(v.u8[pi]); }
 
