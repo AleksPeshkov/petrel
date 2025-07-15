@@ -9,7 +9,7 @@ public:
     NodeAbPv (NodeAbPv& n, ply_t r = 1) : NodeAb(n, r) {}
     NodeAbPv (const PositionMoves& p, SearchControl& c, ply_t d) : NodeAb(p, c, d) {}
 
-    NodeControl visit(Square from, Square to);
+    NodeControl visit(Square from, Square to) override;
 };
 
 #endif

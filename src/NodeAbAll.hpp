@@ -8,7 +8,7 @@ class NodeAbAll : public NodeAb {
 public:
     NodeAbAll (NodeAb& n, ply_t r = 1) : NodeAb(n, r) {}
 
-    NodeControl visit(Square from, Square to);
+    NodeControl visit(Square from, Square to) override;
 };
 
 #endif

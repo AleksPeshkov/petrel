@@ -12,11 +12,11 @@ typedef Pool<TimerThread, SpinLock> TimerPool;
 class TimerThread : private ThreadControl {
     friend class Timer;
 
+    Duration duration;
+    ThreadControl* thread;
     TimerPool* pool;
     TimerPool::Iterator iterator;
-    ThreadControl* thread;
     TaskId taskId;
-    Duration duration;
 
     void run() override;
 };

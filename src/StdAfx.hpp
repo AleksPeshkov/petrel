@@ -1,10 +1,6 @@
 #ifndef STD_AFX_HPP
 #define STD_AFX_HPP
 
-//#define USE_PRECOMPILED_HEADERS
-
-#if defined USE_PRECOMPILED_HEADERS
-
 #include <array>
 #include <atomic>
 #include <cctype>
@@ -25,7 +21,5 @@
 #include <thread>
 #include <tmmintrin.h>
 #include <xmmintrin.h>
-
-#endif
 
 #endif

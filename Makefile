@@ -1,16 +1,12 @@
 #debug = yes
 CXX = clang++
 #CXX = g++
+EXE = petrel
 
-SRC_DIR ?= src
+SRCDIR ?= src
 DEBUG_DIR ?= debug
 RELEASE_DIR ?= release
 TEST_DIR ?= test
-
-GIT_DATE = $(shell git log -1 --date=short --pretty=format:%cd)
-GIT_HASH = $(shell git log -1 --date=short --pretty=format:%h)
-GIT_ORIGIN = $(shell git remote get-url origin)
-CXXFLAGS += -DGIT_DATE=\"$(GIT_DATE)\" -DGIT_HASH=\"$(GIT_HASH)\" -DGIT_ORIGIN=\"$(GIT_ORIGIN)\"
 
 ifeq ($(debug),yes)
 	BUILD_DIR = $(DEBUG_DIR)
@@ -18,18 +14,32 @@ ifeq ($(debug),yes)
 	OPTIMIZATIONS = -Og -O0
 else
 	BUILD_DIR = $(RELEASE_DIR)
-	CXXFLAGS += -DNDEBUG
+#	CXXFLAGS += -DNDEBUG
+	CXXFLAGS += -DDEBUG -ggdb
 	OPTIMIZATIONS = -Ofast -flto -finline-functions
 endif
 
-TARGET ?= $(BUILD_DIR)/petrel
+TARGET ?= $(BUILD_DIR)/$(EXE)
 EXPECT ?= $(TEST_DIR)/expect.sh
 
 CXXFLAGS += -std=c++17 -mssse3 -march=native -mtune=native
-CXXFLAGS +=-fno-rtti -fno-common -fno-exceptions -flax-vector-conversions
+CXXFLAGS += -fno-exceptions -fno-rtti
 
-WARNINGS += -pedantic -Wall -Wextra -Wuninitialized -Wpointer-arith -Wcast-qual -Wcast-align
-WARNINGS += -Wconversion -Wshadow -Wno-ignored-attributes
+WARNINGS += -Wall -Wpedantic -Wextra
+WARNINGS += -Wno-ignored-attributes
+WARNINGS += -Wuninitialized -Wcast-qual -Wconversion -Wshadow -Wmissing-declarations -Wstrict-aliasing=1 -Wstrict-overflow=5
+WARNINGS += -Wpacked -Wdisabled-optimization -Wredundant-decls -Winvalid-constexpr -Wextra-semi -Wsuggest-override
+#WARNINGS += -Winline -Wsign-promo
+
+ifeq ($(CXX), g++)
+	CXXFLAGS +=
+	WARNINGS += -Wuseless-cast -Wcast-align=strict -Wunsafe-loop-optimizations -Wsuggest-final-types -Wsuggest-final-methods -Wnormalized -Wvector-operation-performance
+endif
+
+ifeq ($(CXX), clang)
+	CXXFLAGS += -ferror-limit=10
+	WARNINGS += -Wcast-align -Wconditional-uninitialized -Wmissing-prototypes
+endif
 
 CXXFLAGS += $(OPTIMIZATIONS) $(WARNINGS)
 
@@ -38,15 +48,38 @@ LDFLAGS += $(LDLIBS) $(OPTIMIZATIONS) -Wl,--no-as-needed
 
 HEADER = StdAfx.hpp
 PRECOMP = $(BUILD_DIR)/$(HEADER).gch
-HEADER_SRC = $(SRC_DIR)/$(HEADER)
+HEADER_SRC = $(SRCDIR)/$(HEADER)
 
-SOURCES = $(wildcard $(SRC_DIR)/*.cpp)
-OBJECTS = $(patsubst $(SRC_DIR)/%.cpp, $(BUILD_DIR)/%.o, $(SOURCES))
+SOURCES = $(wildcard $(SRCDIR)/*.cpp)
+OBJECTS = $(patsubst $(SRCDIR)/%.cpp, $(BUILD_DIR)/%.o, $(SOURCES))
 DEPS = $(patsubst %.o, %.d, $(OBJECTS))
 
-.PHONY: all test test-hash clean
 
-all: $(TARGET)
+GIT_DATE := $(shell git log -1 --date=short --pretty=format:%cd)
+ifneq ($(GIT_DATE), )
+#	CXXFLAGS += -DGIT_DATE=\"$(GIT_DATE)\"
+endif
+
+GIT_SHA := $(shell git log -1 --date=short --pretty=format:%h)
+ifneq ($(GIT_SHA), )
+	CXXFLAGS += -DGIT_SHA=\"$(GIT_SHA)\"
+endif
+
+GIT_ORIGIN := $(shell git remote get-url origin)
+ifneq ($(GIT_ORIGIN), )
+	CXXFLAGS += -DGIT_ORIGIN=\"$(GIT_ORIGIN)\"
+endif
+
+
+.PHONY: all clean _clear_console test test-hash
+
+all: _clear_console $(TARGET)
+
+clean:
+	$(RM) -r $(DEBUG_DIR) $(RELEASE_DIR)
+
+_clear_console:
+	clear
 
 run: all
 	clear
@@ -58,13 +91,10 @@ test: all
 test-hash: all
 	$(EXPECT) $(TARGET) $(TEST_DIR)/test-hash.rc
 
-clean:
-	$(RM) -r $(DEBUG_DIR) $(RELEASE_DIR)
-
 $(TARGET): $(PRECOMP) $(OBJECTS)
 	$(CXX) -o $@ $(LDFLAGS) $(OBJECTS)
 
-$(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp $(PRECOMP)
+$(BUILD_DIR)/%.o: $(SRCDIR)/%.cpp $(PRECOMP)
 	$(CXX) -c -o $@ $< -MMD $(CXXFLAGS) -Winvalid-pch -include $(HEADER_SRC)
 
 $(PRECOMP): $(HEADER_SRC) | $(BUILD_DIR)

@@ -17,12 +17,12 @@ using out::ostream;
 class UciSearchInfo {
     ostream& out; //output stream
     const PositionFen& positionFen; //current position
+    mutable node_count_t lastInfoNodes = 0;
 
     TimePoint fromSearchStart;
 
     mutable SpinLock outLock;
     mutable bool isreadyWaiting = false; //set when got 'isready' command while thinking
-    mutable node_count_t lastInfoNodes = 0;
 
     ostream& nps(ostream&, node_count_t, const PerftTT&) const;
     ostream& info_nps(ostream&, node_count_t, const PerftTT&) const;
