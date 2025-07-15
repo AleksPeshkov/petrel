@@ -18,7 +18,7 @@
 * Startup constant initialization
 */
 const SquaresInBetween inBetween; //32k 64*64*8
-const HyperbolaDir hyperbolaDir; ////12k 3*64*4*16
+const HyperbolaDir hyperbolaDir; ////4k 64*4*16
 const HyperbolaSq hyperbolaSq; //1k 64*16
 const AttacksFrom attacksFrom; //3k 6*64*8
 constexpr const VectorOfAll vectorOfAll; //4k 256*16

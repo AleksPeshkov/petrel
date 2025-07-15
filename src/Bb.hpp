@@ -3,9 +3,9 @@
 
 #include "io.hpp"
 #include "bitops.hpp"
+#include "typedefs.hpp"
 #include "BitSet.hpp"
 #include "BitRank.hpp"
-#include "Square.hpp"
 
 #if defined _WIN32
 #   define BB(number) number##ull
@@ -62,10 +62,20 @@ public:
 
 };
 
-constexpr Bb Square::horizont() const { return Bb{Rank(*this)} - *this; }
-constexpr Bb Square::vertical() const { return Bb{File(*this)} - *this; }
+constexpr Bb Square::rank() const { return Bb{Rank(*this)} - *this; }
+constexpr Bb Square::file() const { return Bb{File(*this)} - *this; }
 constexpr Bb Square::diagonal() const { return Bb{BB(0x0102040810204080), Rank(*this) + +File(*this) - 7} - *this; }
 constexpr Bb Square::antidiag() const { return Bb{BB(0x8040201008040201), Rank(*this) - +File(*this)} - *this; }
+
+constexpr Bb Square::line(Direction dir) const {
+    switch (dir) {
+        case FileDir:     return file();
+        case RankDir:     return rank();
+        case DiagonalDir: return diagonal();
+        case AntidiagDir: return antidiag();
+        default: return {};
+    }
+}
 
 // https://www.chessprogramming.org/0x88
 constexpr Bb Square::operator() (signed df, signed dr) const {

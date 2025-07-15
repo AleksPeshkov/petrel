@@ -4,6 +4,39 @@
 #include "io.hpp"
 #include "Index.hpp"
 
+enum direction_t { FileDir, RankDir, DiagonalDir, AntidiagDir };
+typedef Index<4, direction_t> Direction;
+
+enum file_t { FileA, FileB, FileC, FileD, FileE, FileF, FileG, FileH, };
+typedef Index<8, file_t> File;
+
+template <> inline
+constexpr io::char_type File::to_char() const { return static_cast<io::char_type>('a' + v); }
+
+template <> inline
+bool File::from_char(io::char_type c) {
+    File file{ static_cast<File::_t>(c - 'a') };
+    if (!file.isOk()) { return false; }
+    this->v = file;
+    return true;
+}
+
+enum rank_t { Rank8, Rank7, Rank6, Rank5, Rank4, Rank3, Rank2, Rank1, };
+typedef Index<8, rank_t> Rank;
+
+constexpr Rank::_t rankForward(Rank rank) { return static_cast<Rank::_t>(rank + Rank2 - Rank1); }
+
+template <> inline
+constexpr io::char_type Rank::to_char() const { return static_cast<io::char_type>('8' - v); }
+
+template <> inline
+bool Rank::from_char(io::char_type c) {
+    Rank rank{ static_cast<Rank::_t>('8' - c) };
+    if (!rank.isOk()) { return false; }
+    this->v = rank;
+    return true;
+}
+
 enum square_t {
     A8, B8, C8, D8, E8, F8, G8, H8,
     A7, B7, C7, D7, E7, F7, G7, H7,
@@ -41,10 +74,12 @@ public:
     constexpr bool on(File file) const { return File{*this} == file; }
 
     // defined in Bb.hpp
-    constexpr Bb horizont() const;
-    constexpr Bb vertical() const;
+    constexpr Bb rank() const;
+    constexpr Bb file() const;
     constexpr Bb diagonal() const;
     constexpr Bb antidiag() const;
+    constexpr Bb line(Direction) const;
+
     constexpr Bb operator() (signed fileOffset, signed rankOffset) const;
 
     friend io::ostream& operator << (io::ostream& out, Square sq) { return out << File(sq) << Rank(sq); }

@@ -9,7 +9,7 @@ class AttacksFrom {
 public:
     constexpr AttacksFrom () {
         FOR_EACH (Square, sq) {
-            attack[Rook][sq]   = sq.vertical() + sq.horizont();
+            attack[Rook][sq]   = sq.file() + sq.rank();
             attack[Bishop][sq] = sq.diagonal() + sq.antidiag();
             attack[Queen][sq]  = attack[Rook][sq] + attack[Bishop][sq];
 

@@ -26,28 +26,13 @@ struct HyperbolaSq : Square::arrayOf<u64x2_t> {
 };
 extern const HyperbolaSq hyperbolaSq;
 
-enum direction_t { Horizont, Vertical, Diagonal, Antidiag };
-typedef Index<4, direction_t>::arrayOf<u64x2_t> Directions;
-struct alignas(64) HyperbolaDir : SliderType::arrayOf< Square::arrayOf<Directions> > {
+struct alignas(64) HyperbolaDir : Square::arrayOf<Direction::arrayOf<u64x2_t>> {
     HyperbolaDir () {
-        constexpr u64x2_t empty = {0, 0};
         FOR_EACH(Square, sq) {
-            Square rsq = ::reverse(sq);
-
-            (*this)[Queen][sq][Horizont] = ::combine(sq.horizont(), rsq.horizont());
-            (*this)[Queen][sq][Vertical] = ::combine(sq.vertical(), rsq.vertical());
-            (*this)[Queen][sq][Diagonal] = ::combine(sq.diagonal(), rsq.diagonal());
-            (*this)[Queen][sq][Antidiag] = ::combine(sq.antidiag(), rsq.antidiag());
-
-            (*this)[Rook][sq][Horizont] = ::combine(sq.horizont(), rsq.horizont());
-            (*this)[Rook][sq][Vertical] = ::combine(sq.vertical(), rsq.vertical());
-            (*this)[Rook][sq][Diagonal] = empty;
-            (*this)[Rook][sq][Antidiag] = empty;
-
-            (*this)[Bishop][sq][Horizont] = empty;
-            (*this)[Bishop][sq][Vertical] = empty;
-            (*this)[Bishop][sq][Diagonal] = ::combine(sq.diagonal(), rsq.diagonal());
-            (*this)[Bishop][sq][Antidiag] = ::combine(sq.antidiag(), rsq.antidiag());
+            Square rsq = reverse(sq);
+            FOR_EACH(Direction, dir) {
+                (*this)[sq][dir] = ::combine(sq.line(dir), rsq.line(dir));
+            }
         }
     }
 };
@@ -66,16 +51,28 @@ class AttackBb : public BitArray<AttackBb, u64x2_t> {
 public:
     explicit AttackBb (Bb bb) : occupied{ hyperbola(::combine(bb, Bb{})) } {}
 
-    Bb attack(SliderType type, Square from) const {
-        const auto& dir = ::hyperbolaDir[type][from];
-        const auto& sq = ::hyperbolaSq[from];
+    Bb attack(SliderType ty, Square from) const {
+        const auto& sq = hyperbolaSq[from];
 
-        auto h = dir[Horizont] & _mm_sub_epi64(occupied & dir[Horizont], sq);
-        auto e = dir[Vertical] & _mm_sub_epi64(occupied & dir[Vertical], sq);
-        auto d = dir[Diagonal] & _mm_sub_epi64(occupied & dir[Diagonal], sq);
-        auto a = dir[Antidiag] & _mm_sub_epi64(occupied & dir[Antidiag], sq);
+        // branchless computation
+        Direction dir = (ty == Bishop) ? DiagonalDir : FileDir;
 
-        return Bb{ static_cast<Bb::_t>( _mm_cvtsi128_si64(hyperbola(h | e | d | a)) ) };
+        const auto& d0 = hyperbolaDir[from][dir];
+        const auto& d1 = hyperbolaDir[from][static_cast<direction_t>(dir+1)];
+
+        // bishop attacks for Bishop, rooks attacks fro Rook and Queen
+        auto result = d0 & _mm_sub_epi64(occupied & d0, sq);
+        result |= d1 & _mm_sub_epi64(occupied & d1, sq);
+
+        if (ty == Queen) {
+            // plus bishop attacks for Queen
+            const auto& d = hyperbolaDir[from][DiagonalDir];
+            const auto& a = hyperbolaDir[from][AntidiagDir];
+            result |= d & _mm_sub_epi64(occupied & d, sq);
+            result |= a & _mm_sub_epi64(occupied & a, sq);
+        }
+
+        return Bb{ static_cast<Bb::_t>(_mm_cvtsi128_si64(hyperbola(result))) };
     }
 
 };

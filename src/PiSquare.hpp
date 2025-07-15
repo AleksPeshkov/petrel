@@ -2,7 +2,6 @@
 #define PI_SQUARE_HPP
 
 #include "typedefs.hpp"
-#include "Square.hpp"
 #include "PiMask.hpp"
 #include "PiVector.hpp"
 #include "VectorOfAll.hpp"
