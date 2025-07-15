@@ -20,8 +20,8 @@ public:
 
     explicit PiMask (_t a) : Base{a} { assertOk(); }
     explicit PiMask (i128_t a) { v.i128 = a; assertOk(); }
-    constexpr explicit operator const _t& () const { return v; }
-    constexpr explicit operator const i128_t& () const { return v.i128; }
+    constexpr operator const _t& () const { return v; }
+    constexpr operator const i128_t& () const { return v; }
 
     // check if either 0 or 0xff bytes are set
     bool isOk() const { return ::equals(v, _mm_cmpgt_epi8(i128_t{0,0}, v)); }
@@ -32,7 +32,6 @@ public:
     static PiMask all() { return PiMask{ ::vectorOfAll[0xffu] }; }
 
     static PiMask equals(i128_t a, i128_t b) { return PiMask { _mm_cmpeq_epi8(a, b) }; }
-    static PiMask equals(u8x16_t a, u8x16_t b) { return equals(a.i128, b.i128); }
     static PiMask equals(PiMask a, PiMask b) { return equals(static_cast<i128_t>(a), static_cast<i128_t>(b)); }
     PiMask operator ~ () { return equals(*this, PiMask{}); }
 

@@ -77,7 +77,7 @@ public:
             Rank::arrayOf<BitRank::_t> br;
         };
         FOR_EACH(Rank, rank) {
-            br[rank] = static_cast<BitRank::_t>(matrix[rank][pi]);
+            br[rank] = matrix[rank][pi];
         }
         return Bb{bb};
     }
@@ -89,7 +89,7 @@ public:
             Rank::arrayOf<BitRank::_t> br;
         };
         FOR_EACH(Rank, rank) {
-            br[rank] = static_cast<BitRank::_t>(matrix[rank].gather());
+            br[rank] = matrix[rank].gather();
         }
         return Bb{bb};
     }
@@ -126,7 +126,7 @@ public:
     index_t count() const {
         VectorBitCount::_t sum{0,0};
         FOR_EACH(Rank, rank) {
-            sum = _mm_add_epi8(sum, ::bitCount.bytes( static_cast<VectorBitCount::_t>(matrix[rank]) ));
+            sum = _mm_add_epi8(sum, ::bitCount.bytes( matrix[rank] ));
         }
         return ::bitCount.total(sum);
     }

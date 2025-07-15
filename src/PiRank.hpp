@@ -14,7 +14,7 @@ struct PiRank : PiBit<PiRank, File> {
     constexpr PiRank () : Base() {}
     constexpr explicit PiRank (BitRank br) : Base(::vectorOfAll[br]) {}
     constexpr explicit PiRank (File f) : Base(::vectorOfAll[BitRank{f}]) {}
-    constexpr PiRank (PiMask m) : Base(static_cast<PiMask::_t>(m)) {}
+    constexpr PiRank (PiMask m) : Base(m) {}
 
     constexpr operator i128_t () const { return v; }
 
