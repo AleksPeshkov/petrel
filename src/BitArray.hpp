@@ -1,64 +1,50 @@
 #ifndef BIT_ARRAY_HPP
 #define BIT_ARRAY_HPP
 
+#include <cassert>
+
+#define SELF static_cast<Self&>(*this)
+#define CONST_SELF static_cast<const Self&>(*this)
+
 template <typename _ValueType>
-class BitArrayBase {
-    typedef BitArrayBase B;
-
-protected:
+struct BitArrayOps {
     typedef _ValueType _t;
-    _t v;
-
-    constexpr BitArrayBase () : v{} {}
-    constexpr explicit BitArrayBase (_t b) : v{b} {}
-
-    constexpr void operator &= (B b) { v &= b.v; }
-    constexpr void operator |= (B b) { v |= b.v; }
-    constexpr void operator ^= (B b) { v ^= b.v; }
-    constexpr void operator %= (B b) { v |= b.v; v ^= b.v; }  //"and not"
-    bool operator == (B b) { return v == b.v; }
-
-public:
-    constexpr explicit operator _t () const { return v; }
+    static constexpr bool equals(const _t& a, const _t& b) { return a == b; }
+    static constexpr void and_assign(_t& a, const _t& b) { a &= b; }
+    static constexpr void or_assign(_t& a, const _t& b) { a |= b; }
+    static constexpr void xor_assign(_t& a, const _t& b) { a ^= b; }
 };
 
-/*
- * typesafe bit array implementation using so called "curiously recurring template pattern"
- */
+//typesafe BitArray implementation using "curiously recurring template pattern"
 template <class _Self, typename _ValueType>
-class BitArray : protected BitArrayBase<_ValueType> {
+class BitArray {
 public:
-    using Base = BitArrayBase<_ValueType>;
-    typedef _Self Self;
-    typedef Self Arg;
+    typedef _ValueType _t;
 
 protected:
-    constexpr Self& self() { return static_cast<Self&>(*this); }
-    constexpr const Self& self() const { return static_cast<const Self&>(*this); }
-
-    using Base::Base;
+    _t v;
+    typedef _Self Self;
+    typedef Self Arg;
+    typedef BitArrayOps<_t> Ops;
 
 public:
-    using typename Base::_t;
-    using Base::operator _t;
+    constexpr BitArray () : v{} {}
+    constexpr explicit BitArray (const _t& b) : v{b} {}
+    constexpr Self& operator = (Arg b) { v = b.v; return SELF; }
+    constexpr explicit operator const _t& () const { return v; }
 
-    constexpr bool none() const { return self() == Self{}; }
-    constexpr bool any()  const { return !self().none(); }
+    constexpr friend bool operator == (Arg a, Arg b) { return Ops::equals(a.v, b.v); }
+    constexpr Self& operator &= (Arg b) { Ops::and_assign(v, b.v); return SELF; }
+    constexpr Self& operator |= (Arg b) { Ops::or_assign(v, b.v); return SELF; }
+    constexpr Self& operator ^= (Arg b) { Ops::xor_assign(v, b.v); return SELF; }
 
-    constexpr bool none(Arg a) const { return (self() & a).none(); }
+    constexpr Self& operator %= (Arg b) { Ops::or_assign(v, b.v); Ops::xor_assign(v, b.v); return SELF; } // andnot_assign
+    constexpr Self& operator += (Arg b) { assert(none(b)); return SELF ^= b; }
+    constexpr Self& operator -= (Arg b) { assert(CONST_SELF >= b); return SELF ^= b; }
 
-    constexpr Self& operator  = (Arg a) { Base::operator  = (a); return self(); }
-    constexpr Self& operator &= (Arg a) { Base::operator &= (a); return self(); }
-    constexpr Self& operator |= (Arg a) { Base::operator |= (a); return self(); }
-    constexpr Self& operator ^= (Arg a) { Base::operator ^= (a); return self(); }
-    constexpr Self& operator += (Arg a) { assert (none(a)); return self() ^= a; }
-    constexpr Self& operator -= (Arg a) { assert (self() >= a); return self() ^= a; }
-
-    // AND NOT operator
-    constexpr Self& operator %= (Arg a) { Base::operator %= (a); return self(); }
-
-    constexpr friend bool operator == (Arg a, Arg b) { return a.operator== (b); }
     constexpr friend bool operator != (Arg a, Arg b) { return !(a == b); }
+    constexpr friend bool operator <  (Arg a, Arg b) { return !(a >= b); }
+    constexpr friend bool operator >  (Arg a, Arg b) { return !(a <= b); }
     constexpr friend bool operator <= (Arg a, Arg b) { return (a & b) == a; }
     constexpr friend bool operator >= (Arg a, Arg b) { return b <= a; }
     constexpr friend Self operator &  (Arg a, Arg b) { return Self{a} &= b; }
@@ -67,7 +53,12 @@ public:
     constexpr friend Self operator +  (Arg a, Arg b) { return Self{a} += b; }
     constexpr friend Self operator -  (Arg a, Arg b) { return Self{a} -= b; }
     constexpr friend Self operator %  (Arg a, Arg b) { return Self{a} %= b; }
-
+    constexpr bool none() const { return CONST_SELF == Self{}; }
+    constexpr bool any() const { return !none(); }
+    constexpr bool none(Arg b) const { return (CONST_SELF & b).none(); }
 };
+
+#undef SELF
+#undef CONST_SELF
 
 #endif

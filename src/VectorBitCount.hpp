@@ -14,10 +14,10 @@ private:
 public:
     _t bytes(_t v) const {
         constexpr auto& nibbleMask = ::vectorOfAll[0x0f];
-        _t lo = v & nibbleMask;
-        _t hi = _mm_srli_epi16(v, 4) & nibbleMask;
-        lo = _mm_shuffle_epi8(nibbleCount.i128, lo);
-        hi = _mm_shuffle_epi8(nibbleCount.i128, hi);
+        _t lo =  _mm_and_si128(v, nibbleMask);
+        _t hi =  _mm_and_si128(_mm_srli_epi16(v, 4), nibbleMask);
+        lo = _mm_shuffle_epi8(nibbleCount, lo);
+        hi = _mm_shuffle_epi8(nibbleCount, hi);
         return _mm_add_epi8(lo, hi);
     }
 

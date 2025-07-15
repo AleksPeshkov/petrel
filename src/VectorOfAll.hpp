@@ -8,10 +8,10 @@
 constexpr u8x16_t all(u8_t i) { return {{ i,i,i,i, i,i,i,i, i,i,i,i, i,i,i,i }}; }
 
 class VectorOfAll {
-    typedef i128_t _t;
+    typedef u8x16_t _t;
     typedef Index<0x100> ByteIndex;
 
-    ByteIndex::arrayOf<u8x16_t> v;
+    ByteIndex::arrayOf<_t> v;
 
 public:
     constexpr VectorOfAll () : v {
@@ -37,9 +37,9 @@ public:
     }
     {}
 
-    constexpr const _t& operator[] (u8_t i) const { return v[i].i128; }
-    constexpr const _t& operator[] (BitRank br) const { return v[static_cast<BitRank::_t>(br)].i128; }
-    constexpr const _t& operator[] (Pi pi) const { return v[pi].i128; }
+    constexpr const _t& operator[] (u8_t i) const { return v[i]; }
+    constexpr const _t& operator[] (BitRank br) const { return v[static_cast<BitRank::_t>(br)]; }
+    constexpr const _t& operator[] (Pi pi) const { return v[pi]; }
 
 };
 
