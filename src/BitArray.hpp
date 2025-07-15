@@ -22,16 +22,17 @@ public:
     typedef _ValueType _t;
 
 protected:
-    _t v;
     typedef _Self Self;
-    typedef Self Arg;
+    typedef const Self& Arg;
     typedef BitArrayOps<_t> Ops;
+
+    _t v;
 
 public:
     constexpr BitArray () : v{} {}
     constexpr explicit BitArray (const _t& b) : v{b} {}
     constexpr Self& operator = (Arg b) { v = b.v; return SELF; }
-    constexpr explicit operator const _t& () const { return v; }
+    constexpr operator const _t& () const { return v; }
 
     constexpr friend bool operator == (Arg a, Arg b) { return Ops::equals(a.v, b.v); }
     constexpr Self& operator &= (Arg b) { Ops::and_assign(v, b.v); return SELF; }

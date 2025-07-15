@@ -12,12 +12,14 @@ class CastlingRules {
 
     File::arrayOf< File::arrayOf<Rules> > castlingRules;
 
+    static constexpr Bb exBetween(Square king, Square rook) { return ::inBetween(king, rook) + rook; }
+
 public:
     constexpr CastlingRules () {
         FOR_EACH(File, kingFile) {
             FOR_EACH(File, rookFile) {
-                Square king(kingFile, Rank1);
-                Square rook(rookFile, Rank1);
+                Square king{kingFile, Rank1};
+                Square rook{rookFile, Rank1};
 
                 if (king == rook) {
                     castlingRules[kingFile][rookFile].unimpeded  = Bb{};
@@ -27,13 +29,13 @@ public:
 
                 switch (CastlingRules::castlingSide(king, rook)) {
                     case QueenSide:
-                        castlingRules[kingFile][rookFile].unimpeded  = ((::inBetween(king, C1)+C1) | (::inBetween(rook, D1)+D1)) % (Bb{king} + rook);
-                        castlingRules[kingFile][rookFile].unattacked = (::inBetween(king, C1)+C1) | king;
+                        castlingRules[kingFile][rookFile].unimpeded  = (exBetween(king, C1) | exBetween(rook, D1)) % (Bb{king} + rook);
+                        castlingRules[kingFile][rookFile].unattacked = exBetween(king, C1) | king;
                         break;
 
                     case KingSide:
-                        castlingRules[kingFile][rookFile].unimpeded  = ((::inBetween(king, G1)+G1) | (::inBetween(rook, F1)+F1)) % (Bb{king} + rook);
-                        castlingRules[kingFile][rookFile].unattacked = (::inBetween(king, G1)+G1) | king;
+                        castlingRules[kingFile][rookFile].unimpeded  = (exBetween(king, G1) | exBetween(rook, F1)) % (Bb{king} + rook);
+                        castlingRules[kingFile][rookFile].unattacked = exBetween(king, G1) | king;
                         break;
                 }
             }
