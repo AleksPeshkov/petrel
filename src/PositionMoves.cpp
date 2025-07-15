@@ -81,10 +81,10 @@ void PositionMoves::correctCheckEvasionsByPawns(Bb checkLine, Square checkFrom) 
 
     //TRICK: assumes Rank8 = 0
     //simple pawn push over check line
-    Bb potencialEvasions = checkLine << 8;
+    Bb potencialEvasions = checkLine << 8u;
 
     //the general case generates invalid diagonal moves to empty squares
-    Bb invalidDiagonalMoves = (checkLine << 9) % Bb{FileA} | (checkLine << 7) % Bb{FileH};
+    Bb invalidDiagonalMoves = (checkLine << 9u) % Bb{FileA} | (checkLine << 7u) % Bb{FileH};
 
     Bb affectedPawns = MY.pawnsSquares() & (potencialEvasions | invalidDiagonalMoves);
     for (Square from : affectedPawns) {
@@ -94,7 +94,7 @@ void PositionMoves::correctCheckEvasionsByPawns(Bb checkLine, Square checkFrom) 
     }
 
     //pawns double push over check line
-    Bb pawnJumpEvasions = MY.pawnsSquares() & Bb{Rank2} & (checkLine << 16) % (MY.occupied() << 8);
+    Bb pawnJumpEvasions = MY.pawnsSquares() & Bb{Rank2} & (checkLine << 16u) % (MY.occupied() << 8u);
     for (Square from : pawnJumpEvasions) {
         moves.add(MY.pieceAt(from), Rank4, File(from));
     }

@@ -7,20 +7,13 @@
 
 typedef i128_t u64x2_t;
 
-constexpr u64x2_t combine(Bb lo, Bb hi) {
-    return u64x2_t{
-        static_cast<long long>(static_cast<Bb::_t>(lo)),
-        static_cast<long long>(static_cast<Bb::_t>(hi))
-    };
-}
-
 //TRICK: Square operator~ is different
 constexpr Square reverse(Square sq) { return { ~File{sq}, ~Rank{sq} }; }
 
 struct HyperbolaSq : Square::arrayOf<u64x2_t> {
     HyperbolaSq () {
         FOR_EACH(Square, sq) {
-            (*this)[sq] = ::combine(Bb{sq}, Bb{::reverse(sq)});
+            (*this)[sq] = u64x2_t{ Bb{sq}, Bb{::reverse(sq)} };
         }
     }
 };
@@ -31,7 +24,7 @@ struct alignas(64) HyperbolaDir : Square::arrayOf<Direction::arrayOf<u64x2_t>> {
         FOR_EACH(Square, sq) {
             Square rsq = reverse(sq);
             FOR_EACH(Direction, dir) {
-                (*this)[sq][dir] = ::combine(sq.line(dir), rsq.line(dir));
+                (*this)[sq][dir] = u64x2_t{sq.line(dir), rsq.line(dir)};
             }
         }
     }
@@ -49,7 +42,7 @@ class AttackBb : public BitArray<AttackBb, u64x2_t> {
     static _t hyperbola(_t v) { return v ^ ::bitReverse(v); }
 
 public:
-    explicit AttackBb (Bb bb) : occupied{ hyperbola(::combine(bb, Bb{})) } {}
+    explicit AttackBb (Bb bb) : occupied{ hyperbola(u64x2_t{bb, 0}) } {}
 
     Bb attack(SliderType ty, Square from) const {
         const auto& sq = hyperbolaSq[from];
@@ -72,7 +65,7 @@ public:
             result |= a & _mm_sub_epi64(occupied & a, sq);
         }
 
-        return Bb{ static_cast<Bb::_t>(_mm_cvtsi128_si64(hyperbola(result))) };
+        return Bb{ _mm_cvtsi128_si64(hyperbola(result)) };
     }
 
 };
