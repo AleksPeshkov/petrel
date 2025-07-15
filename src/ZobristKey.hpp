@@ -2,7 +2,6 @@
 #define ZOBRIST_KEY_HPP
 
 #include "typedefs.hpp"
-#include "Square.hpp"
 
 class ZobristKey {
 public:

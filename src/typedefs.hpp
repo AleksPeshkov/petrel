@@ -4,6 +4,7 @@
 #include <limits>
 #include "types.hpp"
 #include "Index.hpp"
+#include "Square.hpp"
 
 typedef index_t ply_t; //search tree depth (relative to root)
 enum : ply_t { MaxDepth = 128 };
@@ -13,36 +14,6 @@ enum : node_count_t {
     NodeCountNone = std::numeric_limits<node_count_t>::max(),
     NodeCountMax  = NodeCountNone - 1
 };
-
-enum file_t { FileA, FileB, FileC, FileD, FileE, FileF, FileG, FileH, };
-typedef Index<8, file_t> File;
-
-template <> inline
-constexpr io::char_type File::to_char() const { return static_cast<io::char_type>('a' + this->v); }
-
-template <> inline
-bool File::from_char(io::char_type c) {
-    File file{ static_cast<File::_t>(c - 'a') };
-    if (!file.isOk()) { return false; }
-    this->v = file;
-    return true;
-}
-
-enum rank_t { Rank8, Rank7, Rank6, Rank5, Rank4, Rank3, Rank2, Rank1, };
-typedef Index<8, rank_t> Rank;
-
-constexpr Rank::_t rankForward(Rank rank) { return static_cast<Rank::_t>(rank + Rank2 - Rank1); }
-
-template <> inline
-constexpr io::char_type Rank::to_char() const { return static_cast<io::char_type>('8' - this->v); }
-
-template <> inline
-bool Rank::from_char(io::char_type c) {
-    Rank rank{ static_cast<Rank::_t>('8' - c) };
-    if (!rank.isOk()) { return false; }
-    this->v = rank;
-    return true;
-}
 
 enum color_t { White, Black };
 typedef Index<2, color_t> Color;

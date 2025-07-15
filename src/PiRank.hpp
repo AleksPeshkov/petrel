@@ -3,7 +3,6 @@
 
 #include "typedefs.hpp"
 #include "Bb.hpp"
-#include "Square.hpp"
 #include "VectorBitCount.hpp"
 #include "VectorOfAll.hpp"
 #include "PiBit.hpp"

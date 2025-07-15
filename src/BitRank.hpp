@@ -3,7 +3,6 @@
 
 #include "typedefs.hpp"
 #include "BitSet.hpp"
-#include "Square.hpp"
 
 /**
  * a bit for each chessboard square of a rank

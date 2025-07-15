@@ -2,7 +2,7 @@
 #define PIECE_SQUARE_TABLE_HPP
 
 #include "Index.hpp"
-#include "Square.hpp"
+#include "typedefs.hpp"
 
 //https://www.chessprogramming.org/PeSTO%27s_Evaluation_Function
 class PieceSquareTable {
