@@ -3,13 +3,17 @@
 
 #include "typedefs.hpp"
 #include "PiMask.hpp"
-#include "PiVector.hpp"
 #include "VectorOfAll.hpp"
 
-class PiSquare : protected PiVector {
-    enum { EmptySquare = 0xff };
-    bool isEmpty(Pi pi) const { return PiVector::get(pi) == EmptySquare; }
-    Square get(Pi pi) const { return static_cast<Square::_t>(PiVector::get(pi)); }
+class PiSquare {
+    typedef u8x16_t _t;
+    _t v;
+
+    enum { NoSquare = 0xff };
+    bool isEmpty(Pi pi) const { return v.u8[pi] == NoSquare; }
+
+    void set(Pi pi, Square sq) { v.u8[pi] = sq; }
+    Square get(Pi pi) const { return static_cast<Square::_t>(v.u8[pi]); }
 
     PiMask piecesAt(Square sq) const { return PiMask::equals(v, ::vectorOfAll[sq]); }
     bool none(Square sq) { return piecesAt(sq).none(); }
@@ -24,11 +28,11 @@ class PiSquare : protected PiVector {
 #endif
 
 public:
-    constexpr PiSquare () : PiVector(::vectorOfAll[EmptySquare]) {}
+    constexpr PiSquare () : v{::vectorOfAll[NoSquare]} {}
 
-    PiMask pieces() const { return PiMask::cmpgt(v, ::vectorOfAll[EmptySquare]); }
+    PiMask pieces() const { return PiMask::cmpgt(v, ::vectorOfAll[NoSquare]); }
     PiMask piecesOn(Rank rank) const { return PiMask::equals(
-        v & ::vectorOfAll[0xff ^ File::Mask],
+        v.i128 & ::vectorOfAll[0xff ^ File::Mask].i128,
         ::vectorOfAll[static_cast<Square::_t>(rank << Square::RankShift)]);
     }
 
@@ -36,7 +40,7 @@ public:
     bool has(Square sq) const { return piecesAt(sq).any(); }
     Pi pieceAt(Square sq) const { assert (has(sq)); return piecesAt(sq).index(); }
 
-    void clear(Pi pi) { assertOk(pi); set(pi, EmptySquare); }
+    void clear(Pi pi) { assertOk(pi); v.u8[pi] = NoSquare; }
     void drop(Pi pi, Square sq) { assert (isEmpty(pi)); assert (none(sq)); set(pi, sq); }
     void move(Pi pi, Square sq) { assertOk(pi); assert (none(sq)); set(pi, sq); }
 
