@@ -16,12 +16,13 @@ private:
      **/
     enum class Status { Idle, Working, Stopping };
 
+    std::condition_variable_any statusChanged;
+
+    Status status;
+    TaskId taskId;
+
     SpinLock statusLock;
     typedef std::unique_lock<decltype(statusLock)> Guard;
-    std::condition_variable_any statusChanged;
-    Status status;
-
-    TaskId taskId;
 
     bool isStatus(Status to) const { return status == to; }
 

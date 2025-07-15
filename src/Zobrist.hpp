@@ -19,7 +19,7 @@ public:
     constexpr explicit Zobrist (_t z) : v{z} {}
     constexpr operator const _t& () const { return v; }
 
-    Zobrist (Arg my, Arg op) : v{ my.v ^ ::bswap(op.v) } {}
+    Zobrist (Arg my, Arg op) : v{ my.v ^ ::byteswap(op.v) } {}
 
     void drop(PieceType ty, Square to) { change(Index{ty}, to); }
     void clear(PieceType ty, Square from) { drop(ty, from); }

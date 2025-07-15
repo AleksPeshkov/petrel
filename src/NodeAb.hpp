@@ -14,7 +14,7 @@ public:
     NodeAb (NodeAb& n, ply_t r = 1) : Node(n, r), alpha{-n.beta}, beta{-n.alpha} {}
     NodeAb (const PositionMoves& p, SearchControl& c, ply_t d) : Node(p, c, d) {}
 
-    NodeControl visit(Square from, Square to);
+    NodeControl visit(Square from, Square to) override;
 };
 
 #endif

@@ -8,14 +8,14 @@
 class HashBucket;
 
 class PerftTT {
-    HashMemory hashMemory;
-    HashAge hashAge;
-
     struct Counter {
         node_count_t reads = 0;
         node_count_t writes = 0;
         node_count_t hits = 0;
     } counter;
+
+    HashMemory hashMemory;
+    HashAge hashAge;
 
 public:
     PerftTT ();

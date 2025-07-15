@@ -25,8 +25,8 @@ public:
         auto myMaterial = std::min(my.v.s.pieceMat, PieceMatMax);
         auto opMaterial = std::min(op.v.s.pieceMat, PieceMatMax);
 
-        auto myScore = static_cast<signed>(my.v.s.openingPst * opMaterial + my.v.s.endgamePst * (PieceMatMax-opMaterial));
-        auto opScore = static_cast<signed>(op.v.s.openingPst * myMaterial + op.v.s.endgamePst * (PieceMatMax-myMaterial));
+        auto myScore = my.v.s.openingPst * opMaterial + my.v.s.endgamePst * (PieceMatMax-opMaterial);
+        auto opScore = op.v.s.openingPst * myMaterial + op.v.s.endgamePst * (PieceMatMax-myMaterial);
 
         return static_cast<Score>((myScore - opScore) / static_cast<signed>(PieceMatMax));
     }
