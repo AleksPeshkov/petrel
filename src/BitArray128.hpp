@@ -5,11 +5,11 @@
 #include "BitArray.hpp"
 
 template <>
-constexpr BitArrayBase<i128_t>::BitArrayBase () : v{0,0} {}
-
-template <>
-INLINE bool BitArrayBase<i128_t>::operator == (BitArrayBase<i128_t> a) {
-    return _mm_movemask_epi8( _mm_cmpeq_epi8(v, a.v) ) == 0xffffu;
-}
+struct BitArrayOps<u8x16_t> {
+    static bool equals(const u8x16_t& a, const u8x16_t& b) { return ::equals(a.i128, b.i128); }
+    static constexpr void and_assign(u8x16_t& a, const u8x16_t& b) { a.i128 &= b.i128; }
+    static constexpr void or_assign(u8x16_t& a, const u8x16_t& b) { a.i128 |= b.i128; }
+    static constexpr void xor_assign(u8x16_t& a, const u8x16_t& b) { a.i128 ^= b.i128; }
+};
 
 #endif

@@ -9,13 +9,17 @@
 
 struct PiRank : PiBit<PiRank, File> {
     typedef PiBit<PiRank, File> Base;
+    using Base::v;
+
     constexpr PiRank () : Base() {}
     constexpr explicit PiRank (BitRank br) : Base(::vectorOfAll[br]) {}
     constexpr explicit PiRank (File f) : Base(::vectorOfAll[BitRank{f}]) {}
     constexpr PiRank (PiMask m) : Base(static_cast<PiMask::_t>(m)) {}
 
+    constexpr operator i128_t () const { return v; }
+
     BitRank gather() const {
-        _t r = this->v;
+        i128_t r = v;
         r |= _mm_unpackhi_epi64(r, r); //64
         r |= _mm_shuffle_epi32(r, _MM_SHUFFLE(1, 1, 1, 1)); //32
         r |= _mm_shufflelo_epi16(r, _MM_SHUFFLE(1, 1, 1, 1)); //16
@@ -28,8 +32,8 @@ struct PiRank : PiBit<PiRank, File> {
     }
 
     PiMask operator [] (File file) const {
-        _t file_vector = ::vectorOfAll[BitRank{file}];
-        return PiMask::equals(file_vector, this->v & file_vector);
+        i128_t file_vector = ::vectorOfAll[BitRank{file}];
+        return PiMask::equals(v.i128 & file_vector, file_vector);
     }
 
 };

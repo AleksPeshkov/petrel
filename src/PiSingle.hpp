@@ -5,9 +5,9 @@
 #include "typedefs.hpp"
 
 class PiSingle {
-    typedef i128_t _t;
+    typedef u8x16_t _t;
 
-    Pi::arrayOf<u8x16_t> v;
+    Pi::arrayOf<_t> v;
 
 public:
     constexpr PiSingle () : v {{
@@ -33,7 +33,7 @@ public:
     }}
     {}
 
-    constexpr const _t& operator[] (Pi pi) const { return v[pi].i128; }
+    constexpr const _t& operator[] (Pi pi) const { return v[pi]; }
 };
 
 extern const PiSingle piSingle;

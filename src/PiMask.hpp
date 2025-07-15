@@ -9,38 +9,34 @@
 #include "PiSingle.hpp"
 
 ///piece vector of boolean values: false (0) or true (0xff)
-class PiMask {
+class PiMask : public BitArray<PiMask, u8x16_t> {
 public:
-    typedef i128_t _t;
-private:
-    _t v;
+    typedef BitArray<PiMask, u8x16_t> Base;
+    using typename Base::_t;
+    using Base::v;
 
-    typedef PiMask self_type;
-    typedef self_type& self_ref;
-    typedef const self_type& self_cref;
+    constexpr PiMask () : Base{{{0,0}}} {}
+    constexpr PiMask (Pi pi) : Base( ::piSingle[pi] ) {}
 
-#ifdef NDEBUG
-    void assertOk() const {}
-#else
-    void assertOk() const {
-        auto n = _mm_cmpgt_epi8(_t{0,0}, v);
-        assert (_mm_movemask_epi8(_mm_cmpeq_epi8(v, n)) == 0xffffu);
-    }
-#endif
+    explicit PiMask (_t a) : Base{a} { assertOk(); }
+    explicit PiMask (i128_t a) { v.i128 = a; assertOk(); }
+    constexpr explicit operator const _t& () const { return v; }
+    constexpr explicit operator const i128_t& () const { return v.i128; }
 
-    friend class PiOrder;
-    explicit PiMask (_t a) : v{a} { assertOk(); }
+    // check if either 0 or 0xff bytes are set
+    bool isOk() const { return ::equals(v, _mm_cmpgt_epi8(i128_t{0,0}, v)); }
 
-public:
-    constexpr operator _t () const { return v; }
+    // assert if either 0 or 0xff bytes are set
+    void assertOk() const { assert (isOk()); }
 
-    constexpr PiMask () : v{0,0} {}
-    constexpr PiMask (Pi pi) : v( ::piSingle[pi] ) {}
+    static PiMask all() { return PiMask{ ::vectorOfAll[0xffu] }; }
 
-    static PiMask all() { return PiMask{ ::vectorOfAll[0xff] }; }
-    static PiMask equals(_t a, _t b) { return PiMask { _mm_cmpeq_epi8(a, b) }; }
+    static PiMask equals(i128_t a, i128_t b) { return PiMask { _mm_cmpeq_epi8(a, b) }; }
+    static PiMask equals(u8x16_t a, u8x16_t b) { return equals(a.i128, b.i128); }
+    static PiMask equals(PiMask a, PiMask b) { return equals(static_cast<i128_t>(a), static_cast<i128_t>(b)); }
+    PiMask operator ~ () { return equals(*this, PiMask{}); }
+
     static PiMask cmpgt(_t a, _t b) { return PiMask { _mm_cmpgt_epi8(a, b) }; }
-    static PiMask negate(_t a) { return PiMask::equals(a, _t{0,0}); }
 
     operator PieceSet() const {
         assertOk();
@@ -69,30 +65,6 @@ public:
     friend io::ostream& operator << (io::ostream& out, PiMask a) {
         return out << PieceSet(a);
     }
-
-    bool any() const { return !none(); }
-
-    constexpr self_ref operator &= (self_cref a) { v &= a.v; return *this; }
-    constexpr self_ref operator |= (self_cref a) { v |= a.v; return *this; }
-    constexpr self_ref operator ^= (self_cref a) { v ^= a.v; return *this; }
-    constexpr self_ref operator %= (self_cref a) { v |= a.v; v ^= a.v; return *this; }  //"and not"
-
-    self_ref operator += (self_cref a) { assert ((*this & a).none()); v ^= a.v; return *this; }
-    self_ref operator -= (self_cref a) { assert (*this >= a); v ^= a.v; return *this; }
-
-    friend bool operator == (self_type a, self_type b) { return (a ^ b).none(); }
-    friend bool operator != (self_type a, self_type b) { return !(a == b); }
-    friend bool operator <= (self_type a, self_type b) { return (a & b) == a; }
-    friend bool operator >= (self_type a, self_type b) { return b <= a; }
-
-    constexpr friend self_type operator & (self_type a, self_type b) { return self_type{a} &= b; }
-    constexpr friend self_type operator | (self_type a, self_type b) { return self_type{a} |= b; }
-    constexpr friend self_type operator ^ (self_type a, self_type b) { return self_type{a} ^= b; }
-    constexpr friend self_type operator % (self_type a, self_type b) { return self_type{a} %= b; }
-
-    friend self_type operator + (self_type a, self_type b) { return self_type{a} += b; }
-    friend self_type operator - (self_type a, self_type b) { return self_type{a} -= b; }
-
 };
 
 #endif
