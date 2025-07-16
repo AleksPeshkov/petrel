@@ -2,18 +2,27 @@
 #include "out.hpp"
 #include "SearchControl.hpp"
 #include "UciSearchInfo.hpp"
+#include "PositionFen.hpp"
 
 NodeControl NodeAb::visit(Move move) {
     RETURN_IF_ABORT (control.countNode());
 
-    score = Score::None;
+    score = NoScore;
     alpha = -parent.beta;
     beta = -parent.alpha;
 
     draft = parent.draft > 0 ? parent.draft-1 : 0;
     makeMove(parent, move);
 
-    if (movesCount() == 0 || draft == 0) {
+    bool inCheck = NodeAb::inCheck();
+
+    if (movesCount() == 0) {
+        //checkmated or stalemated
+        score = inCheck ? Score::checkmated(ply) : Score{DrawScore};
+        return parent.negamax(score, move);
+    }
+
+    if (draft == 0 && !inCheck) {
         score = staticEval();
     }
     else {
@@ -35,7 +44,7 @@ NodeControl NodeAb::negamax(Score childScore, Move move) {
         if (alpha < score) {
             alpha = score;
 
-            control.setPv(ply, move);
+            control.setPv(ply, createFullMove(move));
         }
     }
 
@@ -43,6 +52,8 @@ NodeControl NodeAb::negamax(Score childScore, Move move) {
 }
 
 NodeControl NodeAb::visitChildren() {
+    assert (MinusInfinity <= alpha && alpha < beta && beta <= PlusInfinity);
+
     NodeAb child{*this};
 
     const Move& move = control.getPv(0)[ply];
@@ -59,4 +70,14 @@ NodeControl NodeAb::visitChildren() {
     }
 
     return NodeControl::Continue;
+}
+
+Score NodeAb::staticEval()
+{
+    return Position::evaluate().clamp();
+}
+
+Move NodeAb::createFullMove(Square from, Square to) const {
+    Color color = control.info.positionFen.getColorToMove() << ply;
+    return Move{from, to, isSpecial(from, to), color, control.info.positionFen.getChessVariant()};
 }

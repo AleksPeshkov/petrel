@@ -14,7 +14,6 @@ private:
     Bb attackedSquares; //squares attacked by all opponent pieces
 
     Zobrist zobrist{0};
-    Score _staticEval = Score::None;
     index_t _movesCount = 0;
 
     //legal move generation helpers
@@ -44,13 +43,13 @@ protected:
     void clearMove(Pi pi, Square to);
     void setMoves(const PiBb& m, index_t n);
 
+    bool inCheck() const;
+
     void setZobrist(const PositionMoves& parent, Square from, Square to) { zobrist = parent.createZobrist(from, to); }
     void setZobrist() { zobrist = generateZobrist(); }
 
-public:
     const Zobrist& getZobrist() const { return zobrist; }
     index_t movesCount() const { return _movesCount; }
-    Score staticEval() const { return _staticEval; }
     PiBb cloneMoves() const { return PiBb{moves}; }
 };
 

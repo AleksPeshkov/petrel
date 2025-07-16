@@ -1,18 +1,17 @@
 #ifndef MOVE_HPP
 #define MOVE_HPP
 
-#include "io.hpp"
+#include "out.hpp"
 #include "typedefs.hpp"
-#include "Square.hpp"
 
 enum chess_variant_t { Orthodox, Chess960 };
 typedef Index<2, chess_variant_t> ChessVariant;
 
-class Position;
-
 /**
  * Internal move is 12 bits long (packed 'from' and 'to' squares) and linked to the position from it was made
- * Position independent move is 13 bits with the extra flag bit to mark either castling, promotion or en passant move
+ * Position independent move is 14 bits with the special move type flag to mark either castling, promotion or en passant move
+ * and color of the side to move and chess variant to appropriate format of castling moves
+ *
  * Any move's squares coordinates are relative to its side. Black side move should flip squares.
  *
  * Castling encoded as the castling rook moves over own king source square.
@@ -21,40 +20,47 @@ class Position;
  * Null move is encoded as 0 {A8A8}
  **/
 class Move {
-    enum Type { Simple, Special };
-
-    struct _t {
-        square_t from:6;
-        square_t to:6;
-        Type special:1;
-
-        constexpr _t (Square f, Square t, Type s = Simple) : from{f}, to{t}, special{s} {}
+    enum move_type_t {
+        Internal,    // move has only minimal info and cannot be corretly printed
+        Normal  = 2, // normal move with full info (color and chess variant)
+        Special = 3  // castling, promotion or en passant move with full info (color and chess variant)
     };
+    typedef Index<2, move_type_t> MoveType;
 
-    union {
-        unsigned n;
-        _t v;
-    };
-
-    constexpr bool isSpecial() const { return v.special == Special; }
+    Square::_t _from:6;
+    Square::_t _to:6;
+    Color::_t color:1;
+    ChessVariant::_t variant:1;
+    MoveType::_t type:2;
 
 public:
-    constexpr Move () : n{0} {} //null move
-    constexpr Move(Square f, Square t, Type s = Simple) : v{f, t, s} {}
+    // null move
+    constexpr Move () : _from{static_cast<Square::_t>(0)}, _to{static_cast<Square::_t>(0)}, color{White}, variant{Orthodox}, type{Internal} {}
 
-    Move(const Position& pos, Move move) : Move{pos, move.from(), move.to()} {}
-    Move (const Position&, Square, Square);
+    // internal move
+    constexpr Move (Square from, Square to) : _from{from}, _to{to}, color{White}, variant{Orthodox}, type{Internal} {}
 
-    // change move squares to black side
-    constexpr Move operator ~ () const { return Move{~from(), ~to(), static_cast<Move::Type>(isSpecial())}; }
+    // full move
+    constexpr Move(Square from, Square to, bool isSpecial, Color c, ChessVariant v = Orthodox)
+        : _from{from}, _to{to}, color{c}, variant{v}, type{isSpecial ? Special : Normal} {}
 
-    constexpr operator bool() const { return n != 0; }
+    // check if move is not null
+    constexpr operator bool() const { return !(_from == 0 && _to == 0); }
 
-    constexpr Square from() const { return v.from; }
-    constexpr Square to()   const { return v.to; }
+    constexpr bool isExternal() const { return type != Internal; }
+    constexpr bool isSpecial()  const { return type == Special; }
 
-    static io::ostream& write(io::ostream&, Move, Color, ChessVariant = Orthodox);
-    static io::ostream& write(io::ostream&, const Move[], Color, ChessVariant = Orthodox);
+    // square from which move is made
+    constexpr Square from() const { return _from; }
+
+    // square to which move is made
+    constexpr Square to() const { return _to; }
+
+    friend constexpr bool operator == (Move a, Move b) { return a._from == b._from && a._to == b._to; }
+    friend constexpr bool operator != (Move a, Move b) { return !(a == b); }
+
+    friend out::ostream& operator << (out::ostream&, Move);
+    friend out::ostream& operator << (out::ostream&, const Move[]);
 };
 
 #endif

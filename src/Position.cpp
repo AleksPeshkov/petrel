@@ -210,3 +210,20 @@ bool Position::afterDrop() {
     //should be not in check
     return MY.checkers().none();
 }
+
+bool Position::isSpecial(Square from, Square to) const {
+    if (MY.kingSquare().is(to)) {
+        return true; // castling
+    }
+
+    if (MY.isPawn(MY.pieceAt(from))) {
+        if (from.on(Rank7)) {
+            return true; // pawn promotion
+        }
+        if (from.on(Rank5) && to.on(Rank5)) {
+            return true; // en passant
+        }
+    }
+
+    return false; // normal move
+}

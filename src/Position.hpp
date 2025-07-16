@@ -28,6 +28,7 @@ public:
 
     void makeMove(const Position&, Square, Square);
     void makeMove(Square, Square);
+    bool isSpecial(Square, Square) const;
 
     //initial position setup
     bool dropValid(Side, PieceType, Square);

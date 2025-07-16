@@ -16,7 +16,8 @@ NodeControl NodePerftRoot::visitRoot() {
         for (Square to : moves[pi]) {
             auto previousPerft = perft;
             RETURN_IF_ABORT (child.visit(from, to));
-            control.perft_currmove(++moveCount, {parent, from, to}, perft - previousPerft);
+            Move move{from, to, isSpecial(from, to), control.info.positionFen.getColorToMove(), control.info.positionFen.getChessVariant()};
+            control.perft_currmove(++moveCount, move, perft - previousPerft);
         }
     }
 

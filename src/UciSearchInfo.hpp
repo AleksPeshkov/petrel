@@ -39,8 +39,6 @@ public:
     void clear();
 
     void readyok(node_count_t, const PerftTT&) const;
-    ostream& write(ostream&, const Move& move, ply_t = 0) const;
-    ostream& write(ostream&, const Move[], ply_t = 0) const;
 
     void bestmove(const Move[], Score, node_count_t, const PerftTT&) const;
     void report_depth(ply_t, const Move[], Score, node_count_t, const PerftTT&) const;

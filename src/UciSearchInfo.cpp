@@ -13,10 +13,6 @@ namespace {
 
     template <typename T>
     constexpr T permil(T n, T m) { return (n * 1000) / m; }
-
-    ostream& operator << (ostream& out, Score a) {
-        return out << static_cast<score_t>(a);
-    }
 }
 
 UciSearchInfo::UciSearchInfo (ostream& o, const PositionFen& p) :
@@ -32,6 +28,7 @@ void UciSearchInfo::clear() {
 void UciSearchInfo::position() const {
     OUTPUT(ob);
     ob << "info fen " << positionFen << '\n';
+    ob << "info " << positionFen.evaluate() << '\n';
 }
 
 void UciSearchInfo::uciok(const HashInfo& hashInfo) const {
@@ -72,14 +69,6 @@ void UciSearchInfo::readyok(node_count_t nodes, const PerftTT& tt) const {
     }
 }
 
-ostream& UciSearchInfo::write(ostream& o, const Move& move, ply_t ply) const {
-    return positionFen.write(o, move, ply);
-}
-
-ostream& UciSearchInfo::write(ostream& o, const Move pv[], ply_t ply) const {
-    return positionFen.write(o, pv, ply);
-}
-
 ostream& UciSearchInfo::nps(ostream& o, node_count_t nodes, const PerftTT& tt) const {
     if (lastInfoNodes == nodes) {
         //return;
@@ -117,52 +106,33 @@ ostream& UciSearchInfo::info_nps(ostream& o, node_count_t nodes, const PerftTT& 
     return o;
 }
 
-void UciSearchInfo::bestmove(const Move pv[], Score bestScore, node_count_t nodes, const PerftTT& tt) const {
+void UciSearchInfo::bestmove(const Move pv[], Score score, node_count_t nodes, const PerftTT& tt) const {
     OUTPUT(ob);
     if (lastInfoNodes != nodes) {
-        ob << "info";
-        nps(ob, nodes, tt);
-        ob << " score " << bestScore;
-        if (pv[0] != Move{}) {
-            ob << " pv"; write(ob, pv);
-        }
-        ob << '\n';
+        ob << "info"; nps(ob, nodes, tt) << " " << score << " pv" << pv << '\n';
     }
-    ob << "bestmove "; write(ob, pv[0]); ob << '\n';
+    ob << "bestmove " << pv[0] << '\n';
 }
 
-void UciSearchInfo::report_depth(ply_t draft, const Move pv[], Score bestScore, node_count_t nodes, const PerftTT& tt) const {
+void UciSearchInfo::report_depth(ply_t draft, const Move pv[], Score score, node_count_t nodes, const PerftTT& tt) const {
     OUTPUT(ob);
-    ob << "info depth " << draft;
-    nps(ob, nodes, tt);
-    ob << " score " << bestScore;
-    ob << " pv"; write(ob, pv);
-    ob << '\n';
+    ob << "info depth " << draft; nps(ob, nodes, tt) << " " << score << " pv" << pv << '\n';
 }
 
 void UciSearchInfo::perft_depth(ply_t draft, node_count_t perftNodes, node_count_t nodes, const PerftTT& tt) const {
     OUTPUT(ob);
-    ob << "info depth " << draft;
-    ob << " perft " << perftNodes;
-    nps(ob, nodes, tt);
-    ob << '\n';
+    ob << "info depth " << draft << " perft " << perftNodes; nps(ob, nodes, tt) << '\n';
 }
 
 void UciSearchInfo::perft_currmove(const Move& currmove, index_t currmovenumber, node_count_t perftNodes, node_count_t nodes, const PerftTT& tt) const {
     OUTPUT(ob);
-    ob << "info currmovenumber " << currmovenumber;
-    ob << " currmove "; write(ob, currmove);
-    ob << " perft " << perftNodes;
-    nps(ob, nodes, tt);
-    ob << '\n';
+    ob << "info currmovenumber " << currmovenumber << " currmove " << currmove << " perft " << perftNodes; nps(ob, nodes, tt) << '\n';
 }
 
 void UciSearchInfo::perft_finish(node_count_t nodes, const PerftTT& tt) const {
     OUTPUT(ob);
     if (lastInfoNodes != nodes) {
-        ob << "info";
-        nps(ob, nodes, tt);
-        ob << '\n';
+        ob << "info"; nps(ob, nodes, tt) << '\n';
     }
     ob << "bestmove 0000\n";
 }
