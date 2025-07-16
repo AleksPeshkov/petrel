@@ -1,7 +1,6 @@
 #include "NodeAb.hpp"
 #include "out.hpp"
 #include "SearchControl.hpp"
-#include "UciSearchInfo.hpp"
 #include "PositionFen.hpp"
 
 NodeControl NodeAb::visit(Move move) {
@@ -50,7 +49,10 @@ NodeControl NodeAb::negamax(Score childScore, Move move) {
         if (alpha < score) {
             alpha = score;
 
-            control.setPv(ply, createFullMove(move));
+            control.pvMoves.set(ply, createFullMove(move));
+            if (ply == 0) {
+                control.infoNewPv(draft, score);
+            }
         }
     }
 
@@ -62,7 +64,7 @@ NodeControl NodeAb::visitChildren() {
 
     NodeAb child{*this};
 
-    const Move& move = control.getPv(0)[ply];
+    const Move& move = control.pvMoves[ply];
     if (isLegalMove(move)) {
         CUTOFF (child.visit(move));
     }
@@ -84,6 +86,9 @@ Score NodeAb::staticEval()
 }
 
 Move NodeAb::createFullMove(Square from, Square to) const {
-    Color color = control.info.positionFen.getColorToMove() << ply;
-    return Move{from, to, isSpecial(from, to), color, control.info.positionFen.getChessVariant()};
+    return Move{from, to, isSpecial(from, to), colorToMove(), control.position.getChessVariant()};
+}
+
+Color NodeAb::colorToMove() const {
+    return control.position.getColorToMove(ply);
 }

@@ -34,7 +34,7 @@ NodeControl NodePerftTT::visit(Square from, Square to) {
             assert(draft >= 2);
             setZobrist(parent, from, to);
 
-            auto n = control.tt().get(getZobrist(), draft - 2);
+            auto n = control.tt.get(getZobrist(), draft - 2);
             if (n != NodeCountNone) {
                 perft = n;
             } else {
@@ -43,7 +43,7 @@ NodeControl NodePerftTT::visit(Square from, Square to) {
 
                 perft = 0;
                 RETURN_IF_ABORT(visitChildren());
-                control.tt().set(getZobrist(), draft - 2, perft);
+                control.tt.set(getZobrist(), draft - 2, perft);
             }
             parent.perft += perft;
         }

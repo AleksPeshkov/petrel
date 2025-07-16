@@ -2,7 +2,7 @@
 
 // convert move to UCI format
 io::ostream& operator << (io::ostream& out, Move move) {
-    assert (!move || move.type != Move::Internal);
+    assert (!move || move.isExternal());
     if (!move || move.type == Move::Internal) { return out << "0000"; }
 
     auto isWhite{ move.color == White };

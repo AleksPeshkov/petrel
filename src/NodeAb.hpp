@@ -28,6 +28,7 @@ public:
     NodeAb (NodeAb& n) : Node{n.control}, parent{n}, ply{n.ply + 1} {}
     NodeControl visitChildren() override;
 
+    Color colorToMove() const;
 };
 
 #endif

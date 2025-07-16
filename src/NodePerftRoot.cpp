@@ -1,5 +1,4 @@
 #include "NodePerftRoot.hpp"
-#include "UciSearchInfo.hpp"
 
 NodeControl NodePerftRoot::visitRoot() {
     if (!isDivide) {
@@ -16,7 +15,8 @@ NodeControl NodePerftRoot::visitRoot() {
         for (Square to : moves[pi]) {
             auto previousPerft = perft;
             RETURN_IF_ABORT (child.visit(from, to));
-            Move move{from, to, isSpecial(from, to), control.info.positionFen.getColorToMove(), control.info.positionFen.getChessVariant()};
+
+            Move move{from, to, isSpecial(from, to), control.position.getColorToMove(), control.position.getChessVariant()};
             control.perft_currmove(++moveCount, move, perft - previousPerft);
         }
     }

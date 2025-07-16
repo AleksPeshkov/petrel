@@ -1,19 +1,10 @@
 #include "Uci.hpp"
-#include "Milliseconds.hpp"
 #include "SearchLimit.hpp"
 
 namespace {
     ostream& uci_error(ostream& err, io::istream& context) {
         return err << "parsing error: " << context.rdbuf() << '\n';
     }
-}
-
-Uci::Uci (ostream& out):
-    positionFen{},
-    info(out, positionFen),
-    searchControl(info)
-{
-    ucinewgame();
 }
 
 void Uci::operator() (io::istream& in, ostream& err) {
@@ -24,12 +15,12 @@ void Uci::operator() (io::istream& in, ostream& err) {
 
         if      (next("go"))        { go(); }
         else if (next("position"))  { position(); }
-        else if (next("stop"))      { searchControl.stop(); }
-        else if (next("isready"))   { searchControl.isready(); }
+        else if (next("stop"))      { root.stop(); }
+        else if (next("isready"))   { root.isready(); }
         else if (next("setoption")) { setoption(); }
         else if (next("set"))       { setoption(); }
         else if (next("ucinewgame")){ ucinewgame(); }
-        else if (next("uci"))       { searchControl.uciok(); }
+        else if (next("uci"))       { root.uciok(); }
         else if (next("perft"))     { goPerft(); }
         else if (next("quit"))      { break; }
         else if (next("exit"))      { break; }
@@ -42,13 +33,13 @@ void Uci::operator() (io::istream& in, ostream& err) {
 }
 
 void Uci::ucinewgame() {
-    if (searchControl.isBusy()) {
+    if (root.isBusy()) {
         io::fail_rewind(command);
         return;
     }
 
-    searchControl.newGame();
-    positionFen.setStartpos();
+    root.newGame();
+    root.position.setStartpos();
 }
 
 void Uci::setoption() {
@@ -57,8 +48,8 @@ void Uci::setoption() {
     if (next("UCI_Chess960")) {
         next("value");
 
-        if (next("true"))  { positionFen.setChessVariant(Chess960); return; }
-        if (next("false")) { positionFen.setChessVariant(Orthodox); return; }
+        if (next("true"))  { root.position.setChessVariant(Chess960); return; }
+        if (next("false")) { root.position.setChessVariant(Orthodox); return; }
 
         io::fail_rewind(command);
         return;
@@ -73,7 +64,7 @@ void Uci::setoption() {
 }
 
 void Uci::setHash() {
-    if (searchControl.isBusy()) {
+    if (root.isBusy()) {
         io::fail_rewind(command);
         return;
     }
@@ -110,33 +101,33 @@ void Uci::setHash() {
         }
     }
 
-    searchControl.setHash(quantity);
+    root.setHash(quantity);
 }
 
 void Uci::position() {
     if (nextNothing()) {
-        searchControl.infoPosition();
+        root.infoPosition();
         return;
     }
 
-    if (next("startpos")) { positionFen.setStartpos(); }
-    if (next("fen")) { positionFen.readFen(command); }
+    if (next("startpos")) { root.position.setStartpos(); }
+    if (next("fen")) { root.position.readFen(command); }
 
     next("moves");
-    positionFen.playMoves(command);
+    root.position.playMoves(command);
 }
 
 void Uci::go() {
-    if (searchControl.isBusy()) {
+    if (root.isBusy()) {
         io::fail_rewind(command);
         return;
     }
 
-    auto whiteSide = positionFen.sideOf(White);
-    auto blackSide = positionFen.sideOf(Black);
+    auto whiteSide = root.position.sideOf(White);
+    auto blackSide = root.position.sideOf(Black);
 
     SearchLimit limit;
-    limit.positionMoves = positionFen;
+    limit.positionMoves = root.position;
 
     unsigned quantity = 0;
     while (command >> std::ws, !command.eof()) {
@@ -155,11 +146,11 @@ void Uci::go() {
         else { io::fail(command); return; }
     }
 
-    searchControl.go(limit);
+    root.go(limit);
 }
 
 void Uci::goPerft() {
-    if (searchControl.isBusy()) {
+    if (root.isBusy()) {
         io::fail_rewind(command);
         return;
     }
@@ -178,6 +169,6 @@ void Uci::goPerft() {
     }
 
     if (nextNothing()) {
-        searchControl.goPerft(depth, isPerftDivide);
+        root.goPerft(depth, isPerftDivide);
     }
 }
