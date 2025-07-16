@@ -4,7 +4,6 @@
 #include "io.hpp"
 #include "typedefs.hpp"
 #include "PositionMoves.hpp"
-#include "Move.hpp"
 
 using in::istream;
 using out::ostream;
@@ -24,8 +23,10 @@ class PositionFen : public PositionMoves {
 
 public:
     constexpr Side sideOf(Color color) const { return colorToMove.is(color) ? My : Op; }
-    constexpr bool isChess960() const { return chessVariant.is(Chess960); }
+    constexpr const Color& getColorToMove() const { return colorToMove; }
 
+    constexpr bool isChess960() const { return chessVariant.is(Chess960); }
+    constexpr const ChessVariant& getChessVariant() const { return chessVariant; }
     void setChessVariant(ChessVariant v) { chessVariant = v; }
     void setStartpos();
     void readFen(istream&);
@@ -33,8 +34,6 @@ public:
     void limitMoves(istream&);
 
     friend ostream& operator << (ostream&, const PositionFen&);
-    ostream& write(ostream&, Move, ply_t = 0) const;
-    ostream& write(ostream&, const Move[], ply_t = 0) const;
 };
 
 #endif

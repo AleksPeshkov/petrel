@@ -190,9 +190,7 @@ void PositionMoves::generateMoves() {
 
 void PositionMoves::generateMoves() {
     generateMoves<My>();
-
     _movesCount = moves.count();
-    _staticEval = (_movesCount == 0) ? Score::None : evaluate();
 }
 
 void PositionMoves::setMoves(const PiBb& m, index_t n) {
@@ -228,6 +226,10 @@ void PositionMoves::makeMove(PositionMoves& parent, Square from, Square to) {
     Position::makeMove(parent, from, to);
     generateMoves();
     // assert (zobrist == Zobrist{0} || zobrist == generateZobrist()); // true, but slow to compute
+}
+
+bool PositionMoves::inCheck() const {
+    return OP.checkers().any();
 }
 
 Zobrist PositionMoves::generateZobrist() const {
