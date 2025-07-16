@@ -230,14 +230,6 @@ ostream& operator << (ostream& out, const PositionFen& pos) {
     return out;
 }
 
-ostream& PositionFen::write(ostream& out, Move move, ply_t ply) const {
-    return Move::write(out, move, static_cast<color_t>(colorToMove ^ (ply & 1)), chessVariant);
-}
-
-ostream& PositionFen::write(ostream& out, const Move pv[], ply_t ply) const {
-    return Move::write(out, pv, static_cast<color_t>(colorToMove ^ (ply & 1)), chessVariant);
-}
-
 istream& PositionFen::readMove(istream& in, Square& from, Square& to) const {
     if (!read(in, from) || !read(in, to)) { return in; }
 

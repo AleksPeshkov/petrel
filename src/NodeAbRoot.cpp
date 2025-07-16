@@ -14,9 +14,9 @@ NodeControl NodeAbRoot::visitChildren() {
     for (draft = 1; draft <= depthLimit; ++draft) {
         control.newIteration();
         setMoves(rootMoves, rootMovesCount);
-        score = Score::None;
-        alpha = Score::Minimum;
-        beta = Score::Maximum;
+        score = NoScore;
+        alpha = MinusInfinity;
+        beta = PlusInfinity;
         BREAK_IF_ABORT ( NodeAb::visitChildren() );
         control.infoDepth(draft, score);;
     }

@@ -19,6 +19,9 @@ enum color_t { White, Black };
 typedef Index<2, color_t> Color;
 template <> io::czstring Color::The_string;
 
+// color to move of the given ply
+constexpr Color operator << (Color c, ply_t ply) { return static_cast<Color::_t>((ply ^ static_cast<unsigned>(c)) & Color::Mask); }
+
 enum side_to_move_t {
     My, // side to move
     Op  // opposite to side to move
