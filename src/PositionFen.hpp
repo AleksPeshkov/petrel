@@ -23,7 +23,7 @@ class PositionFen : public PositionMoves {
 
 public:
     constexpr Side sideOf(Color color) const { return colorToMove.is(color) ? My : Op; }
-    constexpr const Color& getColorToMove() const { return colorToMove; }
+    constexpr Color getColorToMove(Ply ply = 0) const { return colorToMove << ply; }
 
     constexpr bool isChess960() const { return chessVariant.is(Chess960); }
     constexpr const ChessVariant& getChessVariant() const { return chessVariant; }

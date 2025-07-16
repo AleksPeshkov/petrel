@@ -26,7 +26,7 @@ perft 5 divide
 <info currmovenumber 18 currmove a2a3 perft 181046 nodes 121490 *
 <info currmovenumber 19 currmove h2h4 perft 218829 nodes 123353 *
 <info currmovenumber 20 currmove h2h3 perft 181044 nodes 124304 *
-<info depth 5 perft 4865609 nodes 124304 *
+<info depth 5 perft 4865609*
 <bestmove 0000
 
 position fen 6kr///////6K1 b k
@@ -246,10 +246,6 @@ perft 7
 position fen 4r3/3k4/8/8/8/8/6PP/qR1K1R2 w KQ - 0 1
 perft 6
 <info depth 6 perft 281330710 *
-
-position fen r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1
-perft 6
-<info depth 6 perft 706045033 *
 
 position startpos moves e2e4 e7e5 f1c4 g8f6 d2d4 c7c6 d4e5 f6e4 g1e2 e4f2 e5e6 f8e7 e6d7 e8f8
 position

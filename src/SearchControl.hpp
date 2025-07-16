@@ -1,42 +1,48 @@
 #ifndef SEARCH_CONTROL_HPP
 #define SEARCH_CONTROL_HPP
 
+#include "out.hpp"
+#include "Milliseconds.hpp"
 #include "NodeCounter.hpp"
+#include "PerftTT.hpp"
+#include "PositionFen.hpp"
+#include "PvMoves.hpp"
 #include "SearchThread.hpp"
 #include "Score.hpp"
-#include "PerftTT.hpp"
-#include "PvMoves.hpp"
+#include "SpinLock.hpp"
 #include "Timer.hpp"
+#include "TimePoint.hpp"
 
 class Move;
 class SearchLimit;
-class UciSearchInfo;
 
 class SearchControl {
-public:
-    UciSearchInfo& info; //virtual
+    SearchControl(const SearchControl&) = delete;
+    SearchControl& operator=(const SearchControl&) = delete;
 
-protected:
+public:
+    SearchControl(ostream& o) : out{o} {}
+
+    PositionFen position; // root position between 'position' and 'go' commands
+
+    mutable node_count_t lastInfoNodes = 0; // to avoid two identical output lines in a row
+    mutable SpinLock outLock;
+    mutable bool isreadyWaiting = false;
+
+    ostream& out; // output stream
+    TimePoint fromSearchStart;
+
     NodeCounter nodeCounter;
     SearchThread searchThread;
-
-    PerftTT transpositionTable;
+    PerftTT tt;
     Timer timer;
-
     PvMoves pvMoves;
-
-    SearchControl (const SearchControl&) = delete;
-    SearchControl& operator = (const SearchControl&) = delete;
-
-public:
-    SearchControl (UciSearchInfo&);
 
     void newGame();
     void newSearch();
     void newIteration();
 
     bool isAborted() const { return nodeCounter.isAborted(); }
-
     bool isBusy() const { return !searchThread.isIdle(); }
     bool isStopped() const { return searchThread.isStopped(); }
     void stop() { searchThread.stop(); }
@@ -47,15 +53,10 @@ public:
     void go(const SearchLimit&);
     void setHash(size_t);
 
-    const PerftTT& tt() const { return transpositionTable; }
-    PerftTT& tt() { return transpositionTable; }
-
-    const Move* getPv(Ply = 0) const;
-    void setPv(Ply ply, const Move&);
-
     void readyok() const;
-    void bestmove(Score) const;
-    void infoDepth(Ply, Score) const;
+    void bestmove() const;
+    void infoNewPv(Ply, Score) const;
+    void infoIterationEnd(Ply) const;
 
     void goPerft(Ply depth, bool isDivide = false);
     void perft_depth(Ply, node_count_t) const;
@@ -64,6 +65,14 @@ public:
 
     NodeControl countNode();
 
-};
+private:
+    template <typename T>
+    static T mebi(T bytes) { return bytes / (1024 * 1024); }
 
+    template <typename T>
+    static constexpr T permil(T n, T m) { return (n * 1000) / m; }
+
+    ostream& nps(ostream&, node_count_t) const;
+    ostream& info_nps(ostream&, node_count_t) const;
+};
 #endif
