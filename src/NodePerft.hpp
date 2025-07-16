@@ -3,11 +3,17 @@
 
 #include "Node.hpp"
 
+class NodePerftTT;
+
 class NodePerft : public Node {
 protected:
-    using Node::Node;
+    NodePerftTT& parent; //virtual
+
     virtual NodeControl visit(Square from, Square to);
+    NodePerft (const PositionMoves& p, SearchControl& c);
+
 public:
+    NodePerft (NodePerftTT& n);
     NodeControl visitChildren() override;
 };
 

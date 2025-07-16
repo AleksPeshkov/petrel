@@ -11,7 +11,7 @@ protected:
 
     void updateParentPerft() {
         assert (&parent != this);
-        static_cast<NodePerftTT&>(parent).perft += perft;
+        parent.perft += perft;
         perft = 0;
     }
 

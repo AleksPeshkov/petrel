@@ -6,18 +6,22 @@
 
 class NodeAb : public Node {
 protected:
-    ply_t draft; //remaining depth
+    NodeAb& parent; //virtual
+
     ply_t ply = 0; //distance from root
+    ply_t draft = 0; //remaining depth
+
+    Score score = Score::None;
     Score alpha = Score::Minimum;
     Score beta = Score::Maximum;
-    Score score = Score::Minimum;
 
-    NodeAb (const PositionMoves& p, SearchControl& c, ply_t d) : Node{p, c}, draft{d} {}
+    NodeAb (const PositionMoves& p, SearchControl& c) : Node{p, c}, parent{*this} {}
 
-    NodeControl visit(Square from, Square to) override;
+    NodeControl visit(Move);
+    NodeControl negamax(Score, Move);
 
 public:
-    NodeAb (NodeAb& n, ply_t r = 1) : Node{n}, draft{n.draft - r}, ply{n.ply + 1}, alpha{-n.beta}, beta{-n.alpha} {}
+    NodeAb (NodeAb& n) : Node{n.control}, parent{n}, ply{n.ply + 1} {}
     NodeControl visitChildren() override;
 
 };
