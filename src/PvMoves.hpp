@@ -16,7 +16,8 @@ public:
         }
     }
 
-    void operator() (Ply ply, Move move) {
+    void set(Ply ply, Move move) {
+        assert (move.isExternal());
         pv[ply][0] = move;
         Move* target = &pv[ply][1];
         Move* source = &pv[ply+1][0];
@@ -25,6 +26,10 @@ public:
     }
 
     operator const Move* () const { return &pv[0][0]; }
+
+    friend out::ostream& operator << (out::ostream& out, const PvMoves& pvMoves) {
+        return out << &pvMoves.pv[0][0];
+    }
 
 };
 

@@ -4,14 +4,11 @@
 #include "io.hpp"
 #include "PositionFen.hpp"
 #include "SearchControl.hpp"
-#include "UciSearchInfo.hpp"
 
 using out::ostream;
 
 class Uci {
-    PositionFen positionFen; //root position between 'position' and 'go' commands
-    UciSearchInfo info; //output with multithread synchronization
-    SearchControl searchControl;
+    SearchControl root;
 
     std::istringstream command; //current input command line
     bool next(io::czstring token) { return in::next(command, token); }
@@ -26,7 +23,7 @@ class Uci {
     void goPerft();
 
 public:
-    Uci (ostream&);
+    Uci (ostream& out): root{out} { ucinewgame(); }
     void operator() (in::istream&, ostream& = std::cerr);
 };
 
