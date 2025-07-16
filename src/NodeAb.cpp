@@ -3,37 +3,39 @@
 #include "SearchControl.hpp"
 #include "UciSearchInfo.hpp"
 
-NodeControl NodeAb::visit(Square from, Square to) {
-    auto& p = static_cast<NodeAb&>(parent);
-
+NodeControl NodeAb::visit(Move move) {
     RETURN_IF_ABORT (control.countNode());
-    makeMove(p, from, to);
+
+    score = Score::None;
+    alpha = -parent.beta;
+    beta = -parent.alpha;
+
+    draft = parent.draft > 0 ? parent.draft-1 : 0;
+    makeMove(parent, move);
 
     if (movesCount() == 0 || draft == 0) {
         score = staticEval();
     }
     else {
-        alpha = -p.beta;
-        beta = -p.alpha;
         RETURN_IF_ABORT (visitChildren());
     }
 
-    if (p.score < -score) {
-        p.score = -score;
+    return parent.negamax(score, move);
+}
 
-        if (p.alpha < p.score) {
-            p.alpha = p.score;
+NodeControl NodeAb::negamax(Score childScore, Move move) {
+    if (score < -childScore) {
+        score = -childScore;
 
-            if (p.alpha >= p.beta) {
-                //beta cut off
-                return NodeControl::BetaCutoff;
-            }
+        if (beta <= score) {
+            //beta cut off
+            return NodeControl::BetaCutoff;
+        }
 
-            control.setPv(ply-1, {from, to});
+        if (alpha < score) {
+            alpha = score;
 
-            //out::space(std::cout, ply-1, '*') << " " << ply-1 << " ";
-            //control.info.write(std::cout, {p, from, to}, ply-1) << " pv";
-            //control.info.write(std::cout, control.getPv(ply-1), ply-1) << std::endl;
+            control.setPv(ply, move);
         }
     }
 
@@ -41,25 +43,18 @@ NodeControl NodeAb::visit(Square from, Square to) {
 }
 
 NodeControl NodeAb::visitChildren() {
-    auto my = (*this)[My];
-
-    score = Score::Minimum;
-    auto child = NodeAb{*this};
+    NodeAb child{*this};
 
     const Move& move = control.getPv(0)[ply];
-    if (move) {
-        Square from = move.from();
-        Square to = move.to();
-        if (isLegalMove(from, to)) {
-            CUTOFF (child.visit(from, to));
-        }
+    if (isLegalMove(move)) {
+        CUTOFF (child.visit(move));
     }
 
-    for (Pi pi : my.pieces()) {
-        Square from = my.squareOf(pi);
+    for (Pi pi : MY.pieces()) {
+        Square from = MY.squareOf(pi);
 
         for (Square to : moves[pi]) {
-            CUTOFF (child.visit(from, to));
+            CUTOFF (child.visit({from, to}));
         }
     }
 
