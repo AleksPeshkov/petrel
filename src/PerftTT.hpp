@@ -20,8 +20,8 @@ class PerftTT {
 public:
     PerftTT ();
 
-    node_count_t get(Zobrist, ply_t);
-    void set(Zobrist, ply_t, node_count_t);
+    node_count_t get(Zobrist, Ply);
+    void set(Zobrist, Ply, node_count_t);
 
     const Counter& getCounter() const { return counter; }
 

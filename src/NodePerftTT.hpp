@@ -6,11 +6,11 @@
 class NodePerftTT : public Node {
 protected:
     NodePerftTT& parent;
-    ply_t draft;
+    Ply draft;
     node_count_t perft = 0;
 
 public:
-    NodePerftTT (const PositionMoves& p, SearchControl& c, ply_t d);
+    NodePerftTT (const PositionMoves& p, SearchControl& c, Ply d);
     NodePerftTT (NodePerftTT& n);
 
     NodeControl visit(Square from, Square to);
