@@ -5,20 +5,18 @@
 #include "Move.hpp"
 
 class PvMoves {
-    enum { N = ::MaxDepth };
-    std::array< std::array<Move, N>, N> pv;
+    Ply::arrayOf< Ply::arrayOf<Move> > pv;
 
 public:
     PvMoves () { clear(); }
 
     void clear() {
-        for (index_t ply = 0; ply < N; ++ply) {
+        FOR_EACH(Ply, ply) {
             pv[ply][0] = Move{};
         }
     }
 
-    void operator() (ply_t ply, Move move) {
-        assert (ply < N-1);
+    void operator() (Ply ply, Move move) {
         pv[ply][0] = move;
         Move* target = &pv[ply][1];
         Move* source = &pv[ply+1][0];

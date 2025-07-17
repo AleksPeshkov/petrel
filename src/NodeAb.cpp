@@ -22,6 +22,12 @@ NodeControl NodeAb::visit(Move move) {
         return parent.negamax(score, move);
     }
 
+    if (ply == MaxPly) {
+        // no room to search deeper
+        score = staticEval();
+        return parent.negamax(score, move);
+    }
+
     if (draft == 0 && !inCheck) {
         score = staticEval();
     }
