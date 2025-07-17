@@ -21,8 +21,6 @@ public:
 
     bool isPonder = false;
     bool isInfinite = false;
-    bool isPerft = false;
-    bool isDivide = false;
 
     Duration getThinkingTime() const {
         if (movetime != Duration::zero()) { return movetime; }

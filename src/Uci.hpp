@@ -23,6 +23,7 @@ class Uci {
     void setHash();
     void setoption();
     void ucinewgame();
+    void goPerft();
 
 public:
     Uci (ostream&);

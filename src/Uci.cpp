@@ -30,6 +30,7 @@ void Uci::operator() (io::istream& in, ostream& err) {
         else if (next("set"))       { setoption(); }
         else if (next("ucinewgame")){ ucinewgame(); }
         else if (next("uci"))       { searchControl.uciok(); }
+        else if (next("perft"))     { goPerft(); }
         else if (next("quit"))      { break; }
         else if (next("exit"))      { break; }
 
@@ -149,11 +150,33 @@ void Uci::go() {
         else if (next("mate"))     { command >> limit.mate; }
         else if (next("ponder"))   { limit.isPonder = true; }
         else if (next("infinite")) { limit.isInfinite = true; }
-        else if (next("perft"))    { limit.isPerft = true; }
-        else if (next("divide"))   { limit.isDivide = true; limit.isPerft = true; }
         else if (next("searchmoves")) { limit.positionMoves.limitMoves(command); }
         else { io::fail(command); return; }
     }
 
     searchControl.go(limit);
+}
+
+void Uci::goPerft() {
+    if (searchControl.isBusy()) {
+        io::fail_rewind(command);
+        return;
+    }
+
+    unsigned depth = 0;
+    command >> depth;
+    if (!depth) {
+        io::fail_rewind(command);
+        return;
+    }
+    depth = std::min(depth, +MaxDepth);
+
+    bool isPerftDivide = false;
+    if (next("divide")) {
+        isPerftDivide = true;
+    }
+
+    if (nextNothing()) {
+        searchControl.goPerft(depth, isPerftDivide);
+    }
 }
