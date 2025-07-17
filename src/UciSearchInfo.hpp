@@ -15,6 +15,7 @@ class PositionFen;
 using out::ostream;
 
 class UciSearchInfo {
+public:
     ostream& out; //output stream
     const PositionFen& positionFen; //current position
     mutable node_count_t lastInfoNodes = 0;
@@ -27,7 +28,6 @@ class UciSearchInfo {
     ostream& nps(ostream&, node_count_t, const PerftTT&) const;
     ostream& info_nps(ostream&, node_count_t, const PerftTT&) const;
 
-public:
     UciSearchInfo (ostream&, const PositionFen&);
 
     //called from Uci

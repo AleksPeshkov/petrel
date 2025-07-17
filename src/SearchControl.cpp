@@ -1,6 +1,6 @@
 #include "SearchControl.hpp"
-#include "NodePerftRoot.hpp"
 #include "NodeAbRoot.hpp"
+#include "NodePerftRoot.hpp"
 #include "UciSearchInfo.hpp"
 #include "SearchLimit.hpp"
 
@@ -25,25 +25,21 @@ void SearchControl::newIteration() {
 void SearchControl::go(const SearchLimit& limit) {
     newSearch();
 
-    nodeCounter = NodeCounter(limit.nodes);
-    auto duration = limit.getThinkingTime();
+    auto searchId = searchThread.start(static_cast<std::unique_ptr<Node>>(
+        std::make_unique<NodeAbRoot>(limit, *this)
+    ));
 
-    auto searchId = searchThread.start(
-        limit.isPerft
-            ? (limit.depth
-                ? (limit.isDivide
-                    ? static_cast<std::unique_ptr<Node>>(std::make_unique<NodePerftDivideDepth>(limit, *this))
-                    : static_cast<std::unique_ptr<Node>>(std::make_unique<NodePerftRootDepth>(limit, *this))
-                )
-                : (limit.isDivide
-                    ? static_cast<std::unique_ptr<Node>>(std::make_unique<NodePerftDivideIterative>(limit, *this))
-                    : static_cast<std::unique_ptr<Node>>(std::make_unique<NodePerftRootIterative>(limit, *this))
-                )
-            )
-            : static_cast<std::unique_ptr<Node>>(std::make_unique<NodeAbRoot>(limit, *this))
-    );
+    if (!limit.isInfinite) {
+        // search alarm timeout
+        auto duration = limit.getThinkingTime();
+        timer.start(duration, searchThread, searchId);
+    }
+}
 
-    timer.start(duration, searchThread, searchId);
+void SearchControl::goPerft(ply_t depth, bool isDivide) {
+    searchThread.start(static_cast<std::unique_ptr<Node>>(
+        std::make_unique<NodePerftRoot>(info.positionFen, *this, depth, isDivide)
+    ));
 }
 
 NodeControl SearchControl::countNode() {

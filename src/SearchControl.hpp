@@ -57,6 +57,7 @@ public:
     void bestmove(Score) const;
     void infoDepth(ply_t, Score) const;
 
+    void goPerft(ply_t depth, bool isDivide = false);
     void perft_depth(ply_t, node_count_t) const;
     void perft_currmove(index_t moveCount, const Move& currentMove, node_count_t) const;
     void perft_finish() const;
