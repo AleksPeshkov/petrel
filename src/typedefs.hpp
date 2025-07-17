@@ -6,8 +6,16 @@
 #include "Index.hpp"
 #include "Square.hpp"
 
-typedef index_t ply_t; //search tree depth (relative to root)
-enum : ply_t { MaxDepth = 128 };
+// search tree distance in halfmoves
+struct Ply : Index<64> {
+    using Index::Index;
+
+    Ply(signed ply) : Index{static_cast<_t>(ply)} {}
+    Ply(unsigned ply) : Index{static_cast<_t>(ply)} {}
+
+    friend io::ostream& operator << (io::ostream& out, Ply ply) { return out << static_cast<unsigned>(ply); }
+};
+constexpr Ply::_t MaxPly = Ply::Size - 1; // Ply is limited to [0 .. MaxPly]
 
 typedef u64_t node_count_t;
 enum : node_count_t {
@@ -20,7 +28,7 @@ typedef Index<2, color_t> Color;
 template <> io::czstring Color::The_string;
 
 // color to move of the given ply
-constexpr Color operator << (Color c, ply_t ply) { return static_cast<Color::_t>((ply ^ static_cast<unsigned>(c)) & Color::Mask); }
+constexpr Color operator << (Color c, Ply ply) { return static_cast<Color::_t>((ply ^ static_cast<unsigned>(c)) & Color::Mask); }
 
 enum side_to_move_t {
     My, // side to move

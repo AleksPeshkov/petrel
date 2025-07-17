@@ -8,8 +8,8 @@ class NodeAb : public Node {
 protected:
     NodeAb& parent; //virtual
 
-    ply_t ply = 0; //distance from root
-    ply_t draft = 0; //remaining depth
+    Ply ply = 0u; //distance from root
+    Ply draft = 0; //remaining depth
 
     Score score = NoScore;
     Score alpha = MinusInfinity;

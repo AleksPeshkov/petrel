@@ -2,7 +2,7 @@
 #include "SearchControl.hpp"
 
 NodePerftTT::NodePerftTT (NodePerftTT& n) : Node{n.control}, parent{n}, draft{n.draft-1} {}
-NodePerftTT::NodePerftTT (const PositionMoves& p, SearchControl& c, ply_t d) : Node{p, c}, parent{static_cast<NodePerftTT&>(*this)}, draft{d} {}
+NodePerftTT::NodePerftTT (const PositionMoves& p, SearchControl& c, Ply d) : Node{p, c}, parent{static_cast<NodePerftTT&>(*this)}, draft{d} {}
 
 NodeControl NodePerftTT::visitChildren() {
     NodePerftTT child{*this};

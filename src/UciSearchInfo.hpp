@@ -41,9 +41,9 @@ public:
     void readyok(node_count_t, const PerftTT&) const;
 
     void bestmove(const Move[], Score, node_count_t, const PerftTT&) const;
-    void report_depth(ply_t, const Move[], Score, node_count_t, const PerftTT&) const;
+    void report_depth(Ply, const Move[], Score, node_count_t, const PerftTT&) const;
 
-    void perft_depth(ply_t, node_count_t, node_count_t, const PerftTT&) const;
+    void perft_depth(Ply, node_count_t, node_count_t, const PerftTT&) const;
     void perft_currmove(const Move&, index_t, node_count_t, node_count_t, const PerftTT&) const;
     void perft_finish(node_count_t, const PerftTT& tt) const;
 

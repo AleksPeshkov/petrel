@@ -6,7 +6,7 @@
 class SearchLimit;
 
 class NodeAbRoot : public NodeAb {
-    ply_t depthLimit;
+    Ply depthLimit;
 
 public:
     NodeAbRoot (const SearchLimit&, SearchControl&);

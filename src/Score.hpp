@@ -11,7 +11,7 @@ enum score_t : i16_t {
     MinusInfinity = NoScore + 1, // negative bound, no position should eval to it
     MinusMate = MinusInfinity +1, // mated in 0, only even negative values for mated positions
     // negative mate range of scores
-    MinEval = MinusMate + static_cast<i16_t>(MaxDepth), // minimal (negative) non mate score bound for a position
+    MinEval = MinusMate + static_cast<i16_t>(MaxPly), // minimal (negative) non mate score bound for a position
     MinusDraw = -1, // negative draw score when opposite side forced draw
     // negative evaluation range of scores
     DrawScore = 0, // only for 50 moves rule draw score
@@ -38,7 +38,7 @@ struct Score {
     constexpr Score operator - (int e) { return Score{v - e}; }
 
     constexpr bool isMate() const { return v < MinEval || MaxEval < v; }
-    static constexpr Score checkmated(ply_t ply) { return MinusMate + static_cast<_t>(ply); }
+    static constexpr Score checkmated(Ply ply) { return MinusMate + static_cast<int>(ply); }
 
     // clamp evaluation from special scores
     constexpr Score clamp() const {

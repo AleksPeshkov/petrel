@@ -36,7 +36,7 @@ void SearchControl::go(const SearchLimit& limit) {
     }
 }
 
-void SearchControl::goPerft(ply_t depth, bool isDivide) {
+void SearchControl::goPerft(Ply depth, bool isDivide) {
     searchThread.start(static_cast<std::unique_ptr<Node>>(
         std::make_unique<NodePerftRoot>(info.positionFen, *this, depth, isDivide)
     ));
@@ -46,11 +46,11 @@ NodeControl SearchControl::countNode() {
     return nodeCounter.count(*this);
 }
 
-const Move* SearchControl::getPv(ply_t ply) const {
+const Move* SearchControl::getPv(Ply ply) const {
     return &pvMoves[ply];
 }
 
-void SearchControl::setPv(ply_t ply, const Move& move) {
+void SearchControl::setPv(Ply ply, const Move& move) {
     pvMoves(ply, move);
 }
 
@@ -74,11 +74,11 @@ void SearchControl::bestmove(Score score) const {
     info.bestmove(pvMoves, score, nodeCounter, transpositionTable);
 }
 
-void SearchControl::infoDepth(ply_t draft, Score score) const {
+void SearchControl::infoDepth(Ply draft, Score score) const {
     info.report_depth(draft, pvMoves, score, nodeCounter, transpositionTable);
 }
 
-void SearchControl::perft_depth(ply_t draft, node_count_t perft) const {
+void SearchControl::perft_depth(Ply draft, node_count_t perft) const {
     info.perft_depth(draft, perft, nodeCounter, transpositionTable);
 }
 

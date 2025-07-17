@@ -15,8 +15,9 @@ public:
     Duration movetime = Duration::zero();
 
     node_count_t nodes = NodeCountMax;
+    Ply depth = MaxPly;
+
     index_t movestogo = 0;
-    ply_t depth = 0;
     index_t mate = 0;
 
     bool isPonder = false;

@@ -16,7 +16,7 @@ namespace {
 PerftTT::PerftTT () : hashMemory(sizeof(HashBucket)) {
 }
 
-node_count_t PerftTT::get(Zobrist z, ply_t d) {
+node_count_t PerftTT::get(Zobrist z, Ply d) {
     ++counter.reads;
 
     auto origin = reinterpret_cast<BucketUnion*>(hashMemory.seek(z));
@@ -62,7 +62,7 @@ node_count_t PerftTT::get(Zobrist z, ply_t d) {
     return NodeCountNone;
 }
 
-void PerftTT::set(Zobrist z, ply_t d, node_count_t n) {
+void PerftTT::set(Zobrist z, Ply d, node_count_t n) {
     ++counter.writes;
 
     auto origin = reinterpret_cast<BucketUnion*>(hashMemory.seek(z));
