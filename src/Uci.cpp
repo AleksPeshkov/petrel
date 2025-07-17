@@ -138,8 +138,9 @@ void Uci::go() {
     SearchLimit limit;
     limit.positionMoves = positionFen;
 
+    unsigned quantity = 0;
     while (command >> std::ws, !command.eof()) {
-        if      (next("depth"))    { command >> limit.depth; limit.depth = std::min(limit.depth, static_cast<ply_t>(MaxDepth)); }
+        if      (next("depth"))    { command >> quantity; limit.depth = std::min(quantity, MaxPly); }
         else if (next("wtime"))    { command >> limit.time[whiteSide]; }
         else if (next("btime"))    { command >> limit.time[blackSide]; }
         else if (next("winc"))     { command >> limit.inc[whiteSide]; }
@@ -169,7 +170,7 @@ void Uci::goPerft() {
         io::fail_rewind(command);
         return;
     }
-    depth = std::min(depth, +MaxDepth);
+    depth = std::min(depth, MaxPly);
 
     bool isPerftDivide = false;
     if (next("divide")) {

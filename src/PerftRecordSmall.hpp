@@ -10,7 +10,7 @@ class PerftRecordSmall {
     u32_t perft;
 
 public:
-    void set(Zobrist::_t z, ply_t d, node_count_t n) {
+    void set(Zobrist::_t z, Ply d, node_count_t n) {
         assert (small_cast<decltype(perft)>(n) == n);
         perft = static_cast<decltype(perft)>(n);
 
@@ -20,12 +20,12 @@ public:
         assert (getDepth() == d);
     }
 
-    static u32_t makeKey(Zobrist::_t z, ply_t d) {
+    static u32_t makeKey(Zobrist::_t z, Ply d) {
         assert (d == (d & 0xf));
         return ((static_cast<decltype(key)>(z >> 32) | 0xf) ^ 0xf) | (d & 0xf);
     }
 
-    bool isKeyMatch(Zobrist::_t z, ply_t d) const {
+    bool isKeyMatch(Zobrist::_t z, Ply d) const {
         return key == makeKey(z, d);
     }
 
@@ -33,7 +33,7 @@ public:
         return perft;
     }
 
-    ply_t getDepth() const {
+    Ply getDepth() const {
         return key & 0xf;
     }
 

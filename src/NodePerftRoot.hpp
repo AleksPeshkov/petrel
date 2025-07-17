@@ -8,7 +8,7 @@
 class NodePerftRoot : public NodePerftTT {
     bool isDivide;
 public:
-    NodePerftRoot(const PositionMoves& p, SearchControl& c, ply_t d, bool i)
+    NodePerftRoot(const PositionMoves& p, SearchControl& c, Ply d, bool i)
         : NodePerftTT(p, c, d), isDivide{i} {}
 
     virtual NodeControl visitRoot();
