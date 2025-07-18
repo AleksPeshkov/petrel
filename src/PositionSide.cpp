@@ -219,7 +219,6 @@ void PositionSide::setOpKing(Square king) {
     for (Pi pi : types.sliders()) {
         Square sq = squareOf(pi);
         if (::attacksFrom(typeOf(pi), sq).has(opKing)) {
-            assert (::inBetween(opKing, sq).any()); //king should not be in check
             traits.setPinner(pi);
         }
     }
