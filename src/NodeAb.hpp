@@ -28,7 +28,9 @@ protected:
     NodeControl visitChildren() override;
     NodeControl quiescence();
 
+    NodeControl recapture(NodeAb&);
     NodeControl goodCaptures(NodeAb&);
+    NodeControl goodCaptures(NodeAb&, Square);
 
     Move createFullMove(Move move) const { return createFullMove(move.from(), move.to()); }
     Move createFullMove(Square from, Square to) const;
