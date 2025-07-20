@@ -20,6 +20,10 @@ public:
     UciMove currentMove = {};
     MovesNumber movesMade = 0; // number of moves already made in this node
 
+    Move killer1 = {}; // first killer move to try at child-child nodes
+    Move killer2 = {}; // second killer move to try at child-child nodes
+    bool canBeKiller; // only moves at after killer stage will update killers
+
     NodeAb (NodeAb* n) : Node{n->root}, parent{n}, grandParent{n->parent}, ply{n->ply + 1} {}
     NodeAb (const PositionMoves& p, SearchRoot& r) : Node{p, r}, parent{nullptr}, grandParent{nullptr} {}
 
@@ -35,6 +39,8 @@ public:
 
     UciMove uciMove(Move move) const { return uciMove(move.from(), move.to()); }
     UciMove uciMove(Square from, Square to) const;
+
+    void updateKillerMove();
 
     Color colorToMove() const;
     Score evaluate();
