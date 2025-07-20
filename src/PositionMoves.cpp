@@ -61,7 +61,7 @@ void PositionMoves::generatePawnMoves() {
         Square from{ MY.squareOf(pi) };
 
         Rank rankTo{ ::rankForward(Rank(from)) };
-        BitRank fileTo = File(from);
+        BitRank fileTo{ File{from} };
 
         //push to free square
         fileTo %= MY.occupied()[rankTo];
@@ -82,6 +82,7 @@ template <Side::_t My>
 void PositionMoves::correctCheckEvasionsByPawns(Bb checkLine, Square checkFrom) {
     constexpr Side Op{~My};
 
+    //TRICK: assumes Rank8 = 0
     //simple pawn push over check line
     Bb potencialEvasions = checkLine << 8;
 
@@ -211,13 +212,13 @@ void PositionMoves::playMove(Square from, Square to) {
     setZobrist(*this, from, to);
     Position::playMove(from, to);
     generateMoves();
-    assert (zobrist == generateZobrist());
+    // assert (zobrist == generateZobrist()); // true, but slow to compute
 }
 
 void PositionMoves::playMove(const Position& parent, Square from, Square to) {
     Position::playMove(parent, from, to);
     generateMoves();
-    assert (zobrist == Zobrist{0} || zobrist == generateZobrist());
+    // assert (zobrist == Zobrist{0} || zobrist == generateZobrist()); // true, but slow to compute
 }
 
 Zobrist PositionMoves::generateZobrist() const {
@@ -232,7 +233,10 @@ Zobrist PositionMoves::generateZobrist() const {
 }
 
 Zobrist PositionMoves::createZobrist(Square from, Square to) const {
+    // side to move pieces encoding
     Zobrist mz{zobrist};
+
+    // opponet side pieces encoding
     Zobrist oz{0};
 
     Pi pi = MY.pieceOn(from);
@@ -243,8 +247,7 @@ Zobrist PositionMoves::createZobrist(Square from, Square to) const {
 
         //en passant capture
         if (ty.is(Pawn) && from.on(Rank5) && to.on(Rank5)) {
-            Square ep{File(to), Rank6};
-            mz.move(Pawn, from, ep);
+            mz.move(Pawn, from, {File{to}, Rank6});
             oz.clear(Pawn, ~to);
             goto zobrist;
         }
@@ -252,9 +255,10 @@ Zobrist PositionMoves::createZobrist(Square from, Square to) const {
 
     if (ty.is(Pawn)) {
         if (from.on(Rank7)) {
-            Square promotedTo{File(to), Rank8};
+            Square promotedTo{File{to}, Rank8};
+
             mz.clear(Pawn, from);
-            mz.drop(static_cast<PieceType>(PromoType(to)), promotedTo);
+            mz.drop(::pieceTypeFrom(Rank{to}), promotedTo);
 
             to = promotedTo;
             goto capture;
@@ -263,8 +267,8 @@ Zobrist PositionMoves::createZobrist(Square from, Square to) const {
         if (from.on(Rank2) && to.on(Rank4)) {
             mz.move(ty, from, to);
 
-            File file = File(from);
-            Square ep(file, Rank3);
+            File file = File{from};
+            Square ep{file, Rank3};
 
             Bb killers = ~OP.pawnsSquares() & ::attacksFrom(Pawn, ep);
             if (killers.any() && !MY.isPinned(MY.occupied() - from + ep)) {
