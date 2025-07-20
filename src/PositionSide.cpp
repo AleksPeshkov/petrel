@@ -11,10 +11,12 @@
         Square sq = squares.squareOf(pi);
         assert (has(sq));
 
-        assert (!types.isPawn(pi) || pawnsBb.has(sq));
+        assert (types.isPawn(pi) == pawnsBb.has(sq));
         assert (!types.isPawn(pi) || (!sq.on(Rank1) && !sq.on(Rank8)));
-        assert (!types.isPawn(pi) || !traits.isEnPassant(pi) || sq.on(Rank4) || sq.on(Rank5));
-        assert (!types.isRook(pi) || !traits.isCastling(pi) || sq.on(Rank1));
+
+        assert (traits.isPromotable(pi) == (types.isPawn(pi) && sq.on(Rank7)));
+        assert (traits.isEnPassant(pi) <= ( types.isPawn(pi) && (sq.on(Rank4) || sq.on(Rank5)) ));
+        assert (traits.isCastling(pi)  <= (types.isRook(pi) && sq.on(Rank1)) );
     }
 
     void PositionSide::assertOk(Pi pi, PieceType ty, Square sq) const {
@@ -132,6 +134,8 @@ void PositionSide::movePawn(Pi pi, Square from, Square to) {
     pawnsBb.move(from, to);
 
     assert (traits.isEmpty(pi));
+    if (to.on(Rank7)) { traits.setPromotable(pi); }
+
     setLeaperAttack(pi, Pawn, to);
 
     assertOk(pi, Pawn, to);
@@ -149,7 +153,9 @@ void PositionSide::promote(Pi pi, Square from, PromoType ty, Square to) {
     types.promote(pi, ty);
     evaluation.promote(from, to, ty);
 
-    assert (traits.isEmpty(pi));
+    assert (traits.isPromotable(pi));
+    traits.clear(pi);
+
     if (ty.is(Knight)) {
         setLeaperAttack(pi, Knight, to);
     }
@@ -193,7 +199,7 @@ void PositionSide::castle(Square kingFrom, Square kingTo, Pi rook, Square rookFr
 void PositionSide::setLeaperAttack(Pi pi, PieceType ty, Square sq) {
     assertOk(pi, ty, sq);
     assert (isLeaper(ty));
-    assert (traits.isEmpty(pi));
+    assert (traits.isEmpty(pi) || traits.isPromotable(pi));
 
     attacks.set(pi, ::attacksFrom(ty, sq));
     if (::attacksFrom(ty, sq).has(opKing)) {
@@ -281,16 +287,17 @@ bool PositionSide::dropValid(PieceType ty, Square to) {
     if (piecesBb.has(to)) { return false; }
     piecesBb += to;
 
-    if (ty.is(Pawn)) {
-        if (to.on(Rank1) || to.on(Rank8)) { return false; }
-        pawnsBb += to;
-    }
-
     Pi pi = ty.is(King) ? Pi{TheKing} : (pieces() | Pi{TheKing}).seekVacant();
 
     evaluation.drop(ty, to);
     types.drop(pi, ty);
     squares.drop(pi, to);
+
+    if (ty.is(Pawn)) {
+        if (to.on(Rank1) || to.on(Rank8)) { return false; }
+        if (to.on(Rank7)) { traits.setPromotable(pi);}
+        pawnsBb += to;
+    }
 
     assertOk(pi, ty, to);
     return true;
