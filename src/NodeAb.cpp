@@ -17,6 +17,7 @@ NodeControl NodeAb::visit(Move move) {
     draft = parent.draft > 0 ? parent.draft-1 : 0;
 
     parent.currentMove = parent.createFullMove(move);
+    ++parent.movesVisited;
     makeMove(parent, move);
 
     bool inCheck = NodeAb::inCheck();
@@ -49,6 +50,7 @@ NodeControl NodeAb::negamax(Score childScore) {
 
         if (beta <= score) {
             //beta cut off
+            setKiller();
             return NodeControl::BetaCutoff;
         }
 
@@ -71,9 +73,21 @@ NodeControl NodeAb::visitChildren() {
 
     NodeAb child{*this};
 
+    canBeKiller = false;
+
     CUTOFF (child.visitIfLegal(control.pvMoves[ply]));
 
     CUTOFF (goodCaptures(child));
+
+    canBeKiller = true;
+
+    if (ply >= 1) {
+        CUTOFF (child.visitIfLegal(parent.killer1));
+        CUTOFF (child.visitIfLegal(parent.killer2));
+    }
+    if (ply >= 3) {
+        CUTOFF (child.visitIfLegal(parent.parent.parent.killer1));
+    }
 
     // the rest of the remaining unsorted moves
     for (Pi pi : MY.pieces()) {
@@ -198,6 +212,17 @@ NodeControl NodeAb::goodCaptures(NodeAb& child, Square to) {
     }
 
     return NodeControl::Continue;
+}
+
+void NodeAb::setKiller() {
+    if (
+        ply >= 1
+        && canBeKiller
+        && parent.killer1 != currentMove
+    ) {
+        parent.killer2 = parent.killer1;
+        parent.killer1 = currentMove;
+    }
 }
 
 Move NodeAb::createFullMove(Square from, Square to) const {
