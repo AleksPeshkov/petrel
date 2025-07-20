@@ -1,6 +1,7 @@
 #include "NodeAb.hpp"
 #include "out.hpp"
 #include "AttacksFrom.hpp"
+#include "CastlingRules.hpp"
 #include "SearchControl.hpp"
 #include "PositionFen.hpp"
 
@@ -15,7 +16,7 @@ NodeControl NodeAb::visit(Move move) {
 
     draft = parent.draft > 0 ? parent.draft-1 : 0;
 
-    parent.currentMove = move;
+    parent.currentMove = parent.createFullMove(move);
     makeMove(parent, move);
 
     bool inCheck = NodeAb::inCheck();
@@ -54,7 +55,7 @@ NodeControl NodeAb::negamax(Score childScore) {
         if (alpha < score) {
             alpha = score;
 
-            control.pvMoves.set(ply, createFullMove(currentMove));
+            control.pvMoves.set(ply, currentMove);
             if (ply == 0) {
                 control.infoNewPv(draft, score);
             }
@@ -100,42 +101,53 @@ NodeControl NodeAb::quiescence() {
     }
 
     NodeAb child{*this};
+
+    //CUTOFF (recapture(child));
+
     CUTOFF (goodCaptures(child));
 
     return NodeControl::Continue;
+}
+
+NodeControl NodeAb::recapture(NodeAb& child) {
+    if (ply == 0) { return NodeControl::Continue; }
+
+    Move move = parent.currentMove;
+    Square to = move.to();
+
+    assert (move.isExternal());
+    if (move.isSpecial()) {
+        Square from = move.from();
+        Pi victim = parent[My].pieceAt(from);
+
+        if (move.from().on(Rank7)) {
+            // pawn promotion
+            assert(parent[My].isPromotable(victim));
+            to = {File{to}, Rank8};
+        }
+        else if (to.on(Rank5)) {
+            // en passant
+            assert (from.on(Rank5));
+            to = {File{to}, Rank6};
+            assert (parent[My].isPawn(victim));
+            assert (parent[My].enPassantPawns().has(victim));
+        }
+        else {
+            // castling
+            assert (from.on(Rank1));
+            assert (parent[My].squareOf(TheKing) == to);
+            to = CastlingRules::castlingRookTo(to, from);
+        }
+    }
+
+    return goodCaptures(child, ~to);
 }
 
 NodeControl NodeAb::goodCaptures(NodeAb& child) {
     // MVV (most valuable victim)
     for (Pi victim : OP.pieces() % PiMask{TheKing}) {
         Square to = ~OP.squareOf(victim);
-        PiMask attackers = moves[to];
-        if (attackers.none()) { continue; }
-
-        bool isVictimProtected = isOpAttacks(to);
-        if (!isVictimProtected) {
-            assert (OP.attackersTo(~to).none());
-        }
-        else {
-            assert (OP.attackersTo(~to).any());
-            // BLIND static exchange evaluation
-            // filter out more valuable attackers than the victim
-            attackers &= MY.goodKillers(OP.typeOf(victim));
-        }
-
-        //LVA (least valuable attacker)
-        while (attackers.any()) {
-            Pi attacker = attackers.least(); attackers -= attacker;
-
-            Square from = MY.squareOf(attacker);
-
-            if (MY.isPromotable(attacker) && !to.on(Rank8)) {
-                // skip underpromotion pseudo moves
-                continue;
-            }
-
-            CUTOFF (child.visit(Move{from, to}));
-        }
+        CUTOFF (goodCaptures(child, to));
     }
 
     // non capture promotions
@@ -154,6 +166,35 @@ NodeControl NodeAb::goodCaptures(NodeAb& child) {
                 CUTOFF( child.visit({from, toKnight}) );
             }
         }
+    }
+
+    return NodeControl::Continue;
+}
+
+NodeControl NodeAb::goodCaptures(NodeAb& child, Square to) {
+    assert (OP.piecesSquares().has(~to));
+
+    PiMask attackers = moves[to];
+    if (!to.on(Rank8)) {
+        // skip underpromotion pseudo moves
+        attackers %= MY.promotables();
+    }
+    if (attackers.none()) { return NodeControl::Continue; }
+
+    bool isVictimProtected = isOpAttacks(to);
+    assert (isVictimProtected == OP.attackersTo(~to).any());
+
+    if (isVictimProtected) {
+        // filter out more valuable attackers than the victim
+        attackers &= MY.goodKillers( OP.typeOf(OP.pieceAt(~to)) );
+    }
+
+    while (attackers.any()) {
+        // LVA (least valuable attacker)
+        Pi attacker = attackers.least(); attackers -= attacker;
+
+        Square from = MY.squareOf(attacker);
+        CUTOFF (child.visit(Move{from, to}));
     }
 
     return NodeControl::Continue;
