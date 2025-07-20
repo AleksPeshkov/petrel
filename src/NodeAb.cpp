@@ -49,6 +49,7 @@ NodeControl NodeAb::negamax(Score lastScore) {
 
         if (score >= beta) {
             //beta cut off
+            updateKillerMove();
             return NodeControl::BetaCutoff;
         }
 
@@ -72,9 +73,22 @@ NodeControl NodeAb::visitChildren() {
     NodeAb node{this};
     const auto child = &node;
 
+    canBeKiller = false;
+
     CUTOFF (child->visitIfLegal(root.pvMoves[ply]));
 
     CUTOFF (goodCaptures(child));
+
+    canBeKiller = true;
+
+    if (parent) {
+        CUTOFF (child->visitIfLegal(parent->killer1));
+        CUTOFF (child->visitIfLegal(parent->killer2));
+
+        if (parent->grandParent) {
+            CUTOFF (child->visitIfLegal(parent->grandParent->killer1));
+        }
+    }
 
     // the rest of the remaining unsorted moves
     for (Pi pi : MY.pieces()) {
@@ -167,6 +181,16 @@ NodeControl NodeAb::goodCaptures(NodeAb* child, Square to) {
     }
 
     return NodeControl::Continue;
+}
+
+void NodeAb::updateKillerMove() {
+    if (!canBeKiller) { return; }
+    if (!parent) { return; }
+
+    if (parent->killer1 != currentMove) {
+        parent->killer2 = parent->killer1;
+        parent->killer1 = currentMove;
+    }
 }
 
 UciMove NodeAb::uciMove(Square from, Square to) const {
