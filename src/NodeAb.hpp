@@ -16,6 +16,9 @@ protected:
     Score beta = PlusInfinity;
 
     Move currentMove = {};
+    Move killer1 = {}; // first killer move to try at child-child nodes
+    Move killer2 = {}; // second killer move to try at child-child nodes
+    bool canBeKiller; // only moves at after killer stage will update killers
     MovesNumber movesMade = 0; // number of moves already made in this node
 
     NodeAb (NodeAb& n) : Node{n.control}, parent{n}, ply{n.ply + 1} {}
@@ -31,6 +34,8 @@ protected:
     NodeControl recapture(NodeAb&);
     NodeControl goodCaptures(NodeAb&);
     NodeControl goodCaptures(NodeAb&, Square);
+
+    void setKiller();
 
     Move createFullMove(Move move) const { return createFullMove(move.from(), move.to()); }
     Move createFullMove(Square from, Square to) const;
