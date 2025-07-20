@@ -75,6 +75,9 @@ public:
 
     PiMask checkers() const { assert (traits.checkers() == attacks[opKing]); return traits.checkers(); }
 
+    PiMask promotables() const { return traits.promotables(); }
+    bool isPromotable(Pi pi) const { assertOk(pi); return traits.isPromotable(pi); }
+
     const PiBb& attacksMatrix() const { return attacks; }
     PiMask attackersTo(Square a) const { return attacks[a]; }
     PiMask attackersTo(Square a, Square b) const { return attacks[a] | attacks[b]; }
