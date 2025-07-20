@@ -85,7 +85,11 @@ bool PromoType::from_char(io::char_type c) { return reinterpret_cast<PieceType*>
 constexpr bool isSlider(piece_type_t ty) { return ty < Knight; }
 constexpr bool isLeaper(piece_type_t ty) { return ty >= Knight; }
 
-//encoding of the promoted piece type inside 12-bit move
+/// encoding of the promoted piece type inside 12-bit move
 constexpr Rank::_t rankOf(PromoType::_t ty) { return static_cast<Rank::_t>(ty); }
+
+/// decoding promoted piece type from move destination square rank
+constexpr PromoType::_t promoTypeFrom(Rank::_t r) { assert (r < 4); return static_cast<PromoType::_t>(r); }
+constexpr PieceType::_t pieceTypeFrom(Rank::_t r) { assert (r < 4); return static_cast<PieceType::_t>(r); }
 
 #endif

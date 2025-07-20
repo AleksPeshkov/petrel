@@ -20,7 +20,6 @@ protected:
 public:
     constexpr const PositionSide& operator[] (Side side) const { return positionSide[side]; }
 
-    Move createMove(Square from, Square to) const { return (*this)[My].createMove(from, to); }
     Score evaluate() const { return PositionSide::evaluate((*this)[My], (*this)[Op]); }
 
     void playMove(const Position&, Square, Square);

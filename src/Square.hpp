@@ -25,15 +25,18 @@ struct Square : Index<64, square_t, Square> {
 
     constexpr explicit operator File() const { return static_cast<File::_t>(this->v & File::Mask); }
     constexpr explicit operator Rank() const { return static_cast<Rank::_t>(static_cast<unsigned>(this->v) >> RankShift); }
-    constexpr explicit operator PromoType() const { return static_cast<PromoType::_t>(+Rank(*this)); }
 
-    constexpr Square& flip() { this->v = static_cast<_t>(this->v ^ RankMask); return *this; }
+    /// flip side of the board
+    Square& flip() { this->v = static_cast<_t>(this->v ^ RankMask); return *this; }
     constexpr Square operator ~ () const { return static_cast<_t>(this->v ^ RankMask); }
+
+    /// move pawn forward
     constexpr Square rankForward() const { return static_cast<_t>(this->v + A8 - A7); }
 
-    constexpr bool on(Rank rank) const { return (this->v & RankMask) == static_cast<unsigned>(rank << RankShift); }
-    constexpr bool on(File file) const { return (this->v & File::Mask) == file; }
+    constexpr bool on(Rank rank) const { return Rank{*this} == rank; }
+    constexpr bool on(File file) const { return File{*this} == file; }
 
+    // defined in Bb.hpp
     constexpr Bb horizont() const;
     constexpr Bb vertical() const;
     constexpr Bb diagonal() const;

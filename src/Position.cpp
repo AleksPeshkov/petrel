@@ -78,11 +78,9 @@ void Position::playPawnMove(Pi pi, Square from, Square to) {
     constexpr Side Op{~My};
 
     if (from.on(Rank7)) {
-        //decoding promotion piece type and destination square
-        PromoType ty(to);
         Square promotedTo{File(to), Rank8};
 
-        MY.promote(pi, ty, from, promotedTo);
+        MY.promote(pi, from, ::promoTypeFrom(Rank{to}), promotedTo);
 
         if (OP.has(~promotedTo)) {
             //promotion with capture

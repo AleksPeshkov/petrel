@@ -3,7 +3,6 @@
 
 #include "Evaluation.hpp"
 #include "PiBb.hpp"
-#include "Move.hpp"
 #include "PiTrait.hpp"
 #include "PiType.hpp"
 #include "PiSquare.hpp"
@@ -80,8 +79,6 @@ public:
     PiMask attackersTo(Square a, Square b) const { return attacks[a] | attacks[b]; }
     PiMask attackersTo(Square a, Square b, Square c) const { return attacks[a] | attacks[b] | attacks[c]; }
 
-    Move createMove(Square from, Square to) const;
-
     static Score evaluate(const PositionSide&, const PositionSide&);
 
     //calculate Zobrist key from scratch
@@ -105,7 +102,7 @@ friend class Position;
     void movePawn(Pi, Square, Square);
     void moveKing(Square, Square);
     void castle(Square kingFrom, Square kingTo, Pi rook, Square rookFrom, Square rookTo);
-    void promote(Pi, PromoType, Square, Square);
+    void promote(Pi, Square, PromoType, Square);
     void capture(Square);
 
     void setEnPassantVictim(Pi);

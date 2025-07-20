@@ -81,7 +81,7 @@ NodeControl NodePerftDivide::visit(Square from, Square to) {
     }
 
     ++moveCount;
-    Move move = parent.createMove(from, to);
+    Move move{parent, from, to};
     control.perft_currmove(moveCount, move, perft);
 
     updateParentPerft();

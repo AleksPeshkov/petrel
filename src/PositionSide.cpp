@@ -137,7 +137,7 @@ void PositionSide::movePawn(Pi pi, Square from, Square to) {
     assertValid(pi, Pawn, to);
 }
 
-void PositionSide::promote(Pi pi, PromoType ty, Square from, Square to) {
+void PositionSide::promote(Pi pi, Square from, PromoType ty, Square to) {
     assert (from.on(Rank7));
     assert (to.on(Rank8));
     assertValid(pi, Pawn, from);
@@ -327,22 +327,4 @@ bool PositionSide::setValidCastling(File file) {
 
     traits.setCastling(rook);
     return true;
-}
-
-Move PositionSide::createMove(Square from, Square to) const {
-    if (kingSquare().is(to)) {
-        return Move::castling(from, to);
-    }
-
-    if (isPawn(pieceOn(from))) {
-        if (from.on(Rank7)) {
-            return Move::promotion(from, to);
-        }
-        if (from.on(Rank5) && to.on(Rank5)) {
-            return Move::enPassant(from, to);
-        }
-    }
-
-    //the rest are common moves
-    return Move(from, to);
 }

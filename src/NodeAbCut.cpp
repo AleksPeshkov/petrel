@@ -22,7 +22,7 @@ NodeControl NodeAbCut::visit(Square from, Square to) {
 
     if (-bestScore > p.bestScore) {
         p.bestScore = -bestScore;
-        control.createPv(p.createMove(from, to));
+        control.createPv(Move{p, from, to});
 
         if (p.alpha < p.bestScore) {
             p.alpha = p.bestScore;
