@@ -89,6 +89,18 @@ NodeControl NodeAb::visitChildren() {
         CUTOFF (child.visitIfLegal(parent.parent.parent.killer1));
     }
 
+    if (ply >= 1) {
+        Move move = parent.currentMove;
+        PieceType ty = parent[My].typeOf(move.from());
+        CUTOFF ( child.visitIfLegal(control.counter[side(ply)][ty][move.to()]) );
+    }
+
+    if (ply >= 2) {
+        Move move = parent.parent.currentMove;
+        PieceType ty = parent.parent[My].typeOf(move.from());
+        CUTOFF ( child.visitIfLegal(control.connected[side(ply)][ty][move.to()]) );
+    }
+
     // the rest of the remaining unsorted moves
     for (Pi pi : MY.pieces()) {
         Square from = MY.squareOf(pi);
@@ -215,13 +227,23 @@ NodeControl NodeAb::goodCaptures(NodeAb& child, Square to) {
 }
 
 void NodeAb::setKiller() {
-    if (
-        ply >= 1
-        && canBeKiller
-        && parent.killer1 != currentMove
-    ) {
+    if (ply >= 1 && canBeKiller) {
+        if (canBeKiller && parent.killer1 != currentMove) {
         parent.killer2 = parent.killer1;
         parent.killer1 = currentMove;
+        }
+
+        {
+            Move move = parent.currentMove;
+            PieceType ty = parent[My].typeOf(move.from());
+            control.counter[side(ply)][ty][move.to()] = currentMove;
+        }
+
+        if (ply >= 2) {
+            Move move = parent.parent.currentMove;
+            PieceType ty = parent.parent[My].typeOf(move.from());
+            control.connected[side(ply)][ty][move.to()] = currentMove;
+        }
     }
 }
 
