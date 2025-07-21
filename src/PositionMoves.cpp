@@ -43,7 +43,7 @@ void PositionMoves::generateCastlingMoves() {
     constexpr Side Op{~My};
 
     for (Pi pi : MY.castlingRooks()) {
-        if ( ::castlingRules.isLegal(MY.kingSquare(), MY.squareOf(pi), MY.occupied(), attackedSquares) ) {
+        if ( ::castlingRules.isLegal(MY.kingSquare(), MY.squareOf(pi), occupied<My>(), attackedSquares) ) {
             //castling encoded as the rook moves over the own king square
             moves.add(pi, MY.kingSquare());
         }
@@ -61,15 +61,15 @@ void PositionMoves::generatePawnMoves() {
         BitRank fileTo{ File{from} };
 
         //push to free square
-        fileTo %= MY.occupied()[rankTo];
+        fileTo %= occupied<My>()[rankTo];
 
         //double push
-        if ((rankTo.is(Rank3)) && (fileTo % MY.occupied()[Rank4]).any()) {
+        if ((rankTo.is(Rank3)) && (fileTo % occupied<My>()[Rank4]).any()) {
             moves.set(pi, Rank4, fileTo);
         }
 
         //remove "captures" of free squares from default generated moves
-        fileTo += moves[rankTo][pi] & MY.occupied()[rankTo];
+        fileTo += moves[rankTo][pi] & occupied<My>()[rankTo];
 
         moves.set(pi, rankTo, fileTo);
     }
@@ -94,7 +94,7 @@ void PositionMoves::correctCheckEvasionsByPawns(Bb checkLine, Square checkFrom) 
     }
 
     //pawns double push over check line
-    Bb pawnJumpEvasions = MY.pawnsSquares() & Bb{Rank2} & (checkLine << 16u) % (MY.occupied() << 8u);
+    Bb pawnJumpEvasions = MY.pawnsSquares() & Bb{Rank2} & (checkLine << 16u) % (occupied<My>() << 8u);
     for (Square from : pawnJumpEvasions) {
         moves.add(MY.pieceAt(from), Rank4, File(from));
     }
@@ -112,7 +112,7 @@ void PositionMoves::excludePinnedMoves(PiMask opPinners) {
         assert (::attacksFrom(OP.typeOf(pinner), pinFrom).has(MY.kingSquare()));
 
         const Bb& pinLine = ::inBetween(MY.kingSquare(), pinFrom);
-        Bb piecesOnPinLine = pinLine & MY.occupied();
+        Bb piecesOnPinLine = pinLine & occupied<My>();
         assert (piecesOnPinLine.any());
 
         if (piecesOnPinLine.isSingleton() && (piecesOnPinLine & MY.piecesSquares()).any()) {
@@ -282,11 +282,11 @@ Zobrist PositionMoves::createZobrist(Square from, Square to) const {
             Square ep{file, Rank3};
 
             Bb killers = ~OP.pawnsSquares() & ::attacksFrom(Pawn, ep);
-            if (killers.any() && !MY.isPinned(MY.occupied() - from + ep)) {
+            if (killers.any() && !MY.isPinned(occupied<My>() - from + ep)) {
                 for (Square killer : killers) {
                     assert (killer.on(Rank4));
 
-                    if (!MY.isPinned(MY.occupied() - killer + ep)) {
+                    if (!MY.isPinned(occupied<My>() - killer + ep)) {
                         mz.setEnPassant(file);
                         goto zobrist;
                     }
