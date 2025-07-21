@@ -3,8 +3,8 @@
 #include "SearchControl.hpp"
 #include "SearchLimit.hpp"
 
-NodeAbRoot::NodeAbRoot (const SearchLimit& limit, SearchControl& control):
-    NodeAb{limit.positionMoves, control}, depthLimit{limit.depth}
+NodeAbRoot::NodeAbRoot (const SearchLimit& l, SearchControl& c):
+    NodeAb{l.positionMoves, c}, depthLimit{l.depth}
 {}
 
 NodeControl NodeAbRoot::visitChildren() {
