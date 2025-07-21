@@ -13,8 +13,9 @@
 #include "TimePoint.hpp"
 #include "Tt.hpp"
 
-class Move;
 class SearchLimit;
+
+typedef Side::arrayOf<PieceType::arrayOf< Square::arrayOf<Move> >> HistoryMoves;
 
 class SearchControl {
     SearchControl(const SearchControl&) = delete;
@@ -37,6 +38,9 @@ public:
     Tt tt;
     Timer timer;
     PvMoves pvMoves;
+
+    HistoryMoves counter;
+    HistoryMoves connected;
 
     void newGame();
     void newSearch();
