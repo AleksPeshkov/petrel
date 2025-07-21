@@ -7,13 +7,13 @@
 #define OUTPUT(ob) OutputBuffer<decltype(outLock)> ob(out, outLock)
 
 void SearchControl::newGame() {
-    tt.clear();
+    tt.memory.zeroFill();
     newSearch();
 }
 
 void SearchControl::newSearch() {
     pvMoves.clear();
-    tt.clearCounter();
+    tt.counter ={0,0,0};
     lastInfoNodes = 0;
     fromSearchStart = {};
 }
@@ -54,7 +54,7 @@ void SearchControl::uciok() const {
     ob << "id name petrel\n";
     ob << "id author Aleks Peshkov\n";
     ob << "option name UCI_Chess960 type check default " << (isChess960 ? "true" : "false") << '\n';
-    ob << "option name Hash type spin min 0 max " << mebi(tt.getInfo().maxSize) << " default " << mebi(tt.getInfo().currentSize) << '\n';
+    ob << "option name Hash type spin min 0 max " << mebi(tt.getMaxSize()) << " default " << mebi(tt.memory.getSize()) << '\n';
     ob << "uciok\n";
 }
 
@@ -129,7 +129,7 @@ void SearchControl::perft_finish() const {
 }
 
 void SearchControl::setHash(size_t bytes) {
-    tt.resize(bytes);
+    tt.memory.allocate(bytes); tt.memory.zeroFill();
 }
 
 ostream& SearchControl::nps(ostream& o, node_count_t nodes) const {
@@ -149,12 +149,11 @@ ostream& SearchControl::nps(ostream& o, node_count_t nodes) const {
         }
     }
 
-    auto& counter = tt.getCounter();
-    if (counter.reads > 0) {
-        o << " hwrites " << counter.writes;
-        o << " hhits " << counter.hits;
-        o << " hreads " << counter.reads;
-        o << " hhitratio " << permil(counter.hits, counter.reads);
+    if (tt.counter.reads > 0) {
+        o << " hwrites " << tt.counter.writes;
+        o << " hhits " << tt.counter.hits;
+        o << " hreads " << tt.counter.reads;
+        o << " hhitratio " << permil(tt.counter.hits, tt.counter.reads);
     }
     return o;
 }

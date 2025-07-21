@@ -6,7 +6,6 @@
 #include "BitReverse.hpp"
 #include "CastlingRules.hpp"
 #include "Evaluation.hpp"
-#include "PerftRecord.hpp"
 #include "PiOrder.hpp"
 #include "PiSingle.hpp"
 #include "SquaresInBetween.hpp"
