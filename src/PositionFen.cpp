@@ -391,7 +391,7 @@ bool PositionFen::setEnPassant(File file) {
     Pi victim = OP.pieceAt(to);
     if (!OP.isPawn(victim)) { return false; }
 
-    if (MY.occupied().has(~Square{file, Rank3})) { return false; }
+    if (occupied<My>().has(~Square{file, Rank3})) { return false; }
 
     setLegalEnPassant<Op>(victim, to);
     return true;
