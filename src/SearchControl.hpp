@@ -4,7 +4,6 @@
 #include "out.hpp"
 #include "Milliseconds.hpp"
 #include "NodeCounter.hpp"
-#include "PerftTT.hpp"
 #include "PositionFen.hpp"
 #include "PvMoves.hpp"
 #include "SearchThread.hpp"
@@ -12,6 +11,7 @@
 #include "SpinLock.hpp"
 #include "Timer.hpp"
 #include "TimePoint.hpp"
+#include "Tt.hpp"
 
 class Move;
 class SearchLimit;
@@ -34,7 +34,7 @@ public:
 
     NodeCounter nodeCounter;
     SearchThread searchThread;
-    PerftTT tt;
+    Tt tt;
     Timer timer;
     PvMoves pvMoves;
 
