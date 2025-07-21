@@ -48,7 +48,6 @@ void PositionSide::swap(PositionSide& MY, PositionSide& OP) {
     swap(MY.squares, OP.squares);
     swap(MY.piecesBb, OP.piecesBb);
     swap(MY.pawnsBb, OP.pawnsBb);
-    /* swap(MY.occupiedBb, OP.occupiedBb); // not needed */
     swap(MY.evaluation, OP.evaluation);
     swap(MY.opKing, OP.opKing);
 }
@@ -67,11 +66,6 @@ void PositionSide::setLeaperAttacks() {
     for (Pi pi : types.leapers()) {
         setLeaperAttack(pi, typeOf(pi), squareOf(pi));
     }
-}
-
-void PositionSide::syncOccupied(PositionSide& MY, PositionSide& OP) {
-    MY.occupiedBb = MY.piecesBb + ~OP.piecesBb;
-    OP.occupiedBb = OP.piecesBb + ~MY.piecesBb;
 }
 
 Score PositionSide::evaluate(const PositionSide& MY, const PositionSide& OP) {
@@ -230,7 +224,7 @@ void PositionSide::setOpKing(Square king) {
     }
 }
 
-void PositionSide::updateSliderAttacks(PiMask affectedSliders) {
+void PositionSide::updateSliderAttacks(PiMask affectedSliders, Bb occupiedBb) {
     assert ((traits.checkers() & types.sliders()).none());
     assert (affectedSliders.any());
 

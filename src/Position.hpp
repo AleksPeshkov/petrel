@@ -12,6 +12,7 @@
 
 class Position {
     Side::arrayOf<PositionSide> positionSide;
+    Side::arrayOf<Bb> occupiedBb; // both color pieces combined
 
     template <Side::_t> void updateSliderAttacks(PiMask);
     template <Side::_t> void updateSliderAttacks(PiMask, PiMask);
@@ -23,6 +24,8 @@ class Position {
 public:
     constexpr PositionSide& operator[] (Side side) { return positionSide[side]; }
     constexpr const PositionSide& operator[] (Side side) const { return positionSide[side]; }
+
+    template <Side::_t My> constexpr const Bb& occupied() const { return occupiedBb[My]; }
 
     Score evaluate() const { return PositionSide::evaluate(MY, OP); }
 
