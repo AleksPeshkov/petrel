@@ -1,8 +1,9 @@
 #include "NodePerftTT.hpp"
 #include "SearchControl.hpp"
+#include "TtPerft.hpp"
 
 NodePerftTT::NodePerftTT (NodePerftTT& n) : Node{n.control}, parent{n}, draft{n.draft-1} {}
-NodePerftTT::NodePerftTT (const PositionMoves& p, SearchControl& c, Ply d) : Node{p, c}, parent{static_cast<NodePerftTT&>(*this)}, draft{d} {}
+NodePerftTT::NodePerftTT (const PositionMoves& p, SearchControl& c, Ply d) : Node{p, c}, parent{*this}, draft{d} {}
 
 NodeControl NodePerftTT::visitChildren() {
     NodePerftTT child{*this};
@@ -34,7 +35,7 @@ NodeControl NodePerftTT::visit(Square from, Square to) {
             assert(draft >= 2);
             setZobrist(parent, from, to);
 
-            auto n = control.tt.get(getZobrist(), draft - 2);
+            auto n = static_cast<TtPerft&>(control.tt).get(getZobrist(), draft - 2);
             if (n != NodeCountNone) {
                 perft = n;
             } else {
@@ -43,7 +44,7 @@ NodeControl NodePerftTT::visit(Square from, Square to) {
 
                 perft = 0;
                 RETURN_IF_ABORT(visitChildren());
-                control.tt.set(getZobrist(), draft - 2, perft);
+                static_cast<TtPerft&>(control.tt).set(getZobrist(), draft - 2, perft);
             }
             parent.perft += perft;
         }
