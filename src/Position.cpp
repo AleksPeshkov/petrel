@@ -148,11 +148,12 @@ template <Side::_t My>
 void Position::updateSliderAttacks(PiMask myAffected) {
     constexpr Side Op{~My};
 
-    PositionSide::syncOccupied(MY, OP);
+    occupiedBb[My] = MY.piecesBb + ~OP.piecesBb;
+    occupiedBb[Op] = OP.piecesBb + ~MY.piecesBb;
 
     myAffected &= MY.sliders();
     if (myAffected.any()) {
-        MY.updateSliderAttacks(myAffected);
+        MY.updateSliderAttacks(myAffected, occupied<My>());
     }
 }
 
@@ -164,7 +165,7 @@ void Position::updateSliderAttacks(PiMask myAffected, PiMask opAffected) {
 
     opAffected &= OP.sliders();
     if (opAffected.any()) {
-        OP.updateSliderAttacks(opAffected);
+        OP.updateSliderAttacks(opAffected, occupied<Op>());
     }
 }
 
@@ -186,13 +187,13 @@ void Position::setLegalEnPassant(Pi victim, Square to) {
     if (killers.none()) { return; }
 
     // discovered check
-    if (MY.isPinned(MY.occupied())) { assert ((MY.checkers() % victim).any()); return; }
+    if (MY.isPinned(occupied<My>())) { assert ((MY.checkers() % victim).any()); return; }
     assert ((MY.checkers() % victim).none());
 
     for (Square from : killers) {
         assert (from.on(Rank4));
 
-        if (!MY.isPinned(MY.occupied() - from + ep - to)) {
+        if (!MY.isPinned(occupied<My>() - from + ep - to)) {
             MY.setEnPassantVictim(victim);
             OP.setEnPassantKiller(OP.pieceAt(~from));
         }

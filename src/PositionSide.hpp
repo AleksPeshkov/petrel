@@ -17,11 +17,10 @@ class PositionSide {
     PiTrait traits; //rooks with castling rights, pawns affected by en passant, pinner pieces, checker pieces
     PiSquare squares; //onboard square locations of the alive pieces or 'NoSquare' special value
 
-    Evaluation evaluation; //PST incremental evaluation
-
     Bb piecesBb; //squares of current side pieces
     Bb pawnsBb; //squares of current side pawns
-    Bb occupiedBb; //squares occupied by pieces of both sides
+
+    Evaluation evaluation; //PST incremental evaluation
 
     Square opKing; //location of the opponent's king
 
@@ -34,12 +33,10 @@ public:
         void assertOk(Pi, PieceType, Square) const;
     #endif
 
-    // bitboard of squares occupied by current side
+    // bitboard of squares occupied by current side pieces
     const Bb& piecesSquares() const { return piecesBb; }
 
-    // bitboard of squares occupied by both sides
-    const Bb& occupied() const { return occupiedBb; }
-
+    // bitboard of squares occupied by current side pawns
     const Bb& pawnsSquares() const { return pawnsBb; }
 
     bool has(Square sq) const { assert (piecesBb.has(sq) == squares.has(sq)); return piecesBb.has(sq); }
@@ -99,8 +96,7 @@ private:
 friend class Position;
 
     static void swap(PositionSide&, PositionSide&);
-    static void syncOccupied(PositionSide&, PositionSide&);
-    void updateSliderAttacks(PiMask);
+    void updateSliderAttacks(PiMask, Bb);
 
     void setOpKing(Square);
     void move(Pi, Square, Square);
