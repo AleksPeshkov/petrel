@@ -79,9 +79,10 @@ public:
     bool isPromotable(Pi pi) const { assertOk(pi); return traits.isPromotable(pi); }
 
     const PiBb& attacksMatrix() const { return attacks; }
-    PiMask attackersTo(Square a) const { return attacks[a]; }
-    PiMask attackersTo(Square a, Square b) const { return attacks[a] | attacks[b]; }
-    PiMask attackersTo(Square a, Square b, Square c) const { return attacks[a] | attacks[b] | attacks[c]; }
+    PiMask attackersTo(Square sq) const { return attacks[sq]; }
+    PiMask affectedBy(Square sq) const { return attackersTo(sq); }
+    PiMask affectedBy(Square a, Square b) const { return affectedBy(a) | affectedBy(b); }
+    PiMask affectedBy(Square a, Square b, Square c) const { return affectedBy(a) | affectedBy(b) | affectedBy(c); }
 
     static Score evaluate(const PositionSide&, const PositionSide&);
 
