@@ -44,7 +44,7 @@ void Position::makeMove(Square from, Square to) {
             Square ep{File(to), Rank6};
             MY.movePawn(pi, from, ep);
             OP.capture(~to);
-            updateSliderAttacks<My>(MY.attackersTo(from, to, ep), OP.attackersTo(~from, ~to, ~ep));
+            updateSliderAttacks<My>(MY.affectedBy(from, to, ep), OP.affectedBy(~from, ~to, ~ep));
             return;
         }
 
@@ -64,11 +64,11 @@ void Position::makeMove(Square from, Square to) {
 
     if (OP.has(~to)) {
         OP.capture(~to);
-        updateSliderAttacks<My>(MY.attackersTo(from) | pi, OP.attackersTo(~from));
+        updateSliderAttacks<My>(MY.affectedBy(from) | pi, OP.affectedBy(~from));
         return;
     }
 
-    updateSliderAttacks<My>(MY.attackersTo(from, to), OP.attackersTo(~from, ~to));
+    updateSliderAttacks<My>(MY.affectedBy(from, to), OP.affectedBy(~from, ~to));
 }
 
 template <Side::_t My>
@@ -83,12 +83,12 @@ void Position::playPawnMove(Pi pi, Square from, Square to) {
         if (OP.has(~promotedTo)) {
             //promotion with capture
             OP.capture(~promotedTo);
-            updateSliderAttacks<My>(MY.attackersTo(from) | pi, OP.attackersTo(~from));
+            updateSliderAttacks<My>(MY.affectedBy(from) | pi, OP.affectedBy(~from));
             return;
         }
 
         //promotion without capture
-        updateSliderAttacks<My>(MY.attackersTo(from, promotedTo) | pi, OP.attackersTo(~from, ~promotedTo));
+        updateSliderAttacks<My>(MY.affectedBy(from, promotedTo) | pi, OP.affectedBy(~from, ~promotedTo));
         return;
     }
 
@@ -98,12 +98,12 @@ void Position::playPawnMove(Pi pi, Square from, Square to) {
     if (OP.has(~to)) {
         //simple pawn capture
         OP.capture(~to);
-        updateSliderAttacks<My>(MY.attackersTo(from), OP.attackersTo(~from));
+        updateSliderAttacks<My>(MY.affectedBy(from), OP.affectedBy(~from));
         return;
     }
 
     //simple pawn move
-    updateSliderAttacks<My>(MY.attackersTo(from, to), OP.attackersTo(~from, ~to));
+    updateSliderAttacks<My>(MY.affectedBy(from, to), OP.affectedBy(~from, ~to));
 
     if (from.on(Rank2) && to.on(Rank4)) {
         setLegalEnPassant<My>(pi, to);
@@ -120,12 +120,12 @@ void Position::playKingMove(Square from, Square to) {
     if (OP.has(~to)) {
         //capture
         OP.capture(~to);
-        updateSliderAttacks<My>(MY.attackersTo(from));
+        updateSliderAttacks<My>(MY.affectedBy(from));
         return;
     }
 
     //non-capture
-    updateSliderAttacks<My>(MY.attackersTo(from, to));
+    updateSliderAttacks<My>(MY.affectedBy(from, to));
 }
 
 template <Side::_t My>
@@ -141,7 +141,7 @@ void Position::playCastling(Pi rook, Square rookFrom, Square kingFrom) {
     //TRICK: castling should not affect opponent's sliders, otherwise it is check or pin
     //TRICK: castling rook should attack 'kingFrom' square
     //TRICK: only first rank sliders can be affected
-    updateSliderAttacks<My>(MY.attackersTo(rookFrom, kingFrom) & MY.piecesOn(Rank1));
+    updateSliderAttacks<My>(MY.affectedBy(rookFrom, kingFrom) & MY.piecesOn(Rank1));
 }
 
 template <Side::_t My>
