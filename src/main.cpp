@@ -3,7 +3,6 @@
 #include "io.hpp"
 #include "AttackBb.hpp"
 #include "AttacksFrom.hpp"
-#include "BitReverse.hpp"
 #include "CastlingRules.hpp"
 #include "Evaluation.hpp"
 #include "PiOrder.hpp"
@@ -23,7 +22,6 @@ constexpr const VectorOfAll vectorOfAll; //4k 256*16
 const PieceSquareTable pieceSquareTable; //3k 6*64*8
 constexpr const PiSingle piSingle; //256
 const CastlingRules castlingRules; //128
-constexpr const BitReverse bitReverse; //32
 
 template <> io::czstring PieceType::The_string{"qrbnpk"};
 template <> io::czstring PromoType::The_string{"qrbn"};

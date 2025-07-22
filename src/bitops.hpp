@@ -71,4 +71,8 @@ constexpr inline index_t popcount(std::uint64_t b) {
     return static_cast<index_t>(__builtin_popcountll(b));
 }
 
+constexpr inline std::uint64_t bitreverse(std::uint64_t b) {
+    return __builtin_bitreverse64(b);
+}
+
 #endif

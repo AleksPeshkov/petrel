@@ -2,7 +2,6 @@
 #define ATTACK_BB_HPP
 
 #include "BitArray128.hpp"
-#include "BitReverse.hpp"
 #include "Bb.hpp"
 
 typedef i128_t u64x2_t;
@@ -39,10 +38,14 @@ class AttackBb : public BitArray<AttackBb, u64x2_t> {
     typedef u64x2_t _t;
     _t occupied;
 
-    static _t hyperbola(_t v) { return v ^ ::bitReverse(v); }
+    static u64_t hyperbola(_t v) {
+        auto lo = static_cast<u64_t>(_mm_cvtsi128_si64(v));
+        auto hi = static_cast<u64_t>(_mm_cvtsi128_si64(_mm_unpackhi_epi64(v, v)));
+        return lo ^ ::bitreverse(hi);
+    }
 
 public:
-    explicit AttackBb (Bb bb) : occupied{ hyperbola(u64x2_t{bb, 0}) } {}
+    explicit AttackBb (Bb bb) : occupied{bb, static_cast<long long>(::bitreverse(bb))} {}
 
     Bb attack(SliderType ty, Square from) const {
         const auto& sq = hyperbolaSq[from];
@@ -65,7 +68,7 @@ public:
             result |= a & _mm_sub_epi64(occupied & a, sq);
         }
 
-        return Bb{ _mm_cvtsi128_si64(hyperbola(result)) };
+        return Bb{ (hyperbola(result)) };
     }
 
 };
