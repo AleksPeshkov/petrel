@@ -7,7 +7,6 @@
 #include <type_traits>
 #include "types.hpp"
 
-#define INLINE       inline __attribute__((__always_inline__))
 #define CACHE_ALIGN  __attribute__((__aligned__(64)))
 
 template <typename T>
@@ -34,27 +33,42 @@ constexpr inline std::uint64_t byteswap(std::uint64_t b) {
     return __builtin_bswap64(b);
 }
 
-INLINE index_t bsf(u32_t b) {
+// the least significant bit in a non-zero bitset
+constexpr inline index_t lsb(u32_t b) {
     assert (b != 0);
     return static_cast<index_t>(__builtin_ctz(b));
 }
 
-INLINE index_t bsr(std::uint32_t b) {
+// the most significant bit in a non-zero bitset
+constexpr inline index_t msb(std::uint32_t b) {
     assert (b != 0);
-    index_t i;
-    __asm__ ( "bsrl %1, %0" : "=Ir" (i) : "rm" (b) : "cc" );
-    return i;
+    return static_cast<index_t>(31 ^ __builtin_clz(b));
 }
 
-INLINE index_t bsf(std::uint64_t b) {
+// the least significant bit in a non-zero bitset
+constexpr inline index_t lsb(std::uint64_t b) {
     assert (b != 0);
     return static_cast<index_t>(__builtin_ctzll(b));
 }
 
-INLINE index_t bsr(std::uint64_t b) {
+// the most significant bit in a non-zero bitset
+constexpr inline index_t msb(std::uint64_t b) {
     assert (b != 0);
-    __asm__ ( "bsrq %1, %0" : "=Jr" (b) : "rm" (b) : "cc" );
-    return static_cast<index_t>(b);
+    return static_cast<index_t>(63 ^ __builtin_clzll(b));
+}
+
+template <typename T>
+constexpr T round(T n) {
+    assert (n > 0);
+    return ::singleton<decltype(n)>(::msb(n));
+}
+
+constexpr inline index_t popcount(std::uint32_t b) {
+    return static_cast<index_t>(__builtin_popcount(b));
+}
+
+constexpr inline index_t popcount(std::uint64_t b) {
+    return static_cast<index_t>(__builtin_popcountll(b));
 }
 
 #endif

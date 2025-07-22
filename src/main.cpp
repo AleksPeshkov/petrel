@@ -26,7 +26,6 @@ constexpr const PiSingle piSingle; //256
 const CastlingRules castlingRules; //128
 constexpr const ZobristKey zobristKey; //64 8*8
 constexpr const BitReverse bitReverse; //32
-constexpr const VectorBitCount bitCount; //16
 
 template <> io::czstring PieceType::The_string{"qrbnpk"};
 template <> io::czstring PromoType::The_string{"qrbn"};
