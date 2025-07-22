@@ -56,7 +56,7 @@ public:
 
     Pi seekVacant() const { return PieceSet(*this).seekVacant(); }
 
-    index_t count() const { return PieceSet(*this).count(); }
+    index_t popcount() const { return PieceSet(*this).popcount(); }
 
     PieceSet begin() const { return *this; }
     PieceSet end() const { return {}; }

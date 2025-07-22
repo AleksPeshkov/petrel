@@ -190,13 +190,13 @@ void PositionMoves::generateMoves() {
 
 void PositionMoves::generateMoves() {
     generateMoves<My>();
-    _movesCount = moves.count();
+    _movesCount = moves.popcount();
 }
 
 void PositionMoves::setMoves(const PiBb& m, index_t n) {
     moves = m; //copy matrix
     _movesCount = n;
-    assert (moves.count() == n);
+    assert (moves.popcount() == n);
 }
 
 void PositionMoves::clearMove(Move move) {

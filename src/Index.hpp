@@ -44,7 +44,7 @@ public:
     bool from_char(io::char_type c) {
         auto p = std::memchr(The_string, c, Size);
         if (!p) { return false; }
-        this->v = static_cast<_t>(static_cast<io::czstring>(p) - The_string);
+        v = static_cast<_t>(static_cast<io::czstring>(p) - The_string);
         assertOk();
         assert (c == to_char());
         return true;

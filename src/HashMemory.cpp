@@ -4,13 +4,6 @@
 #include "bitops.hpp"
 #include "memory.hpp"
 
-namespace {
-    template <typename T>
-    T round(T n) {
-        assert (n > 0);
-        return ::singleton<decltype(n)>(::bsr(n));
-    }
-}
 HashMemory::HashMemory (size_t bucketSize) :
     BucketSize{ bucketSize },
     PageSize{ std::max(::getPageSize(), static_cast<size_t>(BucketSize)) }

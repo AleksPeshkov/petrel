@@ -33,7 +33,7 @@ public:
     PiMask sliders() const { return anyOf(Slider); }
     PiMask leapers() const { return anyOf(Leaper); }
 
-    PieceType typeOf(Pi pi) const { assertOk(pi); return static_cast<PieceType::_t>( ::bsf(static_cast<unsigned>(get(pi))) ); }
+    PieceType typeOf(Pi pi) const { assertOk(pi); return static_cast<PieceType::_t>( ::lsb(static_cast<unsigned>(get(pi))) ); }
 
     bool isPawn(Pi pi) const { return is(pi, Pawn); }
     bool isRook(Pi pi) const { return is(pi, Rook); }

@@ -123,14 +123,13 @@ public:
         return result;
     }
 
-    index_t count() const {
-        VectorBitCount::_t sum{0,0};
+    index_t popcount() const {
+        index_t sum = 0;
         FOR_EACH(Rank, rank) {
-            sum = _mm_add_epi8(sum, ::bitCount.bytes( matrix[rank] ));
+            sum += ::popcount(matrix[rank]);
         }
-        return ::bitCount.total(sum);
+        return sum;
     }
-
 };
 
 #endif
