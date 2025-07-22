@@ -37,12 +37,12 @@ public:
 
     // get the first (lowest) bit set
     constexpr Index first() const {
-        return static_cast<index_type>(::bsf(v));
+        return static_cast<index_type>(::lsb(v));
     }
 
     // get the last (highest) bit set
     constexpr Index last() const {
-        return static_cast<index_type>(::bsr(v));
+        return static_cast<index_type>(::msb(v));
     }
 
     // get the singleton bit set

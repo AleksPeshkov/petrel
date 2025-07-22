@@ -35,7 +35,7 @@ public:
 
     void move(Square from, Square to) { assert (from != to); *this -= from; *this += to; }
 
-    constexpr BitRank operator[] (Rank r) const { return BitRank{small_cast<BitRank::_t>(this->v >> 8*r)}; }
+    constexpr BitRank operator[] (Rank r) const { return BitRank{small_cast<BitRank::_t>(v >> 8*r)}; }
 
     constexpr friend Bb operator << (Bb bb, unsigned offset) { return Bb{static_cast<_t>(bb) << offset}; }
     constexpr friend Bb operator >> (Bb bb, unsigned offset) { return Bb{static_cast<_t>(bb) >> offset}; }
@@ -74,7 +74,7 @@ constexpr Bb Square::line(Direction dir) const {
 
 // https://www.chessprogramming.org/0x88
 constexpr Bb Square::operator() (signed df, signed dr) const {
-    auto sq0x88 = this->v + (this->v & 070) + df + 16*dr;
+    auto sq0x88 = v + (v & 070) + df + 16*dr;
 
     if (sq0x88 & 0x88) {
         return {}; //out of chess board
