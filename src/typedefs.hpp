@@ -52,8 +52,8 @@ enum piece_type_t {
     Knight = 3,
     Pawn = 4,
     King = 5,
-    ZobristCastling = 6, //pseudo-piece type for the rook with castling right for zobrist hash
-    ZobristEnPassant = 7, //pseudo-piece type for the pawn can be legally captured E.P. for zobrist hash
+    Castling = 6, //pseudo-piece type for the rook with castling right for zobrist hash
+    EnPassant = 7, //pseudo-piece type for the pawn can be legally captured E.P. for zobrist hash
 };
 typedef Index<3, piece_type_t> SliderType; // Queen, Rook, Bishop
 typedef Index<4, piece_type_t> PromoType; // Queen, Rook, Bishop, Knight
