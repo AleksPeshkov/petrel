@@ -11,7 +11,6 @@
 #include "SquaresInBetween.hpp"
 #include "Uci.hpp"
 #include "VectorOfAll.hpp"
-#include "Zobrist.hpp"
 
 /**
 * Startup constant initialization
@@ -24,7 +23,6 @@ constexpr const VectorOfAll vectorOfAll; //4k 256*16
 const PieceSquareTable pieceSquareTable; //3k 6*64*8
 constexpr const PiSingle piSingle; //256
 const CastlingRules castlingRules; //128
-constexpr const ZobristKey zobristKey; //64 8*8
 constexpr const BitReverse bitReverse; //32
 
 template <> io::czstring PieceType::The_string{"qrbnpk"};
