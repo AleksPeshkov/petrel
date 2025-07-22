@@ -17,7 +17,7 @@ template <> inline
 bool File::from_char(io::char_type c) {
     File file{ static_cast<File::_t>(c - 'a') };
     if (!file.isOk()) { return false; }
-    this->v = file;
+    v = file;
     return true;
 }
 
@@ -33,7 +33,7 @@ template <> inline
 bool Rank::from_char(io::char_type c) {
     Rank rank{ static_cast<Rank::_t>('8' - c) };
     if (!rank.isOk()) { return false; }
-    this->v = rank;
+    v = rank;
     return true;
 }
 
