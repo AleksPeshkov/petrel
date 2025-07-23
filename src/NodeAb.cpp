@@ -15,7 +15,7 @@ NodeControl NodeAb::visit(Move move) {
 
     bool inCheck = NodeAb::inCheck();
 
-    if (movesCount() == 0) {
+    if (moves.popcount() == 0) {
         //checkmated or stalemated
         score = inCheck ? Score::checkmated(ply) : Score{DrawScore};
         return parent.negamax(score, move);

@@ -27,21 +27,19 @@ NodeControl NodePerftTT::visit(Square from, Square to) {
 
         case 1:
             RETURN_IF_ABORT (control.countNode());
-            makeMove(parent, from, to);
-            parent.perft += movesCount();
+            makeMoveNoZobrist(parent, from, to);
+            parent.perft += moves.popcount();
             return NodeControl::Continue;
 
         default: {
             assert(draft >= 2);
-            setZobrist(parent, from, to);
+            RETURN_IF_ABORT (control.countNode());
+            makeMove(parent, from, to);
 
             auto n = static_cast<TtPerft&>(control.tt).get(getZobrist(), draft - 2);
             if (n != NodeCountNone) {
                 perft = n;
             } else {
-                RETURN_IF_ABORT (control.countNode());
-                makeMove(parent, from, to);
-
                 perft = 0;
                 RETURN_IF_ABORT(visitChildren());
                 static_cast<TtPerft&>(control.tt).set(getZobrist(), draft - 2, perft);
