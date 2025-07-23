@@ -8,11 +8,10 @@ NodeAbRoot::NodeAbRoot (const SearchLimit& l, SearchControl& c):
 {}
 
 NodeControl NodeAbRoot::visitChildren() {
-    auto rootMoves = cloneMoves();
-    auto rootMovesCount = movesCount();
+    auto rootMovesClone = moves;
 
     for (draft = 1; draft <= depthLimit; ++draft) {
-        setMoves(rootMoves, rootMovesCount);
+        moves = rootMovesClone;
         score = NoScore;
         alpha = MinusInfinity;
         beta = PlusInfinity;

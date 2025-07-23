@@ -96,7 +96,6 @@ private:
 friend class Position;
 
     static void swap(PositionSide&, PositionSide&);
-    void updateSliderAttacks(PiMask, Bb);
 
     void setOpKing(Square);
     void move(Pi, Square, Square);
@@ -111,6 +110,9 @@ friend class Position;
     void clearEnPassantVictim();
     void clearEnPassantKillers();
     void clearCheckers() { traits.clearCheckers(); }
+
+    void updateSliders(PiMask, Bb);
+    void updateSlidersCheckers(PiMask, Bb);
 
     //used only during initial position setup
     bool dropValid(PieceType, Square);
