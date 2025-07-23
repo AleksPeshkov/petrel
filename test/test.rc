@@ -7,25 +7,25 @@ isready
 
 perft 5 divide
 <info currmovenumber 1 currmove b1a3 perft 198572 nodes 9306 *
-<info currmovenumber 2 currmove b1c3 perft 234656 nodes 18610 *
-<info currmovenumber 3 currmove g1f3 perft 233491 nodes 27424 *
-<info currmovenumber 4 currmove g1h3 perft 198502 nodes 34888 *
-<info currmovenumber 5 currmove d2d4 perft 361790 nodes 46040 *
-<info currmovenumber 6 currmove d2d3 perft 328511 nodes 56699 *
-<info currmovenumber 7 currmove e2e4 perft 405385 nodes 67683 *
-<info currmovenumber 8 currmove e2e3 perft 402988 nodes 78646 *
-<info currmovenumber 9 currmove c2c4 perft 240082 nodes 85588 *
-<info currmovenumber 10 currmove c2c3 perft 222861 nodes 92044 *
-<info currmovenumber 11 currmove f2f4 perft 198473 nodes 97198 *
-<info currmovenumber 12 currmove f2f3 perft 178889 nodes 101868 *
-<info currmovenumber 13 currmove b2b4 perft 216145 nodes 106070 *
-<info currmovenumber 14 currmove b2b3 perft 215255 nodes 110272 *
-<info currmovenumber 15 currmove g2g4 perft 214048 nodes 113543 *
-<info currmovenumber 16 currmove g2g3 perft 217210 nodes 116816 *
-<info currmovenumber 17 currmove a2a4 perft 217832 nodes 119609 *
-<info currmovenumber 18 currmove a2a3 perft 181046 nodes 121490 *
-<info currmovenumber 19 currmove h2h4 perft 218829 nodes 123353 *
-<info currmovenumber 20 currmove h2h3 perft 181044 nodes 124304 *
+<info currmovenumber 2 currmove b1c3 perft 234656 nodes 18650 *
+<info currmovenumber 3 currmove g1f3 perft 233491 nodes 27524 *
+<info currmovenumber 4 currmove g1h3 perft 198502 nodes 35068 *
+<info currmovenumber 5 currmove d2d4 perft 361790 nodes 46300 *
+<info currmovenumber 6 currmove d2d3 perft 328511 nodes 57039 *
+<info currmovenumber 7 currmove e2e4 perft 405385 nodes 68143 *
+<info currmovenumber 8 currmove e2e3 perft 402988 nodes 79226 *
+<info currmovenumber 9 currmove c2c4 perft 240082 nodes 86308 *
+<info currmovenumber 10 currmove c2c3 perft 222861 nodes 92904 *
+<info currmovenumber 11 currmove f2f4 perft 198473 nodes 98238 *
+<info currmovenumber 12 currmove f2f3 perft 178889 nodes 103088 *
+<info currmovenumber 13 currmove b2b4 perft 216145 nodes 107530 *
+<info currmovenumber 14 currmove b2b3 perft 215255 nodes 111972 *
+<info currmovenumber 15 currmove g2g4 perft 214048 nodes 115523 *
+<info currmovenumber 16 currmove g2g3 perft 217210 nodes 119076 *
+<info currmovenumber 17 currmove a2a4 perft 217832 nodes 122169 *
+<info currmovenumber 18 currmove a2a3 perft 181046 nodes 124350 *
+<info currmovenumber 19 currmove h2h4 perft 218829 nodes 126553 *
+<info currmovenumber 20 currmove h2h3 perft 181044 nodes 127844 *
 <info depth 5 perft 4865609*
 <bestmove 0000
 

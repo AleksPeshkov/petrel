@@ -22,7 +22,7 @@ class PositionSide {
 
     Evaluation evaluation; //PST incremental evaluation
 
-    Square opKing; //location of the opponent's king
+    Square opKing; //location of the opponent's king, needed for detecting checking and pinning pieces traits
 
 public:
     #ifdef NDEBUG
@@ -96,7 +96,6 @@ private:
 friend class Position;
 
     static void swap(PositionSide&, PositionSide&);
-    void updateSliderAttacks(PiMask, Bb);
 
     void setOpKing(Square);
     void move(Pi, Square, Square);
@@ -111,6 +110,9 @@ friend class Position;
     void clearEnPassantVictim();
     void clearEnPassantKillers();
     void clearCheckers() { traits.clearCheckers(); }
+
+    void updateSliders(PiMask, Bb);
+    void updateSlidersCheckers(PiMask, Bb);
 
     //used only during initial position setup
     bool dropValid(PieceType, Square);
