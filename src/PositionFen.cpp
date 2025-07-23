@@ -305,7 +305,7 @@ void PositionFen::limitMoves(istream& in) {
     }
 
     if (n) {
-        setMoves(movesMatrix, n);
+        moves = movesMatrix;
         in.clear();
         return;
     }
@@ -427,7 +427,7 @@ void PositionFen::readFen(istream& in) {
     }
 
     setZobrist();
-    generateMoves();
+    makeMoves();
 }
 
 void PositionFen::setStartpos() {

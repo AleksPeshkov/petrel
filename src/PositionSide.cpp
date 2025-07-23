@@ -224,7 +224,21 @@ void PositionSide::setOpKing(Square king) {
     }
 }
 
-void PositionSide::updateSliderAttacks(PiMask affectedSliders, Bb occupiedBb) {
+void PositionSide::updateSliders(PiMask affectedSliders, Bb occupiedBb) {
+    assert (traits.checkers().none());
+    assert (affectedSliders.any());
+
+    Hyperbola blockers{ occupiedBb };
+
+    for (Pi pi : affectedSliders) {
+        Bb attack = blockers.attack(SliderType{typeOf(pi)}, squareOf(pi));
+        attacks.set(pi, attack);
+
+        assert (!attack.has(opKing)); // king cannot be left in check
+    }
+}
+
+void PositionSide::updateSlidersCheckers(PiMask affectedSliders, Bb occupiedBb) {
     assert ((traits.checkers() & types.sliders()).none());
     assert (affectedSliders.any());
 
