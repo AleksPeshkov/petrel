@@ -1,5 +1,5 @@
 #include "PositionSide.hpp"
-#include "AttackBb.hpp"
+#include "Hyperbola.hpp"
 #include "CastlingRules.hpp"
 #include "AttacksFrom.hpp"
 #include "SquaresInBetween.hpp"
@@ -232,14 +232,15 @@ void PositionSide::setOpKing(Square king) {
 
 void PositionSide::updateSliderAttacks(PiMask affectedSliders) {
     assert ((traits.checkers() & types.sliders()).none());
+    assert (affectedSliders.any());
 
     //TRICK: attacks calculated without opponent's king for implicit out of check king moves generation
-    AttackBb blockers{ occupiedBb - opKing };
+    Hyperbola blockers{ occupiedBb - opKing };
 
-    assert (affectedSliders.any());
     for (Pi pi : affectedSliders) {
         Bb attack = blockers.attack(SliderType{typeOf(pi)}, squareOf(pi));
         attacks.set(pi, attack);
+
         if (attack.has(opKing)) {
             traits.setChecker(pi);
         }
