@@ -1,5 +1,5 @@
-#ifndef ATTACK_BB_HPP
-#define ATTACK_BB_HPP
+#ifndef HYPERBOLA_HPP
+#define HYPERBOLA_HPP
 
 #include "BitArray128.hpp"
 #include "BitReverse.hpp"
@@ -34,15 +34,16 @@ extern const HyperbolaDir hyperbolaDir;
 /**
  * Vector of bitboard and its bitreversed complement
  * used for sliding pieces attacks generation
+ * https://www.chessprogramming.org/Hyperbola_Quintessence
  */
-class AttackBb : public BitArray<AttackBb, u64x2_t> {
+class Hyperbola : public BitArray<Hyperbola, u64x2_t> {
     typedef u64x2_t _t;
     _t occupied;
 
     static _t hyperbola(_t v) { return v ^ ::bitReverse(v); }
 
 public:
-    explicit AttackBb (Bb bb) : occupied{ hyperbola(u64x2_t{bb, 0}) } {}
+    explicit Hyperbola (Bb bb) : occupied{ hyperbola(u64x2_t{bb, 0}) } {}
 
     Bb attack(SliderType ty, Square from) const {
         const auto& sq = hyperbolaSq[from];
@@ -53,12 +54,12 @@ public:
         const auto& d0 = hyperbolaDir[from][dir];
         const auto& d1 = hyperbolaDir[from][static_cast<direction_t>(dir+1)];
 
-        // bishop attacks for Bishop, rooks attacks fro Rook and Queen
+        // bishop attacks for Bishops, rooks attacks for Rooks and Queens
         auto result = d0 & _mm_sub_epi64(occupied & d0, sq);
         result |= d1 & _mm_sub_epi64(occupied & d1, sq);
 
         if (ty == Queen) {
-            // plus bishop attacks for Queen
+            // plus bishop attacks for Queens
             const auto& d = hyperbolaDir[from][DiagonalDir];
             const auto& a = hyperbolaDir[from][AntidiagDir];
             result |= d & _mm_sub_epi64(occupied & d, sq);
