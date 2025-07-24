@@ -1,12 +1,11 @@
 #include <errno.h>
 
 #include "io.hpp"
-#include "AttackBb.hpp"
 #include "AttacksFrom.hpp"
 #include "BitReverse.hpp"
 #include "CastlingRules.hpp"
 #include "Evaluation.hpp"
-#include "PerftRecord.hpp"
+#include "Hyperbola.hpp"
 #include "PiOrder.hpp"
 #include "PiSingle.hpp"
 #include "SquaresInBetween.hpp"
@@ -18,7 +17,7 @@
 * Startup constant initialization
 */
 const SquaresInBetween inBetween; //32k 64*64*8
-const HyperbolaDir hyperbolaDir; ////4k 64*4*16
+const HyperbolaDir hyperbolaDir; //4k 64*4*16
 const HyperbolaSq hyperbolaSq; //1k 64*16
 const AttacksFrom attacksFrom; //3k 6*64*8
 constexpr const VectorOfAll vectorOfAll; //4k 256*16
