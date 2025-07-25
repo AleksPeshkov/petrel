@@ -33,13 +33,13 @@ public:
     Score evaluate() const { return PositionSide::evaluate(MY, OP); }
 
     // 1st step of making a move: update the zobrist hash
-    void makeZobrist(const Position& parent, Square from, Square to) { zobrist = parent.createZobrist(from, to); }
+    void makeZobrist(const Position* parent, Square from, Square to) { zobrist = parent->createZobrist(from, to); }
 
     // 2nd step of making a move: update the position (including attack matrix)
-    void makeMoveNoZobrist(const Position&, Square, Square);
+    void makeMoveNoZobrist(const Position*, Square, Square);
 
     // 1st and 2nd step combined
-    void makeMove(const Position&, Square, Square);
+    void makeMove(const Position*, Square, Square);
 
     void makeMove(Square, Square);
     bool isSpecial(Square, Square) const;

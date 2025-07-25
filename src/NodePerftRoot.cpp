@@ -9,12 +9,14 @@ NodeControl NodePerftRoot::visitRoot() {
 
     index_t moveCount = 0;
 
-    NodePerftTT child(*this);
+    NodePerftTT node{this};
+    const auto child = &node;
+
     for (Pi pi : MY.pieces()) {
         Square from = MY.squareOf(pi);
         for (Square to : moves[pi]) {
             auto previousPerft = perft;
-            RETURN_IF_ABORT (child.visit(from, to));
+            RETURN_IF_ABORT (child->visit(from, to));
 
             Move move{from, to, isSpecial(from, to), control.position.getColorToMove(), control.position.getChessVariant()};
             control.perft_currmove(++moveCount, move, perft - previousPerft);

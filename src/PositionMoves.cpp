@@ -202,14 +202,14 @@ void PositionMoves::makeMove(Square from, Square to) {
     makeMoves();
 }
 
-void PositionMoves::makeMove(PositionMoves& parent, Square from, Square to) {
-    parent.moves.clear(parent[My].pieceAt(from), to);
+void PositionMoves::makeMove(PositionMoves* parent, Square from, Square to) {
+    parent->moves.clear((*parent)[My].pieceAt(from), to);
     Position::makeMove(parent, from, to);
     makeMoves();
 }
 
-void PositionMoves::makeMoveNoZobrist(PositionMoves& parent, Square from, Square to) {
-    parent.moves.clear(parent[My].pieceAt(from), to);
+void PositionMoves::makeMoveNoZobrist(PositionMoves* parent, Square from, Square to) {
+    parent->moves.clear((*parent)[My].pieceAt(from), to);
     Position::makeMoveNoZobrist(parent, from, to);
     makeMoves();
 }

@@ -27,11 +27,11 @@ private:
 protected:
 
     void makeMove(Square, Square);
-    void makeMove(PositionMoves& parent, Square from, Square to);
-    void makeMoveNoZobrist(PositionMoves& parent, Square from, Square to);
+    void makeMove(PositionMoves* parent, Square from, Square to);
+    void makeMoveNoZobrist(PositionMoves* parent, Square from, Square to);
 
     void makeMove(Move move) { return makeMove(move.from(), move.to()); }
-    void makeMove(PositionMoves& parent, Move move) { return makeMove(parent, move.from(), move.to()); }
+    void makeMove(PositionMoves* parent, Move move) { return makeMove(parent, move.from(), move.to()); }
 
     void makeMoves();
     bool isLegalMove(Move move) const { return move && isLegalMove(move.from(), move.to()); }
