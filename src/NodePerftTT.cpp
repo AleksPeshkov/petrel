@@ -2,17 +2,18 @@
 #include "SearchControl.hpp"
 #include "TtPerft.hpp"
 
-NodePerftTT::NodePerftTT (NodePerftTT& n) : Node{n.control}, parent{n}, draft{n.draft-1} {}
-NodePerftTT::NodePerftTT (const PositionMoves& p, SearchControl& c, Ply d) : Node{p, c}, parent{*this}, draft{d} {}
+NodePerftTT::NodePerftTT (NodePerftTT* n) : Node{n->control}, parent{n}, draft{n->draft-1} {}
+NodePerftTT::NodePerftTT (const PositionMoves& p, SearchControl& c, Ply d) : Node{p, c}, parent{nullptr}, draft{d} {}
 
 NodeControl NodePerftTT::visitChildren() {
-    NodePerftTT child{*this};
+    NodePerftTT node{this};
+    const auto child = &node;
 
     for (Pi pi : MY.pieces()) {
         Square from = MY.squareOf(pi);
 
         for (Square to : moves[pi]) {
-            RETURN_IF_ABORT (child.visit(from, to));
+            RETURN_IF_ABORT (child->visit(from, to));
         }
     }
 
@@ -22,13 +23,13 @@ NodeControl NodePerftTT::visitChildren() {
 NodeControl NodePerftTT::visit(Square from, Square to) {
     switch (draft) {
         case 0:
-            parent.perft += 1;
+            parent->perft += 1;
             return NodeControl::Continue;
 
         case 1:
             RETURN_IF_ABORT (control.countNode());
             makeMoveNoZobrist(parent, from, to);
-            parent.perft += moves.popcount();
+            parent->perft += moves.popcount();
             return NodeControl::Continue;
 
         default: {
@@ -44,7 +45,7 @@ NodeControl NodePerftTT::visit(Square from, Square to) {
                 RETURN_IF_ABORT(visitChildren());
                 static_cast<TtPerft&>(control.tt).set(getZobrist(), draft - 2, perft);
             }
-            parent.perft += perft;
+            parent->perft += perft;
         }
     }
 
