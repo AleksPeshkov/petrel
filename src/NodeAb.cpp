@@ -6,8 +6,8 @@
 #include "PositionFen.hpp"
 
 NodeControl NodeAb::visit(Move move) {
-    alpha = -parent.beta;
-    beta = -parent.alpha;
+    alpha = -parent->beta;
+    beta = -parent->alpha;
     assert (MinusInfinity <= alpha && alpha < beta && beta <= PlusInfinity);
 
     // mate-distance pruning
@@ -15,47 +15,46 @@ NodeControl NodeAb::visit(Move move) {
     if (alpha >= beta) { return NodeControl::BetaCutoff; }
 
     score = NoScore;
-    draft = parent.draft > 0 ? parent.draft-1 : 0;
+    draft = parent->draft > 0 ? parent->draft-1 : 0;
 
     RETURN_IF_ABORT (control.countNode());
-    parent.currentMove = parent.createFullMove(move);
+    parent->currentMove = parent->externalMove(move);
     makeMove(parent, move);
-    ++parent.movesMade;
+    ++parent->movesMade;
 
     bool inCheck = NodeAb::inCheck();
 
     if (ply == MaxPly) {
         // no room to search deeper
-        return parent.negamax(staticEval());
+        score = evaluate();
     }
-
-    if (draft == 0 && !inCheck) {
+    else if (draft == 0 && !inCheck) {
         RETURN_IF_ABORT (quiescence());
     }
     else {
         RETURN_IF_ABORT (visitChildren());
         if (movesMade == 0) {
             //checkmated or stalemated
-            return parent.negamax(inCheck ? Score::checkmated(ply) : Score{DrawScore});
+            score = inCheck ? Score::checkmated(ply) : Score{DrawScore};
         }
     }
 
-    return parent.negamax(score);
+    return parent->negamax(-score);
 }
 
-NodeControl NodeAb::negamax(Score childScore) {
+NodeControl NodeAb::negamax(Score lastScore) {
     assert (MinusInfinity <= alpha && alpha < beta && beta <= PlusInfinity);
 
-    if (score < -childScore) {
-        score = -childScore;
+    if (lastScore > score) {
+        score = lastScore;
 
-        if (beta <= score) {
+        if (score >= beta) {
             //beta cut off
             setKiller();
             return NodeControl::BetaCutoff;
         }
 
-        if (alpha < score) {
+        if (score > alpha) {
             alpha = score;
 
             control.pvMoves.set(ply, currentMove);
@@ -72,34 +71,35 @@ NodeControl NodeAb::negamax(Score childScore) {
 NodeControl NodeAb::visitChildren() {
     assert (MinusInfinity <= alpha && alpha < beta && beta <= PlusInfinity);
 
-    NodeAb child{*this};
+    NodeAb node{this};
+    const auto child = &node;
 
     canBeKiller = false;
 
-    CUTOFF (child.visitIfLegal(control.pvMoves[ply]));
+    CUTOFF (child->visitIfLegal(control.pvMoves[ply]));
 
     CUTOFF (goodCaptures(child));
 
     canBeKiller = true;
 
     if (ply >= 1) {
-        CUTOFF (child.visitIfLegal(parent.killer1));
-        CUTOFF (child.visitIfLegal(parent.killer2));
+        CUTOFF (child->visitIfLegal(parent->killer1));
+        CUTOFF (child->visitIfLegal(parent->killer2));
     }
     if (ply >= 3) {
-        CUTOFF (child.visitIfLegal(parent.parent.parent.killer1));
+        CUTOFF (child->visitIfLegal(parent->grandParent->killer1));
     }
 
     if (ply >= 1) {
-        Move move = parent.currentMove;
-        PieceType ty = parent[My].typeOf(move.from());
-        CUTOFF ( child.visitIfLegal(control.counter[side(ply)][ty][move.to()]) );
+        Move move = parent->currentMove;
+        PieceType ty = (*parent)[My].typeOf(move.from());
+        CUTOFF ( child->visitIfLegal(control.counter[sideOf(ply)][ty][move.to()]) );
     }
 
     if (ply >= 2) {
-        Move move = parent.parent.currentMove;
-        PieceType ty = parent.parent[My].typeOf(move.from());
-        CUTOFF ( child.visitIfLegal(control.connected[side(ply)][ty][move.to()]) );
+        Move move = grandParent->currentMove;
+        PieceType ty = (*grandParent)[My].typeOf(move.from());
+        CUTOFF ( child->visitIfLegal(control.connected[sideOf(ply)][ty][move.to()]) );
     }
 
     // the rest of the remaining unsorted moves
@@ -107,7 +107,7 @@ NodeControl NodeAb::visitChildren() {
         Square from = MY.squareOf(pi);
 
         for (Square to : moves[pi]) {
-            CUTOFF (child.visit({from, to}));
+            CUTOFF (child->visit({from, to}));
         }
     }
 
@@ -119,7 +119,7 @@ NodeControl NodeAb::quiescence() {
     assert (!inCheck());
 
     //stand pat
-    score = staticEval();
+    score = evaluate();
     if (beta <= score) {
         return NodeControl::BetaCutoff;
     }
@@ -127,7 +127,8 @@ NodeControl NodeAb::quiescence() {
         alpha = score;
     }
 
-    NodeAb child{*this};
+    NodeAb node{this};
+    const auto child = &node;
 
     CUTOFF (recapture(child));
 
@@ -136,33 +137,33 @@ NodeControl NodeAb::quiescence() {
     return NodeControl::Continue;
 }
 
-NodeControl NodeAb::recapture(NodeAb& child) {
+NodeControl NodeAb::recapture(NodeAb* child) {
     if (ply == 0) { return NodeControl::Continue; }
 
-    Move move = parent.currentMove;
+    Move move = parent->currentMove;
     Square to = move.to();
 
     assert (move.isExternal());
     if (move.isSpecial()) {
         Square from = move.from();
-        Pi victim = parent[My].pieceAt(from);
+        Pi victim = (*parent)[My].pieceAt(from);
 
         if (move.from().on(Rank7)) {
             // pawn promotion
-            assert(parent[My].isPromotable(victim));
+            assert((*parent)[My].isPromotable(victim));
             to = {File{to}, Rank8};
         }
         else if (to.on(Rank5)) {
             // en passant
             assert (from.on(Rank5));
             to = {File{to}, Rank6};
-            assert (parent[My].isPawn(victim));
-            assert (parent[My].enPassantPawns().has(victim));
+            assert ((*parent)[My].isPawn(victim));
+            assert ((*parent)[My].enPassantPawns().has(victim));
         }
         else {
             // castling
             assert (from.on(Rank1));
-            assert (parent[My].squareOf(TheKing) == to);
+            assert ((*parent)[My].squareOf(TheKing) == to);
             to = CastlingRules::castlingRookTo(to, from);
         }
     }
@@ -170,7 +171,7 @@ NodeControl NodeAb::recapture(NodeAb& child) {
     return goodCaptures(child, ~to);
 }
 
-NodeControl NodeAb::goodCaptures(NodeAb& child) {
+NodeControl NodeAb::goodCaptures(NodeAb* child) {
     // MVV (most valuable victim)
     for (Pi victim : OP.pieces() % PiMask{TheKing}) {
         Square to = ~OP.squareOf(victim);
@@ -185,12 +186,12 @@ NodeControl NodeAb::goodCaptures(NodeAb& child) {
 
             Square from = MY.squareOf(pi);
             // to the queen
-            CUTOFF( child.visit({from, to}) );
+            CUTOFF( child->visit({from, to}) );
 
             // underpromotion to the knight only if it makes check
             if (attacksFrom(Knight, ~OP.squareOf(TheKing)).has(to)) {
                 Square toKnight{ File{to}, ::rankOf(Knight) };
-                CUTOFF( child.visit({from, toKnight}) );
+                CUTOFF( child->visit({from, toKnight}) );
             }
         }
     }
@@ -198,7 +199,7 @@ NodeControl NodeAb::goodCaptures(NodeAb& child) {
     return NodeControl::Continue;
 }
 
-NodeControl NodeAb::goodCaptures(NodeAb& child, Square to) {
+NodeControl NodeAb::goodCaptures(NodeAb* child, Square to) {
     assert (OP.piecesSquares().has(~to));
 
     PiMask attackers = moves[to];
@@ -221,7 +222,7 @@ NodeControl NodeAb::goodCaptures(NodeAb& child, Square to) {
         Pi attacker = attackers.least(); attackers -= attacker;
 
         Square from = MY.squareOf(attacker);
-        CUTOFF (child.visit(Move{from, to}));
+        CUTOFF (child->visit(Move{from, to}));
     }
 
     return NodeControl::Continue;
@@ -229,31 +230,31 @@ NodeControl NodeAb::goodCaptures(NodeAb& child, Square to) {
 
 void NodeAb::setKiller() {
     if (ply >= 1 && canBeKiller) {
-        if (canBeKiller && parent.killer1 != currentMove) {
-        parent.killer2 = parent.killer1;
-        parent.killer1 = currentMove;
+        if (canBeKiller && parent->killer1 != currentMove) {
+        parent->killer2 = parent->killer1;
+        parent->killer1 = currentMove;
         }
 
         {
-            Move move = parent.currentMove;
-            PieceType ty = parent[My].typeOf(move.from());
-            control.counter[side(ply)][ty][move.to()] = currentMove;
+            Move move = parent->currentMove;
+            PieceType ty = (*parent)[My].typeOf(move.from());
+            control.counter[sideOf(ply)][ty][move.to()] = currentMove;
         }
 
         if (ply >= 2) {
-            Move move = parent.parent.currentMove;
-            PieceType ty = parent.parent[My].typeOf(move.from());
-            control.connected[side(ply)][ty][move.to()] = currentMove;
+            Move move = grandParent->currentMove;
+            PieceType ty = (*grandParent)[My].typeOf(move.from());
+            control.connected[sideOf(ply)][ty][move.to()] = currentMove;
         }
     }
 }
 
-Move NodeAb::createFullMove(Square from, Square to) const {
+Move NodeAb::externalMove(Square from, Square to) const {
     Color color = control.position.getColorToMove() << ply;
     return Move{from, to, isSpecial(from, to), color, control.position.getChessVariant()};
 }
 
-Score NodeAb::staticEval()
+Score NodeAb::evaluate()
 {
     return Position::evaluate().clamp();
 }

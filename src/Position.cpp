@@ -12,23 +12,23 @@ void Position::makeMove(Square from, Square to) {
     //assert (zobrist == generateZobrist()); // true, but slow to compute
 }
 
-void Position::makeMove(const Position& parent, Square from, Square to) {
-    assert (this != &parent);
-    MY = parent[Op];
-    OP = parent[My];
+void Position::makeMove(const Position* parent, Square from, Square to) {
+    assert (parent);
+    MY = (*parent)[Op];
+    OP = (*parent)[My];
     //current position flipped its sides relative to parent, so we make the move inplace for the Op
 
-    zobrist = parent.zobrist;
+    zobrist = parent->zobrist;
     makeMove<Op>(from, to);
     zobrist.flip();
 
     //assert (zobrist == generateZobrist()); // true, but slow to compute
 }
 
-void Position::makeMoveNoZobrist(const Position& parent, Square from, Square to) {
-    assert (this != &parent);
-    MY = parent[Op];
-    OP = parent[My];
+void Position::makeMoveNoZobrist(const Position* parent, Square from, Square to) {
+    assert (parent);
+    MY = (*parent)[Op];
+    OP = (*parent)[My];
     //current position flipped its sides relative to parent, so we make the move inplace for the Op
 
     makeMove<Op, NoZobrist>(from, to);
