@@ -63,9 +63,7 @@ protected:
 
 public:
     using Z::Z;
-    Zobrist (Arg my, Arg op) : Z{my ^ *op} {
-        //static_assert (get(Queen, C3) == ~get(Queen, C6));
-    }
+    Zobrist (Arg my, Arg op) : Z{my ^ *op} {}
 
     void change(Index ty, Square sq) { *this ^=  get(ty, sq); }
     void my(PieceType::_t ty, Square sq) { *this ^=  get(ty, sq); }

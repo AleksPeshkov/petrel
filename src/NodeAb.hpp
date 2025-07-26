@@ -2,6 +2,7 @@
 #define NODE_AB_HPP
 
 #include "Node.hpp"
+#include "Repetition.hpp"
 #include "Score.hpp"
 #include "UciMove.hpp"
 
@@ -9,6 +10,7 @@ class NodeAb : public Node {
 public:
     NodeAb* const parent;
     NodeAb* const grandParent;
+    RepetitionMask repMask; // hash of previous zobrists
 
     Ply ply = 0; //distance from root
     Ply draft = 0; //remaining depth
@@ -44,6 +46,7 @@ public:
 
     Color colorToMove() const;
     Score evaluate();
+    bool isRepetition() const;
 };
 
 #endif
