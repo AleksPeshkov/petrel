@@ -15,7 +15,7 @@ class Index {
 
 public:
     typedef _Value_type _t;
-    enum { Size = _Size, Mask = _Mask };
+    enum { Size = _Size, Last = Size-1, Mask = _Mask };
     template <typename T> using arrayOf = std::array<T, Size>;
 
 protected:

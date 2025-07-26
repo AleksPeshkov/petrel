@@ -25,6 +25,17 @@ enum : node_count_t {
     NodeCountMax  = NodeCountNone - 1
 };
 
+// number of halfmoves without capture or pawn move
+class Rule50 : Index<101> {
+public:
+    using Index::operator _t;
+    constexpr Rule50() : Index{0} {}
+    constexpr void clear() { v = 0; }
+    constexpr void next() { v = v < Last ? v + 1 : Last; }
+    constexpr bool isEmpty() const { return v == 0; }
+    constexpr bool isDraw() const { return v == Last; }
+};
+
 enum color_t { White, Black };
 typedef Index<2, color_t> Color;
 template <> io::czstring Color::The_string;

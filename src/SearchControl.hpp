@@ -6,6 +6,7 @@
 #include "NodeCounter.hpp"
 #include "PositionFen.hpp"
 #include "PvMoves.hpp"
+#include "Repetition.hpp"
 #include "SearchThread.hpp"
 #include "Score.hpp"
 #include "SpinLock.hpp"
@@ -41,6 +42,8 @@ public:
 
     HistoryMoves counter;
     HistoryMoves connected;
+
+    RepetitionHistory repetition;
 
     void newGame();
     void newSearch();

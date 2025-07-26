@@ -37,13 +37,13 @@ NodeControl NodePerftTT::visit(Square from, Square to) {
             RETURN_IF_ABORT (control.countNode());
             makeMove(parent, from, to);
 
-            auto n = static_cast<TtPerft&>(control.tt).get(getZobrist(), draft - 2);
+            auto n = static_cast<TtPerft&>(control.tt).get(zobrist, draft - 2);
             if (n != NodeCountNone) {
                 perft = n;
             } else {
                 perft = 0;
                 RETURN_IF_ABORT(visitChildren());
-                static_cast<TtPerft&>(control.tt).set(getZobrist(), draft - 2, perft);
+                static_cast<TtPerft&>(control.tt).set(zobrist, draft - 2, perft);
             }
             parent->perft += perft;
         }

@@ -18,6 +18,7 @@ void Position::makeMove(const Position* parent, Square from, Square to) {
     OP = (*parent)[My];
     //current position flipped its sides relative to parent, so we make the move inplace for the Op
 
+    rule50 = parent->rule50;
     zobrist = parent->zobrist;
     makeMove<Op>(from, to);
     zobrist.flip();
@@ -43,6 +44,7 @@ void Position::makeMove(Square from, Square to) {
     //Assumes that the given move is valid and legal
     assert (MY.checkers().none());
     OP.clearCheckers();
+    rule50.next();
 
     Pi pi = MY.pieceAt(from);
 
@@ -55,6 +57,7 @@ void Position::makeMove(Square from, Square to) {
 
         //en passant capture encoded as the pawn captures the pawn
         if (MY.isPawn(pi) && from.on(Rank5) && to.on(Rank5)) {
+            rule50.clear();
             Square ep{File(to), Rank6};
 
             if constexpr (Z) {
@@ -75,6 +78,7 @@ void Position::makeMove(Square from, Square to) {
     assert (!OP.hasEnPassant());
 
     if (MY.isPawn(pi)) {
+        rule50.clear();
         if (from.on(Rank7)) {
             PromoType promo = ::promoTypeFrom(Rank{to});
             to = {File(to), Rank8};
@@ -136,6 +140,7 @@ void Position::makeMove(Square from, Square to) {
         OP.setOpKing(~to);
 
         if (OP.has(~to)) {
+            rule50.clear();
             if constexpr (Z) {
                 if (OP.isCastling(~to)) { zobrist.opCastling(~to); } // captured the rook with castling right
                 zobrist.op(OP.typeOf(~to), ~to);
@@ -181,6 +186,7 @@ void Position::makeMove(Square from, Square to) {
     MY.move(pi, from, to);
 
     if (OP.has(~to)) {
+        rule50.clear();
         if constexpr (Z) {
             if (OP.isCastling(~to)) { zobrist.opCastling(~to); } // captured the rook with castling right
             zobrist.op(OP.typeOf(~to), ~to);

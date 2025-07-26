@@ -39,7 +39,7 @@ void Uci::ucinewgame() {
     }
 
     root.newGame();
-    root.position.setStartpos();
+    root.position.setStartpos(root.repetition);
 }
 
 void Uci::setoption() {
@@ -110,11 +110,9 @@ void Uci::position() {
         return;
     }
 
-    if (next("startpos")) { root.position.setStartpos(); }
-    if (next("fen")) { root.position.readFen(command); }
-
-    next("moves");
-    root.position.playMoves(command);
+    if (next("startpos")) { root.position.setStartpos(root.repetition); }
+    if (next("fen")) { root.position.readFen(command, root.repetition); }
+    if (next("moves")) { root.position.playMoves(command, root.repetition); }
 }
 
 void Uci::go() {

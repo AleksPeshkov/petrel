@@ -2,6 +2,7 @@
 
 #include "PositionFen.hpp"
 #include "CastlingRules.hpp"
+#include "Repetition.hpp"
 
 namespace {
 
@@ -282,53 +283,6 @@ istream& PositionFen::readMove(istream& in, Square& from, Square& to) const {
     return in;
 }
 
-void PositionFen::limitMoves(istream& in) {
-    PiBb movesMatrix;
-    movesMatrix.clear();
-    index_t n = 0;
-
-    while (in >> std::ws && !in.eof()) {
-        auto beforeMove = in.tellg();
-
-        Square from; Square to;
-
-        if (!readMove(in, from, to) || !isLegalMove(from, to)) {
-            io::fail_pos(in, beforeMove);
-            return;
-        }
-
-        Pi pi = MY.pieceAt(from);
-        if (!movesMatrix.has(pi, to)) {
-            movesMatrix.set(pi, to);
-            ++n;
-        }
-    }
-
-    if (n) {
-        moves = movesMatrix;
-        in.clear();
-        return;
-    }
-
-    io::fail_rewind(in);
-}
-
-void PositionFen::playMoves(istream& in) {
-    while (in >> std::ws && !in.eof()) {
-        auto beforeMove = in.tellg();
-
-        Square from; Square to;
-
-        if (!readMove(in, from, to) || !isLegalMove(from, to)) {
-            io::fail_pos(in, beforeMove);
-            return;
-        }
-
-        makeMove(from, to);
-        colorToMove.flip();
-    }
-}
-
 istream& PositionFen::readBoard(istream& in) {
     FenToBoard board;
     if (!read(in, board)) { return in; };
@@ -411,7 +365,7 @@ istream& PositionFen::readEnPassant(istream& in) {
     return in;
 }
 
-void PositionFen::readFen(istream& in) {
+void PositionFen::readFen(istream& in, RepetitionHistory& repetition) {
     in >> std::ws;
     readBoard(in);
     in >> std::ws;
@@ -426,11 +380,70 @@ void PositionFen::readFen(istream& in) {
         in.clear(); //ignore missing optional 'fifty' and 'moves' fen fields
     }
 
-    setZobrist();
+    zobrist = generateZobrist();
+    repetition.clear();
+    repetition.push(colorToMove, zobrist);
+
     makeMoves();
 }
 
-void PositionFen::setStartpos() {
+void PositionFen::setStartpos(RepetitionHistory& repetition) {
     std::istringstream startpos{"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"};
-    readFen(startpos);
+    readFen(startpos, repetition);
+}
+
+void PositionFen::limitMoves(istream& in) {
+    PiBb movesMatrix;
+    movesMatrix.clear();
+    index_t n = 0;
+
+    while (in >> std::ws && !in.eof()) {
+        auto beforeMove = in.tellg();
+
+        Square from; Square to;
+
+        if (!readMove(in, from, to) || !isLegalMove(from, to)) {
+            io::fail_pos(in, beforeMove);
+            return;
+        }
+
+        Pi pi = MY.pieceAt(from);
+        if (!movesMatrix.has(pi, to)) {
+            movesMatrix.set(pi, to);
+            ++n;
+        }
+    }
+
+    if (n) {
+        moves = movesMatrix;
+        in.clear();
+        return;
+    }
+
+    io::fail_rewind(in);
+}
+
+void PositionFen::playMoves(istream& in, RepetitionHistory& repetition) {
+    while (in >> std::ws && !in.eof()) {
+        auto beforeMove = in.tellg();
+
+        Square from; Square to;
+
+        if (!readMove(in, from, to) || !isLegalMove(from, to)) {
+            io::fail_pos(in, beforeMove);
+            return;
+        }
+
+        makeMove(from, to);
+        colorToMove.flip();
+
+        if (rule50.isEmpty()) {
+            repetition.clear();
+        }
+        else {
+            repetition.push(colorToMove, zobrist);
+        }
+    }
+
+    repetition.normalize();
 }
