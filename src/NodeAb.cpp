@@ -20,12 +20,16 @@ NodeControl NodeAb::visit(Move move) {
     parent->currentMove = parent->uciMove(move);
     makeMove(parent, move);
     ++parent->movesMade;
+    repMask.update(rule50, parent->zobrist);
 
     bool inCheck = NodeAb::inCheck();
 
     if (ply == MaxPly) {
         // no room to search deeper
         score = evaluate();
+    }
+    else if (isRepetition()) {
+        score = DrawScore;
     }
     else if (draft == 0 && !inCheck) {
         RETURN_IF_ABORT (quiescence());
@@ -212,4 +216,22 @@ Color NodeAb::colorToMove() const {
 Score NodeAb::evaluate()
 {
     return Position::evaluate().clamp();
+}
+
+bool NodeAb::isRepetition() const {
+    if (rule50 < 4) { return false; }
+
+    const Z& z = zobrist;
+
+    if (grandParent) {
+        auto next = grandParent;
+        while ((next = next->grandParent)) {
+            if (next->zobrist == z) {
+                return true;
+            }
+            if (!next->repMask.has(z)) { break; }
+        }
+    }
+
+    return root.repetition.has(colorToMove(), z);
 }

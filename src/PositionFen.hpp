@@ -9,6 +9,8 @@
 using in::istream;
 using out::ostream;
 
+class RepetitionHistory;
+
 class PositionFen : public PositionMoves {
     Color colorToMove = White; //root position color for moves long algebraic format output
     ChessVariant chessVariant = Orthodox; //format of castling moves output
@@ -22,6 +24,8 @@ class PositionFen : public PositionMoves {
     bool setCastling(Side, CastlingSide);
     bool setEnPassant(File);
 
+    ostream& writeFen(ostream&) const;
+
 public:
     constexpr Side sideOf(Color color) const { return colorToMove.is(color) ? My : Op; }
     constexpr Color getColorToMove(Ply ply = 0) const { return colorToMove << ply; }
@@ -29,12 +33,12 @@ public:
     constexpr bool isChess960() const { return chessVariant.is(Chess960); }
     constexpr const ChessVariant& getChessVariant() const { return chessVariant; }
     void setChessVariant(ChessVariant v) { chessVariant = v; }
-    void setStartpos();
-    void readFen(istream&);
-    void playMoves(istream&);
+    void setStartpos(RepetitionHistory&);
+    void readFen(istream&, RepetitionHistory&);
+    void playMoves(istream&, RepetitionHistory&);
     void limitMoves(istream&);
 
-    friend ostream& operator << (ostream&, const PositionFen&);
+    friend ostream& operator << (ostream& out, const PositionFen& pos) { return pos.writeFen(out); }
 };
 
 #endif
