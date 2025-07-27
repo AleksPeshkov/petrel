@@ -12,7 +12,6 @@
 #include "Timer.hpp"
 #include "Tt.hpp"
 
-class UciGoLimit;
 class SearchRoot;
 
 class HistoryMoves {
@@ -59,6 +58,16 @@ public:
 
 };
 
+template<class BasicLockable>
+class OutputBuffer : public std::ostringstream {
+    io::ostream& out;
+    BasicLockable& lock;
+    typedef std::lock_guard<decltype(lock)> Guard;
+public:
+    OutputBuffer (io::ostream& o, BasicLockable& l) : std::ostringstream{}, out(o), lock(l) {}
+    ~OutputBuffer () { Guard g{lock}; out << str() << std::flush; }
+};
+
 class SearchRoot {
 public:
     PositionFen position; // root position between 'position' and 'go' commands
@@ -67,37 +76,26 @@ public:
     HistoryMoves counterMove;
     RepetitionHistory repetition;
 
-private:
+protected:
     mutable node_count_t lastInfoNodes = 0; // to avoid printing identical nps info lines in a row
     mutable SpinLock outLock;
-    mutable bool isreadyWaiting = false;
+    mutable std::atomic<bool> isreadyWaiting = false;
 
     ostream& out; // output stream
-    TimePoint fromSearchStart;
 
     NodeCounter nodeCounter;
-    SearchThread searchThread;
+
+    TimePoint fromSearchStart;
     Timer timer;
+
+    SearchThread searchThread;
 
 public:
     SearchRoot (ostream& o) : out{o} {}
 
-    bool isBusy() const { return !searchThread.isIdle(); }
     bool isStopped() const { return searchThread.isStopped(); }
-    void stop() { searchThread.stop(); }
-
-    void uciok() const;
-    void isready() const;
     void readyok() const;
-    void setHash(size_t);
 
-    void infoPosition() const;
-
-    void go(const UciGoLimit&);
-    void goPerft(Ply depth, bool isDivide = false);
-
-    void newGame();
-    void newSearch();
     void newIteration();
 
     void bestmove() const;
@@ -116,5 +114,7 @@ protected:
     ostream& nps(ostream&) const;
     ostream& info_nps(ostream&) const;
 };
+
+#define OUTPUT(ob) OutputBuffer<decltype(outLock)> ob(out, outLock)
 
 #endif
