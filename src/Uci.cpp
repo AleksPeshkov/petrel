@@ -1,5 +1,5 @@
 #include "Uci.hpp"
-#include "SearchLimit.hpp"
+#include "UciGoLimit.hpp"
 
 namespace {
     ostream& uci_error(ostream& err, io::istream& context) {
@@ -126,7 +126,7 @@ void Uci::go() {
     auto whiteSide = root.position.sideOf(White);
     auto blackSide = root.position.sideOf(Black);
 
-    SearchLimit limit;
+    UciGoLimit limit;
     limit.positionMoves = root.position;
 
     unsigned quantity = 0;
