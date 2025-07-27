@@ -1,11 +1,11 @@
-#ifndef SEARCH_LIMIT_HPP
-#define SEARCH_LIMIT_HPP
+#ifndef UCI_GO_LIMIT_HPP
+#define UCI_GO_LIMIT_HPP
 
 #include "typedefs.hpp"
 #include "Duration.hpp"
 #include "PositionFen.hpp"
 
-class SearchLimit {
+class UciGoLimit {
 public:
     PositionFen positionMoves;
 
