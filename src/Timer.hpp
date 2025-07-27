@@ -1,7 +1,7 @@
 #ifndef TIMER_HPP
 #define TIMER_HPP
 
-#include "Duration.hpp"
+#include "chrono.hpp"
 #include "Pool.hpp"
 #include "SpinLock.hpp"
 #include "ThreadControl.hpp"
@@ -12,7 +12,7 @@ typedef Pool<TimerThread, SpinLock> TimerPool;
 class TimerThread : private ThreadControl {
     friend class Timer;
 
-    Duration duration;
+    TimeInterval timeInterval;
     ThreadControl* thread;
     TimerPool* pool;
     TimerPool::Iterator iterator;
@@ -23,7 +23,7 @@ class TimerThread : private ThreadControl {
 
 class Timer : private TimerPool {
 public:
-    void start(Duration, ThreadControl&, ThreadControl::TaskId);
+    void start(TimeInterval, ThreadControl&, ThreadControl::TaskId);
 };
 
 #endif

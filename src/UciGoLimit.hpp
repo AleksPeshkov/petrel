@@ -2,17 +2,17 @@
 #define UCI_GO_LIMIT_HPP
 
 #include "typedefs.hpp"
-#include "Duration.hpp"
+#include "chrono.hpp"
 #include "PositionFen.hpp"
 
 class UciGoLimit {
 public:
     PositionFen positionMoves;
 
-    Side::arrayOf<Duration> time = {{ Duration::zero(), Duration::zero() }};
-    Side::arrayOf<Duration> inc = {{ Duration::zero(), Duration::zero() }};
+    Color::arrayOf<TimeInterval> time = {{ TimeInterval::zero(), TimeInterval::zero() }};
+    Color::arrayOf<TimeInterval> inc = {{ TimeInterval::zero(), TimeInterval::zero() }};
 
-    Duration movetime = Duration::zero();
+    TimeInterval movetime = TimeInterval::zero();
 
     node_count_t nodes = NodeCountMax;
     Ply depth = MaxPly;
@@ -23,8 +23,8 @@ public:
     bool isPonder = false;
     bool isInfinite = false;
 
-    Duration getThinkingTime() const {
-        if (movetime != Duration::zero()) { return movetime; }
+    TimeInterval getThinkingTime() const {
+        if (movetime != TimeInterval::zero()) { return movetime; }
 
         auto moves = movestogo ? movestogo : 60;
         auto average = (time[My] + (moves-1)*inc[My]) / moves;

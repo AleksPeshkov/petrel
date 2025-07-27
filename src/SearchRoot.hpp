@@ -1,8 +1,8 @@
 #ifndef SEARCH_ROOT_HPP
 #define SEARCH_ROOT_HPP
 
+#include "chrono.hpp"
 #include "out.hpp"
-#include "Milliseconds.hpp"
 #include "NodeCounter.hpp"
 #include "PositionFen.hpp"
 #include "PvMoves.hpp"
@@ -10,7 +10,6 @@
 #include "Score.hpp"
 #include "SpinLock.hpp"
 #include "Timer.hpp"
-#include "TimePoint.hpp"
 #include "Tt.hpp"
 
 class UciGoLimit;

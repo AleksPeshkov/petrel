@@ -1,9 +1,18 @@
 #include "Uci.hpp"
+#include "chrono.hpp"
 #include "UciGoLimit.hpp"
 
 namespace {
     ostream& uci_error(ostream& err, io::istream& context) {
         return err << "parsing error: " << context.rdbuf() << '\n';
+    }
+
+    io::istream& operator >> (io::istream& in, TimeInterval& timeInterval) {
+        unsigned long msecs;
+        if (in >> msecs) {
+            timeInterval = duration_cast<TimeInterval>( Msecs{msecs} );
+        }
+        return in;
     }
 }
 

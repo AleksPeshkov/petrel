@@ -6,6 +6,15 @@
 
 #define OUTPUT(ob) OutputBuffer<decltype(outLock)> ob(out, outLock)
 
+namespace {
+    io::ostream& operator << (io::ostream& out, TimeInterval& timeInterval) {
+        using namespace std::chrono_literals;
+        if (timeInterval < 1ms) { return out; }
+
+        return out << " time " << duration_cast<Msecs>(timeInterval).count();
+    }
+}
+
 void SearchRoot::newGame() {
     tt.newGame();
     newSearch();
@@ -25,19 +34,20 @@ void SearchRoot::newIteration() {
 void SearchRoot::go(const UciGoLimit& limit) {
     newSearch();
     nodeCounter = { limit.nodes };
+
     auto searchId = searchThread.start(static_cast<std::unique_ptr<Node>>(
         std::make_unique<NodeAbRoot>(limit, *this)
     ));
 
     if (!limit.isInfinite) {
-        auto duration = limit.getThinkingTime();
-        timer.start(duration, searchThread, searchId);
+        timer.start(limit.getThinkingTime(), searchThread, searchId);
     }
 }
 
 void SearchRoot::goPerft(Ply depth, bool isDivide) {
     newSearch();
     nodeCounter = {};
+
     searchThread.start(static_cast<std::unique_ptr<Node>>(
         std::make_unique<NodePerftRoot>(position, *this, depth, isDivide)
     ));
@@ -142,16 +152,9 @@ ostream& SearchRoot::nps(ostream& o, node_count_t nodes) const {
     }
     lastInfoNodes = nodes;
 
-    o << " nodes " << nodes;
+    auto timeInterval = fromSearchStart.getDuration();
 
-    auto duration = fromSearchStart.getDuration();
-    if (duration >= Milliseconds{1}) {
-        o << " time " << milliseconds(duration);
-
-        if (duration >= Milliseconds{20}) {
-            o << " nps " << ::nps(nodes, duration);
-        }
-    }
+    o << " nodes " << nodes << timeInterval << " nps " << ::nps(nodes, timeInterval);
 
     if (tt.reads > 0) {
         o << " hwrites " << tt.writes;
