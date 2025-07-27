@@ -2,7 +2,6 @@
 #define CASTLING_RULES_HPP
 
 #include "Bb.hpp"
-#include "SquaresInBetween.hpp"
 
 class CastlingRules {
     struct Rules {

@@ -3,10 +3,35 @@
 
 #include "io.hpp"
 #include "typedefs.hpp"
-
-#include "PieceSet.hpp"
-#include "VectorOfAll.hpp"
+#include "BitSet.hpp"
 #include "PiSingle.hpp"
+#include "VectorOfAll.hpp"
+
+/**
+ * class used for enumeration of piece vectors
+ */
+class PieceSet : public BitSet<PieceSet, Pi> {
+public:
+    using BitSet::BitSet;
+
+    Pi seekVacant() const {
+        _t x = v;
+        x = ~x & (x+1); //TRICK: isolate the lowest unset bit
+        return PieceSet{x}.index();
+    }
+
+    index_t popcount() const {
+        return ::popcount(v);
+    }
+
+    friend io::ostream& operator << (io::ostream& out, PieceSet v) {
+        FOR_EACH(Pi, pi) {
+            if (v.has(pi)) { out << pi; } else { out << '.'; }
+        }
+        return out;
+    }
+
+};
 
 ///piece vector of boolean values: false (0) or true (0xff)
 class PiMask : public BitArray<PiMask, u8x16_t> {

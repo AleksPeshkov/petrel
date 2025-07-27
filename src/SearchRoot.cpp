@@ -1,10 +1,8 @@
+#include <mutex>
 #include "SearchRoot.hpp"
 #include "NodeAbRoot.hpp"
 #include "NodePerftRoot.hpp"
 #include "UciGoLimit.hpp"
-#include "OutputBuffer.hpp"
-
-#define OUTPUT(ob) OutputBuffer<decltype(outLock)> ob(out, outLock)
 
 namespace {
     io::ostream& operator << (io::ostream& out, TimeInterval& timeInterval) {
@@ -13,7 +11,25 @@ namespace {
 
         return out << " time " << duration_cast<Msecs>(timeInterval).count();
     }
+
+    template <typename T>
+    static T mebi(T bytes) { return bytes / (1024 * 1024); }
+
+    template <typename T>
+    static constexpr T permil(T n, T m) { return (n * 1000) / m; }
+
+    template<class BasicLockable>
+    class OutputBuffer : public std::ostringstream {
+        io::ostream& out;
+        BasicLockable& lock;
+        typedef std::lock_guard<decltype(lock)> Guard;
+    public:
+        OutputBuffer (io::ostream& o, BasicLockable& l) : std::ostringstream{}, out(o), lock(l) {}
+        ~OutputBuffer () { Guard g{lock}; out << str() << std::flush; }
+    };
 }
+
+#define OUTPUT(ob) OutputBuffer<decltype(outLock)> ob(out, outLock)
 
 void SearchRoot::newGame() {
     tt.newGame();

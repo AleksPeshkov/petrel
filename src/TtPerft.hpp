@@ -3,6 +3,8 @@
 
 #include "Tt.hpp"
 
+class Z;
+
 class TtPerft : public Tt {
 public:
     node_count_t get(const Z&, Ply);

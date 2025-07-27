@@ -2,7 +2,6 @@
 #define POSITION_MOVES_HPP
 
 #include "Position.hpp"
-#include "Move.hpp"
 #include "PiBb.hpp"
 #include "Zobrist.hpp"
 
