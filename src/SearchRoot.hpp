@@ -14,6 +14,15 @@
 class UciGoLimit;
 class SearchRoot;
 
+class HistoryMoves {
+    typedef Side::arrayOf<PieceType::arrayOf< Square::arrayOf<Move> >> _t;
+    _t v;
+public:
+    void clear() { std::memset(&v, 0, sizeof(v)); }
+    const Move& operator() (Color c, PieceType ty, Square sq) const { return v[c][ty][sq]; }
+    void set(Color c, PieceType ty, Square sq, const Move& move) { v[c][ty][sq] = move; }
+};
+
 class NodeCounter {
     node_count_t nodes = 0; // (0 <= nodes && nodes <= nodesLimit)
     node_count_t nodesLimit; // search limit
@@ -54,6 +63,7 @@ public:
     PositionFen position; // root position between 'position' and 'go' commands
     Tt tt;
     PvMoves pvMoves;
+    HistoryMoves counterMove;
 
 private:
     mutable node_count_t lastInfoNodes = 0; // to avoid printing identical nps info lines in a row

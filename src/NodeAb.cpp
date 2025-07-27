@@ -88,6 +88,10 @@ NodeControl NodeAb::visitChildren() {
         if (parent->grandParent) {
             CUTOFF (child->visitIfLegal(parent->grandParent->killer1));
         }
+
+        Move move = parent->currentMove;
+        PieceType ty = (*parent)[My].typeOf(move.from());
+        CUTOFF (child->visitIfLegal( root.counterMove(colorToMove(), ty, move.to()) ));
     }
 
     // the rest of the remaining unsorted moves
@@ -191,6 +195,10 @@ void NodeAb::updateKillerMove() {
         parent->killer2 = parent->killer1;
         parent->killer1 = currentMove;
     }
+
+    Move move = parent->currentMove;
+    PieceType ty = (*parent)[My].typeOf(move.from());
+    root.counterMove.set(colorToMove(), ty, move.to(), currentMove);
 }
 
 UciMove NodeAb::uciMove(Square from, Square to) const {
