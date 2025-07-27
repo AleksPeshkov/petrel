@@ -3,10 +3,12 @@
 
 #include "Tt.hpp"
 
+class Z;
+
 class TtPerft : public Tt {
 public:
-    node_count_t get(const Zobrist&, Ply);
-    void set(const Zobrist&, Ply, node_count_t);
+    node_count_t get(const Z&, Ply);
+    void set(const Z&, Ply, node_count_t);
 };
 
 #endif

@@ -2,7 +2,6 @@
 #include "Hyperbola.hpp"
 #include "CastlingRules.hpp"
 #include "AttacksFrom.hpp"
-#include "SquaresInBetween.hpp"
 
 #ifndef NDEBUG
     void PositionSide::assertOk(Pi pi) const {
