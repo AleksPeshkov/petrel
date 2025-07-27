@@ -14,7 +14,7 @@
 #include "Tt.hpp"
 
 class Move;
-class SearchLimit;
+class UciGoLimit;
 
 class SearchControl {
     SearchControl(const SearchControl&) = delete;
@@ -50,7 +50,7 @@ public:
     void uciok() const;
     void isready() const;
     void infoPosition() const;
-    void go(const SearchLimit&);
+    void go(const UciGoLimit&);
     void setHash(size_t);
 
     void readyok() const;

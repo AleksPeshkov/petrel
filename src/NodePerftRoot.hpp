@@ -2,7 +2,7 @@
 #define NODE_PERFT_ROOT_HPP
 
 #include "NodePerftTT.hpp"
-#include "SearchLimit.hpp"
+#include "UciGoLimit.hpp"
 #include "SearchControl.hpp"
 
 class NodePerftRoot : public NodePerftTT {

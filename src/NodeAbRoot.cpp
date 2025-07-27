@@ -1,9 +1,9 @@
 #include "NodeAbRoot.hpp"
 #include "Move.hpp"
 #include "SearchControl.hpp"
-#include "SearchLimit.hpp"
+#include "UciGoLimit.hpp"
 
-NodeAbRoot::NodeAbRoot (const SearchLimit& l, SearchControl& c):
+NodeAbRoot::NodeAbRoot (const UciGoLimit& l, SearchControl& c):
     NodeAb{l.positionMoves, c}, depthLimit{l.depth}
 {}
 

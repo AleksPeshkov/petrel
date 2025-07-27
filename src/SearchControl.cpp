@@ -1,7 +1,7 @@
 #include "SearchControl.hpp"
 #include "NodeAbRoot.hpp"
 #include "NodePerftRoot.hpp"
-#include "SearchLimit.hpp"
+#include "UciGoLimit.hpp"
 #include "OutputBuffer.hpp"
 
 #define OUTPUT(ob) OutputBuffer<decltype(outLock)> ob(out, outLock)
@@ -22,7 +22,7 @@ void SearchControl::newIteration() {
     tt.newIteration();
 }
 
-void SearchControl::go(const SearchLimit& limit) {
+void SearchControl::go(const UciGoLimit& limit) {
     newSearch();
     nodeCounter = { limit.nodes };
     auto searchId = searchThread.start(static_cast<std::unique_ptr<Node>>(
