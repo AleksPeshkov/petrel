@@ -1,6 +1,5 @@
 #include <algorithm>
 #include <cstring>
-#include "bitops.hpp"
 #include "memory.hpp"
 #include "TtMemory.hpp"
 #include "Zobrist.hpp"

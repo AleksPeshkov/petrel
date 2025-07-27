@@ -1,11 +1,18 @@
 #ifndef BB_HPP
 #define BB_HPP
 
-#include "io.hpp"
 #include "bitops.hpp"
+#include "io.hpp"
 #include "typedefs.hpp"
 #include "BitSet.hpp"
-#include "BitRank.hpp"
+
+/**
+ * a bit for each chessboard square of a rank
+ */
+class BitRank : public BitSet<BitRank, File, u8_t> {
+public:
+    using BitSet::BitSet;
+};
 
 /**
  * BitBoard type: a bit for each chessboard square
@@ -82,5 +89,41 @@ constexpr Bb Square::operator() (signed df, signed dr) const {
 
     return Bb{ static_cast<square_t>((sq0x88 + (sq0x88 & 7)) >> 1) };
 }
+
+#include "Bb.hpp"
+#include "typedefs.hpp"
+
+// line (file, rank, diagonal) in between two squares (excluding both ends) or 0 (32k)
+class InBetween {
+    Square::arrayOf< Square::arrayOf<Bb> > inBetween;
+
+public:
+    constexpr InBetween () {
+        FOR_EACH(Square, from) {
+            FOR_EACH(Square, to) {
+                Bb belowFrom{ ::singleton<Bb::_t>(from) - 1 };
+                Bb belowTo{ ::singleton<Bb::_t>(to) - 1 };
+                Bb areaInBetween = (belowFrom ^ belowTo) % to;
+
+                Bb result = Bb{};
+                FOR_EACH(Direction, dir) {
+                    Bb line = from.line(dir); // line bitboard for this direction
+                    if (line.has(to)) {       // Check if 'to' is on this line
+                        result = areaInBetween & line;
+                        break; // Only one valid direction per (from, to)
+                    }
+                }
+
+                inBetween[from][to] = result;
+            }
+        }
+    }
+
+    constexpr const Bb& operator() (Square from, Square to) const { return inBetween[from][to]; }
+
+};
+
+// line (file, rank, diagonal) in between two squares (excluding both ends) or 0
+extern const InBetween inBetween;
 
 #endif

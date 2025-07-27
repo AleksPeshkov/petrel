@@ -2,7 +2,6 @@
 
 #include "CastlingRules.hpp"
 #include "AttacksFrom.hpp"
-#include "SquaresInBetween.hpp"
 
 template <Side::_t My>
 void PositionMoves::generateEnPassantMoves() {
