@@ -2,7 +2,7 @@
 #define UCI_MOVE_HPP
 
 #include "out.hpp"
-#include "Move.hpp"
+#include "typedefs.hpp"
 
 enum chess_variant_t { Orthodox, Chess960 };
 typedef Index<2, chess_variant_t> ChessVariant;

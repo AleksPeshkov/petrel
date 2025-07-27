@@ -2,7 +2,6 @@
 #define VECTOR_OF_ALL_HPP
 
 #include "bitops128.hpp"
-#include "BitRank.hpp"
 #include "typedefs.hpp"
 
 constexpr u8x16_t all(u8_t i) { return {{ i,i,i,i, i,i,i,i, i,i,i,i, i,i,i,i }}; }
