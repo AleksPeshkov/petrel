@@ -2,29 +2,25 @@
 #define PV_MOVES_HPP
 
 #include "typedefs.hpp"
-#include "Move.hpp"
+#include "UciMove.hpp"
 
-class PvMoves {
-    Ply::arrayOf< Ply::arrayOf<Move> > pv;
+class CACHE_ALIGN PvMoves {
+    Ply::arrayOf< Ply::arrayOf<UciMove> > pv;
 
 public:
     PvMoves () { clear(); }
 
-    void clear() {
-        FOR_EACH(Ply, ply) {
-            pv[ply][0] = Move{};
-        }
-    }
+    void clear() { std::memset(&pv, 0, sizeof(pv)); }
 
-    void set(Ply ply, Move move) {
+    void set(Ply ply, UciMove move) {
         pv[ply][0] = move;
-        Move* target = &pv[ply][1];
-        Move* source = &pv[ply+1][0];
+        auto target = &pv[ply][1];
+        auto source = &pv[ply+1][0];
         while ((*target++ = *source++));
-        pv[ply+1][0] = Move{};
+        pv[ply+1][0] = {};
     }
 
-    operator const Move* () const { return &pv[0][0]; }
+    operator const UciMove* () const { return &pv[0][0]; }
 
     friend out::ostream& operator << (out::ostream& out, const PvMoves& pvMoves) {
         return out << &pvMoves.pv[0][0];

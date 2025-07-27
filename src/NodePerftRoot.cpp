@@ -18,7 +18,7 @@ NodeControl NodePerftRoot::visitRoot() {
             auto previousPerft = perft;
             RETURN_IF_ABORT (child->visit(from, to));
 
-            Move move{from, to, isSpecial(from, to), root.position.getColorToMove(), root.position.getChessVariant()};
+            UciMove move{from, to, isSpecial(from, to), root.position.getColorToMove(), root.position.getChessVariant()};
             root.perft_currmove(++moveCount, move, perft - previousPerft);
         }
     }

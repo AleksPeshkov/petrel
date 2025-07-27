@@ -118,7 +118,7 @@ void SearchRoot::perft_depth(Ply draft, node_count_t perft) const {
     ob << "info depth " << draft << " perft " << perft; nps(ob, nodeCounter) << '\n';
 }
 
-void SearchRoot::perft_currmove(index_t moveCount, const Move& currentMove, node_count_t perft) const {
+void SearchRoot::perft_currmove(index_t moveCount, const UciMove& currentMove, node_count_t perft) const {
     OUTPUT(ob);
     ob << "info currmovenumber " << moveCount << " currmove " << currentMove << " perft " << perft; nps(ob, nodeCounter) << '\n';
 }

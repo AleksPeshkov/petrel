@@ -59,7 +59,7 @@ public:
 
     void goPerft(Ply depth, bool isDivide = false);
     void perft_depth(Ply, node_count_t) const;
-    void perft_currmove(index_t moveCount, const Move& currentMove, node_count_t) const;
+    void perft_currmove(index_t moveCount, const UciMove& currentMove, node_count_t) const;
     void perft_finish() const;
 
     NodeControl countNode();
@@ -74,4 +74,5 @@ private:
     ostream& nps(ostream&, node_count_t) const;
     ostream& info_nps(ostream&, node_count_t) const;
 };
+
 #endif

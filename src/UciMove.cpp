@@ -1,17 +1,16 @@
-#include "Move.hpp"
+#include "UciMove.hpp"
 
 // convert move to UCI format
-io::ostream& operator << (io::ostream& out, Move move) {
-    assert (!move || move.isExternal());
-    if (!move || move.type == Move::Internal) { return out << "0000"; }
+io::ostream& operator << (io::ostream& out, const UciMove& move) {
+    if (!move) { return out << "0000"; }
 
     auto isWhite{ move.color == White };
-    Square _from{ move._from };
-    Square _to{ move._to };
+    Square _from{ move.from() };
+    Square _to{ move.to() };
     Square from{ isWhite ? _from : ~_from };
     Square to{ isWhite ? _to : ~_to };
 
-    if (move.type == Move::Normal) { return out << from << to; }
+    if (move.type == UciMove::Normal) { return out << from << to; }
 
     //pawn promotion
     if (_from.on(Rank7)) {
@@ -30,11 +29,14 @@ io::ostream& operator << (io::ostream& out, Move move) {
     //castling
     if (_from.on(Rank1)) {
         //castling move internally encoded as the rook captures the king
-        if (move.variant == Chess960) { return out << to << from; }
 
-        // Orthodox:
-        if (from.on(FileA)) { return out << to << Square{FileC, Rank(from)}; }
-        if (from.on(FileH)) { return out << to << Square{FileG, Rank(from)}; }
+        if (move.variant == Orthodox) {
+            if (from.on(FileA)) { return out << to << Square{FileC, Rank(from)}; }
+            if (from.on(FileH)) { return out << to << Square{FileG, Rank(from)}; }
+        }
+
+        // Chess960:
+        return out << to << from;
     }
 
     //should never happen
@@ -42,8 +44,8 @@ io::ostream& operator << (io::ostream& out, Move move) {
     return out << "0000";
 }
 
-io::ostream& operator << (io::ostream& out, const Move pv[]) {
-    for (Move move; (move = *pv); ++pv) {
+io::ostream& operator << (io::ostream& out, const UciMove pv[]) {
+    for (UciMove move; (move = *pv++); ) {
         out << " " << move;
     }
     return out;

@@ -3,6 +3,7 @@
 
 #include "Node.hpp"
 #include "Score.hpp"
+#include "UciMove.hpp"
 
 class NodeAb : public Node {
 public:
@@ -16,7 +17,7 @@ public:
     Score alpha = MinusInfinity;
     Score beta = PlusInfinity;
 
-    Move currentMove = {};
+    UciMove currentMove = {};
     MovesNumber movesMade = 0; // number of moves already made in this node
 
     NodeAb (NodeAb* n) : Node{n->root}, parent{n}, grandParent{n->parent}, ply{n->ply + 1} {}
@@ -31,8 +32,8 @@ public:
 
     NodeControl goodCaptures(NodeAb*);
 
-    Move externalMove(Move move) const { return externalMove(move.from(), move.to()); }
-    Move externalMove(Square from, Square to) const;
+    UciMove uciMove(Move move) const { return uciMove(move.from(), move.to()); }
+    UciMove uciMove(Square from, Square to) const;
 
     Color colorToMove() const;
     Score evaluate();
