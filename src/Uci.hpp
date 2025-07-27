@@ -2,13 +2,12 @@
 #define UCI_HPP
 
 #include "io.hpp"
-#include "PositionFen.hpp"
-#include "SearchRoot.hpp"
+#include "UciGoRoot.hpp"
 
 using out::ostream;
 
 class Uci {
-    SearchRoot root;
+    UciGoRoot root;
 
     std::istringstream command; //current input command line
     bool next(io::czstring token) { return in::next(command, token); }

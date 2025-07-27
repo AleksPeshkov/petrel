@@ -25,6 +25,12 @@ enum : node_count_t {
     NodeCountMax  = NodeCountNone - 1
 };
 
+enum class NodeControl {
+    Continue,
+    Abort,
+    BetaCutoff,
+};
+
 enum color_t { White, Black };
 typedef Index<2, color_t> Color;
 template <> io::czstring Color::The_string;
