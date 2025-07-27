@@ -37,6 +37,7 @@ void SearchRoot::newGame() {
 }
 
 void SearchRoot::newSearch() {
+    counterMove.clear();
     pvMoves.clear();
     tt.counter ={0,0,0};
     lastInfoNodes = 0;
