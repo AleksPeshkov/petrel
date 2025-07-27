@@ -3,14 +3,14 @@
 #include "typedefs.hpp"
 
 void TimerThread::run() {
-    std::this_thread::sleep_for(duration);
+    std::this_thread::sleep_for(timeInterval);
     thread->stop(taskId);
     pool->release(std::move(iterator));
 }
 
-void Timer::start(Duration duration, ThreadControl& thread, ThreadControl::TaskId taskId) {
-    //zero duration means no timer
-    if (duration == Duration::zero() || taskId == decltype(taskId)::None || !thread.isTask(taskId)) {
+// zero time interval means no timer start
+void Timer::start(TimeInterval timeInterval, ThreadControl& thread, ThreadControl::TaskId taskId) {
+    if (timeInterval == TimeInterval::zero() || taskId == decltype(taskId)::None || !thread.isTask(taskId)) {
         return;
     }
 
@@ -22,7 +22,7 @@ void Timer::start(Duration duration, ThreadControl& thread, ThreadControl::TaskI
     timer.iterator = timerIterator;
     timer.thread = &thread;
     timer.taskId = taskId;
-    timer.duration = duration;
+    timer.timeInterval = timeInterval;
 
     timer.start();
 }
