@@ -3,13 +3,13 @@
 
 #include "NodeAb.hpp"
 
-class SearchLimit;
+class UciGoLimit;
 
 class NodeAbRoot : public NodeAb {
     Ply depthLimit;
 
 public:
-    NodeAbRoot (const SearchLimit&, SearchControl&);
+    NodeAbRoot (const UciGoLimit&, SearchControl&);
     NodeControl visitChildren() override;
 };
 
