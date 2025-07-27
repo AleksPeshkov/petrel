@@ -3,12 +3,12 @@
 
 #include "io.hpp"
 #include "PositionFen.hpp"
-#include "SearchControl.hpp"
+#include "SearchRoot.hpp"
 
 using out::ostream;
 
 class Uci {
-    SearchControl root;
+    SearchRoot root;
 
     std::istringstream command; //current input command line
     bool next(io::czstring token) { return in::next(command, token); }

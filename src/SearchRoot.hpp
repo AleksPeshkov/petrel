@@ -1,5 +1,5 @@
-#ifndef SEARCH_CONTROL_HPP
-#define SEARCH_CONTROL_HPP
+#ifndef SEARCH_ROOT_HPP
+#define SEARCH_ROOT_HPP
 
 #include "out.hpp"
 #include "Milliseconds.hpp"
@@ -13,15 +13,14 @@
 #include "TimePoint.hpp"
 #include "Tt.hpp"
 
-class Move;
 class UciGoLimit;
 
-class SearchControl {
-    SearchControl(const SearchControl&) = delete;
-    SearchControl& operator=(const SearchControl&) = delete;
+class SearchRoot {
+    SearchRoot(const SearchRoot&) = delete;
+    SearchRoot& operator=(const SearchRoot&) = delete;
 
 public:
-    SearchControl(ostream& o) : out{o} {}
+    SearchRoot(ostream& o) : out{o} {}
 
     PositionFen position; // root position between 'position' and 'go' commands
 

@@ -10,8 +10,8 @@ protected:
     node_count_t perft = 0;
 
 public:
-    NodePerftTT (const PositionMoves& p, SearchControl& c, Ply d);
-    NodePerftTT (NodePerftTT* n);
+    NodePerftTT (const PositionMoves&, SearchRoot&, Ply);
+    NodePerftTT (NodePerftTT*);
 
     NodeControl visit(Square from, Square to);
     NodeControl visitChildren() override;
