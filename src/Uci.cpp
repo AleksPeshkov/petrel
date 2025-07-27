@@ -4,7 +4,7 @@
 
 namespace {
     ostream& uci_error(ostream& err, io::istream& context) {
-        return err << "parsing error: " << context.rdbuf() << '\n';
+        return err << "parsing error: " << context.rdbuf() << std::endl;
     }
 
     io::istream& operator >> (io::istream& in, TimeInterval& timeInterval) {

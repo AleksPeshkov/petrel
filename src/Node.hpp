@@ -3,12 +3,6 @@
 
 #include "PositionMoves.hpp"
 
-enum class NodeControl {
-    Continue,
-    Abort,
-    BetaCutoff,
-};
-
 #define RETURN_IF_ABORT(visit) { if (visit == NodeControl::Abort) { return NodeControl::Abort; } } ((void)0)
 #define BREAK_IF_ABORT(visit) { if (visit == NodeControl::Abort) { break; } } ((void)0)
 #define CUTOFF(visit) { NodeControl result = visit; \
