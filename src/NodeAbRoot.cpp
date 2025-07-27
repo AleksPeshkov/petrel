@@ -1,10 +1,9 @@
 #include "NodeAbRoot.hpp"
-#include "Move.hpp"
-#include "SearchControl.hpp"
+#include "SearchRoot.hpp"
 #include "UciGoLimit.hpp"
 
-NodeAbRoot::NodeAbRoot (const UciGoLimit& l, SearchControl& c):
-    NodeAb{l.positionMoves, c}, depthLimit{l.depth}
+NodeAbRoot::NodeAbRoot (const UciGoLimit& l, SearchRoot& r):
+    NodeAb{l.positionMoves, r}, depthLimit{l.depth}
 {}
 
 NodeControl NodeAbRoot::visitChildren() {
@@ -16,10 +15,10 @@ NodeControl NodeAbRoot::visitChildren() {
         alpha = MinusInfinity;
         beta = PlusInfinity;
         BREAK_IF_ABORT ( NodeAb::visitChildren() );
-        control.infoIterationEnd(draft);
-        control.newIteration();
+        root.infoIterationEnd(draft);
+        root.newIteration();
     }
 
-    control.bestmove();
+    root.bestmove();
     return NodeControl::Continue;
 }

@@ -3,7 +3,7 @@
 NodeControl NodePerftRoot::visitRoot() {
     if (!isDivide) {
         RETURN_IF_ABORT (NodePerftTT::visitChildren());
-        control.perft_depth(draft, perft);
+        root.perft_depth(draft, perft);
         return NodeControl::Continue;
     }
 
@@ -18,17 +18,17 @@ NodeControl NodePerftRoot::visitRoot() {
             auto previousPerft = perft;
             RETURN_IF_ABORT (child->visit(from, to));
 
-            Move move{from, to, isSpecial(from, to), control.position.getColorToMove(), control.position.getChessVariant()};
-            control.perft_currmove(++moveCount, move, perft - previousPerft);
+            Move move{from, to, isSpecial(from, to), root.position.getColorToMove(), root.position.getChessVariant()};
+            root.perft_currmove(++moveCount, move, perft - previousPerft);
         }
     }
 
-    control.perft_depth(draft, perft);
+    root.perft_depth(draft, perft);
     return NodeControl::Continue;
 }
 
 NodeControl NodePerftRoot::visitChildren() {
     visitRoot();
-    control.perft_finish();
+    root.perft_finish();
     return NodeControl::Continue;
 }
