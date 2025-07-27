@@ -17,7 +17,7 @@ NodeControl NodeAb::visit(Move move) {
     draft = parent->draft > 0 ? parent->draft-1 : 0;
 
     RETURN_IF_ABORT (root.countNode());
-    parent->currentMove = move;
+    parent->currentMove = parent->uciMove(move);
     makeMove(parent, move);
     ++parent->movesMade;
 
@@ -55,7 +55,7 @@ NodeControl NodeAb::negamax(Score lastScore) {
         if (score > alpha) {
             alpha = score;
 
-            root.pvMoves.set(ply, externalMove(currentMove));
+            root.pvMoves.set(ply, currentMove);
             if (ply == 0) {
                 root.infoNewPv(draft, score);
             }
@@ -163,8 +163,8 @@ NodeControl NodeAb::goodCaptures(NodeAb* child) {
     return NodeControl::Continue;
 }
 
-Move NodeAb::externalMove(Square from, Square to) const {
-    return Move{from, to, isSpecial(from, to), colorToMove(), root.position.getChessVariant()};
+UciMove NodeAb::uciMove(Square from, Square to) const {
+    return UciMove{from, to, isSpecial(from, to), colorToMove(), root.position.getChessVariant()};
 }
 
 Color NodeAb::colorToMove() const {

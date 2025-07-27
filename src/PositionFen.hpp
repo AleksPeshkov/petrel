@@ -4,6 +4,7 @@
 #include "io.hpp"
 #include "typedefs.hpp"
 #include "PositionMoves.hpp"
+#include "UciMove.hpp"
 
 using in::istream;
 using out::ostream;
