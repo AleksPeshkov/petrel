@@ -17,6 +17,7 @@ void UciGoRoot::newGame() {
 
 void UciGoRoot::newSearch() {
     tt.newSearch();
+    counterMove.clear();
     pvMoves.clear();
     lastInfoNodes = 0;
     fromSearchStart = {};
