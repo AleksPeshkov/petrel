@@ -9,7 +9,7 @@ class NodeAbRoot : public NodeAb {
     Ply depthLimit;
 
 public:
-    NodeAbRoot (const UciGoLimit&, SearchControl&);
+    NodeAbRoot (const UciGoLimit&, SearchRoot&);
     NodeControl visitChildren() override;
 };
 

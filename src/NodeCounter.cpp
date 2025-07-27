@@ -1,7 +1,7 @@
 #include "NodeCounter.hpp"
-#include "SearchControl.hpp"
+#include "SearchRoot.hpp"
 
-NodeControl NodeCounter::refreshQuota(const SearchControl& search) {
+NodeControl NodeCounter::refreshQuota(const SearchRoot& root) {
     assertOk();
     assert (nodesQuota == 0);
     //nodes -= nodesQuota;
@@ -18,7 +18,7 @@ NodeControl NodeCounter::refreshQuota(const SearchControl& search) {
         }
     }
 
-    if (search.isStopped()) {
+    if (root.isStopped()) {
         nodesLimit = nodes;
         nodesQuota = 0;
 
@@ -32,7 +32,7 @@ NodeControl NodeCounter::refreshQuota(const SearchControl& search) {
     assertOk();
 
     //inform UCI that search is responsive
-    search.readyok();
+    root.readyok();
 
     return NodeControl::Continue;
 }

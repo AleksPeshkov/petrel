@@ -15,14 +15,14 @@ enum class NodeControl {
     if (result == NodeControl::Abort) { return NodeControl::Abort; } \
     if (result == NodeControl::BetaCutoff) { return NodeControl::BetaCutoff; }} ((void)0)
 
-class SearchControl;
+class SearchRoot;
 
 class Node : public PositionMoves {
 protected:
-    SearchControl& control;
+    SearchRoot& root;
 
-    Node (const PositionMoves& p, SearchControl& c) : PositionMoves{p}, control{c} {}
-    Node (SearchControl& c) : PositionMoves{}, control{c} {}
+    Node (const PositionMoves& p, SearchRoot& r) : PositionMoves{p}, root{r} {}
+    Node (SearchRoot& r) : PositionMoves{}, root{r} {}
 
 public:
     virtual ~Node() = default;

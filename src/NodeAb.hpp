@@ -19,8 +19,8 @@ public:
     Move currentMove = {};
     MovesNumber movesMade = 0; // number of moves already made in this node
 
-    NodeAb (NodeAb* n) : Node{n->control}, parent{n}, grandParent{n->parent}, ply{n->ply + 1} {}
-    NodeAb (const PositionMoves& p, SearchControl& c) : Node{p, c}, parent{nullptr}, grandParent{nullptr} {}
+    NodeAb (NodeAb* n) : Node{n->root}, parent{n}, grandParent{n->parent}, ply{n->ply + 1} {}
+    NodeAb (const PositionMoves& p, SearchRoot& r) : Node{p, r}, parent{nullptr}, grandParent{nullptr} {}
 
     NodeControl visitIfLegal(Move move) { if (parent->isLegalMove(move)) { return visit(move); } return NodeControl::Continue; }
     NodeControl visit(Move);

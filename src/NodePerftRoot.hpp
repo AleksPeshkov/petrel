@@ -3,13 +3,13 @@
 
 #include "NodePerftTT.hpp"
 #include "UciGoLimit.hpp"
-#include "SearchControl.hpp"
+#include "SearchRoot.hpp"
 
 class NodePerftRoot : public NodePerftTT {
     bool isDivide;
 public:
-    NodePerftRoot(const PositionMoves& p, SearchControl& c, Ply d, bool i)
-        : NodePerftTT(p, c, d), isDivide{i} {}
+    NodePerftRoot(const PositionMoves& p, SearchRoot& r, Ply d, bool i)
+        : NodePerftTT(p, r, d), isDivide{i} {}
 
     virtual NodeControl visitRoot();
     virtual NodeControl visitChildren() override;

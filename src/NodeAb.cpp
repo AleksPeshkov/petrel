@@ -1,7 +1,7 @@
 #include "NodeAb.hpp"
 #include "out.hpp"
 #include "AttacksFrom.hpp"
-#include "SearchControl.hpp"
+#include "SearchRoot.hpp"
 #include "PositionFen.hpp"
 
 NodeControl NodeAb::visit(Move move) {
@@ -16,7 +16,7 @@ NodeControl NodeAb::visit(Move move) {
     score = NoScore;
     draft = parent->draft > 0 ? parent->draft-1 : 0;
 
-    RETURN_IF_ABORT (control.countNode());
+    RETURN_IF_ABORT (root.countNode());
     parent->currentMove = move;
     makeMove(parent, move);
     control.pvMoves.set(ply, Move{});
@@ -56,9 +56,9 @@ NodeControl NodeAb::negamax(Score lastScore) {
         if (score > alpha) {
             alpha = score;
 
-            control.pvMoves.set(ply, externalMove(currentMove));
+            root.pvMoves.set(ply, externalMove(currentMove));
             if (ply == 0) {
-                control.infoNewPv(draft, score);
+                root.infoNewPv(draft, score);
             }
         }
     }
@@ -73,7 +73,7 @@ NodeControl NodeAb::visitChildren() {
     NodeAb node{this};
     const auto child = &node;
 
-    CUTOFF (child->visitIfLegal(control.pvMoves[ply]));
+    CUTOFF (child->visitIfLegal(root.pvMoves[ply]));
 
     CUTOFF (goodCaptures(child));
 
@@ -165,11 +165,11 @@ NodeControl NodeAb::goodCaptures(NodeAb* child) {
 }
 
 Move NodeAb::externalMove(Square from, Square to) const {
-    return Move{from, to, isSpecial(from, to), colorToMove(), control.position.getChessVariant()};
+    return Move{from, to, isSpecial(from, to), colorToMove(), root.position.getChessVariant()};
 }
 
 Color NodeAb::colorToMove() const {
-    return control.position.getColorToMove(ply);
+    return root.position.getColorToMove(ply);
 }
 
 Score NodeAb::evaluate()
