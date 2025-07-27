@@ -4,7 +4,7 @@
 #include "typedefs.hpp"
 #include "Node.hpp"
 
-class SearchControl;
+class SearchRoot;
 
 class NodeCounter {
     node_count_t nodes = 0; // (0 <= nodes && nodes <= nodesLimit)
@@ -36,11 +36,11 @@ public:
         return nodes == nodesLimit;
     }
 
-    NodeControl count(const SearchControl& search) {
+    NodeControl count(const SearchRoot& root) {
         assertOk();
 
         if (nodesQuota == 0) {
-            return refreshQuota(search);
+            return refreshQuota(root);
         }
 
         assert (nodesQuota > 0);
@@ -50,7 +50,7 @@ public:
         return NodeControl::Continue;
     }
 
-    NodeControl refreshQuota(const SearchControl& search);
+    NodeControl refreshQuota(const SearchRoot&);
 
 };
 

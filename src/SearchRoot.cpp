@@ -1,4 +1,4 @@
-#include "SearchControl.hpp"
+#include "SearchRoot.hpp"
 #include "NodeAbRoot.hpp"
 #include "NodePerftRoot.hpp"
 #include "UciGoLimit.hpp"
@@ -6,23 +6,23 @@
 
 #define OUTPUT(ob) OutputBuffer<decltype(outLock)> ob(out, outLock)
 
-void SearchControl::newGame() {
+void SearchRoot::newGame() {
     tt.memory.zeroFill();
     newSearch();
 }
 
-void SearchControl::newSearch() {
+void SearchRoot::newSearch() {
     pvMoves.clear();
     tt.counter ={0,0,0};
     lastInfoNodes = 0;
     fromSearchStart = {};
 }
 
-void SearchControl::newIteration() {
+void SearchRoot::newIteration() {
     tt.nextAge();
 }
 
-void SearchControl::go(const UciGoLimit& limit) {
+void SearchRoot::go(const UciGoLimit& limit) {
     newSearch();
     nodeCounter = { limit.nodes };
     auto searchId = searchThread.start(static_cast<std::unique_ptr<Node>>(
@@ -35,7 +35,7 @@ void SearchControl::go(const UciGoLimit& limit) {
     }
 }
 
-void SearchControl::goPerft(Ply depth, bool isDivide) {
+void SearchRoot::goPerft(Ply depth, bool isDivide) {
     newSearch();
     nodeCounter = {};
     searchThread.start(static_cast<std::unique_ptr<Node>>(
@@ -43,11 +43,11 @@ void SearchControl::goPerft(Ply depth, bool isDivide) {
     ));
 }
 
-NodeControl SearchControl::countNode() {
+NodeControl SearchRoot::countNode() {
     return nodeCounter.count(*this);
 }
 
-void SearchControl::uciok() const {
+void SearchRoot::uciok() const {
     bool isChess960 = position.isChess960();
 
     OUTPUT(ob);
@@ -58,7 +58,7 @@ void SearchControl::uciok() const {
     ob << "uciok\n";
 }
 
-void SearchControl::isready() const {
+void SearchRoot::isready() const {
     OUTPUT(ob);
     if (!isBusy()) {
         isreadyWaiting = false;
@@ -69,13 +69,13 @@ void SearchControl::isready() const {
     }
 }
 
-void SearchControl::infoPosition() const {
+void SearchRoot::infoPosition() const {
     OUTPUT(ob);
     ob << "info fen " << position << '\n';
     ob << "info" << position.evaluate() << '\n';
 }
 
-void SearchControl::readyok() const {
+void SearchRoot::readyok() const {
     if (isreadyWaiting) {
         std::ostringstream ob;
         info_nps(ob, nodeCounter);
@@ -91,7 +91,7 @@ void SearchControl::readyok() const {
     }
 }
 
-void SearchControl::bestmove() const {
+void SearchRoot::bestmove() const {
     OUTPUT(ob);
     if (lastInfoNodes != nodeCounter) {
         ob << "info"; nps(ob, nodeCounter) << '\n';
@@ -99,27 +99,27 @@ void SearchControl::bestmove() const {
     ob << "bestmove " << pvMoves[0] << '\n';
 }
 
-void SearchControl::infoIterationEnd(Ply draft) const {
+void SearchRoot::infoIterationEnd(Ply draft) const {
     OUTPUT(ob);
     ob << "info depth " << draft; nps(ob, nodeCounter) << '\n';
 }
 
-void SearchControl::infoNewPv(Ply draft, Score score) const {
+void SearchRoot::infoNewPv(Ply draft, Score score) const {
     OUTPUT(ob);
     ob << "info depth " << draft; nps(ob, nodeCounter) << score << " pv" << pvMoves << '\n';
 }
 
-void SearchControl::perft_depth(Ply draft, node_count_t perft) const {
+void SearchRoot::perft_depth(Ply draft, node_count_t perft) const {
     OUTPUT(ob);
     ob << "info depth " << draft << " perft " << perft; nps(ob, nodeCounter) << '\n';
 }
 
-void SearchControl::perft_currmove(index_t moveCount, const Move& currentMove, node_count_t perft) const {
+void SearchRoot::perft_currmove(index_t moveCount, const Move& currentMove, node_count_t perft) const {
     OUTPUT(ob);
     ob << "info currmovenumber " << moveCount << " currmove " << currentMove << " perft " << perft; nps(ob, nodeCounter) << '\n';
 }
 
-void SearchControl::perft_finish() const {
+void SearchRoot::perft_finish() const {
     if (lastInfoNodes != nodeCounter) {
         OUTPUT(ob);
         ob << "info"; nps(ob, nodeCounter) << '\n';
@@ -128,11 +128,11 @@ void SearchControl::perft_finish() const {
     ob << "bestmove 0000\n";
 }
 
-void SearchControl::setHash(size_t bytes) {
+void SearchRoot::setHash(size_t bytes) {
     tt.memory.allocate(bytes); tt.memory.zeroFill();
 }
 
-ostream& SearchControl::nps(ostream& o, node_count_t nodes) const {
+ostream& SearchRoot::nps(ostream& o, node_count_t nodes) const {
     if (lastInfoNodes == nodes) {
         return o;
     }
@@ -158,7 +158,7 @@ ostream& SearchControl::nps(ostream& o, node_count_t nodes) const {
     return o;
 }
 
-ostream& SearchControl::info_nps(ostream& o, node_count_t nodes) const {
+ostream& SearchRoot::info_nps(ostream& o, node_count_t nodes) const {
     std::ostringstream buffer;
     nps(buffer, nodes);
 
