@@ -2,8 +2,7 @@
 #define SEARCH_THREAD_HPP
 
 #include "ThreadControl.hpp"
-
-class Node;
+#include "Node.hpp"
 
 class SearchThread : public ThreadControl {
     std::unique_ptr<Node> node;
