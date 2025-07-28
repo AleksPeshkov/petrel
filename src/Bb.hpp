@@ -9,7 +9,7 @@
 /**
  * a bit for each chessboard square of a rank
  */
-class BitRank : public BitSet<BitRank, File, u8_t> {
+class BitRank : public BitSet<BitRank, File::_t, u8_t> {
 public:
     using BitSet::BitSet;
 };
@@ -17,7 +17,7 @@ public:
 /**
  * BitBoard type: a bit for each chessboard square
  */
-class Bb : public BitSet<Bb, Square, u64_t> {
+class Bb : public BitSet<Bb, Square::_t, u64_t> {
     //declared to catch type cast bugs
     Bb (unsigned int) = delete;
     Bb (int) = delete;
