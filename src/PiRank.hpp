@@ -2,39 +2,36 @@
 #define PI_RANK_HPP
 
 #include "typedefs.hpp"
-#include "Bb.hpp"
+#include "BitArray128.hpp"
+#include "PiMask.hpp"
 #include "VectorOfAll.hpp"
-#include "PiBit.hpp"
 
-struct PiRank : PiBit<PiRank, File> {
-    typedef PiBit<PiRank, File> Base;
-    using Base::v;
+class PiRank : public BitArray<PiRank, vu8x16_t> {
+    typedef BitArray<PiRank, vu8x16_t> Base;
 
-    constexpr PiRank () : Base() {}
-    constexpr explicit PiRank (BitRank br) : Base(::vectorOfAll[br]) {}
-    constexpr explicit PiRank (File f) : Base(::vectorOfAll[BitRank{f}]) {}
-    constexpr PiRank (PiMask m) : Base(m) {}
-
-    constexpr operator i128_t () const { return v; }
+public:
+    using Base::Base;
+    constexpr explicit PiRank () : Base{::all(0)} {}
+    constexpr explicit PiRank (BitRank br) : Base{::vectorOfAll[br]} {}
+    constexpr explicit PiRank (File f) : PiRank{BitRank{f}} {}
+    constexpr PiRank (PiMask m) : Base{m} {}
 
     BitRank gather() const {
-        i128_t r = v;
-        r |= _mm_unpackhi_epi64(r, r); //64
-        r |= _mm_shuffle_epi32(r, _MM_SHUFFLE(1, 1, 1, 1)); //32
-        r |= _mm_shufflelo_epi16(r, _MM_SHUFFLE(1, 1, 1, 1)); //16
-        r |= _mm_srli_epi16(r, 8); //8
-        return BitRank{small_cast<BitRank::_t>(_mm_cvtsi128_si32(r))};
+        u8_t r  = v[0] | v[1] | v[2] | v[3] | v[4] | v[5] | v[6] | v[7]
+            | v[8] | v[9] | v[10] | v[11] | v[12] | v[13] | v[14] | v[15];
+        return BitRank{r};
     }
 
     constexpr BitRank operator [] (Pi pi) const {
-        return BitRank{ get(pi) };
+        return BitRank{ ::u8(v, pi) };
     }
 
     PiMask operator [] (File file) const {
-        i128_t file_vector = ::vectorOfAll[BitRank{file}];
-        return PiMask::equals(v.i128 & file_vector, file_vector);
+        _t file_vector = PiRank{file};
+        return PiMask{ (v & file_vector) == file_vector };
     }
 
+    constexpr void clear() { v = ::all(0); }
 };
 
 #endif

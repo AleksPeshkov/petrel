@@ -4,10 +4,8 @@
 #include "bitops128.hpp"
 #include "typedefs.hpp"
 
-constexpr u8x16_t all(u8_t i) { return {{ i,i,i,i, i,i,i,i, i,i,i,i, i,i,i,i }}; }
-
 class VectorOfAll {
-    typedef u8x16_t _t;
+    typedef vu8x16_t _t;
     typedef Index<0x100> ByteIndex;
 
     ByteIndex::arrayOf<_t> v;

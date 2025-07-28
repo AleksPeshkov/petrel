@@ -1,26 +1,51 @@
 #ifndef BIT_OPS_128_HPP
 #define BIT_OPS_128_HPP
 
-#include <tmmintrin.h>
 #include "bitops.hpp"
 
-typedef __m128i i128_t;
+typedef u8_t  vu8x16_t __attribute__((vector_size(16)));
+typedef u64_t vu64x2_t __attribute__((vector_size(16)));
 
-inline index_t popcount(i128_t n) {
-    auto lo = static_cast<u64_t>(_mm_cvtsi128_si64(n));
-    auto hi = static_cast<u64_t>(_mm_cvtsi128_si64(_mm_unpackhi_epi64(n, n)));
-    return popcount(lo) + popcount(hi);
+constexpr u8_t u8(const vu8x16_t& v, int i) {
+    union {
+        vu8x16_t v;
+        u8_t u8[16];
+    } u;
+    u.v = v;
+    return u.u8[i];
 }
 
-inline bool equals(const i128_t& a, const i128_t& b) {
-    return _mm_movemask_epi8(_mm_cmpeq_epi8(a, b)) == 0xffffu;
+constexpr u64_t u64(const vu64x2_t& v) {
+    union {
+        vu64x2_t v;
+        u64_t u64[2];
+    } u;
+    u.v = v;
+    return u.u64[0];
 }
 
-union u8x16_t {
-    u8_t u8[16];
-    i128_t i128;
+template <typename vector_type>
+inline constexpr vector_type shufflevector(vector_type vector, vector_type mask) {
+#if __clang__
+    return __builtin_shufflevector(vector, mask);
+#else
+    return __builtin_shuffle(vector, mask);
+#endif
+}
 
-    constexpr operator const i128_t&() const { return i128; }
-};
+inline index_t popcount(vu64x2_t v) {
+    return popcount(v[0]) + popcount(v[1]);
+}
+
+inline u32_t mask(vu8x16_t v) {
+    return static_cast<u32_t>(__builtin_ia32_pmovmskb128(v));
+}
+
+template <typename vector_type>
+inline bool equals(const vector_type& a, const vector_type& b) {
+    return mask(a == b) == 0xffffu;
+}
+
+constexpr vu8x16_t all(u8_t i) { return vu8x16_t{ i,i,i,i, i,i,i,i, i,i,i,i, i,i,i,i }; }
 
 #endif

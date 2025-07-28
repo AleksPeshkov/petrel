@@ -2,74 +2,92 @@
 #define PI_TYPE_H
 
 #include "typedefs.hpp"
-#include "PiBit.hpp"
 
-class PiType : protected PiBit<PiType, PieceType> {
-    typedef PiBit<PiType, PieceType> Base;
-    typedef PieceType::_t _t;
+enum class Type : u8_t {
+    Empty   = 0,
+    Queen  = ::singleton<u8_t>(piece_type_t::Queen),
+    Rook   = ::singleton<u8_t>(piece_type_t::Rook),
+    Bishop = ::singleton<u8_t>(piece_type_t::Bishop),
+    Knight = ::singleton<u8_t>(piece_type_t::Knight),
+    Pawn   = ::singleton<u8_t>(piece_type_t::Pawn),
+    King   = ::singleton<u8_t>(piece_type_t::King),
+    Slider = Queen | Rook | Bishop,
+    Leaper = Pawn | Knight | King,
+    PNBRQ  = Pawn | Knight | Bishop | Rook | Queen,
+    PNBR   = Pawn | Knight | Bishop | Rook,
+    PNB    = Pawn | Knight | Bishop,
+};
 
-    enum : u8_t {
-        QueenMask = ::singleton<u8_t>(Queen),
-        RookMask = ::singleton<u8_t>(Rook),
-        BishopMask = ::singleton<u8_t>(Bishop),
-        KnightMask = ::singleton<u8_t>(Knight),
-        PawnMask = ::singleton<u8_t>(Pawn),
-        KingMask = ::singleton<u8_t>(King),
-        SliderMask = QueenMask | RookMask | BishopMask,
-        LeaperMask = KingMask | KnightMask | PawnMask,
+class PiType {
+    typedef Type element_type;
+
+    static constexpr PieceType::arrayOf<element_type> GoodOrEqualKillers = {
+        Type::PNBRQ, // Queen
+        Type::PNBR, // Rook
+        Type::PNB,  // Bishop
+        Type::PNB,  // Knight
+        Type::Pawn, // Pawn
+        Type::Empty, // King
     };
 
-    static constexpr PieceType::arrayOf<u8_t> NotBadKillersMask = {
-        PawnMask | KnightMask | BishopMask | RookMask | QueenMask, // Queen
-        PawnMask | KnightMask | BishopMask | RookMask, // Rook
-        PawnMask | KnightMask | BishopMask, // Bishop
-        PawnMask | KnightMask | BishopMask, // Knight
-        PawnMask, // Pawn
-        0, // King
+    static constexpr PieceType::arrayOf<element_type> GoodKillers = {
+        Type::PNBR, // Queen
+        Type::PNB,  // Rook
+        Type::Pawn, // Bishop
+        Type::Pawn, // Knight
+        Type::Empty, // Pawn
+        Type::Empty, // King
     };
 
-    static constexpr PieceType::arrayOf<u8_t> GoodKillersMask = {
-        PawnMask | KnightMask | BishopMask | RookMask, // Queen
-        PawnMask | KnightMask | BishopMask, // Rook
-        PawnMask, // Bishop
-        PawnMask, // Knight
-        0, // Pawn
-        0, // King
+    union {
+        Type type[16];
+        u8_t vu8x16 __attribute__((vector_size(16)));
     };
 
-    bool is(Pi pi, PieceType ty) const { assertOk(pi); assert (!ty.is(King)); return Base::is(pi, ty); }
+    constexpr element_type element(PieceType::_t ty) const { return static_cast<element_type>(::singleton<u8_t>(ty)); }
+    constexpr vu8x16_t vector(element_type e) const { return ::vectorOfAll[static_cast<u8_t>(e)]; }
+    constexpr vu8x16_t vector(PieceType::_t ty) const { return vector(element(ty)); }
+
+    constexpr bool has(Pi pi, element_type e) const { assertOk(pi); return (static_cast<u8_t>(type[pi]) & static_cast<u8_t>(e)) != 0; }
+    constexpr bool is(Pi pi, PieceType ty) const { assertOk(pi);  return has(pi, element(ty)); }
+    PiMask any(element_type e) const { return PiMask::any(vu8x16 & vector(e)); }
 
 public:
+    constexpr PiType () : type {
+        Type::Empty, Type::Empty, Type::Empty, Type::Empty,
+        Type::Empty, Type::Empty, Type::Empty, Type::Empty,
+        Type::Empty, Type::Empty, Type::Empty, Type::Empty,
+        Type::Empty, Type::Empty, Type::Empty, Type::Empty,
+    } {}
 
-#ifdef NDEBUG
-    void assertOk(Pi) const {}
-#else
-    void assertOk(Pi pi) const {
-        assert ( !isEmpty(pi) );
-        assert ( ::isSingleton(get(pi)) );
-    }
-#endif
+    constexpr bool isOk(Pi pi) const { return !isEmpty(pi) && ::isSingleton(static_cast<u8_t>(type[pi])); }
 
-    PiMask pieces() const { return notEmpty(); }
-    PiMask piecesOfType(PieceType ty) const { assert (!ty.is(King)); return anyOf(ty); }
-    PiMask sliders() const { return anyOf(SliderMask); }
-    PiMask leapers() const { return anyOf(LeaperMask); }
+    #ifdef NDEBUG
+        constexpr void assertOk(Pi) const {}
+    #else
+        constexpr void assertOk(Pi pi) const { assert (isOk(pi)); }
+    #endif
 
-    // mask less valuable piece types
-    PiMask goodKillers(PieceType ty) const { return anyOf(GoodKillersMask[ty]); }
+    constexpr void drop(Pi pi, PieceType ty) { assert (isEmpty(pi)); assert (pi != TheKing || ty == King); type[pi] = element(ty); }
+    constexpr void clear(Pi pi) { assertOk(pi); assert (pi != TheKing); assert (!is(pi, King)); type[pi] = Type::Empty; }
+    constexpr void promote(Pi pi, PromoType::_t ty) { assert (isPawn(pi)); type[pi] = element(ty); }
+
+    constexpr bool isEmpty(Pi pi) const { return type[pi] == Type::Empty; }
+    constexpr bool isPawn(Pi pi) const { return is(pi, Pawn); }
+    constexpr bool isRook(Pi pi) const { return is(pi, Rook); }
+    constexpr bool isSlider(Pi pi) const { assertOk(pi); return has(pi, Type::Slider); }
+    PieceType typeOf(Pi pi) const { assertOk(pi); return static_cast<PieceType::_t>( ::lsb(static_cast<unsigned>(type[pi])) ); }
+
+    PiMask pieces() const { return PiMask::any(vu8x16); }
+    PiMask piecesOfType(PieceType ty) const { assert (!ty.is(King)); return any(element(ty)); }
+    PiMask sliders() const { return any(Type::Slider); }
+    PiMask leapers() const { return any(Type::Leaper); }
+
+    // mask of less valuable piece types
+    PiMask goodKillers(PieceType ty) const {return any(GoodKillers[ty]); }
 
     // mask of equal or less valuable types
-    PiMask notBadKillers(PieceType ty) const { return anyOf(NotBadKillersMask[ty]); }
-
-    PieceType typeOf(Pi pi) const { assertOk(pi); return static_cast<PieceType::_t>( ::lsb(static_cast<unsigned>(get(pi))) ); }
-
-    bool isPawn(Pi pi) const { return is(pi, Pawn); }
-    bool isRook(Pi pi) const { return is(pi, Rook); }
-    bool isSlider(Pi pi) const { assertOk(pi); return (get(pi) & SliderMask) != 0; }
-
-    void clear(Pi pi) { assertOk(pi); assert (pi != TheKing); assert (!Base::is(pi, King)); Base::clear(pi); }
-    void drop(Pi pi, PieceType ty) { assert (isEmpty(pi)); assert (pi != TheKing || ty == King); set(pi, ty); }
-    void promote(Pi pi, PromoType ty) { assert (isPawn(pi)); clear(pi); set(pi, ty); }
+    PiMask notBadKillers(PieceType ty) const { return any(GoodOrEqualKillers[ty]); }
 };
 
 #endif

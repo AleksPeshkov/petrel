@@ -13,7 +13,6 @@
 #include <cstring>
 #include <forward_list>
 #include <errno.h>
-#include <immintrin.h>
 #include <iomanip>
 #include <iostream>
 #include <limits>
@@ -21,9 +20,7 @@
 #include <set>
 #include <sstream>
 #include <thread>
-#include <tmmintrin.h>
 #include <type_traits>
 #include <unistd.h>
-#include <xmmintrin.h>
 
 #endif
