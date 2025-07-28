@@ -2,7 +2,6 @@
 #define SPIN_LOCK_HPP
 
 #include <atomic>
-#include <immintrin.h>
 
 class SpinLock {
     std::atomic_flag atomic = ATOMIC_FLAG_INIT;
@@ -19,7 +18,7 @@ public:
 
     void lock() {
         while (!try_lock()) {
-            _mm_pause();
+            __builtin_ia32_pause();
         }
     }
 

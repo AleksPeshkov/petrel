@@ -30,7 +30,7 @@ WARNINGS += -Wpacked -Wdisabled-optimization -Wredundant-decls -Winvalid-constex
 #WARNINGS += -Winline -Wsign-promo
 
 ifeq ($(CXX), g++)
-	WARNINGS += -Wno-class-memaccess
+	WARNINGS += -Wno-class-memaccess -flax-vector-conversions
 	WARNINGS += -Wuseless-cast -Wcast-align=strict -Wunsafe-loop-optimizations -Wsuggest-final-types -Wsuggest-final-methods
 	WARNINGS += -Wnormalized -Wvector-operation-performance
 endif
