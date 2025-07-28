@@ -5,25 +5,24 @@
 #include "Bb.hpp"
 #include "VectorOfAll.hpp"
 
-typedef i128_t u64x2_t;
+typedef u64_t u64x2_t __attribute__((vector_size(16)));
 
 class BitReverse {
-    const u8x16_t nibbleSwap = {{0x00, 0x08, 0x04, 0x0c, 0x02, 0x0a, 0x06, 0x0e, 0x01, 0x09, 0x05, 0x0d, 0x03, 0x0b, 0x07, 0x0f,}};
-    const u8x16_t _byteSwap = {{15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0,}};
-
 public:
-    i128_t bitSwap(i128_t v) const {
-        constexpr auto& nibbleMask = ::vectorOfAll[0x0f];
-        auto hi = _mm_shuffle_epi8(nibbleSwap, _mm_and_si128(nibbleMask, _mm_srli_epi16(v, 4)));
-        auto lo = _mm_shuffle_epi8(_mm_slli_epi16(nibbleSwap, 4), _mm_and_si128(nibbleMask, v));
+    constexpr vu8x16_t bitSwap(vu8x16_t v) const {
+        constexpr vu8x16_t nibbleSwap{0x00, 0x08, 0x04, 0x0c, 0x02, 0x0a, 0x06, 0x0e, 0x01, 0x09, 0x05, 0x0d, 0x03, 0x0b, 0x07, 0x0f,};
+        constexpr auto& nibbleMask = ::vectorOfAll[0x0f].vu8x16;
+        auto hi = shufflevector(nibbleSwap, nibbleMask & (v >> 4));
+        auto lo = shufflevector(nibbleSwap << 4, nibbleMask & v);
         return hi | lo;
     }
 
-    i128_t byteSwap(i128_t v) const {
-        return _mm_shuffle_epi8(v, _byteSwap);
+    constexpr vu8x16_t byteSwap(vu8x16_t v) const {
+        constexpr vu8x16_t _byteSwap{15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0,};
+        return shufflevector(v, _byteSwap);
     }
 
-    i128_t operator() (i128_t v) const {
+    constexpr u64x2_t operator() (u64x2_t v) const {
         return byteSwap(bitSwap(v));
     }
 
@@ -60,16 +59,15 @@ extern const HyperbolaDir hyperbolaDir;
  * used for sliding pieces attacks generation
  * https://www.chessprogramming.org/Hyperbola_Quintessence
  */
-class Hyperbola : public BitArray<Hyperbola, u64x2_t> {
-    typedef u64x2_t _t;
-    _t occupied;
+class Hyperbola {
+    u64x2_t occupied;
 
-    static _t hyperbola(_t v) { return v ^ ::bitReverse(v); }
+    constexpr static u64x2_t hyperbola(u64x2_t v) { return v ^ ::bitReverse(v); }
 
 public:
     explicit Hyperbola (Bb bb) : occupied{ hyperbola(u64x2_t{bb, 0}) } {}
 
-    Bb attack(SliderType ty, Square from) const {
+    constexpr Bb attack(SliderType ty, Square from) const {
         const auto& sq = hyperbolaSq[from];
 
         // branchless computation
@@ -79,20 +77,21 @@ public:
         const auto& d1 = hyperbolaDir[from][static_cast<direction_t>(dir+1)];
 
         // bishop attacks for Bishops, rooks attacks for Rooks and Queens
-        auto result = d0 & _mm_sub_epi64(occupied & d0, sq);
-        result |= d1 & _mm_sub_epi64(occupied & d1, sq);
+        auto result = ((occupied & d0) - sq) & d0;
+        result     |= ((occupied & d1) - sq) & d1;
 
         if (ty == Queen) {
             // plus bishop attacks for Queens
             const auto& d = hyperbolaDir[from][DiagonalDir];
             const auto& a = hyperbolaDir[from][AntidiagDir];
-            result |= d & _mm_sub_epi64(occupied & d, sq);
-            result |= a & _mm_sub_epi64(occupied & a, sq);
+            result |= ((occupied & d) - sq) & d;
+            result |= ((occupied & a) - sq) & a;
         }
 
-        return Bb{ _mm_cvtsi128_si64(hyperbola(result)) };
-    }
+        union { u64x2_t u64x2; u64_t u64[2]; } bb = { hyperbola(result) };
 
+        return Bb{ bb.u64[0] };
+    }
 };
 
 #endif

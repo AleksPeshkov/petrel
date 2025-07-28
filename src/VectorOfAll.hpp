@@ -4,7 +4,7 @@
 #include "bitops128.hpp"
 #include "typedefs.hpp"
 
-constexpr u8x16_t all(u8_t i) { return {{ i,i,i,i, i,i,i,i, i,i,i,i, i,i,i,i }}; }
+constexpr u8x16_t all(u8_t i) { return u8x16_t{ i,i,i,i, i,i,i,i, i,i,i,i, i,i,i,i }; }
 
 class VectorOfAll {
     typedef u8x16_t _t;

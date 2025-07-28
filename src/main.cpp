@@ -6,8 +6,7 @@
 #include "CastlingRules.hpp"
 #include "Evaluation.hpp"
 #include "Hyperbola.hpp"
-#include "PiOrder.hpp"
-#include "PiSingle.hpp"
+#include "PiMask.hpp"
 #include "Uci.hpp"
 #include "VectorOfAll.hpp"
 

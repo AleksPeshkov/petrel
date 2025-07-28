@@ -6,9 +6,9 @@
 #define SELF static_cast<Self&>(*this)
 #define CONST_SELF static_cast<const Self&>(*this)
 
-template <typename _ValueType>
+template <typename _vector_type>
 struct BitArrayOps {
-    typedef _ValueType _t;
+    typedef _vector_type _t;
     static constexpr bool equals(const _t& a, const _t& b) { return a == b; }
     static constexpr void and_assign(_t& a, const _t& b) { a &= b; }
     static constexpr void or_assign(_t& a, const _t& b) { a |= b; }
@@ -16,23 +16,24 @@ struct BitArrayOps {
 };
 
 //typesafe BitArray implementation using "curiously recurring template pattern"
-template <class _Self, typename _ValueType>
+template <class _Self, typename _vector_type>
 class BitArray {
 public:
-    typedef _ValueType _t;
+    typedef _vector_type _t;
+    typedef _vector_type vector_type;
 
 protected:
     typedef _Self Self;
     typedef const Self& Arg;
-    typedef BitArrayOps<_t> Ops;
+    typedef BitArrayOps<vector_type> Ops;
 
-    _t v;
+    vector_type v;
 
 public:
     constexpr BitArray () : v{} {}
-    constexpr explicit BitArray (const _t& b) : v{b} {}
+    constexpr explicit BitArray (const vector_type& b) : v{b} {}
     constexpr Self& operator = (Arg b) { v = b.v; return SELF; }
-    constexpr operator const _t& () const { return v; }
+    constexpr operator const vector_type& () const { return v; }
 
     constexpr friend bool operator == (Arg a, Arg b) { return Ops::equals(a.v, b.v); }
     constexpr Self& operator &= (Arg b) { Ops::and_assign(v, b.v); return SELF; }

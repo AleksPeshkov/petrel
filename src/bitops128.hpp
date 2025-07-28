@@ -5,6 +5,16 @@
 #include "bitops.hpp"
 
 typedef __m128i i128_t;
+typedef u8_t vu8x16_t __attribute__((vector_size(16)));
+
+template <typename vector_type>
+inline constexpr vector_type shufflevector(vector_type vector, vector_type mask) {
+#if __clang__
+    return __builtin_shufflevector(vector, mask);
+#else
+    return __builtin_shuffle(vector, mask);
+#endif
+}
 
 inline index_t popcount(i128_t n) {
     auto lo = static_cast<u64_t>(_mm_cvtsi128_si64(n));
@@ -12,15 +22,21 @@ inline index_t popcount(i128_t n) {
     return popcount(lo) + popcount(hi);
 }
 
-inline bool equals(const i128_t& a, const i128_t& b) {
+template <typename vector_type>
+inline bool equals(const vector_type& a, const vector_type& b) {
     return _mm_movemask_epi8(_mm_cmpeq_epi8(a, b)) == 0xffffu;
 }
 
-union u8x16_t {
-    u8_t u8[16];
-    i128_t i128;
+typedef u8_t au8x16_t [16];
 
-    constexpr operator const i128_t&() const { return i128; }
+union u8x16_t {
+    vu8x16_t vu8x16;
+    au8x16_t u8;
+    i128_t  i128;
+
+    constexpr operator const i128_t&   () const { return i128; }
+    constexpr operator const vu8x16_t& () const { return vu8x16; }
+    constexpr operator const au8x16_t& () const { return u8; }
 };
 
 #endif
