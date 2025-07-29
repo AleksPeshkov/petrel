@@ -25,12 +25,6 @@ enum : node_count_t {
     NodeCountMax  = NodeCountNone - 1
 };
 
-enum class NodeControl {
-    Continue,
-    Abort,
-    BetaCutoff,
-};
-
 // number of halfmoves without capture or pawn move
 class Rule50 : Index<101> {
 public:
