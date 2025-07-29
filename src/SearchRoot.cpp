@@ -21,7 +21,7 @@ void SearchRoot::newIteration() {
     tt.newIteration();
 }
 
-NodeControl SearchRoot::countNode() {
+ReturnStatus SearchRoot::countNode() {
     return nodeCounter.count(*this);
 }
 
@@ -103,7 +103,7 @@ ostream& SearchRoot::info_nps(ostream& o) const {
     return o;
 }
 
-NodeControl NodeCounter::count(const SearchRoot& root) {
+ReturnStatus NodeCounter::count(const SearchRoot& root) {
     assertOk();
 
     if (nodesQuota == 0) {
@@ -114,10 +114,10 @@ NodeControl NodeCounter::count(const SearchRoot& root) {
     --nodesQuota;
 
     assertOk();
-    return NodeControl::Continue;
+    return ReturnStatus::Continue;
 }
 
-NodeControl NodeCounter::refreshQuota(const SearchRoot& root) {
+ReturnStatus NodeCounter::refreshQuota(const SearchRoot& root) {
     assertOk();
     assert (nodesQuota == 0);
     //nodes -= nodesQuota;
@@ -130,7 +130,7 @@ NodeControl NodeCounter::refreshQuota(const SearchRoot& root) {
         nodesQuota = static_cast<decltype(nodesQuota)>(nodesRemaining);
         if (nodesQuota == 0) {
             assertOk();
-            return NodeControl::Abort;
+            return ReturnStatus::Abort;
         }
     }
 
@@ -139,7 +139,7 @@ NodeControl NodeCounter::refreshQuota(const SearchRoot& root) {
         nodesQuota = 0;
 
         assertOk();
-        return NodeControl::Abort;
+        return ReturnStatus::Abort;
     }
 
     assert (0 < nodesQuota && nodesQuota <= QuotaLimit);
@@ -150,5 +150,5 @@ NodeControl NodeCounter::refreshQuota(const SearchRoot& root) {
     //inform UCI that search is responsive
     root.readyok();
 
-    return NodeControl::Continue;
+    return ReturnStatus::Continue;
 }
