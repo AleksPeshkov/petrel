@@ -6,13 +6,25 @@
 #include "PositionFen.hpp"
 #include "PvMoves.hpp"
 #include "Repetition.hpp"
-#include "SearchThread.hpp"
 #include "Score.hpp"
 #include "SpinLock.hpp"
+#include "ThreadRun.hpp"
 #include "Timer.hpp"
 #include "Tt.hpp"
 
 class SearchRoot;
+
+enum class ReturnStatus {
+    Continue,
+    Abort,
+    BetaCutoff,
+};
+
+#define RETURN_IF_ABORT(visitor) { if (visitor == ReturnStatus::Abort) { return ReturnStatus::Abort; } } ((void)0)
+#define BREAK_IF_ABORT(visitor) { if (visitor == ReturnStatus::Abort) { break; } } ((void)0)
+#define RETURN_CUTOFF(visitor) { ReturnStatus status = visitor; \
+    if (status == ReturnStatus::Abort) { return ReturnStatus::Abort; } \
+    if (status == ReturnStatus::BetaCutoff) { return ReturnStatus::BetaCutoff; }} ((void)0)
 
 class HistoryMoves {
     typedef Side::arrayOf<PieceType::arrayOf< Square::arrayOf<Move> >> _t;
@@ -53,8 +65,8 @@ public:
         return nodes == nodesLimit;
     }
 
-    NodeControl count(const SearchRoot&);
-    NodeControl refreshQuota(const SearchRoot&);
+    ReturnStatus count(const SearchRoot&);
+    ReturnStatus refreshQuota(const SearchRoot&);
 
 };
 
@@ -88,7 +100,7 @@ protected:
     TimePoint fromSearchStart;
     Timer timer;
 
-    SearchThread searchThread;
+    ThreadRun searchThread;
 
 public:
     SearchRoot (ostream& o) : out{o} {}
@@ -106,7 +118,7 @@ public:
     void perft_currmove(index_t moveCount, const UciMove& currentMove, node_count_t) const;
     void perft_finish() const;
 
-    NodeControl countNode();
+    ReturnStatus countNode();
 
 protected:
     SearchRoot (const SearchRoot&) = delete;
