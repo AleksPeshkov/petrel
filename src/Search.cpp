@@ -1,17 +1,39 @@
-#include "NodeAb.hpp"
+#include "Search.hpp"
 #include "out.hpp"
 #include "AttacksFrom.hpp"
 #include "SearchRoot.hpp"
 #include "PositionFen.hpp"
+#include "UciGoLimit.hpp"
 
-NodeControl NodeAb::visit(Move move) {
+void SearchThread::run() {
+    NodeAb{root.position, root}.visitRoot(limit.depth);
+}
+
+ReturnStatus NodeAb::visitRoot(Ply depthLimit) {
+    auto rootMovesClone = moves;
+
+    for (draft = 1; draft <= depthLimit; ++draft) {
+        moves = rootMovesClone;
+        score = NoScore;
+        alpha = MinusInfinity;
+        beta = PlusInfinity;
+        BREAK_IF_ABORT ( searchMoves() );
+        root.infoIterationEnd(draft);
+        root.newIteration();
+    }
+
+    root.bestmove();
+    return ReturnStatus::Continue;
+}
+
+ReturnStatus NodeAb::visit(Move move) {
     alpha = -parent->beta;
     beta = -parent->alpha;
     assert (MinusInfinity <= alpha && alpha < beta && beta <= PlusInfinity);
 
     // mate-distance pruning
     alpha = std::max(alpha, Score::checkmated(ply));
-    if (alpha >= beta) { return NodeControl::BetaCutoff; }
+    if (alpha >= beta) { return ReturnStatus::BetaCutoff; }
 
     score = NoScore;
     draft = parent->draft > 0 ? parent->draft-1 : 0;
@@ -33,7 +55,7 @@ NodeControl NodeAb::visit(Move move) {
         RETURN_IF_ABORT (quiescence());
     }
     else {
-        RETURN_IF_ABORT (visitChildren());
+        RETURN_IF_ABORT (searchMoves());
         if (movesMade == 0) {
             //checkmated or stalemated
             score = inCheck ? Score::checkmated(ply) : Score{DrawScore};
@@ -43,7 +65,7 @@ NodeControl NodeAb::visit(Move move) {
     return parent->negamax(-score);
 }
 
-NodeControl NodeAb::negamax(Score lastScore) {
+ReturnStatus NodeAb::negamax(Score lastScore) {
     assert (MinusInfinity <= alpha && alpha < beta && beta <= PlusInfinity);
 
     if (lastScore > score) {
@@ -52,7 +74,7 @@ NodeControl NodeAb::negamax(Score lastScore) {
         if (score >= beta) {
             //beta cut off
             updateKillerMove();
-            return NodeControl::BetaCutoff;
+            return ReturnStatus::BetaCutoff;
         }
 
         if (score > alpha) {
@@ -66,32 +88,32 @@ NodeControl NodeAb::negamax(Score lastScore) {
     }
 
     assert (MinusInfinity <= alpha && alpha < beta && beta <= PlusInfinity);
-    return NodeControl::Continue;
+    return ReturnStatus::Continue;
 }
 
-NodeControl NodeAb::visitChildren() {
+ReturnStatus NodeAb::searchMoves() {
     assert (MinusInfinity <= alpha && alpha < beta && beta <= PlusInfinity);
 
     NodeAb node{this};
     const auto child = &node;
 
-    CUTOFF (child->visitIfLegal(root.pvMoves[ply]));
+    RETURN_CUTOFF (child->visitIfLegal(root.pvMoves[ply]));
 
-    CUTOFF (goodCaptures(child));
+    RETURN_CUTOFF (goodCaptures(child));
 
     canBeKiller = true;
 
     if (parent) {
-        CUTOFF (child->visitIfLegal(parent->killer1));
-        CUTOFF (child->visitIfLegal(parent->killer2));
+        RETURN_CUTOFF (child->visitIfLegal(parent->killer1));
+        RETURN_CUTOFF (child->visitIfLegal(parent->killer2));
 
         if (parent->grandParent) {
-            CUTOFF (child->visitIfLegal(parent->grandParent->killer1));
+            RETURN_CUTOFF (child->visitIfLegal(parent->grandParent->killer1));
         }
 
         Move move = parent->currentMove;
         PieceType ty = (*parent)[My].typeOf(move.from());
-        CUTOFF (child->visitIfLegal( root.counterMove(colorToMove(), ty, move.to()) ));
+        RETURN_CUTOFF (child->visitIfLegal( root.counterMove(colorToMove(), ty, move.to()) ));
     }
 
     // the rest of the remaining unsorted moves
@@ -99,21 +121,21 @@ NodeControl NodeAb::visitChildren() {
         Square from = MY.squareOf(pi);
 
         for (Square to : moves[pi]) {
-            CUTOFF (child->visit({from, to}));
+            RETURN_CUTOFF (child->visit({from, to}));
         }
     }
 
-    return NodeControl::Continue;
+    return ReturnStatus::Continue;
 }
 
-NodeControl NodeAb::quiescence() {
+ReturnStatus NodeAb::quiescence() {
     assert (MinusInfinity <= alpha && alpha < beta && beta <= PlusInfinity);
     assert (!inCheck());
 
     //stand pat
     score = evaluate();
     if (beta <= score) {
-        return NodeControl::BetaCutoff;
+        return ReturnStatus::BetaCutoff;
     }
     if (alpha < score) {
         alpha = score;
@@ -123,18 +145,18 @@ NodeControl NodeAb::quiescence() {
     const auto child = &node;
 
     // recapture
-    CUTOFF (goodCaptures(child, ~lastPieceTo));
+    RETURN_CUTOFF (goodCaptures(child, ~lastPieceTo));
 
-    CUTOFF (goodCaptures(child));
+    RETURN_CUTOFF (goodCaptures(child));
 
-    return NodeControl::Continue;
+    return ReturnStatus::Continue;
 }
 
-NodeControl NodeAb::goodCaptures(NodeAb* child) {
+ReturnStatus NodeAb::goodCaptures(NodeAb* child) {
     // MVV (most valuable victim)
     for (Pi victim : OP.pieces() % PiMask{TheKing}) {
         Square to = ~OP.squareOf(victim);
-        CUTOFF (goodCaptures(child, to));
+        RETURN_CUTOFF (goodCaptures(child, to));
     }
 
     // non capture promotions
@@ -145,20 +167,20 @@ NodeControl NodeAb::goodCaptures(NodeAb* child) {
 
             Square from = MY.squareOf(pi);
             // to the queen
-            CUTOFF( child->visit({from, to}) );
+            RETURN_CUTOFF( child->visit({from, to}) );
 
             // underpromotion to the knight only if it makes check
             if (attacksFrom(Knight, ~OP.squareOf(TheKing)).has(to)) {
                 Square toKnight{ File{to}, ::rankOf(Knight) };
-                CUTOFF( child->visit({from, toKnight}) );
+                RETURN_CUTOFF( child->visit({from, toKnight}) );
             }
         }
     }
 
-    return NodeControl::Continue;
+    return ReturnStatus::Continue;
 }
 
-NodeControl NodeAb::goodCaptures(NodeAb* child, Square to) {
+ReturnStatus NodeAb::goodCaptures(NodeAb* child, Square to) {
     assert (OP.piecesSquares().has(~to));
 
     PiMask attackers = moves[to];
@@ -166,7 +188,7 @@ NodeControl NodeAb::goodCaptures(NodeAb* child, Square to) {
         // skip underpromotion pseudo moves
         attackers %= MY.promotables();
     }
-    if (attackers.none()) { return NodeControl::Continue; }
+    if (attackers.none()) { return ReturnStatus::Continue; }
 
     bool isVictimProtected = isOpAttacks(to);
     assert (isVictimProtected == OP.attackersTo(~to).any());
@@ -181,10 +203,10 @@ NodeControl NodeAb::goodCaptures(NodeAb* child, Square to) {
         Pi attacker = attackers.least(); attackers -= attacker;
 
         Square from = MY.squareOf(attacker);
-        CUTOFF (child->visit(Move{from, to}));
+        RETURN_CUTOFF (child->visit(Move{from, to}));
     }
 
-    return NodeControl::Continue;
+    return ReturnStatus::Continue;
 }
 
 void NodeAb::updateKillerMove() {

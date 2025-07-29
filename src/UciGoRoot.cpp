@@ -1,7 +1,7 @@
 #include "UciGoRoot.hpp"
 #include "UciGoLimit.hpp"
-#include "NodeAbRoot.hpp"
-#include "NodePerftRoot.hpp"
+#include "Search.hpp"
+#include "SearchPerft.hpp"
 
 template <typename T>
 static T mebi(T bytes) { return bytes / (1024 * 1024); }
@@ -27,9 +27,7 @@ void UciGoRoot::go(const UciGoLimit& limit) {
     newSearch();
     nodeCounter = { limit.nodes };
 
-    auto searchId = searchThread.start(static_cast<std::unique_ptr<Node>>(
-        std::make_unique<NodeAbRoot>(limit, static_cast<SearchRoot&>(*this))
-    ));
+    auto searchId = searchThread.start(std::make_unique<SearchThread>(static_cast<SearchRoot&>(*this), limit));
 
     if (!limit.isInfinite) {
         timer.start(limit.getThinkingTime(), searchThread, searchId);
@@ -40,9 +38,7 @@ void UciGoRoot::goPerft(Ply depth, bool isDivide) {
     newSearch();
     nodeCounter = {};
 
-    searchThread.start(static_cast<std::unique_ptr<Node>>(
-        std::make_unique<NodePerftRoot>(position, static_cast<SearchRoot&>(*this), depth, isDivide)
-    ));
+    searchThread.start(std::make_unique<PerftThread>(static_cast<SearchRoot&>(*this), depth, isDivide));
 }
 
 void UciGoRoot::uciok() const {
