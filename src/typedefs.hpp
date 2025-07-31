@@ -60,13 +60,10 @@ enum piece_type_t {
     Knight = 3,
     Pawn = 4,
     King = 5,
-    Castling = 6, //pseudo-piece type for the rook with castling right for zobrist hash
-    EnPassant = 7, //pseudo-piece type for the pawn can be legally captured E.P. for zobrist hash
 };
 typedef Index<3, piece_type_t> SliderType; // Queen, Rook, Bishop
 typedef Index<4, piece_type_t> PromoType; // Queen, Rook, Bishop, Knight
 typedef Index<6, piece_type_t> PieceType; // Queen, Rook, Bishop, Knight, Pawn, King
-typedef Index<8, piece_type_t> PieceZobristType;
 template <> io::czstring PieceType::The_string;
 template <> io::czstring PromoType::The_string;
 

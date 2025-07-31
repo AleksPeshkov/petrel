@@ -25,20 +25,6 @@
     }
 #endif
 
-Zobrist PositionSide::generateZobrist() const {
-    Zobrist z{0};
-
-    for (Pi pi : pieces()) {
-        z.drop(typeOf(pi), squareOf(pi));
-    }
-
-    for (Pi rook : castlingRooks()) {
-        z.setCastling(squareOf(rook));
-    }
-
-    return z;
-}
-
 void PositionSide::swap(PositionSide& MY, PositionSide& OP) {
     using std::swap;
     swap(MY.attacks, OP.attacks);
