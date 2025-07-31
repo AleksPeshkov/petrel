@@ -39,7 +39,7 @@ ReturnStatus NodeAb::visit(Move move) {
     draft = parent->draft > 0 ? parent->draft-1 : 0;
 
     RETURN_IF_ABORT (root.countNode());
-    parent->currentMove = parent->uciMove(move);
+    parent->childMove = move;
     makeMove(parent, move);
     root.pvMoves.set(ply, UciMove{});
     ++parent->movesMade;
@@ -50,7 +50,6 @@ ReturnStatus NodeAb::visit(Move move) {
 
     canBeKiller = false;
 
-    bool inCheck = NodeAb::inCheck();
 
     if (moves.popcount() == 0) {
         //checkmated or stalemated
@@ -89,7 +88,7 @@ ReturnStatus NodeAb::negamax(Score lastScore) {
         if (score > alpha) {
             alpha = score;
 
-            root.pvMoves.set(ply, currentMove);
+            root.pvMoves.set(ply, uciMove(childMove));
             if (ply == 0) {
                 root.infoNewPv(draft, score);
             }
@@ -109,24 +108,93 @@ ReturnStatus NodeAb::searchMoves() {
     RETURN_CUTOFF (child->visitIfLegal(root.pvMoves[ply]));
 
     RETURN_CUTOFF (goodCaptures(child));
+    RETURN_CUTOFF (safePromotions(child));
+    RETURN_CUTOFF (notBadCaptures(child));
+    RETURN_CUTOFF (allPromotions(child));
+    //TODO: underpromotions
 
     canBeKiller = true;
 
+    Pi lastPi = TheKing;
+    Bb newMoves = {};
+
+    //TODO: checking moves
+
     if (parent) {
+        // killer move to be tried first
         RETURN_CUTOFF (child->visitIfLegal(parent->killer1));
-        RETURN_CUTOFF (child->visitIfLegal(parent->killer2));
 
-        if (parent->grandParent) {
-            RETURN_CUTOFF (child->visitIfLegal(parent->grandParent->killer1));
-        }
-
-        Move move = parent->currentMove;
+        // counter moves may refute the last opponent move
+        Move move = parent->childMove;
         PieceType ty = (*parent)[My].typeOf(move.from());
         RETURN_CUTOFF (child->visitIfLegal( root.counterMove(colorToMove(), ty, move.to()) ));
+
+        RETURN_CUTOFF (child->visitIfLegal(parent->killer2));
+
+        // try quiet moves of the last moved piece (unless it was captured)
+        {
+            Square from = parent->lastPieceTo;
+            if (MY.piecesSquares().has(from)) {
+                // last moved piece
+                lastPi = MY.pieceAt(from);
+
+                // new moves of the last moved piece
+                newMoves = moves[lastPi];
+
+                if (from != parent->lastPieceFrom) {
+                    // unless it was a pawn promotion move
+                    newMoves %= (*parent)[My].attacksOf(lastPi);
+                }
+
+                // try new safe moves of the last moved piece
+                for (Square to : newMoves % attackedSquares) {
+                    RETURN_CUTOFF (child->visit({from, to}));
+                }
+
+                // keep unsafe news moves for later
+                newMoves &= attackedSquares;
+            }
+        }
+
+        // new safe quiet moves, except for the last moved piece (or king)
+        for (Pi pi : MY.pieces() - lastPi) {
+            Square from = MY.squareOf(pi);
+            for (Square to : moves[pi] % (*parent)[My].attacksOf(pi) % attackedSquares) {
+                RETURN_CUTOFF (child->visit({from, to}));
+            }
+        }
     }
 
-    // the rest of the remaining unsorted moves
+    // all the rest safe quiet moves
     for (Pi pi : MY.pieces()) {
+        Square from = MY.squareOf(pi);
+        for (Square to : moves[pi] % attackedSquares) {
+            RETURN_CUTOFF (child->visit({from, to}));
+        }
+    }
+
+    if (newMoves.any()) {
+        Square from = parent->lastPieceTo;
+        Pi pi = MY.pieceAt(from);
+
+        // unsafe new moves of the last moved piece
+        for (Square to : newMoves) {
+            RETURN_CUTOFF (child->visitIfLegal({from, to}));
+        }
+
+        // the rest moves of the last moved piece
+        for (Square to : moves[pi]) {
+            RETURN_CUTOFF (child->visit({from, to}));
+        }
+    }
+
+    // unsafe (bad) captures
+    RETURN_CUTOFF (allCaptures(child));
+
+    // all the rest moves, LV first
+    auto pieces = MY.pieces();
+    while (pieces.any()) {
+        Pi pi = pieces.leastValuable(); pieces -= pi;
         Square from = MY.squareOf(pi);
 
         for (Square to : moves[pi]) {
@@ -139,7 +207,7 @@ ReturnStatus NodeAb::searchMoves() {
 
 ReturnStatus NodeAb::quiescence() {
     assert (MinusInfinity <= alpha && alpha < beta && beta <= PlusInfinity);
-    assert (!inCheck());
+    assert (!inCheck);
 
     //stand pat
     score = evaluate();
@@ -153,55 +221,55 @@ ReturnStatus NodeAb::quiescence() {
     NodeAb node{this};
     const auto child = &node;
 
-    // recapture
-    RETURN_CUTOFF (goodCaptures(child, ~lastPieceTo));
-
     RETURN_CUTOFF (goodCaptures(child));
+    RETURN_CUTOFF (safePromotions(child));
+    RETURN_CUTOFF (notBadCaptures(child));
+    RETURN_CUTOFF (allPromotions(child));
 
     return ReturnStatus::Continue;
 }
 
 ReturnStatus NodeAb::goodCaptures(NodeAb* child) {
-    // MVV (most valuable victim)
+    // MVV (most valuable victim) order
     for (Pi victim : OP.pieces() % PiMask{TheKing}) {
         Square to = ~OP.squareOf(victim);
         RETURN_CUTOFF (goodCaptures(child, to));
     }
 
-    // non capture promotions
-    for (Pi pi : MY.promotables()) {
-        for (Square to : moves[pi] & Bb{Rank8}) {
-            // skip move to the defended square
-            if (isOpAttacks(to)) { continue; }
+    return ReturnStatus::Continue;
+}
 
-            Square from = MY.squareOf(pi);
-            // to the queen
-            RETURN_CUTOFF( child->visit({from, to}) );
+ReturnStatus NodeAb::notBadCaptures(NodeAb* child) {
+    // MVV (most valuable victim) order
+    for (Pi victim : OP.pieces() % PiMask{TheKing}) {
+        Square to = ~OP.squareOf(victim);
+        RETURN_CUTOFF (notBadCaptures(child, to));
+    }
 
-            // underpromotion to the knight only if it makes check
-            if (attacksFrom(Knight, ~OP.squareOf(TheKing)).has(to)) {
-                Square toKnight{ File{to}, ::rankOf(Knight) };
-                RETURN_CUTOFF( child->visit({from, toKnight}) );
-            }
-        }
+    return ReturnStatus::Continue;
+}
+
+ReturnStatus NodeAb::allCaptures(NodeAb* child) {
+    // MVV (most valuable victim)
+    for (Pi victim : OP.pieces() % PiMask{TheKing}) {
+        Square to = ~OP.squareOf(victim);
+        RETURN_CUTOFF (allCaptures(child, to));
     }
 
     return ReturnStatus::Continue;
 }
 
 ReturnStatus NodeAb::goodCaptures(NodeAb* child, Square to) {
-    assert (OP.piecesSquares().has(~to));
-
     PiMask attackers = moves[to];
+
     if (!to.on(Rank8)) {
         // skip underpromotion pseudo moves
         attackers %= MY.promotables();
     }
     if (attackers.none()) { return ReturnStatus::Continue; }
 
-    bool isVictimProtected = isOpAttacks(to);
+    bool isVictimProtected = attackedSquares.has(to);
     assert (isVictimProtected == OP.attackersTo(~to).any());
-
     if (isVictimProtected) {
         // filter out more valuable attackers than the victim
         attackers &= MY.goodKillers( OP.typeOf(OP.pieceAt(~to)) );
@@ -209,10 +277,80 @@ ReturnStatus NodeAb::goodCaptures(NodeAb* child, Square to) {
 
     while (attackers.any()) {
         // LVA (least valuable attacker)
-        Pi attacker = attackers.least(); attackers -= attacker;
+        Pi attacker = attackers.leastValuable(); attackers -= attacker;
 
         Square from = MY.squareOf(attacker);
         RETURN_CUTOFF (child->visit(Move{from, to}));
+    }
+
+    return ReturnStatus::Continue;
+}
+
+ReturnStatus NodeAb::notBadCaptures(NodeAb* child, Square to) {
+    PiMask attackers = moves[to];
+
+    if (!to.on(Rank8)) {
+        // skip underpromotion pseudo moves
+        attackers %= MY.promotables();
+    }
+    if (attackers.none()) { return ReturnStatus::Continue; }
+
+    bool isVictimProtected = attackedSquares.has(to);
+    assert (isVictimProtected == OP.attackersTo(~to).any());
+    if (isVictimProtected) {
+        // filter out more valuable attackers than the victim
+        attackers &= MY.notBadKillers( OP.typeOf(OP.pieceAt(~to)) );
+    }
+
+    while (attackers.any()) {
+        // LVA (least valuable attacker)
+        Pi attacker = attackers.leastValuable(); attackers -= attacker;
+
+        Square from = MY.squareOf(attacker);
+        RETURN_CUTOFF (child->visit(Move{from, to}));
+    }
+
+    return ReturnStatus::Continue;
+}
+
+ReturnStatus NodeAb::allCaptures(NodeAb* child, Square to) {
+    PiMask attackers = moves[to];
+    if (!to.on(Rank8)) {
+        // skip underpromotion pseudo moves
+        attackers %= MY.promotables();
+    }
+
+    while (attackers.any()) {
+        // LVA (least valuable attacker)
+        Pi attacker = attackers.leastValuable(); attackers -= attacker;
+
+        Square from = MY.squareOf(attacker);
+        RETURN_CUTOFF (child->visit(Move{from, to}));
+    }
+
+    return ReturnStatus::Continue;
+}
+
+// non capture queen promotions to the unattacked squares
+ReturnStatus NodeAb::safePromotions(NodeAb* child) {
+    for (Pi pi : MY.promotables()) {
+        // skip moves to the attacked square
+        for (Square to : moves[pi] % attackedSquares & Bb{Rank8}) {
+            Square from = MY.squareOf(pi);
+            RETURN_CUTOFF( child->visit({from, to}) );
+        }
+    }
+
+    return ReturnStatus::Continue;
+}
+
+// all non capture queen promotions
+ReturnStatus NodeAb::allPromotions(NodeAb* child) {
+    for (Pi pi : MY.promotables()) {
+        for (Square to : moves[pi] & Bb{Rank8}) {
+            Square from = MY.squareOf(pi);
+            RETURN_CUTOFF( child->visit({from, to}) );
+        }
     }
 
     return ReturnStatus::Continue;
@@ -222,14 +360,14 @@ void NodeAb::updateKillerMove() {
     if (!canBeKiller) { return; }
     if (!parent) { return; }
 
-    if (parent->killer1 != currentMove) {
+    if (parent->killer1 != childMove) {
         parent->killer2 = parent->killer1;
-        parent->killer1 = currentMove;
+        parent->killer1 = childMove;
     }
 
-    Move move = parent->currentMove;
+    Move move = parent->childMove;
     PieceType ty = (*parent)[My].typeOf(move.from());
-    root.counterMove.set(colorToMove(), ty, move.to(), currentMove);
+    root.counterMove.set(colorToMove(), ty, move.to(), childMove);
 }
 
 UciMove NodeAb::uciMove(Square from, Square to) const {
@@ -290,7 +428,9 @@ bool NodeAb::isRepetition() const {
             if (next->zobrist == z) {
                 return true;
             }
-            if (!next->repMask.has(z)) { break; }
+            if (!next->repMask.has(z)) {
+                return false;
+            }
         }
     }
 
