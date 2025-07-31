@@ -46,22 +46,25 @@ ReturnStatus NodeAb::visit(Move move) {
 
     bool inCheck = NodeAb::inCheck();
 
-    if (ply == MaxPly) {
+    if (moves.popcount() == 0) {
+        //checkmated or stalemated
+        score = inCheck ? Score::checkmated(ply) : Score{DrawScore};
+    }
+    else if (rule50 >= 100 || isRepetition()) {
+        score = DrawScore;
+    }
+    else if (!inCheck && isDrawMaterial()) {
+        score = DrawScore;
+    }
+    else if (ply == MaxPly) {
         // no room to search deeper
         score = evaluate();
     }
-    else if (isRepetition()) {
-        score = DrawScore;
-    }
-    else if (draft == 0 && !inCheck) {
+    else if (!inCheck && draft == 0) {
         RETURN_IF_ABORT (quiescence());
     }
     else {
         RETURN_IF_ABORT (searchMoves());
-        if (movesMade == 0) {
-            //checkmated or stalemated
-            score = inCheck ? Score::checkmated(ply) : Score{DrawScore};
-        }
     }
 
     return parent->negamax(-score);
@@ -238,6 +241,24 @@ Color NodeAb::colorToMove() const {
 Score NodeAb::evaluate()
 {
     return Position::evaluate().clamp();
+}
+
+bool NodeAb::isDrawMaterial() const {
+    if (rule50 == 0) {
+        // insufficient material
+        auto& my = root.position[My].evaluation;
+        auto& op = root.position[Op].evaluation;
+        if (my.count(Pawn) == 0 && op.count(Pawn) == 0) {
+            if (my.material() <= 4 && op.material() <= 4) { return true; }
+            if (my.material() <= 4 && op.count(Knight) == 2) { return true; }
+            if (op.material() <= 4 && my.count(Knight) == 2) { return true; }
+            auto myMinors = my.count(Knight) + my.count(Bishop);
+            auto opMinors = op.count(Knight) + op.count(Bishop);
+            if (myMinors == 2 && opMinors == 1 && !(my.count(Bishop) == 2)) { return true; }
+            if (opMinors == 2 && myMinors == 1 && !(op.count(Bishop) == 2)) { return true; }
+        }
+    }
+    return false;
 }
 
 bool NodeAb::isRepetition() const {

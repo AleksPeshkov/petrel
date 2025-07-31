@@ -57,6 +57,7 @@ protected:
 
     Color colorToMove() const;
     Score evaluate();
+    bool isDrawMaterial() const;
     bool isRepetition() const;
 
 public:
