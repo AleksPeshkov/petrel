@@ -48,7 +48,15 @@ protected:
     ReturnStatus quiescence();
 
     ReturnStatus goodCaptures(NodeAb*);
+    ReturnStatus notBadCaptures(NodeAb*);
+    ReturnStatus allCaptures(NodeAb*);
+
     ReturnStatus goodCaptures(NodeAb*, Square);
+    ReturnStatus notBadCaptures(NodeAb*, Square);
+    ReturnStatus allCaptures(NodeAb*, Square);
+
+    ReturnStatus safePromotions(NodeAb*);
+    ReturnStatus allPromotions(NodeAb*);
 
     UciMove uciMove(Move move) const { return uciMove(move.from(), move.to()); }
     UciMove uciMove(Square from, Square to) const;

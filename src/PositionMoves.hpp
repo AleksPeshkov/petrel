@@ -8,10 +8,9 @@
 class PositionMoves : public Position {
 protected:
     PiBb moves; //generated moves from My side
-
-private:
     Bb attackedSquares; //squares attacked by all opponent pieces
 
+private:
     //legal move generation helpers
     template <Side::_t> void excludePinnedMoves(PiMask);
     template <Side::_t> void correctCheckEvasionsByPawns(Bb, Square);
@@ -37,8 +36,6 @@ protected:
     bool isLegalMove(Square from, Square to) const;
 
     bool inCheck() const;
-
-    bool isOpAttacks(Square sq) const { return attackedSquares.has(sq); }
 };
 
 #endif
