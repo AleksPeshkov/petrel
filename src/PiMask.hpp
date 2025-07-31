@@ -15,7 +15,7 @@ class PieceSet : public BitSet<PieceSet, Pi::_t> {
 public:
     using Base::Base;
 
-    Pi seekVacant() const {
+    Pi vacantMostValuable() const {
         _t x = v;
         x = ~x & (x+1); //TRICK: isolate the lowest unset bit
         return PieceSet{x}.index();
@@ -109,12 +109,10 @@ public:
     Pi index() const { return PieceSet{*this}.index(); }
 
     // most valuable piece in the first (lowest) set bit
-    Pi most() const { return PieceSet{*this}.first(); }
+    Pi mostValuable() const { return PieceSet{*this}.first(); }
 
     // least valuable pieces in the last (highest) set bit
-    Pi least() const { return PieceSet{*this}.last(); }
-
-    Pi seekVacant() const { return PieceSet{*this}.seekVacant(); }
+    Pi leastValuable() const { return PieceSet{*this}.last(); }
 
     index_t popcount() const { return PieceSet{*this}.popcount(); }
 

@@ -31,9 +31,9 @@ protected:
     Score alpha = MinusInfinity;
     Score beta = PlusInfinity;
 
-    UciMove currentMove = {};
     MovesNumber movesMade = 0; // number of moves already made in this node
 
+    Move childMove = {}; // last move made from this node
     Move killer1 = {}; // first killer move to try at child-child nodes
     Move killer2 = {}; // second killer move to try at child-child nodes
     bool canBeKiller; // only moves at after killer stage will update killers
@@ -48,7 +48,15 @@ protected:
     ReturnStatus quiescence();
 
     ReturnStatus goodCaptures(NodeAb*);
+    ReturnStatus notBadCaptures(NodeAb*);
+    ReturnStatus allCaptures(NodeAb*);
+
     ReturnStatus goodCaptures(NodeAb*, Square);
+    ReturnStatus notBadCaptures(NodeAb*, Square);
+    ReturnStatus allCaptures(NodeAb*, Square);
+
+    ReturnStatus safePromotions(NodeAb*);
+    ReturnStatus allPromotions(NodeAb*);
 
     UciMove uciMove(Move move) const { return uciMove(move.from(), move.to()); }
     UciMove uciMove(Square from, Square to) const;
