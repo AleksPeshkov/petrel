@@ -2,7 +2,7 @@
 #define POSITION_HPP
 
 #include "PositionSide.hpp"
-#include "Score.hpp"
+#include "Zobrist.hpp"
 
 // side to move
 #define MY ((*this)[My])
@@ -26,6 +26,9 @@ private:
     enum UpdateZobrist { NoZobrist, WithZobrist };
     template <Side::_t, UpdateZobrist = WithZobrist> void makeMove(Square, Square);
 
+    template <Side::_t> Zobrist generateZobrist() const;
+
+    //calculate Zobrist key from scratch
     Zobrist createZobrist(Square, Square) const;
 
 public:
