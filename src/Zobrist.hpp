@@ -5,23 +5,20 @@
 #include "io.hpp"
 #include "typedefs.hpp"
 
+typedef u64_t z_t;
+
 class Z {
-public:
     typedef const Z& Arg;
-    typedef u64_t _t;
 
 protected:
-    _t v;
+    z_t v;
+
+    constexpr Z& operator ^= (Arg b) { v ^= b.v; return *this; }
+    constexpr friend Z operator ^ (Arg a, Arg b) { return Z{a} ^= b; }
 
 public:
-    constexpr Z(_t n = 0) : v{n} {}
-    constexpr operator const _t& () const { return v; }
-
-    constexpr Z& flip() { v = ::byteswap(v); return *this; }
-    constexpr Z  operator * () const { return Z{*this}.flip(); }
-
-    constexpr Z& operator ^= (Arg z) { v ^= z.v; return *this; }
-    constexpr friend Z operator ^ (Arg a, Arg b) { return Z{a} ^= b; }
+    constexpr Z(z_t n = 0) : v{n} {}
+    constexpr operator const z_t& () const { return v; }
 
     constexpr friend bool operator == (Arg a, Arg b) { return a.v == b.v; }
     constexpr friend bool operator != (Arg a, Arg b) { return a.v != b.v; }
@@ -30,7 +27,7 @@ public:
         auto flags = out.flags();
 
         out << " [" << std::hex << std::setw(16) << std::setfill('0') << "]";
-        out << static_cast<Z::_t>(z);
+        out << static_cast<z_t>(z);
 
         out.flags(flags);
         return out;
@@ -38,62 +35,73 @@ public:
 };
 
 class Zobrist : public Z {
-    typedef PieceZobristType Index;
-
-protected:
+    typedef const Zobrist& Arg;
 
     //hand picked set of de Bruijn numbers
-    enum : _t {
-        _Queen  = ULL(0x0218a392cd5d3dbf),
-        _Rook   = ULL(0x024530decb9f8ead),
-        _Bishop = ULL(0x02b91efc4b53a1b3),
-        _Knight = ULL(0x02dc61d5ecfc9a51),
-        _Pawn   = ULL(0x031faf09dcda2ca9),
-        _King   = ULL(0x0352138afdd1e65b),
-        _Extra  = ULL(0x03ac4dfb48546797),
-        _Castling = _Extra ^ _Rook,
-        _EnPassant = _Extra ^ _Pawn,
+    enum : z_t {
+        zQueen  = ULL(0x0218a392cd5d3dbf),
+        zRook   = ULL(0x024530decb9f8ead),
+        zBishop = ULL(0x02b91efc4b53a1b3),
+        zKnight = ULL(0x02dc61d5ecfc9a51),
+        zPawn   = ULL(0x031faf09dcda2ca9),
+        zKing   = ULL(0x0352138afdd1e65b),
+        zCastling = zRook ^ zPawn,
+        zEnPassant = ::rotateleft(zPawn, 32), // A4 => A8
+        // zExtra  = ULL(0x03ac4dfb48546797), // reserved
     };
 
-    constexpr static const Index::arrayOf<_t> key = {{
-        _Queen, _Rook, _Bishop, _Knight, _Pawn, _King, _Castling, _EnPassant
+    enum { Castling = 6, EnPassant = 7 };
+    typedef ::Index<8> Index;
+
+    inline static constexpr Index::arrayOf<z_t> zKey = {{
+        zQueen, zRook, zBishop, zKnight, zPawn, zKing, zCastling, zEnPassant
     }};
 
-    constexpr static Z get(Index ty, Square sq) { return static_cast<Z>(::rotateleft(key[ty], sq)); }
+    constexpr static z_t r(const z_t& z, Square::_t sq) { return ::rotateleft(z, sq); }
+    constexpr static z_t z(Index ty, Square::_t sq) { return r(zKey[ty], sq); }
+    constexpr static z_t flip(z_t z) { return ::byteswap(z); }
+
+    constexpr void my(Index ty, Square sq) { v ^= z(ty, sq); }
+    constexpr void op(Index ty, Square sq) { v ^= flip(z(ty, sq)); }
 
 public:
     using Z::Z;
-    Zobrist (Arg my, Arg op) : Z{my ^ *op} {
-        //static_assert (get(Queen, C3) == ~get(Queen, C6));
+    constexpr Zobrist (Arg my, Arg op) : Z{my.v ^ flip(op)} {
+        static_assert (z(EnPassant, A4) == z(Pawn, A8));
+        static_assert (z(EnPassant, B4) == z(Pawn, B8));
     }
 
-    void change(Index ty, Square sq) { *this ^=  get(ty, sq); }
-    void my(PieceType::_t ty, Square sq) { *this ^=  get(ty, sq); }
-    void op(PieceType::_t ty, Square sq) { *this ^= *get(ty, sq); }
-    void myCastling(Square sq)  { assert (sq.on(Rank1)); *this ^=  get(Castling, sq); }
-    void opCastling(Square sq)  { assert (sq.on(Rank1)); *this ^= *get(Castling, sq); }
-    void myEnPassant(Square sq) { assert (sq.on(Rank4)); *this ^=  get(EnPassant, sq); }
-    void opEnPassant(Square sq) { assert (sq.on(Rank4)); *this ^= *get(EnPassant, sq); }
+    constexpr Zobrist& flip() { v = ::byteswap(v); return *this; }
 
-    void drop(PieceType ty, Square to) { change(static_cast<Index>(ty), to); }
-    void clear(PieceType ty, Square from) { change(static_cast<Index>(ty), from); }
+    void operator () (PieceType::_t ty, Square sq) { my(Index{ty}, sq); }
+    void castling(Square sq)  { assert (sq.on(Rank1)); my(Castling, sq); }
+    void enPassant(Square sq) { assert (sq.on(Rank4)); my(EnPassant, sq); }
 
-    void setCastling(Square sq)  { assert (sq.on(Rank1)); change(Castling, sq); }
-    void clearCastling(Square sq) { setCastling(sq); }
+    void op(PieceType::_t ty, Square sq) { op(Index{ty}, sq);}
+    void opCastling(Square sq)  { assert (sq.on(Rank1)); op(Castling, sq); }
+    void opEnPassant(Square sq) { assert (sq.on(Rank4)); op(EnPassant, sq); }
 
-    void setEnPassant(Square sq) { assert (sq.on(Rank4)); change(EnPassant, sq); }
-    void clearEnPassant(Square sq) { setEnPassant(sq); }
-
-    void move(PieceType ty, Square from, Square to) {
+    void move(PieceType::_t ty, Square from, Square to) {
         assert (from != to);
-        clear(ty, from);
-        drop(ty, to);
+        my(ty, from);
+        my(ty, to);
     }
 
     void promote(Square from, PromoType::_t ty, Square to) {
         assert (from.on(Rank7) && to.on(Rank8));
-        clear(Pawn, from);
-        drop(ty, to);
+        my(Pawn, from);
+        my(ty, to);
+    }
+
+    void castle(Square kingFrom, Square kingTo, Square rookFrom, Square rookTo) {
+        assert (kingFrom.on(Rank1) && kingTo.on(Rank1));
+        assert (rookFrom.on(Rank1) && rookTo.on(Rank1));
+        assert (kingFrom != rookFrom);
+        assert (kingTo != rookTo);
+        my(King, kingFrom);
+        my(King, kingTo);
+        my(Rook, rookFrom);
+        my(Rook, rookTo);
     }
 
 };

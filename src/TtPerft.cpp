@@ -33,7 +33,7 @@ class PerftRecordSmall {
     u32_t perft;
 
 public:
-    void set(Z::_t z, Ply d, node_count_t n) {
+    void set(z_t z, Ply d, node_count_t n) {
         assert (small_cast<decltype(perft)>(n) == n);
         perft = static_cast<decltype(perft)>(n);
 
@@ -43,12 +43,12 @@ public:
         assert (getDepth() == d);
     }
 
-    static u32_t makeKey(Z::_t z, Ply d) {
+    static u32_t makeKey(z_t z, Ply d) {
         assert (d == (d & 0xf));
         return ((static_cast<decltype(key)>(z >> 32) | 0xf) ^ 0xf) | (d & 0xf);
     }
 
-    bool isKeyMatch(Z::_t z, Ply d) const {
+    bool isKeyMatch(z_t z, Ply d) const {
         return key == makeKey(z, d);
     }
 
@@ -65,7 +65,7 @@ public:
 class PerftRecord {
     typedef unsigned age_t;
 
-    Z::_t key;
+    z_t key;
     node_count_t nodes;
 
     enum { DepthBits = 6, DepthShift = 64 - DepthBits, AgeShift = DepthShift - HashAge::AgeBits };
@@ -80,7 +80,7 @@ class PerftRecord {
     }
 
 public:
-    bool isKeyMatch(Z::_t z, Ply d) const {
+    bool isKeyMatch(z_t z, Ply d) const {
         return (getKey() == z) && (getDepth() == d);
     }
 
@@ -88,7 +88,7 @@ public:
         return ((nodes & AgeMask) >> AgeShift) == age;
     }
 
-    const Z::_t& getKey() const {
+    const z_t& getKey() const {
         return key;
     }
 
@@ -100,7 +100,7 @@ public:
         return nodes & ~NodesMask;
     }
 
-    void set(Z::_t z, Ply d, node_count_t n, HashAge::_t age) {
+    void set(z_t z, Ply d, node_count_t n, HashAge::_t age) {
         key = z;
         nodes = createNodes(n, d, age);
     }
