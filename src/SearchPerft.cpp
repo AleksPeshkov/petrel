@@ -68,8 +68,10 @@ ReturnStatus PerftNode::visit(Square from, Square to) {
 
         default: {
             assert(draft >= 2);
+            makeZobrist(parent, from, to);
+            root.tt.prefetch(zobrist, 64);
             RETURN_IF_ABORT (root.countNode());
-            makeMove(parent, from, to);
+            makeMoveNoZobrist(parent, from, to);
 
             auto n = static_cast<TtPerft&>(root.tt).get(zobrist, draft - 2);
             if (n != NodeCountNone) {

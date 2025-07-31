@@ -26,6 +26,7 @@ template <typename T>
 constexpr bool isSingleton(T n) { return (n != 0) && (::clearFirst(n) == 0); }
 
 constexpr inline std::uint64_t rotateleft(std::uint64_t b, index_t n) {
+    if  (n == 0) { return b; }
     return b << n | b >> (64 - n);
 }
 
