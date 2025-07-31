@@ -120,29 +120,39 @@ void PositionSide::movePawn(Pi pi, Square from, Square to) {
     assertOk(pi, Pawn, to);
 }
 
-void PositionSide::promote(Pi pi, Square from, PromoType ty, Square to) {
+Pi PositionSide::promote(Pi pawn, Square from, PromoType ty, Square to) {
     assert (from.on(Rank7));
     assert (to.on(Rank8));
-    assertOk(pi, Pawn, from);
+    assert (traits.isPromotable(pawn));
+    assertOk(pawn, Pawn, from);
 
-    squares.move(pi, to);
     piecesBb.move(from, to);
-    pawnsBb -= from;
-
-    types.promote(pi, ty);
     evaluation.promote(from, to, ty);
 
-    assert (traits.isPromotable(pi));
-    traits.clear(pi);
+    // remove pawn
+    pawnsBb -= from;
+    attacks.clear(pawn);
+    squares.clear(pawn);
+    traits.clear(pawn);
+    types.clear(pawn);
+
+    // drop promoted piece to the most valuable if possible
+    //TODO: resort all pieces
+    Pi promo = PieceSet(pieces()).vacantMostValuable();
+    assert (promo <= pawn);
+
+    squares.drop(promo, to);
+    types.drop(promo, static_cast<PieceType::_t>(ty));
 
     if (ty.is(Knight)) {
-        setLeaperAttack(pi, Knight, to);
+        setLeaperAttack(promo, Knight, to);
     }
     else {
-        setPinner(pi, PieceType{ty}, to);
+        setPinner(promo, PieceType{ty}, to);
     }
 
-    assertOk(pi, PieceType{ty}, to);
+    assertOk(promo, PieceType{ty}, to);
+    return promo;
 }
 
 void PositionSide::updateMovedKing(Square to) {
@@ -281,7 +291,7 @@ bool PositionSide::dropValid(PieceType ty, Square to) {
     if (piecesBb.has(to)) { return false; }
     piecesBb += to;
 
-    Pi pi = ty.is(King) ? Pi{TheKing} : (pieces() | Pi{TheKing}).seekVacant();
+    Pi pi = ty.is(King) ? Pi{TheKing} : PieceSet((pieces() | Pi{TheKing})).vacantMostValuable();
 
     evaluation.drop(ty, to);
     types.drop(pi, ty);
