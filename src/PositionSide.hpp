@@ -3,10 +3,9 @@
 
 #include "Evaluation.hpp"
 #include "PiBb.hpp"
+#include "PiSquare.hpp"
 #include "PiTrait.hpp"
 #include "PiType.hpp"
-#include "PiSquare.hpp"
-#include "Zobrist.hpp"
 
 //TRICK: all squares are relative to its own side (so the king piece is initially on E1 square regardless color)
 
@@ -85,9 +84,6 @@ public:
     PiMask affectedBy(Square a, Square b, Square c) const { return affectedBy(a) | affectedBy(b) | affectedBy(c); }
 
     static Score evaluate(const PositionSide&, const PositionSide&);
-
-    //calculate Zobrist key from scratch
-    Zobrist generateZobrist() const;
 
 private:
     void move(Pi, PieceType, Square, Square);
