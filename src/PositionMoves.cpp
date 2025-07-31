@@ -162,9 +162,11 @@ template <Side::_t My>
 void PositionMoves::generateMoves() {
     constexpr Side Op{~My};
     attackedSquares = ~OP.attacksMatrix().gather();
+
+    inCheck = attackedSquares.has(MY.kingSquare());
     assert (OP.checkers().any() == attackedSquares.has(MY.kingSquare()));
 
-    if (OP.checkers().any()) {
+    if (inCheck) {
         generateCheckEvasions<My>();
         return;
     }
@@ -211,8 +213,4 @@ void PositionMoves::makeMoveNoZobrist(PositionMoves* parent, Square from, Square
     parent->moves.clear((*parent)[My].pieceAt(from), to);
     Position::makeMoveNoZobrist(parent, from, to);
     makeMoves();
-}
-
-bool PositionMoves::inCheck() const {
-    return OP.checkers().any();
 }

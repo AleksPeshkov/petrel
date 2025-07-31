@@ -64,7 +64,7 @@ public:
     }
 
     void drop(PieceType ty, Square t) { to(ty, t); }
-    void capture(PieceType ty, Square f) { from(ty, f); }
+    void capture(PieceType ty, Square f) { assert (ty != King); from(ty, f); }
     void move(PieceType ty, Square f, Square t) { assert (f != t); from(ty, f); to(ty, t); }
 
     void promote(Square f, Square t, PromoType ty) {
