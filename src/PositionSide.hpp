@@ -80,6 +80,7 @@ public:
     bool isPromotable(Pi pi) const { assertOk(pi); return traits.isPromotable(pi); }
 
     const PiBb& attacksMatrix() const { return attacks; }
+    Bb attacksOf(Pi pi) const { return attacks[pi]; }
     PiMask attackersTo(Square sq) const { return attacks[sq]; }
     PiMask affectedBy(Square sq) const { return attackersTo(sq); }
     PiMask affectedBy(Square a, Square b) const { return affectedBy(a) | affectedBy(b); }
@@ -103,7 +104,7 @@ friend class Position;
     void movePawn(Pi, Square, Square);
     void moveKing(Square, Square);
     void castle(Square kingFrom, Square kingTo, Pi rook, Square rookFrom, Square rookTo);
-    void promote(Pi, Square, PromoType, Square);
+    Pi promote(Pi, Square, PromoType, Square);
     void capture(Square);
 
     void setEnPassantVictim(Pi);
