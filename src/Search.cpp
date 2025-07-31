@@ -107,6 +107,11 @@ ReturnStatus NodeAb::searchMoves() {
     RETURN_CUTOFF (child->visitIfLegal(root.pvMoves[ply]));
 
     RETURN_CUTOFF (goodCaptures(child));
+    RETURN_CUTOFF (safePromotions(child));
+    RETURN_CUTOFF (notBadCaptures(child));
+    RETURN_CUTOFF (allPromotions(child));
+    RETURN_CUTOFF (allCaptures(child));
+    //TODO: underpromotions
 
     canBeKiller = true;
 
@@ -123,7 +128,16 @@ ReturnStatus NodeAb::searchMoves() {
         RETURN_CUTOFF (child->visitIfLegal( root.counterMove(colorToMove(), ty, move.to()) ));
     }
 
-    // the rest of the remaining unsorted moves
+    // safe non capture moves
+    for (Pi pi : MY.pieces()) {
+        Square from = MY.squareOf(pi);
+
+        for (Square to : moves[pi] % attackedSquares) {
+            RETURN_CUTOFF (child->visit({from, to}));
+        }
+    }
+
+    // all the rest moves
     for (Pi pi : MY.pieces()) {
         Square from = MY.squareOf(pi);
 
@@ -151,55 +165,54 @@ ReturnStatus NodeAb::quiescence() {
     NodeAb node{this};
     const auto child = &node;
 
-    // recapture
-    RETURN_CUTOFF (goodCaptures(child, lastMovedTo));
-
     RETURN_CUTOFF (goodCaptures(child));
+    RETURN_CUTOFF (safePromotions(child));
+    RETURN_CUTOFF (notBadCaptures(child, lastMovedTo));
 
     return ReturnStatus::Continue;
 }
 
 ReturnStatus NodeAb::goodCaptures(NodeAb* child) {
-    // MVV (most valuable victim)
+    // MVV (most valuable victim) order
     for (Pi victim : OP.pieces() % PiMask{TheKing}) {
         Square to = ~OP.squareOf(victim);
         RETURN_CUTOFF (goodCaptures(child, to));
     }
 
-    // non capture promotions
-    for (Pi pi : MY.promotables()) {
-        for (Square to : moves[pi] & Bb{Rank8}) {
-            // skip move to the defended square
-            if (isOpAttacks(to)) { continue; }
+    return ReturnStatus::Continue;
+}
 
-            Square from = MY.squareOf(pi);
-            // to the queen
-            RETURN_CUTOFF( child->visit({from, to}) );
+ReturnStatus NodeAb::notBadCaptures(NodeAb* child) {
+    // MVV (most valuable victim) order
+    for (Pi victim : OP.pieces() % PiMask{TheKing}) {
+        Square to = ~OP.squareOf(victim);
+        RETURN_CUTOFF (notBadCaptures(child, to));
+    }
 
-            // underpromotion to the knight only if it makes check
-            if (attacksFrom(Knight, ~OP.squareOf(TheKing)).has(to)) {
-                Square toKnight{ File{to}, ::rankOf(Knight) };
-                RETURN_CUTOFF( child->visit({from, toKnight}) );
-            }
-        }
+    return ReturnStatus::Continue;
+}
+
+ReturnStatus NodeAb::allCaptures(NodeAb* child) {
+    // MVV (most valuable victim)
+    for (Pi victim : OP.pieces() % PiMask{TheKing}) {
+        Square to = ~OP.squareOf(victim);
+        RETURN_CUTOFF (allCaptures(child, to));
     }
 
     return ReturnStatus::Continue;
 }
 
 ReturnStatus NodeAb::goodCaptures(NodeAb* child, Square to) {
-    assert (OP.piecesSquares().has(~to));
-
     PiMask attackers = moves[to];
+
     if (!to.on(Rank8)) {
         // skip underpromotion pseudo moves
         attackers %= MY.promotables();
     }
     if (attackers.none()) { return ReturnStatus::Continue; }
 
-    bool isVictimProtected = isOpAttacks(to);
+    bool isVictimProtected = attackedSquares.has(to);
     assert (isVictimProtected == OP.attackersTo(~to).any());
-
     if (isVictimProtected) {
         // filter out more valuable attackers than the victim
         attackers &= MY.goodKillers( OP.typeOf(OP.pieceAt(~to)) );
@@ -211,6 +224,76 @@ ReturnStatus NodeAb::goodCaptures(NodeAb* child, Square to) {
 
         Square from = MY.squareOf(attacker);
         RETURN_CUTOFF (child->visit(Move{from, to}));
+    }
+
+    return ReturnStatus::Continue;
+}
+
+ReturnStatus NodeAb::notBadCaptures(NodeAb* child, Square to) {
+    PiMask attackers = moves[to];
+
+    if (!to.on(Rank8)) {
+        // skip underpromotion pseudo moves
+        attackers %= MY.promotables();
+    }
+    if (attackers.none()) { return ReturnStatus::Continue; }
+
+    bool isVictimProtected = attackedSquares.has(to);
+    assert (isVictimProtected == OP.attackersTo(~to).any());
+    if (isVictimProtected) {
+        // filter out more valuable attackers than the victim
+        attackers &= MY.notBadKillers( OP.typeOf(OP.pieceAt(~to)) );
+    }
+
+    while (attackers.any()) {
+        // LVA (least valuable attacker)
+        Pi attacker = attackers.least(); attackers -= attacker;
+
+        Square from = MY.squareOf(attacker);
+        RETURN_CUTOFF (child->visit(Move{from, to}));
+    }
+
+    return ReturnStatus::Continue;
+}
+
+ReturnStatus NodeAb::allCaptures(NodeAb* child, Square to) {
+    PiMask attackers = moves[to];
+    if (!to.on(Rank8)) {
+        // skip underpromotion pseudo moves
+        attackers %= MY.promotables();
+    }
+
+    while (attackers.any()) {
+        // LVA (least valuable attacker)
+        Pi attacker = attackers.least(); attackers -= attacker;
+
+        Square from = MY.squareOf(attacker);
+        RETURN_CUTOFF (child->visit(Move{from, to}));
+    }
+
+    return ReturnStatus::Continue;
+}
+
+// non capture queen promotions to the unattacked squares
+ReturnStatus NodeAb::safePromotions(NodeAb* child) {
+    for (Pi pi : MY.promotables()) {
+        // skip moves to the attacked square
+        for (Square to : moves[pi] % attackedSquares & Bb{Rank8}) {
+            Square from = MY.squareOf(pi);
+            RETURN_CUTOFF( child->visit({from, to}) );
+        }
+    }
+
+    return ReturnStatus::Continue;
+}
+
+// all non capture queen promotions
+ReturnStatus NodeAb::allPromotions(NodeAb* child) {
+    for (Pi pi : MY.promotables()) {
+        for (Square to : moves[pi] & Bb{Rank8}) {
+            Square from = MY.squareOf(pi);
+            RETURN_CUTOFF( child->visit({from, to}) );
+        }
     }
 
     return ReturnStatus::Continue;
