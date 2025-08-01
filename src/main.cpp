@@ -7,6 +7,7 @@
 #include "Evaluation.hpp"
 #include "Hyperbola.hpp"
 #include "PiMask.hpp"
+#include "Thread.hpp"
 #include "Uci.hpp"
 #include "VectorOfAll.hpp"
 
@@ -28,6 +29,11 @@ template <> io::czstring PromoType::The_string{"qrbn"};
 template <> io::czstring Color::The_string{"wb"};
 template <> io::czstring CastlingSide::The_string{"kq"};
 template <> io::czstring Pi::The_string{"KQRrBbNn12345678"};
+
+/*
+* Non constant static initialization
+*/
+ThreadPool Thread::timerPool;
 
 namespace {
 

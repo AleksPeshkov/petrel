@@ -5,10 +5,6 @@
 #include "PositionFen.hpp"
 #include "UciGoLimit.hpp"
 
-void SearchThread::run() {
-    NodeAb{root.position, root}.visitRoot(limit.depth);
-}
-
 ReturnStatus NodeAb::visitRoot(Ply depthLimit) {
     auto rootMovesClone = moves;
 

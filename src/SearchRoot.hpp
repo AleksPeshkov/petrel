@@ -8,8 +8,7 @@
 #include "Repetition.hpp"
 #include "Score.hpp"
 #include "SpinLock.hpp"
-#include "ThreadRun.hpp"
-#include "Timer.hpp"
+#include "Thread.hpp"
 #include "Tt.hpp"
 
 class SearchRoot;
@@ -98,9 +97,8 @@ protected:
     NodeCounter nodeCounter;
 
     TimePoint fromSearchStart;
-    Timer timer;
 
-    ThreadRun searchThread;
+    Thread searchThread;
 
 public:
     SearchRoot (ostream& o) : out{o} {}

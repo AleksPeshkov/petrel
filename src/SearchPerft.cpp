@@ -2,11 +2,6 @@
 #include "SearchRoot.hpp"
 #include "TtPerft.hpp"
 
-void PerftThread::run() {
-    PerftNode rootNode{root.position, root, depth};
-    rootNode.visitRoot(isDivide);
-}
-
 ReturnStatus PerftNode::visitRoot(bool isDivide) {
     ReturnStatus status = isDivide ? searchDivide() : searchMoves();;
 

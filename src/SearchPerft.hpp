@@ -2,20 +2,9 @@
 #define SEARCH_PERFT_HPP
 
 #include "SearchRoot.hpp"
-#include "ThreadRun.hpp"
 #include "UciGoLimit.hpp"
 
 class SearchRoot;
-
-class PerftThread : public Runnable {
-    SearchRoot& root;
-    Ply depth;
-    bool isDivide;
-
-public:
-    PerftThread (SearchRoot& r, Ply d, bool i) : root{r}, depth{d}, isDivide{i} {}
-    void run() override;
-};
 
 class PerftNode : public PositionMoves {
 protected:
