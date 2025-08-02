@@ -1,15 +1,13 @@
-#include "Search.hpp"
+#include "Node.hpp"
 #include "out.hpp"
 #include "AttacksFrom.hpp"
-#include "SearchRoot.hpp"
-#include "PositionFen.hpp"
-#include "UciGoLimit.hpp"
+#include "Uci.hpp"
 
-void SearchThread::run() {
-    NodeAb{root.position, root}.visitRoot(limit.depth);
-}
+#define RETURN_CUTOFF(visitor) { ReturnStatus status = visitor; \
+    if (status == ReturnStatus::Stop) { return ReturnStatus::Stop; } \
+    if (status == ReturnStatus::BetaCutoff) { return ReturnStatus::BetaCutoff; }} ((void)0)
 
-TtSlot::TtSlot (NodeAb* node, Bound b) :
+TtSlot::TtSlot (Node* node, Bound b) :
     zobrist{node->zobrist >> 40},
     score{node->score},
     bound{b},
@@ -19,27 +17,42 @@ TtSlot::TtSlot (NodeAb* node, Bound b) :
 {
     static_assert (sizeof(TtSlot) == sizeof(u64_t));
 }
+Node::Node (NodeRoot& r) :
+    PositionMoves{r}, parent{nullptr}, grandParent{nullptr}, root{r}, ply{0} {}
 
-ReturnStatus NodeAb::visitRoot(Ply depthLimit) {
+Node::Node (Node* n) :
+    PositionMoves{}, parent{n}, grandParent{n->parent}, root{n->root}, ply{n->ply + 1},
+    killer1{grandParent ? grandParent->killer1 : Move{}},
+    killer2{grandParent ? grandParent->killer2 : Move{}}
+{}
+
+
+ReturnStatus Node::searchRoot() {
+    root.newSearch();
+    root.nodeCounter = { root.limits.nodes };
+
     auto rootMovesClone = moves;
-    repMask = root.repetition.getMask(colorToMove());
+    repMask = root.repetitions.getMask(colorToMove());
     origin = root.tt.prefetch<TtSlot>(zobrist);
 
-    for (draft = 1; draft <= depthLimit; ++draft) {
+    for (draft = 1; draft <= root.limits.depth; ++draft) {
         moves = rootMovesClone;
         score = NoScore;
         alpha = MinusInfinity;
         beta = PlusInfinity;
-        BREAK_IF_ABORT ( searchMoves() );
-        root.infoIterationEnd(draft);
+        RETURN_IF_STOP (searchMoves());
+        root.uci.infoIterationEnd(draft);
         root.newIteration();
     }
 
-    root.bestmove();
+    if (root.limits.isInfinite || root.limits.isPonder) {
+        root.uci.waitStop();
+    }
+
     return ReturnStatus::Continue;
 }
 
-ReturnStatus NodeAb::visit(Move move) {
+ReturnStatus Node::visit(Move move) {
     alpha = -parent->beta;
     beta = -parent->alpha;
     assert (MinusInfinity <= alpha && alpha < beta && beta <= PlusInfinity);
@@ -48,7 +61,7 @@ ReturnStatus NodeAb::visit(Move move) {
     score = MinusInfinity;
     draft = parent->draft > 0 ? parent->draft-1 : 0;
 
-    RETURN_IF_ABORT (root.countNode());
+    RETURN_IF_STOP (root.countNode());
     parent->childMove = move;
     makeMove(parent, move);
 
@@ -57,7 +70,7 @@ ReturnStatus NodeAb::visit(Move move) {
 
     if (rule50 <= 1) { repMask = RepetitionMask{}; }
     else if (grandParent) { repMask = RepetitionMask{grandParent->repMask, grandParent->zobrist}; }
-    else { repMask = root.repetition.getMask(colorToMove()); }
+    else { repMask = root.repetitions.getMask(colorToMove()); }
 
     canBeKiller = false;
 
@@ -79,10 +92,10 @@ ReturnStatus NodeAb::visit(Move move) {
         score = DrawScore;
     }
     else if (draft == 0 && !inCheck) {
-        RETURN_IF_ABORT (quiescence());
+        RETURN_IF_STOP (quiescence());
     }
     else {
-        RETURN_IF_ABORT (searchMoves());
+        RETURN_IF_STOP (searchMoves());
         if (movesMade == 0) {
             //checkmated or stalemated
             score = inCheck ? Score::checkmated(ply) : Score{DrawScore};
@@ -92,7 +105,7 @@ ReturnStatus NodeAb::visit(Move move) {
     return parent->negamax(this);
 }
 
-ReturnStatus NodeAb::negamax(NodeAb* child) {
+ReturnStatus Node::negamax(Node* child) {
     assert (MinusInfinity <= alpha && alpha < beta && beta <= PlusInfinity);
 
     auto childScore = -child->score;
@@ -116,7 +129,7 @@ ReturnStatus NodeAb::negamax(NodeAb* child) {
             ++root.tt.writes;
 
             if (ply == 0) {
-                root.infoNewPv(draft, score);
+                root.uci.infoNewPv(draft, score);
             }
         }
     }
@@ -125,7 +138,7 @@ ReturnStatus NodeAb::negamax(NodeAb* child) {
     return ReturnStatus::Continue;
 }
 
-ReturnStatus NodeAb::searchMoves() {
+ReturnStatus Node::searchMoves() {
     // mate-distance pruning
     alpha = std::max(alpha, Score::checkmated(ply));
     beta = std::min(beta, -Score::checkmated(ply)-1);
@@ -133,7 +146,7 @@ ReturnStatus NodeAb::searchMoves() {
 
     assert (MinusInfinity <= alpha && alpha < beta && beta <= PlusInfinity);
 
-    NodeAb node{this};
+    Node node{this};
     const auto child = &node;
 
     canBeKiller = false;
@@ -260,7 +273,7 @@ ReturnStatus NodeAb::searchMoves() {
     return ReturnStatus::Continue;
 }
 
-ReturnStatus NodeAb::quiescence() {
+ReturnStatus Node::quiescence() {
     assert (MinusInfinity <= alpha && alpha < beta && beta <= PlusInfinity);
     assert (!inCheck);
 
@@ -273,7 +286,7 @@ ReturnStatus NodeAb::quiescence() {
         alpha = score;
     }
 
-    NodeAb node{this};
+    Node node{this};
     const auto child = &node;
 
     ttSlot = *origin;
@@ -292,7 +305,7 @@ ReturnStatus NodeAb::quiescence() {
     return ReturnStatus::Continue;
 }
 
-ReturnStatus NodeAb::goodCaptures(NodeAb* child) {
+ReturnStatus Node::goodCaptures(Node* child) {
     // MVV (most valuable victim) order
     for (Pi victim : OP.pieces() % PiMask{TheKing}) {
         Square to = ~OP.squareOf(victim);
@@ -302,7 +315,7 @@ ReturnStatus NodeAb::goodCaptures(NodeAb* child) {
     return ReturnStatus::Continue;
 }
 
-ReturnStatus NodeAb::notBadCaptures(NodeAb* child) {
+ReturnStatus Node::notBadCaptures(Node* child) {
     // MVV (most valuable victim) order
     for (Pi victim : OP.pieces() % PiMask{TheKing}) {
         Square to = ~OP.squareOf(victim);
@@ -312,7 +325,7 @@ ReturnStatus NodeAb::notBadCaptures(NodeAb* child) {
     return ReturnStatus::Continue;
 }
 
-ReturnStatus NodeAb::allCaptures(NodeAb* child) {
+ReturnStatus Node::allCaptures(Node* child) {
     // MVV (most valuable victim)
     for (Pi victim : OP.pieces() % PiMask{TheKing}) {
         Square to = ~OP.squareOf(victim);
@@ -322,7 +335,7 @@ ReturnStatus NodeAb::allCaptures(NodeAb* child) {
     return ReturnStatus::Continue;
 }
 
-ReturnStatus NodeAb::goodCaptures(NodeAb* child, Square to) {
+ReturnStatus Node::goodCaptures(Node* child, Square to) {
     PiMask attackers = moves[to];
 
     if (!to.on(Rank8)) {
@@ -349,7 +362,7 @@ ReturnStatus NodeAb::goodCaptures(NodeAb* child, Square to) {
     return ReturnStatus::Continue;
 }
 
-ReturnStatus NodeAb::notBadCaptures(NodeAb* child, Square to) {
+ReturnStatus Node::notBadCaptures(Node* child, Square to) {
     PiMask attackers = moves[to];
 
     if (!to.on(Rank8)) {
@@ -376,7 +389,7 @@ ReturnStatus NodeAb::notBadCaptures(NodeAb* child, Square to) {
     return ReturnStatus::Continue;
 }
 
-ReturnStatus NodeAb::allCaptures(NodeAb* child, Square to) {
+ReturnStatus Node::allCaptures(Node* child, Square to) {
     PiMask attackers = moves[to];
     if (!to.on(Rank8)) {
         // skip underpromotion pseudo moves
@@ -395,7 +408,7 @@ ReturnStatus NodeAb::allCaptures(NodeAb* child, Square to) {
 }
 
 // non capture queen promotions to the unattacked squares
-ReturnStatus NodeAb::safePromotions(NodeAb* child) {
+ReturnStatus Node::safePromotions(Node* child) {
     for (Pi pi : MY.promotables()) {
         // skip moves to the attacked square
         for (Square to : moves[pi] % attackedSquares & Bb{Rank8}) {
@@ -408,7 +421,7 @@ ReturnStatus NodeAb::safePromotions(NodeAb* child) {
 }
 
 // all non capture queen promotions
-ReturnStatus NodeAb::allPromotions(NodeAb* child) {
+ReturnStatus Node::allPromotions(Node* child) {
     for (Pi pi : MY.promotables()) {
         for (Square to : moves[pi] & Bb{Rank8}) {
             Square from = MY.squareOf(pi);
@@ -419,7 +432,7 @@ ReturnStatus NodeAb::allPromotions(NodeAb* child) {
     return ReturnStatus::Continue;
 }
 
-void NodeAb::updateKillerMove() {
+void Node::updateKillerMove() {
     if (!canBeKiller) { return; }
     if (!parent) { return; }
 
@@ -433,23 +446,23 @@ void NodeAb::updateKillerMove() {
     root.counterMove.set(colorToMove(), ty, move.to(), childMove);
 }
 
-UciMove NodeAb::uciMove(Square from, Square to) const {
-    return UciMove{from, to, isSpecial(from, to), colorToMove(), root.position.getChessVariant()};
+UciMove Node::uciMove(Square from, Square to) const {
+    return UciMove{from, to, isSpecial(from, to), colorToMove(), root.uci.chessVariant()};
 }
 
-Color NodeAb::colorToMove() const {
-    return root.position.getColorToMove(ply);
+Color Node::colorToMove() const {
+    return root.colorToMove(ply);
 }
 
-Score NodeAb::evaluate()
+Score Node::evaluate() const
 {
     return Position::evaluate().clamp();
 }
 
 // insufficient mate material
-bool NodeAb::isDrawMaterial() const {
-    auto& my = root.position[My].evaluation;
-    auto& op = root.position[Op].evaluation;
+bool Node::isDrawMaterial() const {
+    auto& my = root[My].evaluation;
+    auto& op = root[Op].evaluation;
     if (my.piecesMat() + op.piecesMat() > 9) { return false; } // more then queen or 3 minor pieces
     if (my.count(Pawn) | op.count(Pawn) | my.count(Rook) | op.count(Rook)) { return false; }
     assert (my.count(Queen) + op.count(Queen) == 0);
@@ -470,7 +483,7 @@ bool NodeAb::isDrawMaterial() const {
     return true;
 }
 
-bool NodeAb::isRepetition() const {
+bool Node::isRepetition() const {
     if (rule50 < 4) { return false; }
 
     const Z& z = zobrist;
@@ -487,5 +500,5 @@ bool NodeAb::isRepetition() const {
         }
     }
 
-    return root.repetition.has(colorToMove(), z);
+    return root.repetitions.has(colorToMove(), z);
 }

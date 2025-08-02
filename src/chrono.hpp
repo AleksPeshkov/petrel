@@ -3,25 +3,20 @@
 
 #include <chrono>
 using std::chrono::duration_cast;
+using std::chrono::milliseconds;
+using namespace std::chrono_literals;
 
-typedef std::chrono::microseconds TimeInterval; // internal engine time duration unit
-typedef std::chrono::milliseconds Msecs; // UCI time duration unit for input and output
+typedef std::chrono::steady_clock Clock;
+typedef Clock::time_point TimePoint;
+typedef Clock::duration TimeInterval;
 
-template <typename nodes_type, typename duration_type>
-constexpr nodes_type nps(nodes_type nodes, duration_type duration) {
-    return (nodes * duration_type::period::den) / (static_cast<nodes_type>(duration.count()) * duration_type::period::num);
+inline TimeInterval elapsedSince(TimePoint start) {
+    return Clock::now() - start;
 }
 
-class TimePoint {
-    typedef std::chrono::steady_clock clock_type;
-    std::chrono::time_point<clock_type> start;
-
-public:
-    TimePoint () : start( clock_type::now() ) {}
-
-    TimeInterval getDuration() const {
-        return duration_cast<TimeInterval>(clock_type::now() - start);
-    }
-};
+// time point since now
+inline TimePoint timeIn(TimeInterval timeInterval) {
+    return Clock::now() + timeInterval;
+}
 
 #endif
