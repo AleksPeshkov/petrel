@@ -1,5 +1,5 @@
-#ifndef REPETITION_HPP
-#define REPETITION_HPP
+#ifndef REPETITIONS_HPP
+#define REPETITIONS_HPP
 
 #include "typedefs.hpp"
 #include "Zobrist.hpp"
@@ -17,7 +17,7 @@ public:
     constexpr bool has(Zr z) const { return (v & mask(z)) != 0; }
 };
 
-class RepetitionHistory {
+class Repetitions {
     class RepRootSide {
         typedef Index<50> RepIndex;
 
