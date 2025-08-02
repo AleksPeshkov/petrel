@@ -4,9 +4,6 @@
 #include "out.hpp"
 #include "typedefs.hpp"
 
-enum chess_variant_t { Orthodox, Chess960 };
-typedef Index<2, chess_variant_t> ChessVariant;
-
 /**
  * Position independent move is 15 bits with the special move type flag to mark either castling, promotion or en passant move
  * and color of the side to move and chess variant to appropriate format of castling moves

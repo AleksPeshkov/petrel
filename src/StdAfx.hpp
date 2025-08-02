@@ -12,6 +12,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <forward_list>
+#include <functional>
 #include <errno.h>
 #include <iomanip>
 #include <iostream>
