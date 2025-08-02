@@ -25,7 +25,7 @@ void Uci::operator() (io::istream& in, ostream& err) {
         if      (next("go"))        { go(); }
         else if (next("position"))  { position(); }
         else if (next("stop"))      { root.stop(); }
-        else if (next("isready"))   { root.isready(); }
+        else if (next("isready"))   { root.readyok(); }
         else if (next("setoption")) { setoption(); }
         else if (next("set"))       { setoption(); }
         else if (next("ucinewgame")){ ucinewgame(); }
@@ -42,7 +42,7 @@ void Uci::operator() (io::istream& in, ostream& err) {
 }
 
 void Uci::ucinewgame() {
-    if (root.isBusy()) {
+    if (!root.isReady()) {
         io::fail_rewind(command);
         return;
     }
@@ -73,7 +73,7 @@ void Uci::setoption() {
 }
 
 void Uci::setHash() {
-    if (root.isBusy()) {
+    if (!root.isReady()) {
         io::fail_rewind(command);
         return;
     }
@@ -125,7 +125,7 @@ void Uci::position() {
 }
 
 void Uci::go() {
-    if (root.isBusy()) {
+    if (!root.isReady()) {
         io::fail_rewind(command);
         return;
     }
@@ -157,7 +157,7 @@ void Uci::go() {
 }
 
 void Uci::goPerft() {
-    if (root.isBusy()) {
+    if (!root.isReady()) {
         io::fail_rewind(command);
         return;
     }

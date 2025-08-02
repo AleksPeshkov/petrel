@@ -5,10 +5,6 @@
 #include "PositionFen.hpp"
 #include "UciGoLimit.hpp"
 
-void SearchThread::run() {
-    NodeAb{root.position, root}.visitRoot(limit.depth);
-}
-
 ReturnStatus NodeAb::visitRoot(Ply depthLimit) {
     auto rootMovesClone = moves;
 
@@ -17,7 +13,7 @@ ReturnStatus NodeAb::visitRoot(Ply depthLimit) {
         score = NoScore;
         alpha = MinusInfinity;
         beta = PlusInfinity;
-        BREAK_IF_ABORT ( searchMoves() );
+        BREAK_IF_STOP ( searchMoves() );
         root.infoIterationEnd(draft);
         root.newIteration();
     }
@@ -38,7 +34,7 @@ ReturnStatus NodeAb::visit(Move move) {
     score = NoScore;
     draft = parent->draft > 0 ? parent->draft-1 : 0;
 
-    RETURN_IF_ABORT (root.countNode());
+    RETURN_IF_STOP (root.countNode());
     parent->currentMove = parent->uciMove(move);
     makeMove(parent, move);
     ++parent->movesMade;
@@ -61,10 +57,10 @@ ReturnStatus NodeAb::visit(Move move) {
         score = evaluate();
     }
     else if (!inCheck && draft == 0) {
-        RETURN_IF_ABORT (quiescence());
+        RETURN_IF_STOP (quiescence());
     }
     else {
-        RETURN_IF_ABORT (searchMoves());
+        RETURN_IF_STOP (searchMoves());
     }
 
     return parent->negamax(-score);

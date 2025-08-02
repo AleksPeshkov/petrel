@@ -8,14 +8,6 @@
 
 class UciGoLimit;
 
-class SearchThread : public Runnable {
-    SearchRoot& root;
-    const UciGoLimit& limit;
-public:
-    SearchThread (SearchRoot& r, const UciGoLimit& l) : root{r}, limit{l} {}
-    void run() override;
-};
-
 class NodeAb : public PositionMoves {
 protected:
     NodeAb* const parent;

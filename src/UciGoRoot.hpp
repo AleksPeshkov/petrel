@@ -15,9 +15,11 @@ public:
     void goPerft(Ply depth, bool isDivide = false);
 
     void uciok() const;
-    void isready() const;
 
-    bool isBusy() const { return !searchThread.isIdle(); }
+    // inform from input search directly or delegate to search thread
+    void readyok() const;
+
+    bool isReady() const { return searchThread.isReady(); }
     void stop() { searchThread.stop(); }
 
     void newGame();

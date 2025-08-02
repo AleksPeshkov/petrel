@@ -23,10 +23,10 @@ void UciGoRoot::go(const UciGoLimit& limit) {
     newSearch();
     nodeCounter = { limit.nodes };
 
-    auto searchId = searchThread.start(std::make_unique<SearchThread>(static_cast<SearchRoot&>(*this), limit));
+    auto searchId = searchThread.start([this, limit] { NodeAb{position, *this}.visitRoot(limit.depth); });
 
     if (!limit.isInfinite) {
-        timer.start(limit.getThinkingTime(), searchThread, searchId);
+        searchThread.startTimer(searchId, limit.getThinkingTime());
     }
 }
 
@@ -34,7 +34,7 @@ void UciGoRoot::goPerft(Ply depth, bool isDivide) {
     newSearch();
     nodeCounter = {};
 
-    searchThread.start(std::make_unique<PerftThread>(static_cast<SearchRoot&>(*this), depth, isDivide));
+    searchThread.start([this, depth, isDivide] { PerftNode{position, *this, depth}.visitRoot(isDivide); } );
 }
 
 void UciGoRoot::setHash(size_t bytes) {
@@ -52,9 +52,9 @@ void UciGoRoot::uciok() const {
     ob << "uciok\n";
 }
 
-void UciGoRoot::isready() const {
+void UciGoRoot::readyok() const {
     OUTPUT(ob);
-    if (!isBusy()) {
+    if (isReady()) {
         isreadyWaiting = false;
         ob << "readyok\n";
     }
