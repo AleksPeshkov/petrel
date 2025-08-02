@@ -120,7 +120,7 @@ friend class Position;
     bool dropValid(PieceType, Square);
     static void finalSetup(PositionSide&, PositionSide&);
 
-friend class PositionFen;
+friend class UciRoot;
 
     bool setValidCastling(File);
     bool setValidCastling(CastlingSide);

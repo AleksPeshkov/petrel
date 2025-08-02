@@ -6,8 +6,10 @@
 #include "Zobrist.hpp"
 
 class PositionMoves : public Position {
-protected:
+public:
     PiBb moves; //generated moves from My side
+
+protected:
     Bb attackedSquares; //squares attacked by all opponent pieces
     bool inCheck;
 
