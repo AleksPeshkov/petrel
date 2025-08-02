@@ -11,11 +11,17 @@ struct Ply : Index<64> {
     using Index::Index;
 
     Ply(signed ply) : Index{static_cast<_t>(ply)} {}
-    Ply(unsigned ply) : Index{static_cast<_t>(ply)} {}
+    Ply(index_t ply) : Index{static_cast<_t>(ply)} {}
 
     friend io::ostream& operator << (io::ostream& out, Ply ply) { return out << static_cast<unsigned>(ply); }
+    friend io::istream& operator >> (io::istream& in, Ply& ply) {
+        index_t n = Ply::Last;
+        in >> n;
+        ply = { std::min(n, static_cast<index_t>(Ply::Last)) };
+        return in;
+    }
 };
-constexpr Ply::_t MaxPly = Ply::Size - 1; // Ply is limited to [0 .. MaxPly]
+constexpr Ply::_t MaxPly = Ply::Last; // Ply is limited to [0 .. MaxPly]
 
 typedef u8_t MovesNumber; // number of (legal) moves in the position
 
@@ -98,6 +104,17 @@ constexpr PromoType::_t promoTypeFrom(Rank::_t r) { assert (r < 4); return stati
 
 // encoding piece type from move destination square rank
 constexpr PieceType::_t pieceTypeFrom(Rank::_t r) { assert (r < 4); return static_cast<PieceType::_t>(r); }
+
+enum class ReturnStatus {
+    Continue,   // continue search normally
+    Stop,       // immediately stop current
+    BetaCutoff, // inform about beta cuttoff to prune current node
+};
+
+#define RETURN_IF_STOP(visitor) { if (visitor == ReturnStatus::Stop) { return ReturnStatus::Stop; } } ((void)0)
+
+enum chess_variant_t { Orthodox, Chess960 };
+typedef Index<2, chess_variant_t> ChessVariant;
 
 /**
  * Internal move is 12 bits long (packed 'from' and 'to' squares) and linked to the position from it was made
