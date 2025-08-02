@@ -1,8 +1,7 @@
 #include <set>
 
-#include "PositionFen.hpp"
+#include "UciRoot.hpp"
 #include "CastlingRules.hpp"
-#include "Repetition.hpp"
 
 namespace {
 
@@ -28,7 +27,7 @@ class FenToBoard {
 
 public:
     friend istream& read(istream&, FenToBoard&);
-    bool dropPieces(Position& pos, Color colorToMove);
+    bool dropPieces(Position& pos, Color colorToMove_);
 };
 
 istream& read(istream& in, FenToBoard& board) {
@@ -94,7 +93,7 @@ bool FenToBoard::drop(Color color, PieceType ty, Square sq) {
     return true;
 }
 
-bool FenToBoard::dropPieces(Position& position, Color colorToMove) {
+bool FenToBoard::dropPieces(Position& position, Color colorToMove_) {
     //each side should have one king
     FOR_EACH(Color, color) {
         if (pieces[color][King].empty()) { return false; }
@@ -103,7 +102,7 @@ bool FenToBoard::dropPieces(Position& position, Color colorToMove) {
     Position pos;
 
     FOR_EACH(Color, color) {
-        Side side = colorToMove.is(color) ? My : Op;
+        Side side = colorToMove_.is(color) ? My : Op;
 
         FOR_EACH(PieceType, ty) {
             while (!pieces[color][ty].empty()) {
@@ -204,8 +203,8 @@ class EnPassantToFen {
     Rank enPassantRank;
 
 public:
-    EnPassantToFen (const PositionSide& side, Color colorToMove):
-        op{side}, enPassantRank{colorToMove.is(White) ? Rank6 : Rank3} {}
+    EnPassantToFen (const PositionSide& side, Color colorToMove_):
+        op{side}, enPassantRank{colorToMove_.is(White) ? Rank6 : Rank3} {}
 
     friend ostream& operator << (ostream& out, const EnPassantToFen& enPassant) {
         if (!enPassant.op.hasEnPassant()) { return out << '-'; }
@@ -216,24 +215,24 @@ public:
 
 } //end of anonymous namespace
 
-ostream& PositionFen::writeFen(ostream& out) const {
+ostream& UciRoot::writeFen(ostream& out) const {
     auto& whitePieces = (*this)[sideOf(White)];
     auto& blackPieces = (*this)[sideOf(Black)];
 
     out << BoardToFen(whitePieces, blackPieces)
-        << ' ' << colorToMove
-        << ' ' << CastlingToFen{whitePieces, blackPieces, chessVariant}
-        << ' ' << EnPassantToFen{(*this)[Op], colorToMove}
+        << ' ' << colorToMove_
+        << ' ' << CastlingToFen{whitePieces, blackPieces, chessVariant()}
+        << ' ' << EnPassantToFen{(*this)[Op], colorToMove_}
         << ' ' << static_cast<unsigned>(rule50) // halfmove clock
         << ' ' << 1; // fake fullmove number
 
     return out;
 }
 
-istream& PositionFen::readMove(istream& in, Square& from, Square& to) const {
+istream& UciRoot::readMove(istream& in, Square& from, Square& to) const {
     if (!read(in, from) || !read(in, to)) { return in; }
 
-    if (colorToMove.is(Black)) { from.flip(); to.flip(); }
+    if (colorToMove_.is(Black)) { from.flip(); to.flip(); }
 
     if (!MY.has(from)) { return io::fail(in); }
     Pi pi = MY.pieceAt(from);
@@ -282,7 +281,7 @@ istream& PositionFen::readMove(istream& in, Square& from, Square& to) const {
     return in;
 }
 
-void PositionFen::limitMoves(istream& in) {
+void UciRoot::limitMoves(istream& in) {
     PiBb movesMatrix;
     movesMatrix.clear();
     index_t n = 0;
@@ -313,8 +312,8 @@ void PositionFen::limitMoves(istream& in) {
     io::fail_rewind(in);
 }
 
-void PositionFen::playMoves(istream& in, RepetitionHistory& repetition) {
-    repetition.push(colorToMove, zobrist);
+void UciRoot::playMoves(istream& in) {
+    repetitions.push(colorToMove_, zobrist);
 
     while (in >> std::ws && !in.eof()) {
         auto beforeMove = in.tellg();
@@ -326,17 +325,13 @@ void PositionFen::playMoves(istream& in, RepetitionHistory& repetition) {
             return;
         }
 
-        makeMove(from, to);
-        colorToMove.flip();
-
-        if (rule50 == 0) { repetition.clear(); }
-        repetition.push(colorToMove, zobrist);
+        playMove(Move{from, to});
     }
 
-    repetition.normalize(colorToMove);
+    repetitions.normalize(colorToMove_);
 }
 
-istream& PositionFen::readBoard(istream& in) {
+istream& UciRoot::readBoard(istream& in) {
     FenToBoard board;
     if (!read(in, board)) { return in; };
 
@@ -347,25 +342,25 @@ istream& PositionFen::readBoard(istream& in) {
     }
 
     auto beforeColor = in.tellg();
-    if (!read(in, colorToMove)) { return in; }
+    if (!read(in, colorToMove_)) { return in; }
 
     Position pos;
-    if (!board.dropPieces(pos, colorToMove)) { return io::fail_pos(in, beforeColor); }
+    if (!board.dropPieces(pos, colorToMove_)) { return io::fail_pos(in, beforeColor); }
     if (!pos.afterDrop()) { return io::fail_pos(in, beforeColor); }
 
     static_cast<Position&>(*this) = pos;
     return in;
 }
 
-bool PositionFen::setCastling(Side My, File file) {
+bool UciRoot::setCastling(Side My, File file) {
     return MY.setValidCastling(file);
 }
 
-bool PositionFen::setCastling(Side My, CastlingSide castlingSide) {
+bool UciRoot::setCastling(Side My, CastlingSide castlingSide) {
     return MY.setValidCastling(castlingSide);
 }
 
-istream& PositionFen::readCastling(istream& in) {
+istream& UciRoot::readCastling(istream& in) {
     if (in.peek() == '-') { return in.ignore(); }
 
     for (io::char_type c; in.get(c) && !std::isblank(c); ) {
@@ -391,7 +386,7 @@ istream& PositionFen::readCastling(istream& in) {
     return in;
 }
 
-bool PositionFen::setEnPassant(File file) {
+bool UciRoot::setEnPassant(File file) {
     Square to{file, Rank4};
     if (!OP.has(to)) { return false; }
 
@@ -404,21 +399,21 @@ bool PositionFen::setEnPassant(File file) {
     return true;
 }
 
-istream& PositionFen::readEnPassant(istream& in) {
+istream& UciRoot::readEnPassant(istream& in) {
     if (in.peek() == '-') { return in.ignore(); }
 
     Square ep;
 
     auto beforeSquare = in.tellg();
     if (read(in, ep)) {
-        if (!ep.on(colorToMove.is(White) ? Rank6 : Rank3) || !setEnPassant( File(ep) )) {
+        if (!ep.on(colorToMove_.is(White) ? Rank6 : Rank3) || !setEnPassant( File(ep) )) {
             return io::fail_pos(in, beforeSquare);
         }
     }
     return in;
 }
 
-void PositionFen::readFen(istream& in, RepetitionHistory& repetition) {
+void UciRoot::readFen(istream& in) {
     in >> std::ws;
     readBoard(in);
     in >> std::ws;
@@ -436,11 +431,12 @@ void PositionFen::readFen(istream& in, RepetitionHistory& repetition) {
     }
 
     zobrist = generateZobrist();
-    repetition.clear();
+    repetitions.clear();
+    repetitions.push(colorToMove_, zobrist);
     makeMoves();
 }
 
-void PositionFen::setStartpos(RepetitionHistory& repetition) {
+void UciRoot::setStartpos() {
     std::istringstream startpos{"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"};
-    readFen(startpos, repetition);
+    readFen(startpos);
 }
