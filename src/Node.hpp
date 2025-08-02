@@ -1,12 +1,14 @@
-#ifndef SEARCH_HPP
-#define SEARCH_HPP
+#ifndef NODE_HPP
+#define NODE_HPP
 
-#include "SearchRoot.hpp"
+#include "PositionMoves.hpp"
+#include "Repetitions.hpp"
 #include "Score.hpp"
 #include "UciMove.hpp"
 
+class NodeRoot;
 class UciGoLimit;
-class NodeAb;
+class Node;
 
 enum Bound { NoBound, LowerBound, UpperBound, Exact };
 
@@ -22,7 +24,7 @@ class PACKED TtSlot {
 
 public:
     TtSlot () {}
-    TtSlot (NodeAb* node, Bound b);
+    TtSlot (Node* node, Bound b);
 
     bool operator == (Z z) const { return zobrist == (z >> 40); }
     operator Move () const { return {from, to}; }
@@ -31,26 +33,18 @@ public:
     Ply draft() const { return draft_; }
 };
 
-class SearchThread : public Runnable {
-    SearchRoot& root;
-    const UciGoLimit& limit;
-public:
-    SearchThread (SearchRoot& r, const UciGoLimit& l) : root{r}, limit{l} {}
-    void run() override;
-};
-
-class NodeAb : public PositionMoves {
+class Node : public PositionMoves {
 protected:
     friend class TtSlot;
 
-    NodeAb* const parent;
-    NodeAb* const grandParent;
+    Node* const parent;
+    Node* const grandParent;
 
-    SearchRoot& root; /* thread local */
+    NodeRoot& root;
 
     RepetitionMask repMask;
 
-    Ply ply = 0; //distance from root
+    Ply ply; //distance from root
     Ply draft = 0; //remaining depth
 
     TtSlot* origin;
@@ -66,27 +60,27 @@ protected:
     Move childMove = {}; // last move made from this node
     Move killer1 = {}; // first killer move to try at child-child nodes
     Move killer2 = {}; // second killer move to try at child-child nodes
-    bool canBeKiller; // only moves at after killer stage will update killers
+    bool canBeKiller = false; // only moves at after killer stage will update killers
 
-    NodeAb (NodeAb* n) : parent{n}, grandParent{n->parent}, root{n->root}, ply{n->ply + 1} {}
+    Node (Node* n);
 
     ReturnStatus visitIfLegal(Move move) { if (parent->isLegalMove(move)) { return visit(move); } return ReturnStatus::Continue; }
     ReturnStatus visit(Move);
-    ReturnStatus negamax(NodeAb*);
+    ReturnStatus negamax(Node*);
 
     ReturnStatus searchMoves();
     ReturnStatus quiescence();
 
-    ReturnStatus goodCaptures(NodeAb*);
-    ReturnStatus notBadCaptures(NodeAb*);
-    ReturnStatus allCaptures(NodeAb*);
+    ReturnStatus goodCaptures(Node*);
+    ReturnStatus notBadCaptures(Node*);
+    ReturnStatus allCaptures(Node*);
 
-    ReturnStatus goodCaptures(NodeAb*, Square);
-    ReturnStatus notBadCaptures(NodeAb*, Square);
-    ReturnStatus allCaptures(NodeAb*, Square);
+    ReturnStatus goodCaptures(Node*, Square);
+    ReturnStatus notBadCaptures(Node*, Square);
+    ReturnStatus allCaptures(Node*, Square);
 
-    ReturnStatus safePromotions(NodeAb*);
-    ReturnStatus allPromotions(NodeAb*);
+    ReturnStatus safePromotions(Node*);
+    ReturnStatus allPromotions(Node*);
 
     UciMove uciMove(Move move) const { return uciMove(move.from(), move.to()); }
     UciMove uciMove(Square from, Square to) const;
@@ -94,13 +88,13 @@ protected:
     void updateKillerMove();
 
     Color colorToMove() const;
-    Score evaluate();
     bool isDrawMaterial() const;
     bool isRepetition() const;
 
 public:
-    NodeAb (const PositionMoves& p, SearchRoot& r) : PositionMoves{p}, parent{nullptr}, grandParent{nullptr}, root{r} {}
-    ReturnStatus visitRoot(Ply);
+    Node (NodeRoot& r);
+    ReturnStatus searchRoot();
+    Score evaluate() const;
 };
 
 #endif
