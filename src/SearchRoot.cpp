@@ -126,7 +126,7 @@ ReturnStatus NodeCounter::refreshQuota(const SearchRoot& root) {
         nodesQuota = static_cast<decltype(nodesQuota)>(nodesRemaining);
         if (nodesQuota == 0) {
             assertOk();
-            return ReturnStatus::Abort;
+            return ReturnStatus::Stop;
         }
     }
 
@@ -135,7 +135,7 @@ ReturnStatus NodeCounter::refreshQuota(const SearchRoot& root) {
         nodesQuota = 0;
 
         assertOk();
-        return ReturnStatus::Abort;
+        return ReturnStatus::Stop;
     }
 
     assert (0 < nodesQuota && nodesQuota <= QuotaLimit);

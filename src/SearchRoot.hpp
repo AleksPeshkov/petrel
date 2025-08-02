@@ -8,22 +8,21 @@
 #include "Repetition.hpp"
 #include "Score.hpp"
 #include "SpinLock.hpp"
-#include "ThreadRun.hpp"
-#include "Timer.hpp"
+#include "Thread.hpp"
 #include "Tt.hpp"
 
 class SearchRoot;
 
 enum class ReturnStatus {
-    Continue,
-    Abort,
-    BetaCutoff,
+    Continue,   // continue search normally
+    Stop,       // immediately stop current
+    BetaCutoff, // inform about beta cuttoff to prune current node
 };
 
-#define RETURN_IF_ABORT(visitor) { if (visitor == ReturnStatus::Abort) { return ReturnStatus::Abort; } } ((void)0)
-#define BREAK_IF_ABORT(visitor) { if (visitor == ReturnStatus::Abort) { break; } } ((void)0)
+#define RETURN_IF_STOP(visitor) { if (visitor == ReturnStatus::Stop) { return ReturnStatus::Stop; } } ((void)0)
+#define BREAK_IF_STOP(visitor) { if (visitor == ReturnStatus::Stop) { break; } } ((void)0)
 #define RETURN_CUTOFF(visitor) { ReturnStatus status = visitor; \
-    if (status == ReturnStatus::Abort) { return ReturnStatus::Abort; } \
+    if (status == ReturnStatus::Stop) { return ReturnStatus::Stop; } \
     if (status == ReturnStatus::BetaCutoff) { return ReturnStatus::BetaCutoff; }} ((void)0)
 
 class HistoryMoves {
@@ -98,14 +97,15 @@ protected:
     NodeCounter nodeCounter;
 
     TimePoint fromSearchStart;
-    Timer timer;
 
-    ThreadRun searchThread;
+    Thread searchThread;
 
 public:
     SearchRoot (ostream& o) : out{o} {}
 
     bool isStopped() const { return searchThread.isStopped(); }
+
+    // inform from inside search thread
     void readyok() const;
 
     void newIteration();
