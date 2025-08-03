@@ -7,7 +7,8 @@
 #include <type_traits>
 #include "types.hpp"
 
-#define CACHE_ALIGN  __attribute__((__aligned__(64)))
+#define CACHE_ALIGN __attribute__((__aligned__(64)))
+#define PACKED __attribute__((packed))
 
 template <typename T>
 constexpr T universe() { return static_cast<T>(~static_cast<T>(0)); }
