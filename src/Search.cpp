@@ -53,7 +53,17 @@ ReturnStatus NodeAb::visit(Move move) {
 
     bool inCheck = NodeAb::inCheck();
 
-    if (ply == MaxPly) {
+    if (moves.popcount() == 0) {
+        //checkmated or stalemated
+        score = inCheck ? Score::checkmated(ply) : Score{DrawScore};
+    }
+    else if (!inCheck && isDrawMaterial()) {
+        score = DrawScore;
+    }
+    else if (rule50 >= 100 || isRepetition()) {
+        score = DrawScore;
+    }
+    else if (ply == MaxPly) {
         // no room to search deeper
         score = evaluate();
     }
@@ -243,6 +253,30 @@ Color NodeAb::colorToMove() const {
 Score NodeAb::evaluate()
 {
     return Position::evaluate().clamp();
+}
+
+// insufficient mate material
+bool NodeAb::isDrawMaterial() const {
+    auto& my = MY.evaluation;
+    auto& op = OP.evaluation;
+    if (my.piecesMat() + op.piecesMat() > 9) { return false; } // more then queen or 3 minor pieces
+    if (my.count(Pawn) | op.count(Pawn) | my.count(Rook) | op.count(Rook)) { return false; }
+    assert (my.count(Queen) + op.count(Queen) == 0);
+
+    // here we should have only 0, 1, 2 or 3 minor pieces total of both sides
+    auto myMinors = my.count(Knight) + my.count(Bishop);
+    auto opMinors = op.count(Knight) + op.count(Bishop);
+
+    // we ignore the case of same color bishops
+    if (myMinors >= 2) {
+        if (myMinors == 3 || my.count(Bishop) == 2) { return false; }
+        if (my.count(Bishop) == 1 && opMinors == 0) { return false; } // knight and bishop
+    } else if (opMinors >= 2) {
+        if (opMinors == 3 || op.count(Bishop) == 2) { return false; }
+        if (op.count(Bishop) == 1 && myMinors == 0) { return false; } // knight and bishop
+    }
+
+    return true;
 }
 
 bool NodeAb::isRepetition() const {

@@ -14,22 +14,9 @@ typedef Index<2, chess_variant_t> ChessVariant;
  * Any move's squares coordinates are relative to its side. Black side's move should flip squares before printing.
  **/
 class UciMove : public Move {
-    enum move_type_t {
-        Normal, // normal move or capture
-        Special // castling, promotion or en passant capture
-    };
-    typedef Index<2, move_type_t> MoveType;
-
-    Color::_t color:1;
-    ChessVariant::_t variant:1;
-    MoveType::_t type:1;
-
 public:
-    // null move
-    constexpr UciMove () : Move{}, color{White}, variant{Orthodox}, type{Normal} {}
-
-    constexpr UciMove(Square from, Square to, bool isSpecial, Color c, ChessVariant v = Orthodox)
-        : Move{from, to}, color{c}, variant{v}, type{isSpecial ? Special : Normal} {}
+    constexpr UciMove () : Move{} { static_assert (sizeof(UciMove) == sizeof(int16_t));}
+    constexpr UciMove (Square f, Square t, bool s, Color c, ChessVariant v = Orthodox) : Move(f, t, s, c, v) {}
 
     friend out::ostream& operator << (out::ostream&, const UciMove&);
     friend out::ostream& operator << (out::ostream&, const UciMove[]);
