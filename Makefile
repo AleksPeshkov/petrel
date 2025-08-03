@@ -25,19 +25,20 @@ CXXFLAGS += -fno-exceptions -fno-rtti
 
 WARNINGS += -Wall -Wpedantic -Wextra
 WARNINGS += -Wno-ignored-attributes
-WARNINGS += -Wuninitialized -Wcast-qual -Wconversion -Wshadow -Wmissing-declarations -Wstrict-aliasing=1 -Wstrict-overflow=5
+WARNINGS += -Wuninitialized -Wcast-qual -Wshadow -Wmissing-declarations -Wstrict-aliasing=1 -Wstrict-overflow=5 -Wsign-promo
 WARNINGS += -Wpacked -Wdisabled-optimization -Wredundant-decls -Winvalid-constexpr -Wextra-semi -Wsuggest-override
-#WARNINGS += -Winline -Wsign-promo
+#WARNINGS += -Winline
 
 ifeq ($(CXX), g++)
-	WARNINGS += -Wno-class-memaccess -flax-vector-conversions
+	CXXFLAGS += -flax-vector-conversions
+	WARNINGS += -Wno-class-memaccess -Wno-packed-bitfield-compat
 	WARNINGS += -Wuseless-cast -Wcast-align=strict -Wunsafe-loop-optimizations -Wsuggest-final-types -Wsuggest-final-methods
 	WARNINGS += -Wnormalized -Wvector-operation-performance
 endif
 
 ifeq ($(CXX), clang)
 	CXXFLAGS += -ferror-limit=10
-	WARNINGS += -Wcast-align -Wconditional-uninitialized -Wmissing-prototypes
+	WARNINGS += -Wcast-align -Wconditional-uninitialized -Wmissing-prototypes -Wconversion
 endif
 
 CXXFLAGS += $(OPTIMIZATIONS) $(WARNINGS)
