@@ -37,7 +37,7 @@ enum side_to_move_t {
     Op  // opposite to side to move
 };
 typedef Index<2, side_to_move_t> Side;
-constexpr Side::_t operator ~ (Side::_t my) { return static_cast<Side::_t>(my ^ Side::Mask); }
+constexpr Side::_t operator ~ (Side::_t my) { return static_cast<Side::_t>(my ^ static_cast<Side::_t>(Side::Mask)); }
 
 enum castling_side_t { KingSide, QueenSide };
 typedef Index<2, castling_side_t> CastlingSide;

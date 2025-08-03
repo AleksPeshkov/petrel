@@ -60,12 +60,12 @@ protected:
 public:
     constexpr Square (File file, Rank rank) : Index{static_cast<_t>(file + (rank << RankShift))} {}
 
-    constexpr explicit operator File() const { return static_cast<File::_t>(v & File::Mask); }
+    constexpr explicit operator File() const { return static_cast<File::_t>(v & static_cast<_t>(File::Mask)); }
     constexpr explicit operator Rank() const { return static_cast<Rank::_t>(static_cast<unsigned>(v) >> RankShift); }
 
     /// flip side of the board
-    Square& flip() { v = static_cast<_t>(v ^ RankMask); return *this; }
-    constexpr Square operator ~ () const { return static_cast<_t>(v ^ RankMask); }
+    Square& flip() { v = static_cast<_t>(static_cast<unsigned>(v) ^ RankMask); return *this; }
+    constexpr Square operator ~ () const { return static_cast<_t>(v ^ static_cast<_t>(RankMask)); }
 
     /// move pawn forward
     constexpr Square rankForward() const { return static_cast<_t>(v + A8 - A7); }
