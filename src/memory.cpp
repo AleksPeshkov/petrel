@@ -1,21 +1,6 @@
 #include <cstdlib>
-#include "memory.hpp"
-
-#ifdef _WIN32
-
-#include <windows.h>
-size_t getAvailableMemory() {
-    MEMORYSTATUSEX status;
-    status.dwLength = sizeof(status);
-    status.ullAvailPhys = 0;
-
-    ::GlobalMemoryStatusEx(&status);
-    return status.ullAvailPhys;
-}
-
-#else
-
 #include <unistd.h>
+#include "memory.hpp"
 
 size_t getPageSize() {
     return static_cast<size_t>(::sysconf(_SC_PAGESIZE));
@@ -31,8 +16,6 @@ size_t getAvailableMemory() {
 
     return 0;
 }
-
-#endif
 
 void* allocateAligned(size_t size, size_t alignment) {
 #ifdef _ISOC11_SOURCE

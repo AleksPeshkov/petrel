@@ -22,7 +22,7 @@ endif
 TARGET ?= $(BUILD_DIR)/$(EXE)
 EXPECT ?= $(TEST_DIR)/expect.sh
 
-CXXFLAGS += -std=c++17 -mssse3 -march=native -mtune=native
+CXXFLAGS += -std=c++23 -mssse3 -march=native -mtune=native
 CXXFLAGS += -fno-exceptions -fno-rtti
 
 WARNINGS += -Wall -Wpedantic -Wextra
@@ -32,8 +32,9 @@ WARNINGS += -Wpacked -Wdisabled-optimization -Wredundant-decls -Winvalid-constex
 #WARNINGS += -Winline -Wsign-promo
 
 ifeq ($(CXX), g++)
-	CXXFLAGS +=
-	WARNINGS += -Wuseless-cast -Wcast-align=strict -Wunsafe-loop-optimizations -Wsuggest-final-types -Wsuggest-final-methods -Wnormalized -Wvector-operation-performance
+	WARNINGS += -Wno-class-memaccess
+	WARNINGS += -Wuseless-cast -Wcast-align=strict -Wunsafe-loop-optimizations -Wsuggest-final-types -Wsuggest-final-methods
+	WARNINGS += -Wnormalized -Wvector-operation-performance
 endif
 
 ifeq ($(CXX), clang)

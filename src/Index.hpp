@@ -35,7 +35,7 @@ public:
     constexpr Index& operator ++ () { assertOk(); v = static_cast<_t>(v+1); return *this; }
     constexpr Index& operator -- () { v = static_cast<_t>(v-1); assertOk(); return *this; }
 
-    constexpr Index& flip() { assertOk(); v = static_cast<_t>(v ^ Mask); return *this; }
+    constexpr Index& flip() { assertOk(); v = static_cast<_t>(v ^ static_cast<_t>(Mask)); return *this; }
     constexpr Index operator ~ () const { return Index{v}.flip(); }
 
     constexpr io::char_type to_char() const { return The_string[v]; }

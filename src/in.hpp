@@ -2,8 +2,8 @@
 #define IN_HPP
 
 #include <cctype>
-#include <iostream>
 #include <iomanip>
+#include <iostream>
 #include <sstream>
 
 namespace in {
