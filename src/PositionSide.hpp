@@ -19,8 +19,10 @@ class PositionSide {
     Bb piecesBb; //squares of current side pieces
     Bb pawnsBb; //squares of current side pawns
 
+public:
     Evaluation evaluation; //PST incremental evaluation
 
+private:
     Square opKing; //location of the opponent's king, needed for detecting checking and pinning pieces traits
 
 public:

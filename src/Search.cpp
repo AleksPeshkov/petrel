@@ -36,7 +36,6 @@ ReturnStatus NodeAb::visit(Move move) {
     alpha = std::max(alpha, Score::checkmated(ply));
     if (alpha >= beta) { return ReturnStatus::BetaCutoff; }
 
-    score = NoScore;
     draft = parent->draft > 0 ? parent->draft-1 : 0;
 
     RETURN_IF_ABORT (root.countNode());
@@ -53,22 +52,23 @@ ReturnStatus NodeAb::visit(Move move) {
 
     bool inCheck = NodeAb::inCheck();
 
-    if (ply == MaxPly) {
+    if (moves.popcount() == 0) {
+        //checkmated or stalemated
+        score = inCheck ? Score::checkmated(ply) : Score{DrawScore};
+    }
+    else if (rule50 >= 100 || isRepetition() || isDrawMaterial()) {
+        score = DrawScore;
+    }
+    else if (ply == MaxPly) {
         // no room to search deeper
         score = evaluate();
-    }
-    else if (isRepetition()) {
-        score = DrawScore;
     }
     else if (draft == 0 && !inCheck) {
         RETURN_IF_ABORT (quiescence());
     }
     else {
+        score = NoScore;
         RETURN_IF_ABORT (searchMoves());
-        if (movesMade == 0) {
-            //checkmated or stalemated
-            score = inCheck ? Score::checkmated(ply) : Score{DrawScore};
-        }
     }
 
     return parent->negamax(-score);
@@ -243,6 +243,40 @@ Color NodeAb::colorToMove() const {
 Score NodeAb::evaluate()
 {
     return Position::evaluate().clamp();
+}
+
+// insufficient mate material
+bool NodeAb::isDrawMaterial() const {
+    auto& my = MY.evaluation;
+    auto& op = OP.evaluation;
+
+    if (my.hasMatingPieces() || op.hasMatingPieces()) { return false; }
+
+    auto myBishops = my.count(Bishop);
+    auto opBishops = op.count(Bishop);
+
+    // here both sides can have only minors pieces
+    auto myMinors = my.count(Knight) + myBishops;
+    auto opMinors = op.count(Knight) + opBishops;
+
+    if (myMinors >= 2 || opMinors >= 2) { return false; }
+
+    // lone minor cannot mate
+    if (myMinors <= 1 && opMinors <= 1) { return true; }
+
+    // myMinors:opMinors == 2:1 | 1:2 | 2:0 | 0:2
+    if (myMinors == 2) {
+        if (myBishops == 0) { return true; }
+        if (myBishops == 1 && opMinors == 1) { return true; }
+        if (myBishops == 2 && opBishops == 1) { return true; }
+    } else {
+        assert (opMinors == 2);
+        if (opBishops == 0) { return true; }
+        if (opBishops == 1 && myMinors == 1) { return true; }
+        if (opBishops == 2 && myBishops == 1) { return true; }
+    }
+
+    return false;
 }
 
 bool NodeAb::isRepetition() const {
