@@ -5,8 +5,6 @@
 #include "Bb.hpp"
 #include "VectorOfAll.hpp"
 
-typedef u64_t u64x2_t __attribute__((vector_size(16)));
-
 class BitReverse {
 public:
     constexpr vu8x16_t bitSwap(vu8x16_t v) const {
@@ -22,7 +20,7 @@ public:
         return shufflevector(v, _byteSwap);
     }
 
-    constexpr u64x2_t operator() (u64x2_t v) const {
+    constexpr vu64x2_t operator() (vu64x2_t v) const {
         return byteSwap(bitSwap(v));
     }
 
@@ -33,21 +31,21 @@ extern const BitReverse bitReverse;
 //TRICK: Square operator~ is different
 constexpr Square reverse(Square sq) { return { ~File{sq}, ~Rank{sq} }; }
 
-struct HyperbolaSq : Square::arrayOf<u64x2_t> {
+struct HyperbolaSq : Square::arrayOf<vu64x2_t> {
     HyperbolaSq () {
         FOR_EACH(Square, sq) {
-            (*this)[sq] = u64x2_t{ Bb{sq}, Bb{::reverse(sq)} };
+            (*this)[sq] = vu64x2_t{ Bb{sq}, Bb{::reverse(sq)} };
         }
     }
 };
 extern const HyperbolaSq hyperbolaSq;
 
-struct alignas(64) HyperbolaDir : Square::arrayOf<Direction::arrayOf<u64x2_t>> {
+struct alignas(64) HyperbolaDir : Square::arrayOf<Direction::arrayOf<vu64x2_t>> {
     HyperbolaDir () {
         FOR_EACH(Square, sq) {
             Square rsq = reverse(sq);
             FOR_EACH(Direction, dir) {
-                (*this)[sq][dir] = u64x2_t{sq.line(dir), rsq.line(dir)};
+                (*this)[sq][dir] = vu64x2_t{sq.line(dir), rsq.line(dir)};
             }
         }
     }
@@ -60,12 +58,12 @@ extern const HyperbolaDir hyperbolaDir;
  * https://www.chessprogramming.org/Hyperbola_Quintessence
  */
 class Hyperbola {
-    u64x2_t occupied;
+    vu64x2_t occupied;
 
-    constexpr static u64x2_t hyperbola(u64x2_t v) { return v ^ ::bitReverse(v); }
+    constexpr static vu64x2_t hyperbola(vu64x2_t v) { return v ^ ::bitReverse(v); }
 
 public:
-    explicit Hyperbola (Bb bb) : occupied{ hyperbola(u64x2_t{bb, 0}) } {}
+    explicit Hyperbola (Bb bb) : occupied{ hyperbola(vu64x2_t{bb, 0}) } {}
 
     constexpr Bb attack(SliderType ty, Square from) const {
         const auto& sq = hyperbolaSq[from];
@@ -88,7 +86,7 @@ public:
             result |= ((occupied & a) - sq) & a;
         }
 
-        union { u64x2_t u64x2; u64_t u64[2]; } bb = { hyperbola(result) };
+        union { vu64x2_t u64x2; u64_t u64[2]; } bb = { hyperbola(result) };
 
         return Bb{ bb.u64[0] };
     }

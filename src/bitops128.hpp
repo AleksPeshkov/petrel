@@ -5,7 +5,8 @@
 #include "bitops.hpp"
 
 typedef __m128i i128_t;
-typedef u8_t vu8x16_t __attribute__((vector_size(16)));
+typedef u8_t  vu8x16_t __attribute__((vector_size(16)));
+typedef u64_t vu64x2_t __attribute__((vector_size(16)));
 
 template <typename vector_type>
 inline constexpr vector_type shufflevector(vector_type vector, vector_type mask) {
