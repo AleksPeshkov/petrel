@@ -4,16 +4,14 @@ CXX = clang++
 EXE = petrel
 
 SRCDIR ?= src
-DEBUG_DIR ?= debug
+BUILD_DIR ?= build
 RELEASE_DIR ?= release
 TEST_DIR ?= test
 
 ifeq ($(debug),yes)
-	BUILD_DIR = $(DEBUG_DIR)
 	CXXFLAGS += -DDEBUG -ggdb
 	OPTIMIZATIONS = -Og -O0
 else
-	BUILD_DIR = $(RELEASE_DIR)
 #	CXXFLAGS += -DNDEBUG
 	CXXFLAGS += -DDEBUG -ggdb
 	OPTIMIZATIONS = -Ofast -flto -finline-functions
@@ -77,7 +75,7 @@ endif
 all: _clear_console $(TARGET)
 
 clean:
-	$(RM) -r $(DEBUG_DIR) $(RELEASE_DIR)
+	$(RM) -r $(BUILD_DIR)
 
 _clear_console:
 	clear
