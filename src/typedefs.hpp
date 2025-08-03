@@ -65,6 +65,9 @@ enum side_to_move_t {
 typedef Index<2, side_to_move_t> Side;
 constexpr Side::_t operator ~ (Side::_t my) { return static_cast<Side::_t>(my ^ static_cast<Side::_t>(Side::Mask)); }
 
+enum chess_variant_t { Orthodox, Chess960 };
+typedef Index<2, chess_variant_t> ChessVariant;
+
 enum castling_side_t { KingSide, QueenSide };
 typedef Index<2, castling_side_t> CastlingSide;
 template <> io::czstring CastlingSide::The_string;
@@ -107,26 +110,43 @@ constexpr PieceType::_t pieceTypeFrom(Rank::_t r) { assert (r < 4); return stati
  * En passant capture encoded as the pawn moves over captured pawn square.
  * Null move is encoded as 0 {A8A8}
  **/
-class Move {
-    Square::_t _from:6;
-    Square::_t _to:6;
+class PACKED Move {
+public:
+    enum move_type_t {
+        Normal, // normal move or capture
+        Special // castling, promotion or en passant capture
+    };
+    typedef Index<2, move_type_t> MoveType;
+
+protected:
+    Square::_t from_:6 = static_cast<Square::_t>(0);
+    Square::_t to_:6 = static_cast<Square::_t>(0);
+
+    // used by UciMove declared here to pack all bit fields
+    Color::_t color:1 = White;
+    ChessVariant::_t variant:1 = Orthodox;
+    MoveType::_t type:1 = Normal;
+
+    // UciMove constructor
+    constexpr Move(Square f, Square t, bool s, Color c, ChessVariant v)
+        : from_{f}, to_{t}, color{c}, variant{v}, type{s ? Special : Normal} {}
 
 public:
     // null move
-    constexpr Move () : _from{static_cast<Square::_t>(0)}, _to{static_cast<Square::_t>(0)} {}
+    constexpr Move () = default;
 
-    constexpr Move (Square f, Square t) : _from{f}, _to{t} {}
+    constexpr Move (Square f, Square t) : from_{f}, to_{t} { static_assert (sizeof(Move) == sizeof(int16_t)); }
 
     // check if move is not null
-    constexpr operator bool() const { return !(_from == 0 && _to == 0); }
+    constexpr operator bool() const { return !(from_ == 0 && to_ == 0); }
 
     // source square the piece moved from
-    constexpr Square from() const { return _from; }
+    constexpr Square from() const { return from_; }
 
     // destination square the piece moved to
-    constexpr Square to() const { return _to; }
+    constexpr Square to() const { return to_; }
 
-    friend constexpr bool operator == (Move a, Move b) { return a._from == b._from && a._to == b._to; }
+    friend constexpr bool operator == (Move a, Move b) { return a.from_ == b.from_ && a.to_ == b.to_; }
     friend constexpr bool operator != (Move a, Move b) { return !(a == b); }
 };
 
