@@ -9,9 +9,21 @@ void SearchThread::run() {
     NodeAb{root.position, root}.visitRoot(limit.depth);
 }
 
+TtSlot::TtSlot (NodeAb* node, Bound b) :
+    zobrist{node->zobrist >> 40},
+    score{node->score},
+    bound{b},
+    from{node->childMove.from()},
+    to{node->childMove.to()},
+    draft_{node->draft}
+{
+    static_assert (sizeof(TtSlot) == sizeof(u64_t));
+}
+
 ReturnStatus NodeAb::visitRoot(Ply depthLimit) {
     auto rootMovesClone = moves;
     repMask = root.repetition.repMask(colorToMove());
+    origin = root.tt.prefetch<TtSlot>(zobrist);
 
     for (draft = 1; draft <= depthLimit; ++draft) {
         moves = rootMovesClone;
@@ -38,6 +50,8 @@ ReturnStatus NodeAb::visit(Move move) {
     parent->childMove = move;
     makeMove(parent, move);
     root.pvMoves.set(ply, UciMove{});
+
+    origin = root.tt.prefetch<TtSlot>(zobrist);
     ++parent->movesMade;
 
     if (rule50 <= 1) { repMask = RepetitionMask{}; }
@@ -78,6 +92,8 @@ ReturnStatus NodeAb::negamax(Score lastScore) {
         if (score >= beta) {
             //beta cut off
             updateKillerMove();
+            *origin = TtSlot{this, UpperBound};
+            ++root.tt.writes;
             return ReturnStatus::BetaCutoff;
         }
 
@@ -85,6 +101,9 @@ ReturnStatus NodeAb::negamax(Score lastScore) {
             alpha = score;
 
             root.pvMoves.set(ply, uciMove(childMove));
+            *origin = TtSlot{this, Exact};
+            ++root.tt.writes;
+
             if (ply == 0) {
                 root.infoNewPv(draft, score);
             }
@@ -107,7 +126,16 @@ ReturnStatus NodeAb::searchMoves() {
     NodeAb node{this};
     const auto child = &node;
 
-    RETURN_CUTOFF (child->visitIfLegal(root.pvMoves[ply]));
+    canBeKiller = false;
+
+    ++root.tt.reads;
+    ttSlot = *origin;
+
+    isHit = (ttSlot == zobrist);
+    if (isHit) {
+        ++root.tt.hits;
+        RETURN_CUTOFF (child->visitIfLegal(ttSlot));
+    }
 
     RETURN_CUTOFF (goodCaptures(child));
     RETURN_CUTOFF (safePromotions(child));
@@ -222,6 +250,15 @@ ReturnStatus NodeAb::quiescence() {
 
     NodeAb node{this};
     const auto child = &node;
+
+    ttSlot = *origin;
+    ++root.tt.reads;
+
+    isHit = (ttSlot == zobrist);
+    if (isHit) {
+        ++root.tt.hits;
+        RETURN_CUTOFF (child->visitIfLegal(ttSlot));
+    }
 
     RETURN_CUTOFF (goodCaptures(child));
     RETURN_CUTOFF (safePromotions(child));

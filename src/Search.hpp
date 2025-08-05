@@ -6,6 +6,30 @@
 #include "UciMove.hpp"
 
 class UciGoLimit;
+class NodeAb;
+
+enum Bound { NoBound, LowerBound, UpperBound, Exact };
+
+class PACKED TtSlot {
+    z_t     zobrist:24;
+    Score::_t score:14;
+    Bound     bound:2;
+    Square::_t from:6;
+    Square::_t   to:6;
+    Ply::_t   draft_:6;
+
+    static inline constexpr z_t zMask = ::singleton<z_t>(40) - 1;
+
+public:
+    TtSlot () {}
+    TtSlot (NodeAb* node, Bound b);
+
+    bool operator == (Z z) const { return zobrist == (z >> 40); }
+    operator Move () const { return {from, to}; }
+    operator Score () const { return {score}; }
+    operator Bound () const { return bound; }
+    Ply draft() const { return draft_; }
+};
 
 class SearchThread : public Runnable {
     SearchRoot& root;
@@ -17,6 +41,8 @@ public:
 
 class NodeAb : public PositionMoves {
 protected:
+    friend class TtSlot;
+
     NodeAb* const parent;
     NodeAb* const grandParent;
 
@@ -26,6 +52,10 @@ protected:
 
     Ply ply = 0; //distance from root
     Ply draft = 0; //remaining depth
+
+    TtSlot* origin;
+    TtSlot  ttSlot;
+    bool isHit = false;
 
     Score score = NoScore;
     Score alpha = MinusInfinity;
