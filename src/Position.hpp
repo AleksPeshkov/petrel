@@ -14,13 +14,17 @@ class Position {
     Side::arrayOf<PositionSide> positionSide; //copied from the parent, updated incrementally
     Side::arrayOf<Bb> occupiedBb; // both color pieces combined, recalculated after each move
 
-    enum UpdateZobrist { NoZobrist, WithZobrist };
+protected:
+    Zobrist zobrist; // incrementally updated position hash
+    Square lastPieceTo; // last moved piece actual destination square (rook square in case of castling or en passant capture pawn square)
 
+private:
     template <Side::_t> void updateSliderAttacks(PiMask);
     template <Side::_t> void updateSliderAttacks(PiMask, PiMask);
+
+    enum UpdateZobrist { NoZobrist, WithZobrist };
     template <Side::_t, UpdateZobrist = WithZobrist> void makeMove(Square, Square);
 
-    Zobrist zobrist; // incrementally updated position hash
     Zobrist createZobrist(Square, Square) const;
     Zobrist generateZobrist() const;
 
