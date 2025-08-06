@@ -49,7 +49,7 @@ enum square_t {
 };
 
 class Bb;
-struct Square : Index<64, square_t, Square> {
+struct Square : Index<64, square_t> {
     enum { RankShift = 3, RankMask = (Rank::Mask << RankShift) };
 
     using Index::Index;

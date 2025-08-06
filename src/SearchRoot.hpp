@@ -4,6 +4,7 @@
 #include "chrono.hpp"
 #include "out.hpp"
 #include "PositionFen.hpp"
+#include "Repetition.hpp"
 #include "PvMoves.hpp"
 #include "Score.hpp"
 #include "SpinLock.hpp"
@@ -85,6 +86,7 @@ public:
     Tt tt;
     PvMoves pvMoves;
     HistoryMoves counterMove;
+    RepetitionHistory repetition;
 
 protected:
     mutable node_count_t lastInfoNodes = 0; // to avoid printing identical nps info lines in a row
