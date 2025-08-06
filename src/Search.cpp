@@ -60,7 +60,6 @@ ReturnStatus NodeAb::visit(Move move) {
 
     canBeKiller = false;
 
-
     if (moves.popcount() == 0) {
         //checkmated or stalemated
         score = inCheck ? Score::checkmated(ply) : Score{DrawScore};
@@ -80,14 +79,16 @@ ReturnStatus NodeAb::visit(Move move) {
         RETURN_IF_ABORT (searchMoves());
     }
 
-    return parent->negamax(-score);
+    return parent->negamax(this);
 }
 
-ReturnStatus NodeAb::negamax(Score lastScore) {
+ReturnStatus NodeAb::negamax(NodeAb* child) {
     assert (MinusInfinity <= alpha && alpha < beta && beta <= PlusInfinity);
 
-    if (lastScore > score) {
-        score = lastScore;
+    auto childScore = -child->score;
+
+    if (childScore > score) {
+        score = childScore;
 
         if (score >= beta) {
             //beta cut off
