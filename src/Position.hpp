@@ -17,6 +17,7 @@ class Position {
 protected:
     Zobrist zobrist; // incrementally updated position hash
     Square lastPieceTo; // last moved piece actual destination square (rook square in case of castling or en passant capture pawn square)
+    Rule50 rule50; // number of irreversible moves before, incremented or reset by makeMove()
 
 private:
     template <Side::_t> void updateSliderAttacks(PiMask);

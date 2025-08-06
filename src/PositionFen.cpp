@@ -2,6 +2,7 @@
 
 #include "PositionFen.hpp"
 #include "CastlingRules.hpp"
+#include "Repetition.hpp"
 
 namespace {
 
@@ -313,7 +314,9 @@ void PositionFen::limitMoves(istream& in) {
     io::fail_rewind(in);
 }
 
-void PositionFen::playMoves(istream& in) {
+void PositionFen::playMoves(istream& in, RepetitionHistory& repetition) {
+    repetition.push(colorToMove, zobrist);
+
     while (in >> std::ws && !in.eof()) {
         auto beforeMove = in.tellg();
 
@@ -326,7 +329,12 @@ void PositionFen::playMoves(istream& in) {
 
         makeMove(from, to);
         colorToMove.flip();
+
+        if (rule50 == 0) { repetition.clear(); }
+        repetition.push(colorToMove, zobrist);
     }
+
+    repetition.normalize(colorToMove);
 }
 
 istream& PositionFen::readBoard(istream& in) {
@@ -411,7 +419,7 @@ istream& PositionFen::readEnPassant(istream& in) {
     return in;
 }
 
-void PositionFen::readFen(istream& in) {
+void PositionFen::readFen(istream& in, RepetitionHistory& repetition) {
     in >> std::ws;
     readBoard(in);
     in >> std::ws;
@@ -420,17 +428,20 @@ void PositionFen::readFen(istream& in) {
     readEnPassant(in);
 
     if (in && !in.eof()) {
-        unsigned _fifty;
-        unsigned _moves;
-        in >> _fifty >> _moves;
-        in.clear(); //ignore missing optional 'fifty' and 'moves' fen fields
+        in >> rule50;
+
+        unsigned fullMoveNumber = 1;
+        in >> fullMoveNumber;
+
+        in.clear(); //ignore possibly missing 'halfmove clock' and 'fullmove number' fen fields
     }
 
     setZobrist();
+    repetition.clear();
     makeMoves();
 }
 
-void PositionFen::setStartpos() {
+void PositionFen::setStartpos(RepetitionHistory& repetition) {
     std::istringstream startpos{"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"};
-    readFen(startpos);
+    readFen(startpos, repetition);
 }
