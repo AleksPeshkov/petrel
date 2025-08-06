@@ -22,6 +22,8 @@ protected:
 
     SearchRoot& root; /* thread local */
 
+    RepetitionMask repMask;
+
     Ply ply = 0; //distance from root
     Ply draft = 0; //remaining depth
 

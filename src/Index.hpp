@@ -9,13 +9,13 @@
 
 #define FOR_EACH(Index, i) for (Index i = static_cast<Index::_t>(0); static_cast<index_t>(i) < Index::Size; ++i)
 
-template <size_t _Size, typename _Value_type = index_t, class _Actual_type = _Value_type, size_t _Mask = _Size-1>
+template <size_t _Size, typename _element_type = index_t, size_t _Mask = _Size-1>
 class Index {
     static io::czstring The_string;
 
 public:
-    typedef _Value_type _t;
-    enum { Size = _Size, Mask = _Mask };
+    typedef _element_type _t;
+    enum { Size = _Size, Last = Size-1, Mask = _Mask };
     template <typename T> using arrayOf = std::array<T, Size>;
 
 protected:
@@ -25,7 +25,7 @@ public:
     constexpr Index () : v{} {}
     constexpr Index (_t i) : v{i} { assertOk(); }
 
-    constexpr operator _t () const { return v; }
+    constexpr operator const _t& () const { return v; }
 
     constexpr void assertOk() const { assert (isOk()); }
     constexpr bool isOk() const { return static_cast<index_t>(v) < Size; }

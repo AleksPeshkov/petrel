@@ -11,6 +11,7 @@ void SearchThread::run() {
 
 ReturnStatus NodeAb::visitRoot(Ply depthLimit) {
     auto rootMovesClone = moves;
+    repMask = root.repetition.repMask(colorToMove());
 
     for (draft = 1; draft <= depthLimit; ++draft) {
         moves = rootMovesClone;
@@ -43,6 +44,11 @@ ReturnStatus NodeAb::visit(Move move) {
     makeMove(parent, move);
     root.pvMoves.set(ply, UciMove{});
     ++parent->movesMade;
+
+    if (rule50 <= 1) { repMask = RepetitionMask{}; }
+    else if (grandParent) { repMask = RepetitionMask{grandParent->repMask, grandParent->zobrist}; }
+    else { repMask = root.repetition.repMask(colorToMove()); }
+
     canBeKiller = false;
 
     bool inCheck = NodeAb::inCheck();
@@ -50,6 +56,9 @@ ReturnStatus NodeAb::visit(Move move) {
     if (ply == MaxPly) {
         // no room to search deeper
         score = evaluate();
+    }
+    else if (isRepetition()) {
+        score = DrawScore;
     }
     else if (draft == 0 && !inCheck) {
         RETURN_IF_ABORT (quiescence());
@@ -234,4 +243,22 @@ Color NodeAb::colorToMove() const {
 Score NodeAb::evaluate()
 {
     return Position::evaluate().clamp();
+}
+
+bool NodeAb::isRepetition() const {
+    if (rule50 < 4) { return false; }
+
+    const Z& z = zobrist;
+
+    if (grandParent) {
+        auto next = grandParent;
+        while ((next = next->grandParent)) {
+            if (next->zobrist == z) {
+                return true;
+            }
+            if (!next->repMask.has(z)) { break; }
+        }
+    }
+
+    return root.repetition.has(colorToMove(), z);
 }
