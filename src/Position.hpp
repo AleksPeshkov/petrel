@@ -17,6 +17,7 @@ class Position {
 protected:
     Zobrist zobrist; // incrementally updated position hash
     Square lastPieceTo; // last moved piece actual destination square (rook square in case of castling or en passant capture pawn square)
+    Rule50 rule50; // number of irreversible moves before, incremented or reset by makeMove()
 
 private:
     template <Side::_t> void updateSliderAttacks(PiMask);
@@ -29,7 +30,6 @@ private:
 
     //calculate Zobrist key from scratch
     Zobrist createZobrist(Square, Square) const;
-    Zobrist generateZobrist() const;
 
 public:
     constexpr PositionSide& operator[] (Side side) { return positionSide[side]; }
@@ -51,13 +51,11 @@ public:
     void makeMove(Square, Square);
     bool isSpecial(Square, Square) const;
 
-    const Zobrist& getZobrist() const { return zobrist; }
-    void setZobrist() { zobrist = generateZobrist(); }
-
     //initial position setup
     bool dropValid(Side, PieceType, Square);
     bool afterDrop();
     template <Side::_t> void setLegalEnPassant(Pi, Square);
+    Zobrist generateZobrist() const;
 };
 
 #endif

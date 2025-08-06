@@ -31,6 +31,26 @@ enum class NodeControl {
     BetaCutoff,
 };
 
+// number of halfmoves without capture or pawn move
+class Rule50 : Index<101> {
+public:
+    using Index::operator const _t&;
+    constexpr Rule50() : Index{0} {}
+    constexpr void clear() { v = 0; }
+    constexpr void next() { v = v < Last ? v + 1 : static_cast<_t>(Last); }
+    constexpr bool isEmpty() const { return v == 0; }
+    constexpr bool isDraw() const { return v == Last; }
+
+    friend io::istream& operator >> (io::istream& in, Rule50& rule50) {
+        auto beforeRule50 = in.tellg();
+        unsigned _rule50 = 0; // default value
+        in >> _rule50;
+        if (_rule50 > Last) { return io::fail_pos(in, beforeRule50); }
+        rule50.v = _rule50;
+        return in;
+    }
+};
+
 enum color_t { White, Black };
 typedef Index<2, color_t> Color;
 template <> io::czstring Color::The_string;
