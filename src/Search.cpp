@@ -45,6 +45,7 @@ ReturnStatus NodeAb::visit(Move move) {
     assert (MinusInfinity <= alpha && alpha < beta && beta <= PlusInfinity);
 
     score = NoScore;
+    score = MinusInfinity;
     draft = parent->draft > 0 ? parent->draft-1 : 0;
 
     RETURN_IF_ABORT (root.countNode());
@@ -60,7 +61,6 @@ ReturnStatus NodeAb::visit(Move move) {
     else { repMask = root.repetition.repMask(colorToMove()); }
 
     canBeKiller = false;
-
 
     if (moves.popcount() == 0) {
         //checkmated or stalemated
@@ -90,14 +90,16 @@ ReturnStatus NodeAb::visit(Move move) {
         }
     }
 
-    return parent->negamax(-score);
+    return parent->negamax(this);
 }
 
-ReturnStatus NodeAb::negamax(Score lastScore) {
+ReturnStatus NodeAb::negamax(NodeAb* child) {
     assert (MinusInfinity <= alpha && alpha < beta && beta <= PlusInfinity);
 
-    if (lastScore > score) {
-        score = lastScore;
+    auto childScore = -child->score;
+
+    if (childScore > score) {
+        score = childScore;
 
         if (score >= beta) {
             //beta cut off

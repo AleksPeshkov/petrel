@@ -72,7 +72,7 @@ protected:
 
     ReturnStatus visitIfLegal(Move move) { if (parent->isLegalMove(move)) { return visit(move); } return ReturnStatus::Continue; }
     ReturnStatus visit(Move);
-    ReturnStatus negamax(Score);
+    ReturnStatus negamax(NodeAb*);
 
     ReturnStatus searchMoves();
     ReturnStatus quiescence();
