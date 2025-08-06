@@ -105,6 +105,9 @@ NodeControl NodeAb::quiescence() {
     NodeAb node{this};
     const auto child = &node;
 
+    // recapture
+    CUTOFF (goodCaptures(child, ~lastPieceTo));
+
     CUTOFF (goodCaptures(child));
 
     return NodeControl::Continue;
@@ -114,33 +117,7 @@ NodeControl NodeAb::goodCaptures(NodeAb* child) {
     // MVV (most valuable victim)
     for (Pi victim : OP.pieces() % PiMask{TheKing}) {
         Square to = ~OP.squareOf(victim);
-        PiMask attackers = moves[to];
-        if (attackers.none()) { continue; }
-
-        bool isVictimProtected = isOpAttacks(to);
-        if (!isVictimProtected) {
-            assert (OP.attackersTo(~to).none());
-        }
-        else {
-            assert (OP.attackersTo(~to).any());
-            // BLIND static exchange evaluation
-            // filter out more valuable attackers than the victim
-            attackers &= MY.goodKillers(OP.typeOf(victim));
-        }
-
-        //LVA (least valuable attacker)
-        while (attackers.any()) {
-            Pi attacker = attackers.least(); attackers -= attacker;
-
-            Square from = MY.squareOf(attacker);
-
-            if (MY.isPromotable(attacker) && !to.on(Rank8)) {
-                // skip underpromotion pseudo moves
-                continue;
-            }
-
-            CUTOFF (child->visit(Move{from, to}));
-        }
+        CUTOFF (goodCaptures(child, to));
     }
 
     // non capture promotions
@@ -159,6 +136,35 @@ NodeControl NodeAb::goodCaptures(NodeAb* child) {
                 CUTOFF( child->visit({from, toKnight}) );
             }
         }
+    }
+
+    return NodeControl::Continue;
+}
+
+NodeControl NodeAb::goodCaptures(NodeAb* child, Square to) {
+    assert (OP.piecesSquares().has(~to));
+
+    PiMask attackers = moves[to];
+    if (!to.on(Rank8)) {
+        // skip underpromotion pseudo moves
+        attackers %= MY.promotables();
+    }
+    if (attackers.none()) { return NodeControl::Continue; }
+
+    bool isVictimProtected = isOpAttacks(to);
+    assert (isVictimProtected == OP.attackersTo(~to).any());
+
+    if (isVictimProtected) {
+        // filter out more valuable attackers than the victim
+        attackers &= MY.goodKillers( OP.typeOf(OP.pieceAt(~to)) );
+    }
+
+    while (attackers.any()) {
+        // LVA (least valuable attacker)
+        Pi attacker = attackers.least(); attackers -= attacker;
+
+        Square from = MY.squareOf(attacker);
+        CUTOFF (child->visit(Move{from, to}));
     }
 
     return NodeControl::Continue;

@@ -31,6 +31,7 @@ public:
     NodeControl quiescence();
 
     NodeControl goodCaptures(NodeAb*);
+    NodeControl goodCaptures(NodeAb*, Square);
 
     UciMove uciMove(Move move) const { return uciMove(move.from(), move.to()); }
     UciMove uciMove(Square from, Square to) const;
