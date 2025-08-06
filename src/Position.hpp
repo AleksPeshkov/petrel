@@ -30,7 +30,6 @@ private:
 
     //calculate Zobrist key from scratch
     Zobrist createZobrist(Square, Square) const;
-    Zobrist generateZobrist() const;
 
 public:
     constexpr PositionSide& operator[] (Side side) { return positionSide[side]; }
@@ -52,13 +51,11 @@ public:
     void makeMove(Square, Square);
     bool isSpecial(Square, Square) const;
 
-    const Zobrist& getZobrist() const { return zobrist; }
-    void setZobrist() { zobrist = generateZobrist(); }
-
     //initial position setup
     bool dropValid(Side, PieceType, Square);
     bool afterDrop();
     template <Side::_t> void setLegalEnPassant(Pi, Square);
+    Zobrist generateZobrist() const;
 };
 
 #endif

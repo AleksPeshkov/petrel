@@ -216,17 +216,16 @@ public:
 
 } //end of anonymous namespace
 
-ostream& operator << (ostream& out, const PositionFen& pos) {
-    auto& whitePieces = pos[pos.sideOf(White)];
-    auto& blackPieces = pos[pos.sideOf(Black)];
+ostream& PositionFen::writeFen(ostream& out) const {
+    auto& whitePieces = (*this)[sideOf(White)];
+    auto& blackPieces = (*this)[sideOf(Black)];
 
     out << BoardToFen(whitePieces, blackPieces)
-        << ' '
-        << pos.colorToMove
-        << ' '
-        << CastlingToFen(whitePieces, blackPieces, pos.chessVariant)
-        << ' '
-        << EnPassantToFen(pos[Op], pos.colorToMove);
+        << ' ' << colorToMove
+        << ' ' << CastlingToFen{whitePieces, blackPieces, chessVariant}
+        << ' ' << EnPassantToFen{(*this)[Op], colorToMove}
+        << ' ' << static_cast<unsigned>(rule50) // halfmove clock
+        << ' ' << 1; // fake fullmove number
 
     return out;
 }
@@ -436,7 +435,7 @@ void PositionFen::readFen(istream& in, RepetitionHistory& repetition) {
         in.clear(); //ignore possibly missing 'halfmove clock' and 'fullmove number' fen fields
     }
 
-    setZobrist();
+    zobrist = generateZobrist();
     repetition.clear();
     makeMoves();
 }
