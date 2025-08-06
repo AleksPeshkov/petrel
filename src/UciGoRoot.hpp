@@ -9,6 +9,7 @@ class UciGoRoot : protected SearchRoot {
 public:
     using SearchRoot::SearchRoot;
     using SearchRoot::position;
+    using SearchRoot::repetition;
 
     void go(const UciGoLimit&);
     void goPerft(Ply depth, bool isDivide = false);
