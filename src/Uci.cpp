@@ -204,24 +204,14 @@ void Uci::goPerft() {
         return;
     }
 
-    unsigned depth = 0;
+    Ply depth;
     command >> depth;
-    if (!depth) {
-        io::fail_rewind(command);
-        return;
-    }
-    depth = std::min(depth, MaxPly);
+    depth = std::min<Ply>(depth, 18); // current Tt implementation limit
 
-    bool isDivide = false;
-    if (next("divide")) {
-        isDivide = true;
-    }
-
-    if (nextNothing()) {
-        root.newSearch();
-        root.nodeCounter = {};
-        searchThread.start([this, depth, isDivide] { NodePerft{root, depth}.visitRoot(isDivide); } );
-    }
+    searchThread.start([this, depth] {
+        NodePerft{root, depth}.visitRoot();
+        perft_finish();
+    } );
 }
 
 void Uci::uciok() const {
@@ -270,28 +260,28 @@ ostream& Uci::nps(ostream& o) const {
     if (lastInfoNodes == root.nodeCounter) {
         return o;
     }
+
     lastInfoNodes = root.nodeCounter;
-
     auto timeInterval = ::elapsedSince(root.searchStartTime);
+    return o << " nodes " << lastInfoNodes << timeInterval << " nps " << ::nps(lastInfoNodes, timeInterval);
+}
 
-    o << " nodes " << lastInfoNodes << timeInterval << " nps " << ::nps(lastInfoNodes, timeInterval);
-
+ostream& Uci::info_nps(ostream& o) const {
     if (root.tt.reads > 0) {
+        o << "info";
         o << " hwrites " << root.tt.writes;
         o << " hhits " << root.tt.hits;
         o << " hreads " << root.tt.reads;
         o << " hhitratio " << ::permil(root.tt.hits, root.tt.reads);
+        o << '\n';
     }
-    return o;
-}
 
-ostream& Uci::info_nps(ostream& o) const {
-    std::ostringstream buffer;
-    nps(buffer);
-
-    if (!buffer.str().empty()) {
-        o << "info" << buffer.str() << '\n';
+    std::ostringstream ob;
+    nps(ob);
+    if (!ob.str().empty()) {
+        o << "info" << ob.str() << '\n';
     }
+
     return o;
 }
 
