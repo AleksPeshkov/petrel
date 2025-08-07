@@ -3,19 +3,12 @@
 #include "TtPerft.hpp"
 #include "Uci.hpp"
 
-NodePerft::NodePerft (NodeRoot& r, Ply d) : PositionMoves{r}, root{r}, parent{nullptr}, draft(d) {}
+NodePerft::NodePerft (NodeRoot& r, Ply d) : PositionMoves{r}, parent{nullptr}, root{r}, draft{d} {}
 
-void NodePerft::visitRoot(bool isDivide) {
-    ReturnStatus status = isDivide ? searchDivide() : searchMoves();
+ReturnStatus NodePerft::visitRoot() {
+    root.newSearch();
+    root.nodeCounter = {};
 
-    if (status != ReturnStatus::Stop) {
-        root.uci.perft_depth(draft, perft);
-    }
-
-    root.uci.perft_finish();
-}
-
-ReturnStatus NodePerft::searchDivide() {
     NodePerft node{this};
     const auto child = &node;
 
@@ -26,17 +19,18 @@ ReturnStatus NodePerft::searchDivide() {
         for (Square to : moves[pi]) {
             auto previousPerft = perft;
 
-            RETURN_IF_STOP (child->visit(from, to));
+            RETURN_IF_STOP (child->visitMove(from, to));
 
             UciMove move{from, to, isSpecial(from, to), root.colorToMove(), root.uci.chessVariant()};
             root.uci.perft_currmove(++moveCount, move, perft - previousPerft);
         }
     }
 
+    root.uci.perft_depth(draft, perft);
     return ReturnStatus::Continue;
 }
 
-ReturnStatus NodePerft::searchMoves() {
+ReturnStatus NodePerft::visit() {
     NodePerft node{this};
     const auto child = &node;
 
@@ -44,43 +38,43 @@ ReturnStatus NodePerft::searchMoves() {
         Square from = MY.squareOf(pi);
 
         for (Square to : moves[pi]) {
-            RETURN_IF_STOP (child->visit(from, to));
+            RETURN_IF_STOP (child->visitMove(from, to));
         }
     }
 
     return ReturnStatus::Continue;
 }
 
-ReturnStatus NodePerft::visit(Square from, Square to) {
+ReturnStatus NodePerft::visitMove(Square from, Square to) {
     switch (draft) {
         case 0:
-            parent->perft += 1;
-            return ReturnStatus::Continue;
+            perft = 1;
+            break;
 
         case 1:
             RETURN_IF_STOP (root.countNode());
             makeMoveNoZobrist(parent, from, to);
-            parent->perft += moves.popcount();
-            return ReturnStatus::Continue;
+            perft = moves.popcount();
+            break;
 
         default: {
             assert(draft >= 2);
             makeZobrist(parent, from, to);
             root.tt.prefetch(zobrist, 64);
+
             RETURN_IF_STOP (root.countNode());
             makeMoveNoZobrist(parent, from, to);
 
-            auto n = static_cast<TtPerft&>(root.tt).get(zobrist, draft - 2);
-            if (n != NodeCountNone) {
-                perft = n;
-            } else {
+            perft = static_cast<TtPerft&>(root.tt).get(zobrist, draft - 2);
+
+            if (perft == NodeCountNone) {
                 perft = 0;
-                RETURN_IF_STOP(searchMoves());
+                RETURN_IF_STOP(visit());
                 static_cast<TtPerft&>(root.tt).set(zobrist, draft - 2, perft);
             }
-            parent->perft += perft;
         }
     }
 
+    parent->perft += perft;
     return ReturnStatus::Continue;
 }
