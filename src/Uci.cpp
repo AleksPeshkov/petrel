@@ -204,24 +204,14 @@ void Uci::goPerft() {
         return;
     }
 
-    unsigned depth = 0;
+    Ply depth;
     command >> depth;
-    if (!depth) {
-        io::fail_rewind(command);
-        return;
-    }
-    depth = std::min(depth, MaxPly);
+    depth = std::min<Ply>(depth, 18); // current Tt implementation limit
 
-    bool isDivide = false;
-    if (next("divide")) {
-        isDivide = true;
-    }
-
-    if (nextNothing()) {
-        root.newSearch();
-        root.nodeCounter = {};
-        searchThread.start([this, depth, isDivide] { NodePerft{root, depth}.visitRoot(isDivide); } );
-    }
+    searchThread.start([this, depth] {
+        NodePerft{root, depth}.visitRoot();
+        perft_finish();
+    } );
 }
 
 void Uci::uciok() const {
