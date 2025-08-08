@@ -70,7 +70,7 @@ ReturnStatus NodeCounter::refreshQuota(const Uci& uci) {
     assertOk();
 
     //inform UCI that search is responsive
-    uci.infoNpsReadyok();
+    uci.info_nps_readyok();
 
     return ReturnStatus::Continue;
 }
