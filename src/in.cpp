@@ -22,11 +22,13 @@ istream& fail_rewind(istream& in) {
     return fail_pos(in, 0);
 }
 
-/// Read the input stream and try to match it with the given token parameter.
-/// The comparision is case insensitive and all sequential space symbols are equal to single space.
-/// @retval true: stream matches the given token, stream position is set forward past the matched token
-/// @retval false: failed to match stream with the given token, stream state reset back before call
-bool next(istream& in, czstring token) {
+/// @brief Matches a case-insensitive token pattern in the input stream, ignoring whitespace.
+/// @param in Input stream to read from.
+/// @param token Token pattern to match (case-insensitive). May contain multi-word tokens
+///              (e.g., "setoption name UCI_Chess960 value true").
+/// @retval true Fully matches the token pattern, advancing the stream past the matched tokens.
+/// @retval false Fails to match. Leaves the stream unchanged. Does not change the failbit.
+bool consume(istream& in, czstring token) {
     if (token == nullptr) { token = ""; }
 
     auto state = in.rdstate();
@@ -34,26 +36,37 @@ bool next(istream& in, czstring token) {
 
     using std::isspace;
     do {
-        while ( isspace(*token) ) { ++token; }
+        // skip leading whitespace
+        while (isspace(*token)) { ++token; }
         in >> std::ws;
 
-        while ( !isspace(*token) && std::tolower(*token) == std::tolower(in.peek()) ) {
-            ++token; in.ignore();
+        // case insensitive match each character until end of token string (whitespace or \0)
+        while (!isspace(*token)
+            && std::tolower(*token) == std::tolower(in.peek())
+        ) {
+            ++token;
+            in.ignore();
         }
-    } while ( isspace(*token) && isspace(in.peek()) );
+    // continue matching the next word in the token (if present)
+    } while (isspace(*token) && isspace(in.peek()));
 
-    if ( *token == '\0' && (isspace(in.peek()) || in.eof()) ) {
+    // ensure the token and the last stream word ended at the same time
+    if (*token == '\0'
+        && (isspace(in.peek()) || in.eof())
+    ) {
+        // success: stream is advanced past the matched token
         return true;
     }
 
+    // failure: restore stream state
     in.seekg(before);
     in.clear(state);
     return false;
 }
 
-bool nextNothing(istream& in) {
+bool hasMore(istream& in) {
     in >> std::ws;
-    return in.eof();
+    return !in.eof();
 }
 
 } // namespace in
