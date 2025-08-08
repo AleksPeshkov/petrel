@@ -41,7 +41,7 @@ ReturnStatus Node::searchRoot() {
         alpha = MinusInfinity;
         beta = PlusInfinity;
         RETURN_IF_STOP (search());
-        root.uci.infoIterationEnd(draft);
+        root.uci.info_iteration(draft);
         root.newIteration();
     }
 
@@ -125,7 +125,7 @@ ReturnStatus Node::negamax(Node* child) {
             ++root.tt.writes;
 
             if (ply == 0) {
-                root.uci.infoNewPv(draft, score);
+                root.uci.info_pv(draft, score);
             }
         }
     }
