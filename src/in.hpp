@@ -8,6 +8,7 @@
 
 namespace in {
     using std::istream;
+    using std::istringstream;
 
     typedef istream::char_type char_type;
     typedef const char_type* czstring;
@@ -17,8 +18,8 @@ namespace in {
     istream& fail_pos(istream&, std::streampos);
     istream& fail_rewind(istream&);
 
-    bool next(istream&, czstring);
-    bool nextNothing(istream&);
+    bool consume(istream&, czstring);
+    bool hasMore(istream&);
 }
 
 #endif
