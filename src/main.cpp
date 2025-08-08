@@ -132,7 +132,7 @@ int main(int argc, const char* argv[]) {
     std::cerr.tie(nullptr);
 
     Uci uci(std::cout);
-    uci(std::cin, std::cerr);
+    uci.processCommands(std::cin, std::cerr);
 
     return EXIT_SUCCESS;
 }

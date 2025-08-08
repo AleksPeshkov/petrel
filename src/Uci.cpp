@@ -47,34 +47,33 @@ namespace {
     }
 }
 
-void Uci::operator() (io::istream& in, ostream& err) {
+void Uci::processCommands(io::istream& in, ostream& err) {
     for (std::string currentLine; std::getline(in, currentLine); ) {
-        command.clear(); //clear state from the previous command
-        command.str(std::move(currentLine));
-        command >> std::ws;
+        inputLine.clear(); //clear error state from the previous line
+        inputLine.str(std::move(currentLine));
+        inputLine >> std::ws;
 
-        if      (next("go"))        { go(); }
-        else if (next("position"))  { position(); }
-        else if (next("stop"))      { searchThread.stop(); }
-        else if (next("isready"))   { readyok(); }
-        else if (next("setoption")) { setoption(); }
-        else if (next("set"))       { setoption(); }
-        else if (next("ucinewgame")){ ucinewgame(); }
-        else if (next("uci"))       { uciok(); }
-        else if (next("perft"))     { goPerft(); }
-        else if (next("quit"))      { break; }
-        else if (next("exit"))      { break; }
+        if      (consume("go"))        { go(); }
+        else if (consume("position"))  { position(); }
+        else if (consume("stop"))      { mainSearchThread.stop(); }
+        else if (consume("isready"))   { readyok(); }
+        else if (consume("setoption")) { setoption(); }
+        else if (consume("set"))       { setoption(); }
+        else if (consume("ucinewgame")){ ucinewgame(); }
+        else if (consume("uci"))       { uciok(); }
+        else if (consume("perft"))     { goPerft(); }
+        else if (consume("quit"))      { break; }
+        else if (consume("exit"))      { break; }
 
-        //parsing error detected or something left unparsed
-        if (!nextNothing()) {
-            uci_error(err, command);
+        if (hasMoreInput()) {
+            uci_error(err, inputLine);
         }
     }
 }
 
 void Uci::ucinewgame() {
     if (!isReady()) {
-        io::fail_rewind(command);
+        io::fail_rewind(inputLine);
         return;
     }
 
@@ -83,41 +82,40 @@ void Uci::ucinewgame() {
 }
 
 void Uci::setoption() {
-    next("name");
+    consume("name");
 
-    if (next("UCI_Chess960")) {
-        next("value");
+    if (consume("UCI_Chess960")) {
+        consume("value");
 
-        if (next("true"))  { root.setChessVariant(Chess960); return; }
-        if (next("false")) { root.setChessVariant(Orthodox); return; }
+        if (consume("true"))  { root.setChessVariant(Chess960); return; }
+        if (consume("false")) { root.setChessVariant(Orthodox); return; }
 
-        io::fail_rewind(command);
+        io::fail_rewind(inputLine);
         return;
     }
 
-    if (next("Hash")) {
-        next("value");
+    if (consume("Hash")) {
+        consume("value");
         setHash();
         return;
     }
-
 }
 
 void Uci::setHash() {
     if (!isReady()) {
-        io::fail_rewind(command);
+        io::fail_rewind(inputLine);
         return;
     }
 
     size_t quantity = 0;
-    command >> quantity;
-    if (!command) {
-        io::fail_rewind(command);
+    inputLine >> quantity;
+    if (!inputLine) {
+        io::fail_rewind(inputLine);
         return;
     }
 
     io::char_type unit = 'm';
-    command >> unit;
+    inputLine >> unit;
 
     switch (std::tolower(unit)) {
         case 't':
@@ -136,7 +134,7 @@ void Uci::setHash() {
             break;
 
         default: {
-            io::fail_rewind(command);
+            io::fail_rewind(inputLine);
             return;
         }
     }
@@ -145,21 +143,21 @@ void Uci::setHash() {
 }
 
 void Uci::position() {
-    if (nextNothing()) {
+    if (!hasMoreInput()) {
         infoPosition();
         return;
     }
 
-    if (next("startpos")) { root.setStartpos(); }
-    if (next("fen")) { root.readFen(command); }
+    if (consume("startpos")) { root.setStartpos(); }
+    if (consume("fen")) { root.readFen(inputLine); }
 
-    next("moves");
-    root.playMoves(command);
+    consume("moves");
+    root.playMoves(inputLine);
 }
 
 void Uci::go() {
     if (!isReady()) {
-        io::fail_rewind(command);
+        io::fail_rewind(inputLine);
         return;
     }
 
@@ -168,47 +166,47 @@ void Uci::go() {
         auto blackSide = root.sideOf(Black);
 
         root.limits = {};
-        while (command >> std::ws, !command.eof()) {
-            if      (next("depth"))    { command >> root.limits.depth; }
-            else if (next("nodes"))    { command >> root.limits.nodes; }
-            else if (next("movetime")) { command >> root.limits.movetime; }
-            else if (next("wtime"))    { command >> root.limits.time[whiteSide]; }
-            else if (next("btime"))    { command >> root.limits.time[blackSide]; }
-            else if (next("winc"))     { command >> root.limits.inc[whiteSide]; }
-            else if (next("binc"))     { command >> root.limits.inc[blackSide]; }
-            else if (next("movestogo")){ command >> root.limits.movestogo; }
-            else if (next("mate"))     { command >> root.limits.mate; } // TODO: implement mate in n moves
-            else if (next("ponder"))   { root.limits.ponder = true; } // TODO: implement ponder
-            else if (next("infinite")) { root.limits.infinite = true; }
-            else if (next("searchmoves")) { root.limitMoves(command); }
-            else { io::fail(command); return; }
+        while (inputLine >> std::ws, !inputLine.eof()) {
+            if      (consume("depth"))    { inputLine >> root.limits.depth; }
+            else if (consume("nodes"))    { inputLine >> root.limits.nodes; }
+            else if (consume("movetime")) { inputLine >> root.limits.movetime; }
+            else if (consume("wtime"))    { inputLine >> root.limits.time[whiteSide]; }
+            else if (consume("btime"))    { inputLine >> root.limits.time[blackSide]; }
+            else if (consume("winc"))     { inputLine >> root.limits.inc[whiteSide]; }
+            else if (consume("binc"))     { inputLine >> root.limits.inc[blackSide]; }
+            else if (consume("movestogo")){ inputLine >> root.limits.movestogo; }
+            else if (consume("mate"))     { inputLine >> root.limits.mate; } // TODO: implement mate in n moves
+            else if (consume("ponder"))   { root.limits.ponder = true; } // TODO: implement ponder
+            else if (consume("infinite")) { root.limits.infinite = true; }
+            else if (consume("searchmoves")) { root.limitMoves(inputLine); }
+            else { io::fail(inputLine); return; }
         }
         root.limits.calculateThinkingTime();
     }
 
-    auto id = searchThread.start([this] {
+    auto id = mainSearchThread.start([this] {
         Node{root}.searchRoot();
         bestmove();
     });
 
     auto timeInterval = root.limits.thinkingTime;
     if (timeInterval > 0ms) {
-        auto deadlineTask = [this, id]() { searchThread.stop(id); };
+        auto deadlineTask = [this, id]() { mainSearchThread.stop(id); };
         The_timerManager.schedule(std::max<TimeInterval>(1ms, timeInterval - 1ms), deadlineTask);
     }
 }
 
 void Uci::goPerft() {
     if (!isReady()) {
-        io::fail_rewind(command);
+        io::fail_rewind(inputLine);
         return;
     }
 
     Ply depth;
-    command >> depth;
+    inputLine >> depth;
     depth = std::min<Ply>(depth, 18); // current Tt implementation limit
 
-    searchThread.start([this, depth] {
+    mainSearchThread.start([this, depth] {
         NodePerft{root, depth}.visitRoot();
         perft_finish();
     } );
@@ -240,7 +238,7 @@ void Uci::readyok() const {
     }
 }
 
-void Uci::infoNpsReadyok() const {
+void Uci::info_nps_readyok() const {
     if (isreadyWaiting) {
         std::ostringstream ob;
         info_nps(ob);
@@ -292,12 +290,12 @@ void Uci::bestmove() const {
     lastInfoNodes = 0;
 }
 
-void Uci::infoIterationEnd(Ply draft) const {
+void Uci::info_iteration(Ply draft) const {
     OUTPUT(ob);
     ob << "info depth " << draft; nps(ob) << '\n';
 }
 
-void Uci::infoNewPv(Ply draft, Score score) const {
+void Uci::info_pv(Ply draft, Score score) const {
     OUTPUT(ob);
     ob << "info depth " << draft; nps(ob) << score << " pv" << root.pvMoves << '\n';
 }
