@@ -45,6 +45,8 @@ public:
     void stop();
     void stop(TaskId id);
 
+    constexpr TaskId getTaskId() const { return taskId; }
+
     TaskId start(Task task);
 
     void waitStop();

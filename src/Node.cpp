@@ -37,6 +37,7 @@ ReturnStatus Node::searchRoot() {
 
     for (draft = 1; draft <= root.limits.depth; ++draft) {
         moves = rootMovesClone;
+        movesMade = 0;
         score = NoScore;
         alpha = MinusInfinity;
         beta = PlusInfinity;
@@ -45,7 +46,7 @@ ReturnStatus Node::searchRoot() {
         root.newIteration();
     }
 
-    if (root.limits.isInfinite || root.limits.isPonder) {
+    if (root.limits.infinite || root.limits.ponder) {
         root.uci.waitStop();
     }
 

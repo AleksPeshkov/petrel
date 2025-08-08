@@ -27,6 +27,8 @@ class Uci {
     // to avoid printing identical nps info lines in a row
     mutable node_count_t lastInfoNodes = 0;
 
+    bool canPonder = false;
+
     // try to consume the given token from the inputLine
     bool consume(io::czstring token) { return io::consume(inputLine, token); }
 
@@ -38,6 +40,7 @@ class Uci {
     void position();
     void setoption();
     void ucinewgame();
+    void ponderhit();
     void uciok() const;
     void readyok() const;
 
@@ -50,6 +53,8 @@ class Uci {
 
     ostream& nps(ostream&) const;
     ostream& info_nps(ostream&) const;
+
+    void setDeadline(TimeInterval);
 
     void bestmove() const;
 
