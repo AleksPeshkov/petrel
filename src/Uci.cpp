@@ -56,6 +56,7 @@ void Uci::processCommands(io::istream& in, ostream& err) {
         if      (consume("go"))        { go(); }
         else if (consume("position"))  { position(); }
         else if (consume("stop"))      { mainSearchThread.stop(); }
+        else if (consume("ponderhit")) { ponderhit(); }
         else if (consume("isready"))   { readyok(); }
         else if (consume("setoption")) { setoption(); }
         else if (consume("set"))       { setoption(); }
@@ -81,6 +82,22 @@ void Uci::ucinewgame() {
     root.setStartpos();
 }
 
+void Uci::uciok() const {
+    bool isChess960 = root.chessVariant().is(Chess960);
+
+    OUTPUT(ob);
+    ob << "id name petrel\n";
+    ob << "id author Aleks Peshkov\n";
+    ob << "option name UCI_Chess960 type check default " << (isChess960 ? "true" : "false") << '\n';
+    ob << "option name Ponder type check default " << (canPonder ? "true" : "false") << '\n';
+    ob << "option name Hash type spin"
+       << " min "     << ::mebi(root.tt.minSize())
+       << " max "     << ::mebi(root.tt.maxSize())
+       << " default " << ::mebi(root.tt.size())
+       << '\n';
+    ob << "uciok\n";
+}
+
 void Uci::setoption() {
     consume("name");
 
@@ -89,6 +106,16 @@ void Uci::setoption() {
 
         if (consume("true"))  { root.setChessVariant(Chess960); return; }
         if (consume("false")) { root.setChessVariant(Orthodox); return; }
+
+        io::fail_rewind(inputLine);
+        return;
+    }
+
+    if (consume("Ponder")) {
+        consume("value");
+
+        if (consume("true"))  { canPonder = true; return; }
+        if (consume("false")) { canPonder = false; return; }
 
         io::fail_rewind(inputLine);
         return;
@@ -176,24 +203,49 @@ void Uci::go() {
             else if (consume("binc"))     { inputLine >> root.limits.inc[blackSide]; }
             else if (consume("movestogo")){ inputLine >> root.limits.movestogo; }
             else if (consume("mate"))     { inputLine >> root.limits.mate; } // TODO: implement mate in n moves
-            else if (consume("ponder"))   { root.limits.ponder = true; } // TODO: implement ponder
+            else if (consume("ponder"))   { root.limits.ponder = true; }
             else if (consume("infinite")) { root.limits.infinite = true; }
             else if (consume("searchmoves")) { root.limitMoves(inputLine); }
             else { io::fail(inputLine); return; }
         }
-        root.limits.calculateThinkingTime();
     }
 
-    auto id = mainSearchThread.start([this] {
+    auto timeInterval = root.limits.calculateThinkingTime(canPonder);
+
+    mainSearchThread.start([this] {
         Node{root}.searchRoot();
         bestmove();
     });
 
-    auto timeInterval = root.limits.thinkingTime;
-    if (timeInterval > 0ms) {
-        auto deadlineTask = [this, id]() { mainSearchThread.stop(id); };
-        The_timerManager.schedule(std::max<TimeInterval>(1ms, timeInterval - 1ms), deadlineTask);
+    if (timeInterval != 0ms) {
+        setDeadline(timeInterval);
     }
+}
+
+void Uci::ponderhit() {
+    root.searchStartTime = ::timeNow();
+    root.limits.ponder = false;
+
+    if (root.limits.movetime != 0ms) {
+        setDeadline(root.limits.movetime);
+        return;
+    }
+
+    auto timeInterval = root.limits.calculateThinkingTime(canPonder);
+    if (timeInterval != 0ms) {
+        timeInterval -= ::elapsedSince(root.searchStartTime);
+        setDeadline(timeInterval);
+    }
+}
+
+void Uci::setDeadline(TimeInterval timeInterval) {
+    auto id = mainSearchThread.getTaskId();
+    auto deadlineTask = [this, id]() { mainSearchThread.stop(id); };
+
+    // stop immediately
+    if (timeInterval < 1ms) { deadlineTask(); return; }
+
+    The_timerManager.schedule(std::max<TimeInterval>(1ms, timeInterval - 1ms), deadlineTask);
 }
 
 void Uci::goPerft() {
@@ -210,21 +262,6 @@ void Uci::goPerft() {
         NodePerft{root, depth}.visitRoot();
         perft_finish();
     } );
-}
-
-void Uci::uciok() const {
-    bool isChess960 = root.chessVariant().is(Chess960);
-
-    OUTPUT(ob);
-    ob << "id name petrel\n";
-    ob << "id author Aleks Peshkov\n";
-    ob << "option name UCI_Chess960 type check default " << (isChess960 ? "true" : "false") << '\n';
-    ob << "option name Hash type spin"
-       << " min "     << ::mebi(root.tt.minSize())
-       << " max "     << ::mebi(root.tt.maxSize())
-       << " default " << ::mebi(root.tt.size())
-       << '\n';
-    ob << "uciok\n";
 }
 
 void Uci::readyok() const {
@@ -286,7 +323,11 @@ ostream& Uci::info_nps(ostream& o) const {
 void Uci::bestmove() const {
     OUTPUT(ob);
     info_nps(ob);
-    ob << "bestmove " << root.pvMoves[0] << '\n';
+    ob << "bestmove " << root.pvMoves[0];
+    if (canPonder && root.pvMoves[1]) {
+        ob << " ponder " << root.pvMoves[1];
+    }
+    ob << '\n';
     lastInfoNodes = 0;
 }
 
