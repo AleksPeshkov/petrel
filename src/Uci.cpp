@@ -300,13 +300,6 @@ ostream& Uci::nps(ostream& o) const {
     auto timeInterval = ::elapsedSince(root.searchStartTime);
 
     o << " nodes " << lastInfoNodes << timeInterval << " nps " << ::nps(lastInfoNodes, timeInterval);
-
-    if (root.tt.reads > 0) {
-        o << " hwrites " << root.tt.writes;
-        o << " hhits " << root.tt.hits;
-        o << " hreads " << root.tt.reads;
-        o << " hhitratio " << ::permil(root.tt.hits, root.tt.reads);
-    }
     return o;
 }
 
@@ -322,6 +315,14 @@ ostream& Uci::info_nps(ostream& o) const {
 
 void Uci::bestmove() const {
     OUTPUT(ob);
+    if (root.tt.reads > 0) {
+        ob << "info";
+        ob << " hwrites " << root.tt.writes;
+        ob << " hhits " << root.tt.hits;
+        ob << " hreads " << root.tt.reads;
+        ob << " hhitratio " << ::permil(root.tt.hits, root.tt.reads);
+        ob << '\n';
+    }
     info_nps(ob);
     ob << "bestmove " << root.pvMoves[0];
     if (canPonder && root.pvMoves[1]) {
