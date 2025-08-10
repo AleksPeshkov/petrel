@@ -24,15 +24,18 @@ public:
     bool ponder = false;
     bool infinite = false;
 
-    void calculateThinkingTime() {
-        if (movetime != TimeInterval::zero()) {
-            thinkingTime = movetime;
-            return;
-        }
+    constexpr TimeInterval average(Side my) const {
+        auto moves = movestogo ? movestogo : 20;
+        return (time[my] + (moves-1)*inc[my]) / moves;
+    }
 
-        auto moves = movestogo ? movestogo : 40;
-        auto averageTime = (time[My] + (moves-1)*inc[My]) / moves;
-        thinkingTime = std::min(time[My], averageTime);
+    TimeInterval calculateThinkingTime(bool canPonder) {
+        if (infinite) { return thinkingTime = 0ms; }
+        if (ponder) { return thinkingTime = 0ms; }
+        if (movetime > 0ms) { return thinkingTime = movetime; }
+
+        auto myAverage = average(My) + (canPonder ? average(Op) / 2 : 0ms);
+        return thinkingTime = std::min(time[My], myAverage);
     }
 };
 
