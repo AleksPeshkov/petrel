@@ -1,69 +1,61 @@
-Developer's notes about source code internals
+Developer's Notes About Source Code Internals
 =============================================
 
-The engine extensively uses PSHUFB x86 processor instruction that is
-available only on SSSE3 instruction set. Porting to platform without
-SIMD instruction support is quite possible but with noticable performance penalty.
+*The text below assumes that the reader knows chess programming terminology.*
 
-Chess programming code details
-------------------------------
+This engine is not strong, fast, or simple.
+It is relatively stable enough to serve as a sparring opponent for a weak engine.
 
-*The text below assumes that the reader does know chess programming terminology.*
+The source code may be interesting for chess programmers due to several novel chess data structures.
 
-The engine uses nor mailbox nor bitboard board representation. The fundamental
-datasructure is 16 byte vector: vector of bytes for each chess piece of
-one of chess playing side. This 16 byte vector perfectly fits into SSE
-register of modern x86 (and x64) processors.
+The engine uses neither mailbox nor bitboard board representations. The fundamental
+data structure is a 16-byte vector: a vector of bytes for each chess piece on one side of the chessboard.
 
-The engine incrementally updates attack table using unique data
-structure -- matrix of pieces and bitboards. Each bitboard rank stored
-separately in one of 8 piece vectors. This allows very fast implemenation
-of attackTo() function and relatively fast update of attack table state.
-The engine uses so called Reversed BitBoard (aka Hyperbola Quintessense)
-piece attack generation of sliding pieces (bishops, rooks, queens).
-Legal moves matrix generated directly from the attack matrix.
+The engine incrementally updates the attack table using a unique data structure—
+a matrix of pieces and bitboards. Each bitboard rank is stored separately in one of 8 piece vectors.
+This allows a very fast implementation of the `attackTo()` function and relatively fast updates of the attack table state.
+The engine uses the so-called Reversed BitBoard (aka Hyperbola Quintessence) method for generating attacks of sliding pieces (bishops, rooks, queens).
 
-The engine does not internally distinguish white and black playing sides.
-Class "PositionSide" represents a chess side without color specific.
-Internally squares are relative to each side's base rank, so all pawns are
-pushing from RANK_2 and promoting at RANK_8, both kings at starting position
-are set to E1 square and so on.
+Fully legal moves are generated in bulk from the attack matrix.
 
-Abbreviations and conventions used in the source code
+During the chess tree search, the engine does not distinguish between white and black playing sides.
+The `PositionSide` class represents a chess side without color specificity.
+Internally, squares are relative to each side's base rank, so all pawns push from RANK_2 and promote at RANK_8, both kings start at E1 square, etc.
+
+Zobrist hashing uses only a few keys per piece type, which rotate to generate a key for each square.
+Changing the position's move side to move (null move) is a byte-reversed operation. This Zobrist implementation allows
+hash transpositions with color changes.
+
+Abbreviations and Conventions Used in the Source Code
 -----------------------------------------------------
-As convention overloaded "~" operation
-used to flip squares, bitbords and other data structures from opposite
-side of view to the current one. Flipping operation reverses bytes
-order inside bitboard and switches ranks inside squares.
+As a convention, the overloaded `~` operator is used to flip squares, bitboards, and other data structures from the opposite side of the move. The flipping operation reverses the byte order inside bitboards and switches ranks within squares.
 
-* Bb bb: BitBoard -- bitset of bits for each square of the chessboard
-* Pi pi: Piece Index -- one of 16 piece slots in a byte vector; {TheKing = 0} = slot dedicated to the king
-* PiBb : matrix of Pi x Bb, used for attack and move tables
-* Side side: {My, Op} -- side to move, opposite side
-* Color color: {White, Black}
-* PieceType ty: {Queen, Rook, Bishop, Knight, Pawn, King} -- colorless kind of chess piece
+Abbreviations in the code:
 
-* typename _t v: internal typename and value used inside generic classes
+* `Bb bb`: BitBoard – a well-known 64-bit bitset representing squares on the chessboard
+* `Pi pi`: Piece Index – one of 16 piece slots in a byte vector; `{TheKing = 0}` is the slot dedicated to the king
+*    pieces are sorted so that more valuable pieces occupy lower indexes
+* `PiBb`: matrix of Pi × Bb (128 bytes), used for storing and updating piece attack information and generating moves in bulk
+* `Side side`: `{My, Op}` – side to move and opposite side
+* `Color color`: `{White, Black}` – rarely used, but required for correct output of internal moves in UCI notation
+* `PieceType ty`: `{Queen = 0, Rook = 1, Bishop = 2, Knight = 3, Pawn = 4, King = 5}` – colorless type of possible chess piece
+* `PiMask`: intermediate data – piece vector of byte masks (0 or 0xFF) for selected pieces
+* `PiSquare`: stores locations of active pieces or the `0xFF` NoSquare tag
+* `PiType`: each piece type is represented as a separate bit, enabling quick grouping by criteria
+* `PiTrait`: castling and en passant statuses, plus temporary information like currently checking pieces
 
-* operator ~ used for flipping squares and bitboards between sides
-* operator %" is a shorcut to "and not" set operation
-* operator +, "operator -" for bitsets with assert test that sets are disjoint
+* `%` operator is used as a shortcut for "AND NOT" bitset operations
+* `+`, `-` operators for bitsets with assertions ensuring disjoint sets
 
-Universal Chess Interface (UCI) extensions
+Universal Chess Interface (UCI) Extensions
 ------------------------------------------
+* `<position>` – `<fen>` or `<startpos>` are optional; the previous set position is assumed
+  So, `<position moves e2e4>` is sufficient to make the first move
+  `<position>` without options displays the current position FEN and static evaluation
 
-* <position> -- <fen> or <startpos> are optional:
-    <ucinewgame> sets up default chess starting position, then the previuos set position is used
-    <moves> are optional
-    so, <position e2e4> is just enough to make first move
-    <position> without any options show current position FEN.
+* `<setoption>` can be abbreviated to short forms like `<set hash 1g>`
+  `set hash` accepts sizes in bytes (b), kilobytes (k), megabytes (m, UCI default), gigabytes (g)
 
-* <quit> is return, <exit> is return from
+* `<perft N>` performs PERFT using bulk counting and a transposition hash table
 
-* <setoption> can be abbreviated to short form like <set hash 1>
-
-* <go perft> and <go divide> can use any UCI search limits (movetime, depth, nodes, limitmoves)
-
-* set hash can set size in bytes(b), kilobytes(k), megabytes(m, default), gigabytes(g)
-
-Aleks Peshkov (mailto:aleks.peshkov@gmail.com)
+Aleks Peshkov (mailto: a###s.p####v@gmail#com, telegram: @a###sp#####v)
