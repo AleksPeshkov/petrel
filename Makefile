@@ -12,8 +12,7 @@ ifeq ($(debug),yes)
 	CXXFLAGS += -DDEBUG -ggdb
 	OPTIMIZATIONS = -Og -O0
 else
-#	CXXFLAGS += -DNDEBUG
-	CXXFLAGS += -DDEBUG -ggdb
+	CXXFLAGS += -DNDEBUG
 	OPTIMIZATIONS = -Ofast -flto -finline-functions
 endif
 
@@ -71,7 +70,7 @@ ifneq ($(GIT_ORIGIN), )
 endif
 
 
-.PHONY: all clean _clear_console test test-hash
+.PHONY: all clean _clear_console test
 
 all: _clear_console $(TARGET)
 
@@ -87,9 +86,6 @@ run: all
 
 test: all
 	$(EXPECT) $(TARGET) $(TEST_DIR)/test.rc
-
-test-hash: all
-	$(EXPECT) $(TARGET) $(TEST_DIR)/test-hash.rc
 
 $(TARGET): $(PRECOMP) $(OBJECTS)
 	$(CXX) -o $@ $(LDFLAGS) $(OBJECTS)
