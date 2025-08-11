@@ -1,24 +1,22 @@
 #debug = yes
 CXX = clang++
 #CXX = g++
+
 EXE = petrel
+BUILD_DIR ?= build
+TARGET ?= $(BUILD_DIR)/$(EXE)
 
 SRCDIR ?= src
-BUILD_DIR ?= build
-RELEASE_DIR ?= release
 TEST_DIR ?= test
+EXPECT ?= $(TEST_DIR)/expect.sh
 
 ifeq ($(debug),yes)
 	CXXFLAGS += -DDEBUG -ggdb
 	OPTIMIZATIONS = -Og -O0
 else
-#	CXXFLAGS += -DNDEBUG
-	CXXFLAGS += -DDEBUG -ggdb
+	CXXFLAGS += -DNDEBUG
 	OPTIMIZATIONS = -Ofast -flto -finline-functions
 endif
-
-TARGET ?= $(BUILD_DIR)/$(EXE)
-EXPECT ?= $(TEST_DIR)/expect.sh
 
 CXXFLAGS += -std=c++23 -mssse3 -march=native -mtune=native
 CXXFLAGS += -fno-exceptions -fno-rtti
@@ -57,7 +55,7 @@ DEPS = $(patsubst %.o, %.d, $(OBJECTS))
 
 GIT_DATE := $(shell git log -1 --date=short --pretty=format:%cd)
 ifneq ($(GIT_DATE), )
-#	CXXFLAGS += -DGIT_DATE=\"$(GIT_DATE)\"
+	CXXFLAGS += -DGIT_DATE=\"$(GIT_DATE)\"
 endif
 
 GIT_SHA := $(shell git log -1 --date=short --pretty=format:%h)
@@ -71,7 +69,7 @@ ifneq ($(GIT_ORIGIN), )
 endif
 
 
-.PHONY: all clean _clear_console test test-hash
+.PHONY: all clean _clear_console test
 
 all: _clear_console $(TARGET)
 
@@ -87,9 +85,6 @@ run: all
 
 test: all
 	$(EXPECT) $(TARGET) $(TEST_DIR)/test.rc
-
-test-hash: all
-	$(EXPECT) $(TARGET) $(TEST_DIR)/test-hash.rc
 
 $(TARGET): $(PRECOMP) $(OBJECTS)
 	$(CXX) -o $@ $(LDFLAGS) $(OBJECTS)
