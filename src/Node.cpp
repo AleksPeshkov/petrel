@@ -361,6 +361,7 @@ ReturnStatus Node::quiescence() {
     RETURN_CUTOFF (safePromotions(child));
     RETURN_CUTOFF (notBadCaptures(child));
     RETURN_CUTOFF (allPromotions(child));
+    RETURN_CUTOFF (allCaptures(child));
 
     return ReturnStatus::Continue;
 }
