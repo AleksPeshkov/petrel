@@ -199,6 +199,7 @@ bool PositionMoves::isLegalMove(Square from, Square to) const {
 
 // make irreversible move in this position itself
 void PositionMoves::makeMove(Square from, Square to) {
+    assert (isLegalMove(from, to));
     Position::makeMove(from, to);
     makeMoves();
 }
