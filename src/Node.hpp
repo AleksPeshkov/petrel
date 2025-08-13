@@ -18,14 +18,14 @@ class PACKED TtSlot {
     Bound     bound:2;
     Square::_t from:6;
     Square::_t   to:6;
-    Ply::_t   draft_:6;
+    Ply::_t  draft_:6;
 
     static inline constexpr z_t zMask = ::singleton<z_t>(40) - 1;
 
 public:
-    TtSlot () {}
+    TtSlot () { static_assert (sizeof(TtSlot) == sizeof(u64_t)); }
+    TtSlot (Z z, Score s, Bound b, Move move, Ply d);
     TtSlot (Node* node, Bound b);
-
     bool operator == (Z z) const { return zobrist == (z >> 40); }
     operator Move () const { return {from, to}; }
     operator Score () const { return {score}; }
@@ -87,6 +87,7 @@ protected:
     UciMove uciMove(Square from, Square to) const;
 
     void updateKillerMove();
+    void refreshPvInTt(Ply d);
 
     Color colorToMove() const;
     bool isDrawMaterial() const;
