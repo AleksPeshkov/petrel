@@ -7,16 +7,16 @@
     if (status == ReturnStatus::Stop) { return ReturnStatus::Stop; } \
     if (status == ReturnStatus::BetaCutoff) { return ReturnStatus::BetaCutoff; }} ((void)0)
 
-TtSlot::TtSlot (Node* node, Bound b) :
-    zobrist{node->zobrist >> 40},
-    score{node->score},
+TtSlot::TtSlot (Z z, Score s, Bound b, Move move, Ply d) :
+    zobrist{z >> 40},
+    score{s},
     bound{b},
-    from{node->childMove.from()},
-    to{node->childMove.to()},
-    draft_{node->draft}
-{
-    static_assert (sizeof(TtSlot) == sizeof(u64_t));
-}
+    from{move.from()},
+    to{move.to()},
+    draft_{d}
+{}
+
+TtSlot::TtSlot (Node* n, Bound b) : TtSlot{n->zobrist, n->score, b, n->childMove, n->draft} {}
 
 Node::Node (NodeRoot& r) :
     PositionMoves{r}, parent{nullptr}, grandParent{nullptr}, root{r}, ply{0} {}
@@ -41,7 +41,12 @@ ReturnStatus Node::searchRoot() {
         score = NoScore;
         alpha = MinusInfinity;
         beta = PlusInfinity;
-        RETURN_IF_STOP (search());
+
+        auto status = search();
+        updateTtPv();
+
+        if (status == ReturnStatus::Stop) { return ReturnStatus::Stop; }
+
         root.uci.info_iteration(draft);
         root.newIteration();
     }
@@ -51,6 +56,24 @@ ReturnStatus Node::searchRoot() {
     }
 
     return ReturnStatus::Continue;
+}
+
+ // refresh PV in TT if it was overwritten
+ void Node::updateTtPv() {
+    Node node{root};
+    Score s = score;
+    Ply d = draft;
+
+    const Move* pv = root.pvMoves;
+    for (Move move; (move = *pv++);) {
+        auto o = root.tt.addr<TtSlot>(node.zobrist);
+        *o = TtSlot{node.zobrist, s, Exact, move, d};
+        ++root.tt.writes;
+
+        node.makeMove(move.from(), move.to());
+        s = -s;
+        d = d > 0 ? d-1 : 0;
+    }
 }
 
 ReturnStatus Node::searchMove(Move move) {
