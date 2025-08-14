@@ -452,8 +452,7 @@ Color Node::colorToMove() const {
     return root.colorToMove(ply);
 }
 
-Score Node::evaluate() const
-{
+Score Node::evaluate() const {
     return Position::evaluate().clamp();
 }
 

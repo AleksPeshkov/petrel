@@ -7,49 +7,72 @@
 #include <thread>
 #include "chrono.hpp"
 
-class Thread {
-public:
-    enum class TaskId : unsigned { None };
-    typedef std::function<void()> Task;
+typedef std::function<void()> ThreadTask;
 
+class TimerThread {
+    TimePoint  triggerTime = TimePoint::max();
+    ThreadTask timerTask;
+
+    std::mutex timerLock;
+    typedef std::unique_lock<decltype(timerLock)> Guard;
+    std::condition_variable timerChanged;
+
+    std::thread stdThread;
+    bool abort = false;
+
+    constexpr bool isActive() const { return triggerTime != TimePoint::max(); }
+
+public:
+    TimerThread();
+    ~TimerThread();
+
+    void schedule(TimePoint, ThreadTask);
+    void cancel() { schedule(TimePoint::max(), nullptr); }
+};
+
+class Thread {
     enum class Status {
         Ready, // the thread is ready to get a new task
-        Run,  // the thread is busy working on a task with the current taskId
-        Stop, // the thread have got the stop signal and is going to be idle soon again
-        Abort // the thread have got abort signal
+        Run,   // the thread is busy working on a task
+        Stop,  // the thread has received a stop signal
+        Abort  // the thread has received an abort signal
     };
 
-private:
+    std::thread stdThread;
+    ThreadTask threadTask = nullptr;
+
     Status status = Status::Ready;
     std::mutex statusLock;
-    std::condition_variable_any statusChanged;
-    std::thread stdThread;
-
     typedef std::unique_lock<decltype(statusLock)> Guard;
+    std::condition_variable_any statusChanged;
 
     bool is(Status to) const { return status == to; }
-
     template <typename Condition> void wait(Condition);
     template <typename Condition> void signal(Condition, Status);
-
-    Task threadTask = nullptr;
-    TaskId taskId = TaskId::None;
 
 public:
     Thread();
     ~Thread();
 
-    bool isReady()    const { return is(Status::Ready); }
+    bool isReady()   const { return is(Status::Ready); }
     bool isStopped() const { return is(Status::Stop) || is(Status::Abort); }
 
+    void start(ThreadTask task);
     void stop();
-    void stop(TaskId id);
-
-    constexpr TaskId getTaskId() const { return taskId; }
-
-    TaskId start(Task task);
-
     void waitStop();
+};
+
+class ThreadWithDeadline : public Thread {
+    TimerThread timer;
+
+public:
+    void start(ThreadTask task) {
+        Thread::start([this, task]() {
+            task();
+            timer.cancel();
+        });
+    }
+    void setDeadline(TimePoint deadline) { timer.schedule(deadline, [this]() { stop(); }); }
 };
 
 #endif
