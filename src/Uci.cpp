@@ -3,7 +3,6 @@
 #include "UciSearchLimits.hpp"
 #include "Node.hpp"
 #include "NodePerft.hpp"
-#include "TimerManager.hpp"
 
 #ifdef DEBUG
 extern const Uci* The_uci;
@@ -18,15 +17,17 @@ class OutputBuffer : public std::ostringstream {
     BasicLockable& outLock;
     const Uci& uci;
 
-    typedef std::lock_guard<decltype(outLock)> Guard;
 public:
-    OutputBuffer (io::ostream& o, BasicLockable& l, const Uci& u) : std::ostringstream{}, out{o}, outLock{l}, uci{u} {}
+    OutputBuffer (io::ostream& o, BasicLockable& l, const Uci& u)
+        : std::ostringstream{}, out{o}, outLock{l}, uci{u}
+    {}
+
     ~OutputBuffer () {
         std::string message = str();
         if (message.empty()) { return; }
 
         {
-            Guard lock{outLock};
+            std::lock_guard<decltype(outLock)> lock{outLock};
             out << message << std::flush;
         }
         uci.log(message);
@@ -44,9 +45,8 @@ namespace {
         return in;
     }
 
-    io::ostream& operator << (io::ostream& out, TimeInterval& timeInterval) {
-        if (timeInterval < 1ms) { return out; }
-        return out << " time " << duration_cast<milliseconds>(timeInterval).count();
+    io::ostream& operator << (io::ostream& out, const TimeInterval& timeInterval) {
+        return out << duration_cast<milliseconds>(timeInterval).count();
     }
 
     template <typename nodes_type, typename duration_type>
@@ -112,8 +112,9 @@ void Uci::uciok() const {
        << " max "     << ::mebi(root.tt.maxSize())
        << " default " << ::mebi(root.tt.size())
        << '\n';
-    ob << "option name Ponder type check default " << (canPonder ? "true" : "false") << '\n';
+    ob << "option name Ponder type check default " << (root.limits.canPonder ? "true" : "false") << '\n';
     ob << "option name UCI_Chess960 type check default " << (isChess960 ? "true" : "false") << '\n';
+    ob << "option name Move Overhead type spin min 0 default " << root.limits.moveOverhead << '\n';
     ob << "uciok\n";
 }
 
@@ -145,8 +146,8 @@ void Uci::setoption() {
     if (consume("Ponder")) {
         consume("value");
 
-        if (consume("true"))  { canPonder = true; return; }
-        if (consume("false")) { canPonder = false; return; }
+        if (consume("true"))  { root.limits.canPonder = true; return; }
+        if (consume("false")) { root.limits.canPonder = false; return; }
 
         io::fail_rewind(inputLine);
         return;
@@ -159,6 +160,14 @@ void Uci::setoption() {
         if (consume("false")) { root.setChessVariant(Orthodox); return; }
 
         io::fail_rewind(inputLine);
+        return;
+    }
+
+    if (consume("Move Overhead")) {
+        consume("value");
+
+        inputLine >> root.limits.moveOverhead;
+        if (!inputLine) { io::fail_rewind(inputLine); }
         return;
     }
 }
@@ -222,7 +231,7 @@ void Uci::go() {
         auto whiteSide = root.sideOf(White);
         auto blackSide = root.sideOf(Black);
 
-        root.limits = {};
+        root.limits.clear();
         while (inputLine >> std::ws, !inputLine.eof()) {
             if      (consume("depth"))    { inputLine >> root.limits.depth; }
             else if (consume("nodes"))    { inputLine >> root.limits.nodes; }
@@ -240,42 +249,16 @@ void Uci::go() {
         }
     }
 
-    auto timeInterval = root.limits.calculateThinkingTime(canPonder);
-
     mainSearchThread.start([this] {
         Node{root}.searchRoot();
         bestmove();
     });
 
-    if (timeInterval != 0ms) {
-        setDeadline(timeInterval);
-    }
+    root.limits.setDeadline(mainSearchThread);
 }
 
 void Uci::ponderhit() {
-    root.searchStartTime = ::timeNow();
-    root.limits.ponder = false;
-
-    if (root.limits.movetime != 0ms) {
-        setDeadline(root.limits.movetime);
-        return;
-    }
-
-    auto timeInterval = root.limits.calculateThinkingTime(canPonder);
-    if (timeInterval != 0ms) {
-        timeInterval -= ::elapsedSince(root.searchStartTime);
-        setDeadline(timeInterval);
-    }
-}
-
-void Uci::setDeadline(TimeInterval timeInterval) {
-    auto id = mainSearchThread.getTaskId();
-    auto deadlineTask = [this, id]() { mainSearchThread.stop(id); };
-
-    // stop immediately
-    if (timeInterval < 1ms) { deadlineTask(); return; }
-
-    The_timerManager.schedule(std::max<TimeInterval>(1ms, timeInterval - 1ms), deadlineTask);
+    root.limits.ponderhit(mainSearchThread);
 }
 
 void Uci::goPerft() {
@@ -288,6 +271,7 @@ void Uci::goPerft() {
     inputLine >> depth;
     depth = std::min<Ply>(depth, 18); // current Tt implementation limit
 
+    root.limits.clear();
     mainSearchThread.start([this, depth] {
         NodePerft{root, depth}.visitRoot();
         info_perft_bestmove();
@@ -326,8 +310,14 @@ ostream& Uci::nps(ostream& o) const {
     }
 
     lastInfoNodes = root.nodeCounter;
-    auto timeInterval = ::elapsedSince(root.searchStartTime);
-    return o << " nodes " << lastInfoNodes << timeInterval << " nps " << ::nps(lastInfoNodes, timeInterval);
+    o << " nodes " << lastInfoNodes;
+
+    auto elapsedTime = ::elapsedSince(root.limits.searchStartTime);
+    if (elapsedTime >= 1ms) {
+        o << " time " << elapsedTime << " nps " << ::nps(lastInfoNodes, elapsedTime);
+    }
+
+    return o;
 }
 
 ostream& Uci::info_nps(ostream& o) const {
@@ -360,7 +350,7 @@ void Uci::bestmove() const {
     info_fen(ob);
     info_nps(ob);
     ob << "bestmove " << root.pvMoves[0];
-    if (canPonder && root.pvMoves[1]) {
+    if (root.limits.canPonder && root.pvMoves[1]) {
         ob << " ponder " << root.pvMoves[1];
     }
     ob << '\n';
