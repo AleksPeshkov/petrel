@@ -9,16 +9,24 @@ template<class BasicLockable>
 class OutputBuffer : public std::ostringstream {
     io::ostream& out;
     BasicLockable& outLock;
+    const Uci& uci;
+
     typedef std::lock_guard<decltype(outLock)> Guard;
 public:
-    OutputBuffer (io::ostream& o, BasicLockable& l) : std::ostringstream{}, out{o}, outLock{l} {}
+    OutputBuffer (io::ostream& o, BasicLockable& l, const Uci& u) : std::ostringstream{}, out{o}, outLock{l}, uci{u} {}
     ~OutputBuffer () {
-        Guard lock{outLock};
-        out << str() << std::flush;
+        std::string message = str();
+        if (message.empty()) { return; }
+
+        {
+            Guard lock{outLock};
+            out << message << std::flush;
+        }
+        uci.log(message);
     }
 };
 
-#define OUTPUT(ob) OutputBuffer<decltype(outLock)> ob(out, outLock)
+#define OUTPUT(ob) OutputBuffer<decltype(outLock)> ob(out, outLock, *this)
 
 namespace {
     io::istream& operator >> (io::istream& in, TimeInterval& timeInterval) {
@@ -44,14 +52,12 @@ namespace {
 
     template <typename T>
     static constexpr T permil(T n, T m) { return (n * 1000) / m; }
-
-    ostream& uci_error(ostream& err, io::istream& context) {
-        return err << "parsing error: " << context.rdbuf() << std::endl;
-    }
 }
 
-void Uci::processCommands(io::istream& in, ostream& err) {
+void Uci::processCommands(io::istream& in) {
     for (std::string currentLine; std::getline(in, currentLine); ) {
+        log('>' + currentLine + '\n');
+
         inputLine.clear(); //clear error state from the previous line
         inputLine.str(std::move(currentLine));
         inputLine >> std::ws;
@@ -70,7 +76,9 @@ void Uci::processCommands(io::istream& in, ostream& err) {
         else if (consume("exit"))      { break; }
 
         if (hasMoreInput()) {
-            uci_error(err, inputLine);
+            std::string unparsedInput;
+            std::getline(inputLine, unparsedInput);
+            log("#parsing error: " + unparsedInput + '\n');
         }
     }
 }
@@ -91,6 +99,7 @@ void Uci::uciok() const {
     OUTPUT(ob);
     ob << "id name petrel\n";
     ob << "id author Aleks Peshkov\n";
+    ob << "option name Debug Log File type string default " << (logFileName.empty() ? "<empty>" : logFileName) << '\n';
     ob << "option name Hash type spin"
        << " min "     << ::mebi(root.tt.minSize())
        << " max "     << ::mebi(root.tt.maxSize())
@@ -103,6 +112,22 @@ void Uci::uciok() const {
 
 void Uci::setoption() {
     consume("name");
+
+    if (consume("Debug Log File")) {
+        consume("value");
+
+        inputLine >> std::ws;
+        logFileName.clear();
+        std::getline(inputLine, logFileName);
+        if (logFileName == "<empty>") { logFileName.clear(); }
+
+        if (logFileName.empty()) {
+            logFile.close();
+        } else {
+            logFile.open(logFileName, std::ios::app);
+        }
+        return;
+    }
 
     if (consume("Hash")) {
         consume("value");
@@ -280,11 +305,11 @@ void Uci::info_nps_readyok() const {
         if (lock.owns_lock() && isreadyWaiting) {
             isreadyWaiting = false;
 
-        std::ostringstream ob;
-        info_nps(ob);
-        ob << "readyok\n";
+            std::ostringstream ob;
+            info_nps(ob);
+            ob << "readyok\n";
 
-                out << ob.str() << std::flush;
+            out << ob.str() << std::flush;
         }
     }
 }
@@ -360,4 +385,21 @@ void Uci::info_perft_bestmove() const {
     OUTPUT(ob);
     info_nps(ob);
     ob << "bestmove 0000\n";
+}
+
+void Uci::log(const std::string& message) const {
+    if (!logFile.is_open()) return;
+    if (message.empty()) return; // Skip empty messages
+
+    {
+        Guard lock{outLock}; // Lock the log mutex
+        logFile << message << std::flush; // Write and flush the message
+
+        // Recover if the log is in a bad state
+        if (!logFile) {
+            logFile.clear(); // Clear error flags
+            logFile.close(); // Close the file
+            logFile.open(logFileName, std::ios::app); // Reopen
+        }
+    }
 }

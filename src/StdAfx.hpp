@@ -12,6 +12,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <forward_list>
+#include <fstream>
 #include <functional>
 #include <errno.h>
 #include <iomanip>
@@ -20,6 +21,7 @@
 #include <mutex>
 #include <set>
 #include <sstream>
+#include <string>
 #include <thread>
 #include <type_traits>
 #include <unistd.h>
