@@ -63,7 +63,6 @@ public:
     PvMoves pvMoves;
     HistoryMoves counterMove;
 
-    TimePoint searchStartTime;
     NodeCounter nodeCounter;
 
     UciSearchLimits limits;
@@ -92,7 +91,6 @@ public:
 
     void setHash(size_t);
 
-    void readyok() const;
     ReturnStatus countNode();
 };
 
