@@ -7,13 +7,12 @@ void NodeRoot::setHash(size_t bytes) {
 
 void NodeRoot::newGame() {
     tt.newGame();
+    counterMove.clear();
     newSearch();
 }
 
 void NodeRoot::newSearch() {
-    searchStartTime = ::timeNow();
     tt.newSearch();
-    counterMove.clear();
     pvMoves.clear();
 }
 
