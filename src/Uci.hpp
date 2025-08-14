@@ -12,7 +12,7 @@
 /// Handling input and output of UCI (Universal Chess Interface)
 class Uci {
     UciRoot root;
-    mutable Thread mainSearchThread;
+    mutable ThreadWithDeadline mainSearchThread;
 
     // stream buffer for parsing current input line
     io::istringstream inputLine;
@@ -29,8 +29,6 @@ class Uci {
 
     // to avoid printing identical nps info lines in a row
     mutable node_count_t lastInfoNodes = 0;
-
-    bool canPonder = false;
 
     std::string logFileName;
     mutable std::ofstream logFile;
@@ -59,8 +57,6 @@ class Uci {
     ostream& nps(ostream&) const;
     ostream& info_nps(ostream&) const;
     ostream& info_fen(ostream&) const;
-
-    void setDeadline(TimeInterval);
 
     void bestmove() const;
 
