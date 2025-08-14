@@ -3,17 +3,17 @@
 
 #include "typedefs.hpp"
 #include "chrono.hpp"
-#include "PiBb.hpp"
+#include "Thread.hpp"
 
 class UciSearchLimits {
 public:
-    // thinkingTime == 0 means no time limit
-    TimeInterval thinkingTime = 0ms;
+    TimePoint searchStartTime;
+
+    TimeInterval deadline = TimeInterval::max();
+    TimeInterval movetime = 0ms;
 
     Color::arrayOf<TimeInterval> time = {{ 0ms, 0ms }};
     Color::arrayOf<TimeInterval> inc = {{ 0ms, 0ms }};
-
-    TimeInterval movetime = 0ms;
 
     node_count_t nodes = NodeCountMax;
     Ply depth = MaxPly;
@@ -24,18 +24,66 @@ public:
     bool ponder = false;
     bool infinite = false;
 
+    bool canPonder = false;
+    TimeInterval moveOverhead = 0ms;
+
+    // clear all limits except canPonder and moveOverhead
+    void clear() {
+        searchStartTime = timeNow();
+        deadline = TimeInterval::max();
+        movetime = 0ms;
+        time = {{ 0ms, 0ms }};
+        inc = {{ 0ms, 0ms }};
+        nodes = NodeCountMax;
+        depth = MaxPly;
+        movestogo = 0;
+        mate = 0;
+        ponder = false;
+        infinite = false;
+    }
+
+    // no time limits
+    constexpr TimeInterval setNoDeadline() { return deadline = TimeInterval::max(); }
+    constexpr bool hasDeadline() const { return deadline != TimeInterval::max(); }
+
     constexpr TimeInterval average(Side my) const {
-        auto moves = movestogo ? movestogo : 20;
+        auto moves = movestogo ? movestogo : 30;
         return (time[my] + (moves-1)*inc[my]) / moves;
     }
 
-    TimeInterval calculateThinkingTime(bool canPonder) {
-        if (infinite) { return thinkingTime = 0ms; }
-        if (ponder) { return thinkingTime = 0ms; }
-        if (movetime > 0ms) { return thinkingTime = movetime; }
+    constexpr TimeInterval calculateDeadline() {
+        if (infinite) { return setNoDeadline(); }
+        if (ponder) { return setNoDeadline(); }
+        if (movetime > 0ms) { return deadline = movetime - moveOverhead; }
 
         auto myAverage = average(My) + (canPonder ? average(Op) / 2 : 0ms);
-        return thinkingTime = std::min(time[My], myAverage);
+        if (myAverage == 0ms) { return setNoDeadline(); } // go without any limits
+
+        return deadline = std::min(time[My], myAverage) - moveOverhead;
+    }
+
+    void ponderhit(ThreadWithDeadline& searchThread) {
+        ponder = false;
+        setDeadline(searchThread);
+    }
+
+    void setDeadline(ThreadWithDeadline& searchThread) {
+        calculateDeadline();
+        if (!hasDeadline()) { return; }
+
+        if (deadline < 500us) {
+            // we have got no time to think
+            // set search limit to depth == 1 to return at least a valid best move
+            depth = 1;
+            return;
+        }
+        searchThread.setDeadline(searchStartTime + deadline - 500us);
+    }
+
+    constexpr bool softDeadlineReached() const {
+        if (!hasDeadline()) { return false; }
+        auto softDeadline = deadline * 3 / 4;
+        return ::elapsedSince(searchStartTime) > softDeadline;
     }
 };
 

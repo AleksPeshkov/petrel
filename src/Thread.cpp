@@ -1,83 +1,106 @@
-#include <thread>
+#include "assert.hpp"
 #include "Thread.hpp"
-#include "TimerManager.hpp"
 
-namespace {
-    using Id = Thread::TaskId;
-    Id& operator++ (Id& id) {
-        id = static_cast<Id>( static_cast< std::underlying_type_t<Id> >(id)+1 );
-        if (id == Id::None) {
-            //wrap around Id::None
-            id = static_cast<Id>( static_cast< std::underlying_type_t<Id> >(Id::None)+1 );
+TimerThread::TimerThread() : stdThread{ std::thread([this] {
+    while (!abort) {
+        Guard lock{timerLock};
+
+        if (!isActive()) {
+            timerChanged.wait(lock); // wait for a new schedule
+            continue;
         }
-        return id;
+
+        if (::timeNow() < triggerTime) {
+            timerChanged.wait_until(lock, triggerTime); // sleep until trigger time
+            continue;
+        }
+
+        lock.unlock();
+
+        if (timerTask) {
+            timerTask();
+            timerTask = nullptr;
+        }
     }
+}) } {}
+
+TimerThread::~TimerThread() {
+    {
+        Guard lock{timerLock};
+        abort = true;
+        triggerTime = TimePoint::max();
+        timerTask = nullptr;
+    }
+    timerChanged.notify_all();
+
+    if (stdThread.joinable()) { stdThread.join(); }
+}
+
+void TimerThread::schedule(TimePoint timePoint, ThreadTask task) {
+    {
+        Guard lock{timerLock};
+        triggerTime = timePoint;
+        timerTask = std::move(task);
+    }
+    timerChanged.notify_all();
 }
 
 template <typename Condition>
 void Thread::wait(Condition condition) {
     if (!condition()) {
-        Guard g{statusLock};
-        statusChanged.wait(g, condition);
+        Guard lock{statusLock};
+        statusChanged.wait(lock, condition);
     }
 }
 
 template <typename Condition>
 void Thread::signal(Condition condition, Status to) {
     {
-        Guard g{statusLock};
+        Guard lock{statusLock};
         if (!condition()) { return; }
         status = to;
     }
     statusChanged.notify_all();
 }
 
-Thread::Thread() {
-    stdThread = std::thread([this] {
-        while (!is(Status::Abort)) {
-            signal([this]() { return !is(Status::Ready); }, Status::Ready);
-            wait([this] { return is(Status::Run) || is(Status::Abort); });
+Thread::Thread() : stdThread{ std::thread([this] {
+    for(;;) {
+        signal([this]() { return !is(Status::Ready); }, Status::Ready);
+        wait([this] { return !is(Status::Ready); });
+        if (is(Status::Abort)) { return; }
 
-            if (is(Status::Run)) {
-                if (threadTask) {
-                    threadTask();
-                }
-                threadTask = nullptr;
-            }
+        if (threadTask) {
+            threadTask();
+            threadTask = nullptr;
         }
-    });
-}
+
+        if (is(Status::Abort)) { return; }
+    }
+})}
+{}
 
 Thread::~Thread() {
     {
-        Guard g{statusLock};
+        Guard lock{statusLock};
         status = Status::Abort;
     }
     statusChanged.notify_all();
     if (stdThread.joinable()) { stdThread.join(); }
 }
 
-Thread::TaskId Thread::start(Task task) {
-    TaskId result;
+void Thread::start(ThreadTask task) {
+    assert (isReady());
     {
         Guard g{statusLock};
-        if (!is(Status::Ready)) { return TaskId::None; }
-
         threadTask = std::move(task);
-        result = ++taskId;
         status = Status::Run;
     }
     statusChanged.notify_all();
-    return result;
 }
 
 void Thread::stop() {
-    signal([this]() { return is(Status::Run); }, Status::Stop);
+    signal([this]() { return !is(Status::Abort); }, Status::Stop);
     wait([this] { return is(Status::Ready); });
-}
-
-void Thread::stop(TaskId id) {
-    signal([this, id]() { return id == taskId && is(Status::Run); }, Status::Stop);
 }
 
 void Thread::waitStop() {
