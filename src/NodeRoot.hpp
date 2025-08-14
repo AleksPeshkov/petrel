@@ -63,7 +63,6 @@ public:
     PvMoves pvMoves;
     HistoryMoves counterMove;
 
-    TimePoint searchStartTime;
     NodeCounter nodeCounter;
 
     UciSearchLimits limits;

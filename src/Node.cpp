@@ -41,10 +41,19 @@ ReturnStatus Node::searchRoot() {
         score = NoScore;
         alpha = MinusInfinity;
         beta = PlusInfinity;
-        RETURN_IF_STOP (search());
-        root.uci.info_iteration(draft);
-        root.newIteration();
+
+        auto status = search();
+
+        // refresh PV for the next iteration or new search
         refreshPvInTt(draft);
+
+        if (status == ReturnStatus::Stop) { return ReturnStatus::Stop; }
+
+        root.uci.info_iteration(draft);
+
+        if (root.limits.softDeadlineReached()) { return ReturnStatus::Continue; }
+
+        root.newIteration();
     }
 
     if (root.limits.infinite || root.limits.ponder) {

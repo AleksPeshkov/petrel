@@ -11,7 +11,7 @@ void NodeRoot::newGame() {
 }
 
 void NodeRoot::newSearch() {
-    searchStartTime = ::timeNow();
+    limits.searchStartTime = ::timeNow();
     tt.newSearch();
     counterMove.clear();
     pvMoves.clear();

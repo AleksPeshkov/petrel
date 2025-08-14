@@ -7,8 +7,13 @@
 
 class UciSearchLimits {
 public:
-    // thinkingTime == 0 means no time limit
-    TimeInterval thinkingTime = 0ms;
+    TimePoint searchStartTime;
+
+    // hardDeadline == 0 means no time limit
+    TimeInterval hardDeadline = 0ms;
+
+    // softDeadline == 0 means use all time
+    TimeInterval softDeadline = 0ms;
 
     Color::arrayOf<TimeInterval> time = {{ 0ms, 0ms }};
     Color::arrayOf<TimeInterval> inc = {{ 0ms, 0ms }};
@@ -25,17 +30,30 @@ public:
     bool infinite = false;
 
     constexpr TimeInterval average(Side my) const {
-        auto moves = movestogo ? movestogo : 20;
+        auto moves = movestogo ? movestogo : 30;
         return (time[my] + (moves-1)*inc[my]) / moves;
     }
 
     TimeInterval calculateThinkingTime(bool canPonder) {
-        if (infinite) { return thinkingTime = 0ms; }
-        if (ponder) { return thinkingTime = 0ms; }
-        if (movetime > 0ms) { return thinkingTime = movetime; }
+        if (infinite) { return hardDeadline = 0ms; }
+        if (ponder) { return hardDeadline = 0ms; }
+        if (movetime > 0ms) { return hardDeadline = movetime; }
 
         auto myAverage = average(My) + (canPonder ? average(Op) / 2 : 0ms);
-        return thinkingTime = std::min(time[My], myAverage);
+        hardDeadline = std::min(time[My], myAverage);
+        softDeadline = hardDeadline * 3 / 4;
+
+        return hardDeadline;
+    }
+
+    TimeInterval ponderhit() {
+        ponder = false;
+        return calculateThinkingTime(true);
+    }
+
+    bool softDeadlineReached() const {
+        if (softDeadline == 0ms) { return false; }
+        return ::elapsedSince(searchStartTime) > softDeadline;
     }
 };
 

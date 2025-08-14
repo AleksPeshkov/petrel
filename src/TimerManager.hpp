@@ -63,10 +63,10 @@ public:
         if (stdThread.joinable()) stdThread.join();
     }
 
-    void schedule(TimeInterval timeInterval, std::function<void()> task) {
+    void schedule(TimePoint timePoint, std::function<void()> task) {
         {
             Guard lock{timersLock};
-            timers.emplace(::timeIn(timeInterval), std::move(task));
+            timers.emplace(timePoint, std::move(task));
         }
         timersChanged.notify_all();
     }

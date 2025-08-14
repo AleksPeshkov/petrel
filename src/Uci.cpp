@@ -240,42 +240,27 @@ void Uci::go() {
         }
     }
 
-    auto timeInterval = root.limits.calculateThinkingTime(canPonder);
-
     mainSearchThread.start([this] {
         Node{root}.searchRoot();
         bestmove();
     });
 
-    if (timeInterval != 0ms) {
-        setDeadline(timeInterval);
-    }
+    setDeadline(root.limits.calculateThinkingTime(canPonder));
 }
 
 void Uci::ponderhit() {
-    root.searchStartTime = ::timeNow();
-    root.limits.ponder = false;
-
-    if (root.limits.movetime != 0ms) {
-        setDeadline(root.limits.movetime);
-        return;
-    }
-
-    auto timeInterval = root.limits.calculateThinkingTime(canPonder);
-    if (timeInterval != 0ms) {
-        timeInterval -= ::elapsedSince(root.searchStartTime);
-        setDeadline(timeInterval);
-    }
+    setDeadline(root.limits.ponderhit());
 }
 
-void Uci::setDeadline(TimeInterval timeInterval) {
+void Uci::setDeadline(TimeInterval deadlineInterval) {
+    if (deadlineInterval == 0ms) { return; } // infinite, by convention
+
     auto id = mainSearchThread.getTaskId();
     auto deadlineTask = [this, id]() { mainSearchThread.stop(id); };
 
-    // stop immediately
-    if (timeInterval < 1ms) { deadlineTask(); return; }
+    if (deadlineInterval < 1ms) { deadlineTask(); return; } // stop immediately
 
-    The_timerManager.schedule(std::max<TimeInterval>(1ms, timeInterval - 1ms), deadlineTask);
+    The_timerManager.schedule(::timeIn(deadlineInterval) - 1ms, deadlineTask);
 }
 
 void Uci::goPerft() {
@@ -327,8 +312,8 @@ ostream& Uci::nps(ostream& o) const {
     }
 
     lastInfoNodes = root.nodeCounter;
-    auto timeInterval = ::elapsedSince(root.searchStartTime);
-    return o << " nodes " << lastInfoNodes << timeInterval << " nps " << ::nps(lastInfoNodes, timeInterval);
+    auto elapsedTime = ::elapsedSince(root.limits.searchStartTime);
+    return o << " nodes " << lastInfoNodes << elapsedTime << " nps " << ::nps(lastInfoNodes, elapsedTime);
 }
 
 ostream& Uci::info_nps(ostream& o) const {
