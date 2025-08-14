@@ -2,7 +2,9 @@
 #define UCI_HPP
 
 #include <atomic>
+#include <fstream>
 #include <mutex>
+#include <string>
 #include "io.hpp"
 #include "Thread.hpp"
 #include "UciRoot.hpp"
@@ -20,6 +22,7 @@ class Uci {
 
     // avoid race conditions betweeen Uci output and main search thread output
     mutable std::mutex outLock;
+    typedef std::lock_guard<decltype(outLock)> Guard;
 
     // used to respond to "isready" command with "info nps"
     mutable std::atomic<bool> isreadyWaiting = false;
@@ -28,6 +31,9 @@ class Uci {
     mutable node_count_t lastInfoNodes = 0;
 
     bool canPonder = false;
+
+    std::string logFileName;
+    mutable std::ofstream logFile;
 
     // try to consume the given token from the inputLine
     bool consume(io::czstring token) { return io::consume(inputLine, token); }
@@ -61,7 +67,10 @@ public:
     Uci (io::ostream& o): root{*this}, out{o} { ucinewgame(); }
 
     // process UCI input commands
-    void processCommands(io::istream&, io::ostream& = std::cerr);
+    void processCommands(io::istream&);
+
+    // log UCI input, UCi output and parsing error messages to the logFile named by logFileName
+    void log(const std::string&) const;
 
     ChessVariant chessVariant() const { return root.chessVariant(); }
 
