@@ -51,7 +51,7 @@ struct Score {
 
     friend out::ostream& operator << (out::ostream& out, Score score) {
         if (score == NoScore) {
-            return out;
+            return out << " score none";
         }
 
         if (score <= MinEval) {
