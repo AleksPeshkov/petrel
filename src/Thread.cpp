@@ -17,15 +17,15 @@ namespace {
 template <typename Condition>
 void Thread::wait(Condition condition) {
     if (!condition()) {
-        Guard g{statusLock};
-        statusChanged.wait(g, condition);
+        Guard lock{statusLock};
+        statusChanged.wait(lock, condition);
     }
 }
 
 template <typename Condition>
 void Thread::signal(Condition condition, Status to) {
     {
-        Guard g{statusLock};
+        Guard lock{statusLock};
         if (!condition()) { return; }
         status = to;
     }
@@ -50,7 +50,7 @@ Thread::Thread() {
 
 Thread::~Thread() {
     {
-        Guard g{statusLock};
+        Guard lock{statusLock};
         status = Status::Abort;
     }
     statusChanged.notify_all();

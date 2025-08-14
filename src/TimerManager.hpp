@@ -20,8 +20,8 @@ class TimerManager {
 
     std::priority_queue<TimerRecord> timers;
 
-    std::mutex mutex;
-    typedef std::unique_lock<decltype(mutex)> Guard;
+    std::mutex timersLock;
+    typedef std::unique_lock<decltype(timersLock)> Guard;
     std::condition_variable timersChanged;
 
     std::thread stdThread;
@@ -31,7 +31,7 @@ public:
     TimerManager() {
         stdThread = std::thread([this] {
             while (!abort) {
-                Guard lock(mutex);
+                Guard lock{timersLock};
 
                 if (timers.empty()) {
                     timersChanged.wait(lock); // wait for new timers
@@ -55,7 +55,7 @@ public:
 
     ~TimerManager() {
         {
-            Guard lock(mutex);
+            Guard lock{timersLock};
             abort = true;
         }
         timersChanged.notify_all();
@@ -65,7 +65,7 @@ public:
 
     void schedule(TimeInterval timeInterval, std::function<void()> task) {
         {
-            Guard lock(mutex);
+            Guard lock{timersLock};
             timers.emplace(::timeIn(timeInterval), std::move(task));
         }
         timersChanged.notify_all();

@@ -8,11 +8,14 @@
 template<class BasicLockable>
 class OutputBuffer : public std::ostringstream {
     io::ostream& out;
-    BasicLockable& lock;
-    typedef std::lock_guard<decltype(lock)> Guard;
+    BasicLockable& outLock;
+    typedef std::lock_guard<decltype(outLock)> Guard;
 public:
-    OutputBuffer (io::ostream& o, BasicLockable& l) : std::ostringstream{}, out(o), lock(l) {}
-    ~OutputBuffer () { Guard g{lock}; out << str() << std::flush; }
+    OutputBuffer (io::ostream& o, BasicLockable& l) : std::ostringstream{}, out{o}, outLock{l} {}
+    ~OutputBuffer () {
+        Guard lock{outLock};
+        out << str() << std::flush;
+    }
 };
 
 #define OUTPUT(ob) OutputBuffer<decltype(outLock)> ob(out, outLock)
@@ -273,17 +276,15 @@ void Uci::readyok() const {
 
 void Uci::info_nps_readyok() const {
     if (isreadyWaiting) {
+        std::unique_lock<std::mutex> lock(outLock, std::try_to_lock);
+        if (lock.owns_lock() && isreadyWaiting) {
+            isreadyWaiting = false;
+
         std::ostringstream ob;
-        info_fen(ob);
         info_nps(ob);
         ob << "readyok\n";
 
-        if (outLock.try_lock()) {
-            if (isreadyWaiting) {
-                isreadyWaiting = false;
                 out << ob.str() << std::flush;
-            }
-            outLock.unlock();
         }
     }
 }

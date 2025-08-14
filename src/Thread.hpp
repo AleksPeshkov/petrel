@@ -22,10 +22,10 @@ public:
 private:
     Status status = Status::Ready;
     std::mutex statusLock;
+    typedef std::unique_lock<decltype(statusLock)> Guard;
+
     std::condition_variable_any statusChanged;
     std::thread stdThread;
-
-    typedef std::unique_lock<decltype(statusLock)> Guard;
 
     bool is(Status to) const { return status == to; }
 

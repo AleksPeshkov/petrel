@@ -92,7 +92,6 @@ public:
 
     void setHash(size_t);
 
-    void readyok() const;
     ReturnStatus countNode();
 };
 
