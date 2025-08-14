@@ -219,14 +219,12 @@ ostream& UciRoot::writeFen(ostream& out) const {
     auto& whitePieces = (*this)[sideOf(White)];
     auto& blackPieces = (*this)[sideOf(Black)];
 
-    out << BoardToFen(whitePieces, blackPieces)
+    return out << BoardToFen(whitePieces, blackPieces)
         << ' ' << colorToMove_
         << ' ' << CastlingToFen{whitePieces, blackPieces, chessVariant()}
         << ' ' << EnPassantToFen{(*this)[Op], colorToMove_}
         << ' ' << static_cast<unsigned>(rule50) // halfmove clock
-        << ' ' << 1; // fake fullmove number
-
-    return out;
+        << ' ' << fullMoveNumber; // fullmove number
 }
 
 istream& UciRoot::readMove(istream& in, Square& from, Square& to) const {
@@ -326,6 +324,7 @@ void UciRoot::playMoves(istream& in) {
         }
 
         playMove(Move{from, to});
+        if (colorToMove_.is(White)) { ++fullMoveNumber; }
     }
 
     repetitions.normalize(colorToMove_);
@@ -423,11 +422,8 @@ void UciRoot::readFen(istream& in) {
 
     if (in && !in.eof()) {
         in >> rule50;
-
-        unsigned fullMoveNumber = 1;
         in >> fullMoveNumber;
-
-        in.clear(); //ignore possibly missing 'halfmove clock' and 'fullmove number' fen fields
+        in.clear(); // ignore possibly missing 'halfmove clock' and 'fullmove number' fen fields
     }
 
     zobrist = generateZobrist();
