@@ -23,7 +23,7 @@ public:
     constexpr friend bool operator == (Arg a, Arg b) { return a.v == b.v; }
     constexpr friend bool operator != (Arg a, Arg b) { return a.v != b.v; }
 
-    friend out::ostream& operator << (out::ostream& out, Z z) {
+    friend ostream& operator << (ostream& out, Z z) {
         auto flags = out.flags();
 
         out << " [" << std::hex << std::setw(16) << std::setfill('0') << "]";

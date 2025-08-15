@@ -13,8 +13,8 @@ struct Ply : Index<64> {
     Ply(signed ply) : Index{static_cast<_t>(ply)} {}
     Ply(index_t ply) : Index{ply} {}
 
-    friend io::ostream& operator << (io::ostream& out, Ply ply) { return out << static_cast<unsigned>(ply); }
-    friend io::istream& operator >> (io::istream& in, Ply& ply) {
+    friend ostream& operator << (ostream& out, Ply ply) { return out << static_cast<unsigned>(ply); }
+    friend istream& operator >> (istream& in, Ply& ply) {
         index_t n = Ply::Last;
         in >> n;
         ply = { std::min(n, static_cast<index_t>(Ply::Last)) };
@@ -47,13 +47,17 @@ public:
     constexpr bool isEmpty() const { return v == 0; }
     constexpr bool isDraw() const { return v == Last; }
 
-    friend io::istream& operator >> (io::istream& in, Rule50& rule50) {
+    friend istream& operator >> (istream& in, Rule50& rule50) {
         auto beforeRule50 = in.tellg();
         unsigned _rule50 = 0; // default value
         in >> _rule50;
         if (_rule50 > Last) { return io::fail_pos(in, beforeRule50); }
         rule50.v = _rule50;
         return in;
+    }
+
+    friend ostream& operator << (ostream& out, const Rule50& rule50) {
+        return out << rule50.v;
     }
 };
 
