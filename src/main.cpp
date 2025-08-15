@@ -35,6 +35,10 @@ template <> io::czstring Pi::The_string{"KQRrBbNn12345678"};
 */
 TimerManager The_timerManager; // Singleton instance
 
+#ifdef DEBUG
+const Uci* The_uci = nullptr;
+#endif
+
 namespace {
 
 using std::ostream;
@@ -132,6 +136,9 @@ int main(int argc, const char* argv[]) {
     std::cerr.tie(nullptr);
 
     Uci uci(std::cout);
+#ifdef DEBUG
+    The_uci = &uci;
+#endif
     uci.processCommands(std::cin);
 
     return EXIT_SUCCESS;

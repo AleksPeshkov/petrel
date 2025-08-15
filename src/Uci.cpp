@@ -5,6 +5,13 @@
 #include "NodePerft.hpp"
 #include "TimerManager.hpp"
 
+#ifdef DEBUG
+extern const Uci* The_uci;
+void log(const std::string& message) {
+    if (The_uci) { The_uci->log(message); }
+}
+#endif
+
 template<class BasicLockable>
 class OutputBuffer : public std::ostringstream {
     io::ostream& out;
