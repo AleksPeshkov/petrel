@@ -39,7 +39,7 @@ public:
     constexpr Index operator ~ () const { return Index{v}.flip(); }
 
     constexpr io::char_type to_char() const { return The_string[v]; }
-    friend io::ostream& operator << (io::ostream& out, Index i) { return out << i.to_char(); }
+    friend ostream& operator << (ostream& out, Index i) { return out << i.to_char(); }
 
     bool from_char(io::char_type c) {
         auto p = std::memchr(The_string, c, Size);
@@ -50,7 +50,7 @@ public:
         return true;
     }
 
-    friend io::istream& read(io::istream& in, Index& i) {
+    friend istream& read(istream& in, Index& i) {
         io::char_type c;
         if (in.get(c)) {
             if (!i.from_char(c)) { io::fail_char(in); }
