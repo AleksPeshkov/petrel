@@ -2,8 +2,8 @@
 #define SCORE_HPP
 
 #include <algorithm>
+#include "io.hpp"
 #include "typedefs.hpp"
-#include "out.hpp"
 
 // position evaluation score, fits in 14 bits
 enum score_t : i16_t {
@@ -51,7 +51,7 @@ struct Score {
         return v;
     }
 
-    friend out::ostream& operator << (out::ostream& out, Score score) {
+    friend ostream& operator << (ostream& out, Score score) {
         if (score == NoScore) {
             return out << " score none";
         }
