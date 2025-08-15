@@ -1,7 +1,7 @@
 #ifndef BIT_ARRAY_HPP
 #define BIT_ARRAY_HPP
 
-#include <cassert>
+#include "bitops.hpp"
 
 #define SELF static_cast<Self&>(*this)
 #define CONST_SELF static_cast<const Self&>(*this)
@@ -41,8 +41,8 @@ public:
     constexpr Self& operator ^= (Arg b) { Ops::xor_assign(v, b.v); return SELF; }
 
     constexpr Self& operator %= (Arg b) { Ops::or_assign(v, b.v); Ops::xor_assign(v, b.v); return SELF; } // andnot_assign
-    constexpr Self& operator += (Arg b) { assert(none(b)); return SELF ^= b; }
-    constexpr Self& operator -= (Arg b) { assert(CONST_SELF >= b); return SELF ^= b; }
+    constexpr Self& operator += (Arg b) { assert (none(b)); return SELF ^= b; }
+    constexpr Self& operator -= (Arg b) { assert (CONST_SELF >= b); return SELF ^= b; }
 
     constexpr friend bool operator != (Arg a, Arg b) { return !(a == b); }
     constexpr friend bool operator <  (Arg a, Arg b) { return !(a >= b); }

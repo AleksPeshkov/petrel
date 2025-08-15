@@ -58,7 +58,7 @@ ReturnStatus NodePerft::visitMove(Square from, Square to) {
             break;
 
         default: {
-            assert(draft >= 2);
+            assert (draft >= 2);
             makeZobrist(parent, from, to);
             root.tt.prefetch(zobrist, 64);
 
