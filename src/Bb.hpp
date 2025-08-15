@@ -44,7 +44,7 @@ public:
     constexpr friend Bb operator << (Bb bb, unsigned offset) { return Bb{static_cast<_t>(bb) << offset}; }
     constexpr friend Bb operator >> (Bb bb, unsigned offset) { return Bb{static_cast<_t>(bb) >> offset}; }
 
-    friend io::ostream& operator << (io::ostream& out, Bb bb) {
+    friend ostream& operator << (ostream& out, Bb bb) {
         FOR_EACH(Rank, rank) {
             FOR_EACH(File, file) {
                 if (bb.has(Square{file, rank})) {

@@ -5,15 +5,15 @@
 #include "NodePerft.hpp"
 #include "TimerManager.hpp"
 
-class Output : public std::ostringstream {
+class Output : public io::ostringstream {
     const Uci& uci;
 public:
-    Output (const Uci* u) : std::ostringstream{}, uci{*u} {}
+    Output (const Uci* u) : io::ostringstream{}, uci{*u} {}
     ~Output () { uci.output(str()); }
 };
 
 namespace {
-    io::istream& operator >> (io::istream& in, TimeInterval& timeInterval) {
+    istream& operator >> (istream& in, TimeInterval& timeInterval) {
         unsigned long msecs;
         if (in >> msecs) {
             timeInterval = duration_cast<TimeInterval>(milliseconds{msecs} );
@@ -38,7 +38,7 @@ namespace {
     static constexpr T permil(T n, T m) { return (n * 1000) / m; }
 }
 
-void Uci::processInput(io::istream& in) {
+void Uci::processInput(istream& in) {
     for (std::string currentLine; std::getline(in, currentLine); ) {
         log('>' + currentLine + '\n');
 
