@@ -5,9 +5,6 @@
 #include "typedefs.hpp"
 #include "NodeRoot.hpp"
 
-using io::istream;
-using io::ostream;
-
 class Uci;
 
 class UciRoot : public NodeRoot {
@@ -23,7 +20,7 @@ class UciRoot : public NodeRoot {
     bool setCastling(Side, CastlingSide);
     bool setEnPassant(File);
 
-    ostream& writeFen(ostream&) const;
+    ostream& fen(ostream&) const;
 
 public:
     UciRoot(const Uci& u) : NodeRoot{u} {}
@@ -36,7 +33,7 @@ public:
     void playMoves(istream&);
     void limitMoves(istream&);
 
-    friend ostream& operator << (ostream& out, const UciRoot& pos) { return pos.writeFen(out); }
+    friend ostream& operator << (ostream& out, const UciRoot& pos) { return pos.fen(out); }
 };
 
 #endif

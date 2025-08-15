@@ -30,7 +30,7 @@ public:
 
     // one and only one bit set
     bool isSingleton() const {
-        assert(CONST_SELF.any());
+        assert (CONST_SELF.any());
         return clearFirst() == 0;
     }
 
@@ -46,7 +46,7 @@ public:
 
     // get the singleton bit set
     index_type index() const {
-        assert(CONST_SELF.any() && isSingleton());
+        assert (CONST_SELF.any() && isSingleton());
         return operator* ();
     }
 
