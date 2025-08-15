@@ -1,7 +1,7 @@
 #ifndef UCI_MOVE_HPP
 #define UCI_MOVE_HPP
 
-#include "out.hpp"
+#include "io.hpp"
 #include "typedefs.hpp"
 
 /**
@@ -15,8 +15,8 @@ public:
     constexpr UciMove () : Move{} { static_assert (sizeof(UciMove) == sizeof(int16_t));}
     constexpr UciMove (Square f, Square t, bool s, Color c, ChessVariant v = Orthodox) : Move(f, t, s, c, v) {}
 
-    friend out::ostream& operator << (out::ostream&, const UciMove&);
-    friend out::ostream& operator << (out::ostream&, const UciMove[]);
+    friend ostream& operator << (ostream&, const UciMove&);
+    friend ostream& operator << (ostream&, const UciMove[]);
 };
 
 #endif

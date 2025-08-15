@@ -1,10 +1,10 @@
 #ifndef BIT_OPS_HPP
 #define BIT_OPS_HPP
 
-#include <cassert>
 #include <climits>
 #include <cstdint>
 #include <type_traits>
+#include "assert.hpp"
 #include "types.hpp"
 
 #define CACHE_ALIGN __attribute__((__aligned__(64)))
