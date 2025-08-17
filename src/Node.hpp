@@ -64,11 +64,12 @@ protected:
 
     Node (Node* n);
 
-    ReturnStatus visitIfLegal(Move move) { if (parent->isLegalMove(move)) { return visit(move); } return ReturnStatus::Continue; }
-    ReturnStatus visit(Move);
+    ReturnStatus searchMove(Move move);
+    ReturnStatus searchMove(Square from, Square to) { return searchMove({from, to}); }
+    ReturnStatus searchIfLegal(Move move) { return parent->isLegalMove(move) ? searchMove(move) : ReturnStatus::Continue; }
     ReturnStatus negamax(Node*);
 
-    ReturnStatus searchMoves();
+    ReturnStatus search();
     ReturnStatus quiescence();
 
     ReturnStatus goodCaptures(Node*);
