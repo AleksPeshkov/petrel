@@ -36,7 +36,7 @@ ReturnStatus Node::searchRoot() {
 
     for (draft = 1; draft <= root.limits.depth; ++draft) {
         setMoves(rootMovesClone);
-        movesMade = 0;
+
         score = NoScore;
         alpha = MinusInfinity;
         beta = PlusInfinity;
@@ -89,7 +89,6 @@ ReturnStatus Node::searchMove(Move move) {
     root.pvMoves.set(ply, UciMove{});
 
     origin = root.tt.prefetch<TtSlot>(zobrist());
-    ++parent->movesMade;
 
     if (rule50() < 2) { repMask = RepetitionMask{}; }
     else if (grandParent) { repMask = RepetitionMask{grandParent->repMask, grandParent->zobrist()}; }
