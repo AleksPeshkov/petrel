@@ -38,17 +38,20 @@ Overloaded operators:
 
 Abbreviations in the code:
 
-* `Bb bb`: BitBoard – a well-known 64-bit size bitset representing squares on the chessboard;
-* `Pi pi`: Piece Index – one of 16 piece slots in a 16-byte piece vector; `{TheKing = 0}` is the slot dedicated to the king. Pieces are sorted by chess value so the most valuable piece occupy the least significant index.
-* `PiMask`: piece vector of byte masks (0 or 0xFF) for selected pieces, widely used intermediate data;
-* `PieceSet`: direct conversion from PiMask of bytes into bitset of corresponding bits, used to implement forward (most valuable first) or backward (least valuable first) iterator over piece vectors elements;
-* `Side side`: `{My, Op}` – current side to move and opposite side;
-* `Color color`: `{White, Black}` – rarely used, but required for correct output of internal moves in UCI notation;
-* `PieceType ty`: `{Queen = 0, Rook = 1, Bishop = 2, Knight = 3, Pawn = 4, King = 5}` – enum of colorless chess piece types;
-* `PiSquare`: stores locations of active pieces or the `0xFF` NoSquare tag;
-* `PiType`: each piece type is represented as a separate bit, enabling quick grouping by any criteria;
-* `PiTrait`: castling and en passant statuses, plus temporary information like currently checking pieces;
-* `PiBbMatrix`: matrix of Pi × Bb (128 bytes) (actually an array of 8 PiRank piece vectors)  used for inrcemental updating piece attack information and generating moves from attacks;
+* `Bb bb`: BitBoard – a well-known 64-bit bitset representing squares on the chessboard
+* `Pi pi`: Piece Index – one of 16 piece slots in a byte vector; `{TheKing = 0}` is the slot dedicated to the king
+*    pieces are sorted so that more valuable pieces occupy lower indexes
+* `PiBbMatrix`: matrix of Pi × Bb (128 bytes), used for storing and updating piece attack information and generating moves from attacks
+* `Side side`: `{My, Op}` – side to move and opposite side
+* `Color color`: `{White, Black}` – rarely used, but required for correct output of internal moves in UCI notation
+* `PieceType ty`: `{Queen = 0, Rook = 1, Bishop = 2, Knight = 3, Pawn = 4, King = 5}` – colorless type of possible chess piece
+* `PiMask`: intermediate data – piece vector of byte masks (0 or 0xFF) for selected pieces
+* `PiSquare`: stores locations of active pieces or the `0xFF` NoSquare tag
+* `PiType`: each piece type is represented as a separate bit, enabling quick grouping by criteria
+* `PiTrait`: castling and en passant statuses, plus temporary information like currently checking pieces
+
+* `%` operator is used as a shortcut for "AND NOT" bitset operations
+* `+`, `-` operators for bitsets with assertions ensuring disjoint sets
 
 Universal Chess Interface (UCI) Extensions
 ------------------------------------------

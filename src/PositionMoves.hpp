@@ -2,12 +2,12 @@
 #define POSITION_MOVES_HPP
 
 #include "Position.hpp"
-#include "PiBb.hpp"
+#include "PiBbMatrix.hpp"
 #include "Zobrist.hpp"
 
 class PositionMoves : public Position {
 public:
-    PiBb moves; // generated legal only moves
+    PiBbMatrix moves; // generated legal only moves
 
 protected:
     Bb attackedSquares; //squares attacked by all opponent pieces
