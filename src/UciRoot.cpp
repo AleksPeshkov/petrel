@@ -302,7 +302,7 @@ void UciRoot::limitMoves(istream& in) {
     }
 
     if (n) {
-        moves = movesMatrix;
+        setMoves(movesMatrix);
         in.clear();
         return;
     }
