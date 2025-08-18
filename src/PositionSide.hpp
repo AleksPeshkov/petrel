@@ -7,17 +7,18 @@
 #include "PiTrait.hpp"
 #include "PiType.hpp"
 
-//TRICK: all squares are relative to its own side (so the king piece is initially on E1 square regardless color)
 
-/// static information about pieces from one player's side (either side to move or its opponent)
+// static information about pieces from one player's side (either side to move or its opponent)
+// TRICK: all squares always relative to the point of view of given side
+// (so the king piece is initially on E1 square regardless color)
 class PositionSide {
     PiBbMatrix attacks_; // squares attacked by a piece and pieces attacking to a square
     PiType types; // chess type of each alive piece: king, pawn, knignt, bishop, rook, queen
     PiTrait traits; // rooks with castling rights, pawns affected by en passant, pinner pieces, checker pieces
     PiSquare squares; // onboard square locations of the alive pieces or 'NoSquare' special value
 
-    Bb bbSide_; // squares of all current side pieces
-    Bb bbPawns_; // squares of current side pawns
+    Bb bbSide_; // bitboard of squares of all current side pieces
+    Bb bbPawns_; // bitboard of squares of current side pawns
 
     Evaluation evaluation_; // PST incremental evaluation
     Square opKing; // square of the opponent's king (from current side point of view)
