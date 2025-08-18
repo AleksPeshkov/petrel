@@ -432,7 +432,7 @@ void UciRoot::readFen(istream& in) {
     setZobrist();
     repetitions.clear();
     repetitions.push(colorToMove_, zobrist());
-    makeMoves();
+    generateMoves();
 }
 
 void UciRoot::setStartpos() {

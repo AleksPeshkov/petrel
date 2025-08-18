@@ -55,8 +55,6 @@ protected:
     Score alpha = MinusInfinity;
     Score beta = PlusInfinity;
 
-    MovesNumber movesMade = 0; // number of moves already made in this node
-
     Move childMove = {}; // last move made from this node
     Move killer1 = {}; // first killer move to try at child-child nodes
     Move killer2 = {}; // second killer move to try at child-child nodes
