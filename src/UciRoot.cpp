@@ -216,15 +216,15 @@ public:
 } //end of anonymous namespace
 
 ostream& UciRoot::fen(ostream& out) const {
-    auto& whitePieces = (*this)[sideOf(White)];
-    auto& blackPieces = (*this)[sideOf(Black)];
+    const auto& whiteSidePieces = positionSide(sideOf(White));
+    const auto& blackSidePieces = positionSide(sideOf(Black));
 
-    return out << BoardToFen(whitePieces, blackPieces)
+    return out << BoardToFen(whiteSidePieces, blackSidePieces)
         << ' ' << colorToMove_
-        << ' ' << CastlingToFen{whitePieces, blackPieces, chessVariant()}
-        << ' ' << EnPassantToFen{(*this)[Op], colorToMove_}
-        << ' ' << static_cast<unsigned>(rule50) // halfmove clock
-        << ' ' << fullMoveNumber; // fullmove number
+        << ' ' << CastlingToFen{whiteSidePieces, blackSidePieces, chessVariant()}
+        << ' ' << EnPassantToFen{OP, colorToMove_}
+        << ' ' << rule50()
+        << ' ' << fullMoveNumber;
 }
 
 istream& UciRoot::readMove(istream& in, Square& from, Square& to) const {
@@ -311,7 +311,7 @@ void UciRoot::limitMoves(istream& in) {
 }
 
 void UciRoot::playMoves(istream& in) {
-    repetitions.push(colorToMove_, zobrist);
+    repetitions.push(colorToMove_, zobrist());
 
     while (in >> std::ws && !in.eof()) {
         auto beforeMove = in.tellg();
@@ -392,7 +392,7 @@ bool UciRoot::setEnPassant(File file) {
     Pi victim = OP.pieceAt(to);
     if (!OP.isPawn(victim)) { return false; }
 
-    if (occupied<My>().has(~Square{file, Rank3})) { return false; }
+    if (OCCUPIED.has(~Square{file, Rank3})) { return false; }
 
     setLegalEnPassant<Op>(victim, to);
     return true;
@@ -421,14 +421,17 @@ void UciRoot::readFen(istream& in) {
     readEnPassant(in);
 
     if (in && !in.eof()) {
+        Rule50 rule50;
         in >> rule50;
+        if (in) { setRule50(rule50); }
+
         in >> fullMoveNumber;
         in.clear(); // ignore possibly missing 'halfmove clock' and 'fullmove number' fen fields
     }
 
-    zobrist = generateZobrist();
+    setZobrist();
     repetitions.clear();
-    repetitions.push(colorToMove_, zobrist);
+    repetitions.push(colorToMove_, zobrist());
     makeMoves();
 }
 
