@@ -16,7 +16,7 @@ ReturnStatus NodePerft::visitRoot() {
     for (Pi pi : MY.pieces()) {
         Square from = MY.squareOf(pi);
 
-        for (Square to : moves[pi]) {
+        for (Square to : movesOf(pi)) {
             auto previousPerft = perft;
 
             RETURN_IF_STOP (child->visitMove(from, to));
@@ -37,7 +37,7 @@ ReturnStatus NodePerft::visit() {
     for (Pi pi : MY.pieces()) {
         Square from = MY.squareOf(pi);
 
-        for (Square to : moves[pi]) {
+        for (Square to : movesOf(pi)) {
             RETURN_IF_STOP (child->visitMove(from, to));
         }
     }
@@ -54,7 +54,7 @@ ReturnStatus NodePerft::visitMove(Square from, Square to) {
         case 1:
             RETURN_IF_STOP (root.countNode());
             makeMoveNoZobrist(parent, from, to);
-            perft = moves.popcount();
+            perft = moves().popcount();
             break;
 
         default: {
