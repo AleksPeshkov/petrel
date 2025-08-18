@@ -2,7 +2,7 @@
 #define POSITION_SIDE_HPP
 
 #include "Evaluation.hpp"
-#include "PiBb.hpp"
+#include "PiBbMatrix.hpp"
 #include "PiSquare.hpp"
 #include "PiTrait.hpp"
 #include "PiType.hpp"
@@ -11,7 +11,7 @@
 
 /// static information about pieces from one player's side (either side to move or its opponent)
 class PositionSide {
-    PiBb attacks_; // squares attacked by a piece and pieces attacking to a square
+    PiBbMatrix attacks_; // squares attacked by a piece and pieces attacking to a square
     PiType types; // chess type of each alive piece: king, pawn, knignt, bishop, rook, queen
     PiTrait traits; // rooks with castling rights, pawns affected by en passant, pinner pieces, checker pieces
     PiSquare squares; // onboard square locations of the alive pieces or 'NoSquare' special value
@@ -37,7 +37,7 @@ class PositionSide {
     #endif
 
 public:
-    constexpr const PiBb& attacks() const { return attacks_; }
+    constexpr const PiBbMatrix& attacks() const { return attacks_; }
 
     // bitboard of squares occupied by all current side pieces
     constexpr const Bb& bbSide() const { return bbSide_; }

@@ -280,7 +280,7 @@ istream& UciRoot::readMove(istream& in, Square& from, Square& to) const {
 }
 
 void UciRoot::limitMoves(istream& in) {
-    PiBb movesMatrix;
+    PiBbMatrix movesMatrix;
     movesMatrix.clear();
     index_t n = 0;
 

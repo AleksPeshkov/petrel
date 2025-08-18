@@ -96,25 +96,30 @@ ReturnStatus Node::searchMove(Move move) {
 
     canBeKiller = false;
 
-    if (moves.popcount() == 0) {
-        //checkmated or stalemated
+    if (moves.none()) {
+        // checkmate or stalemate
         score = inCheck ? Score::checkmated(ply) : Score{DrawScore};
-    }
-    else if (rule50().isDraw() || isRepetition() || isDrawMaterial()) {
-        score = DrawScore;
-    }
-    else if (ply == MaxPly) {
-        // no room to search deeper
-        score = evaluate();
-    }
-    else if (draft == 0 && !inCheck) {
-        RETURN_IF_STOP (quiescence());
-    }
-    else {
-        score = NoScore;
-        RETURN_IF_STOP (search());
+        return parent->negamax(this);
     }
 
+    if (rule50().isDraw() || isRepetition() || isDrawMaterial()) {
+        score = DrawScore;
+        return parent->negamax(this);
+    }
+
+    if (ply == MaxPly) {
+        // no room to search deeper
+        score = evaluate();
+        return parent->negamax(this);
+    }
+
+    if (draft == 0 && !inCheck) {
+        RETURN_IF_STOP (quiescence());
+        return parent->negamax(this);
+    }
+
+    score = NoScore;
+    RETURN_IF_STOP (search());
     return parent->negamax(this);
 }
 

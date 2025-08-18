@@ -5,63 +5,63 @@
 #include "PiRank.hpp"
 
 /// array of 8 PiRank
-class PiBb {
+class PiBbMatrix {
     Rank::arrayOf<PiRank> matrix;
 
 public:
-    constexpr PiBb () = default;
+    constexpr PiBbMatrix () = default;
 
-    friend void swap(PiBb& a, PiBb& b) {
+    constexpr friend void swap(PiBbMatrix& a, PiBbMatrix& b) {
         FOR_EACH(Rank, rank) {
             using std::swap;
             swap(a.matrix[rank], b.matrix[rank]);
         }
     }
 
-    void clear() {
+    constexpr void clear() {
         FOR_EACH(Rank, rank) {
             matrix[rank].clear();
         }
     }
 
-    void clear(Pi pi, Square sq) {
+    constexpr void clear(Pi pi, Square sq) {
         matrix[Rank(sq)] -= PiRank{File(sq)} & PiMask{pi};
     }
 
-    void clear(Pi pi) {
+    constexpr void clear(Pi pi) {
         FOR_EACH(Rank, rank) {
             matrix[rank] %= PiMask{pi};
         }
     }
 
-    void set(Pi pi, Rank rank, BitRank br) {
+    constexpr void set(Pi pi, Rank rank, BitRank br) {
         //_mm_blendv_epi8
         matrix[rank] = (matrix[rank] % PiMask{pi}) + (PiRank{br} & PiMask{pi});
     }
 
-    void set(Pi pi, Bb bb) {
+    constexpr void set(Pi pi, Bb bb) {
         FOR_EACH(Rank, rank) {
             set(pi, rank, bb[rank]);
         }
     }
 
-    void add(Pi pi, Rank rank, File file) {
+    constexpr void add(Pi pi, Rank rank, File file) {
         matrix[rank] += PiRank{file} & PiMask{pi};
     }
 
-    void add(Pi pi, Square sq) {
+    constexpr void add(Pi pi, Square sq) {
         add(pi, Rank(sq), File(sq));
     }
 
-    bool has(Pi pi, Square sq) const {
+    constexpr bool has(Pi pi, Square sq) const {
         return (matrix[Rank(sq)] & PiRank{File(sq)} & PiMask{pi}).any();
     }
 
-    const PiRank& operator[] (Rank rank) const {
+    constexpr const PiRank& operator[] (Rank rank) const {
         return matrix[rank];
     }
 
-    PiRank& operator[] (Rank rank) {
+    constexpr PiRank& operator[] (Rank rank) {
         return matrix[rank];
     }
 
@@ -71,7 +71,7 @@ public:
     }
 
     //bitboard of the given piece
-    Bb operator[] (Pi pi) const {
+    constexpr Bb operator[] (Pi pi) const {
         union {
             Bb::_t bb;
             Rank::arrayOf<BitRank::_t> br;
@@ -83,7 +83,7 @@ public:
     }
 
     //bitboard of squares affected by all pieces
-    Bb gather() const {
+    constexpr Bb gather() const {
         union {
             Bb::_t bb;
             Rank::arrayOf<BitRank::_t> br;
@@ -101,29 +101,36 @@ public:
         }
     }
 
-    friend PiBb operator % (const PiBb& from, Bb bb) {
-        PiBb result;
+    constexpr friend PiBbMatrix operator % (const PiBbMatrix& from, Bb bb) {
+        PiBbMatrix result;
         FOR_EACH(Rank, rank) {
             result.matrix[rank] = from.matrix[rank] % PiRank{bb[rank]};
         }
         return result;
     }
 
-    void operator &= (Bb bb) {
+    constexpr void operator &= (Bb bb) {
         FOR_EACH(Rank, rank) {
             matrix[rank] &= PiRank{bb[rank]};
         }
     }
 
-    friend PiBb operator & (const PiBb& from, Bb bb) {
-        PiBb result;
+    constexpr friend PiBbMatrix operator & (const PiBbMatrix& from, Bb bb) {
+        PiBbMatrix result;
         FOR_EACH(Rank, rank) {
             result.matrix[rank] = from.matrix[rank] & PiRank{bb[rank]};
         }
         return result;
     }
 
-    index_t popcount() const {
+    constexpr bool none() const {
+        FOR_EACH(Rank, rank) {
+            if (matrix[rank].any()) { return false; }
+        }
+        return true;
+    }
+
+    constexpr index_t popcount() const {
         index_t sum = 0;
         FOR_EACH(Rank, rank) {
             sum += ::popcount(matrix[rank]);
