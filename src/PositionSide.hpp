@@ -11,21 +11,23 @@
 
 /// static information about pieces from one player's side (either side to move or its opponent)
 class PositionSide {
-    PiBb attacks; //squares attacked by a piece and pieces attacking to a square
-    PiType types; //chess type of each alive piece: king, pawn, knignt, bishop, rook, queen
-    PiTrait traits; //rooks with castling rights, pawns affected by en passant, pinner pieces, checker pieces
-    PiSquare squares; //onboard square locations of the alive pieces or 'NoSquare' special value
+    PiBb attacks_; // squares attacked by a piece and pieces attacking to a square
+    PiType types; // chess type of each alive piece: king, pawn, knignt, bishop, rook, queen
+    PiTrait traits; // rooks with castling rights, pawns affected by en passant, pinner pieces, checker pieces
+    PiSquare squares; // onboard square locations of the alive pieces or 'NoSquare' special value
 
-    Bb piecesBb; //squares of current side pieces
-    Bb pawnsBb; //squares of current side pawns
+    Bb bbSide_; // squares of all current side pieces
+    Bb bbPawns_; // squares of current side pawns
 
-public:
-    Evaluation evaluation; //PST incremental evaluation
+    Evaluation evaluation_; // PST incremental evaluation
+    Square opKing; // square of the opponent's king (from current side point of view)
 
-private:
-    Square opKing; //location of the opponent's king, needed for detecting checking and pinning pieces traits
+    void move(Pi, PieceType, Square, Square);
+    void updateMovedKing(Square);
+    void setLeaperAttacks();
+    void setLeaperAttack(Pi, PieceType, Square);
+    void setPinner(Pi, PieceType, Square);
 
-public:
     #ifdef NDEBUG
         void assertOk(Pi) const {}
         void assertOk(Pi, PieceType, Square) const {}
@@ -34,20 +36,25 @@ public:
         void assertOk(Pi, PieceType, Square) const;
     #endif
 
-    // bitboard of squares occupied by current side pieces
-    const Bb& piecesSquares() const { return piecesBb; }
+public:
+    constexpr const PiBb& attacks() const { return attacks_; }
+
+    // bitboard of squares occupied by all current side pieces
+    constexpr const Bb& bbSide() const { return bbSide_; }
 
     // bitboard of squares occupied by current side pawns
-    const Bb& pawnsSquares() const { return pawnsBb; }
+    constexpr const Bb& bbPawns() const { return bbPawns_; }
 
-    bool has(Square sq) const { assert (piecesBb.has(sq) == squares.has(sq)); return piecesBb.has(sq); }
+    // static evaluation data of pieces and piece-squares
+    constexpr const Evaluation& evaluation() const { return evaluation_; }
+
+    bool has(Square sq) const { assert (bbSide_.has(sq) == squares.has(sq)); return bbSide_.has(sq); }
+    Square squareOf(Pi pi) const { assertOk(pi); return squares.squareOf(pi); }
+    Square kingSquare() const { return squareOf(TheKing); }
 
     // mask of all pieces of the given side
     PiMask pieces() const { assert (squares.pieces() == types.pieces()); return squares.pieces(); }
     PiMask sliders() const { return types.sliders(); }
-
-    Square squareOf(Pi pi) const { assertOk(pi); return squares.squareOf(pi); }
-    Square kingSquare() const { return squareOf(TheKing); }
 
     Pi pieceAt(Square sq) const { Pi pi = squares.pieceAt(sq); assertOk(pi); return pi; }
     PiMask piecesOn(Rank rank) const { return squares.piecesOn(rank); }
@@ -74,29 +81,18 @@ public:
     PiMask pinners() const { return traits.pinners(); }
     bool isPinned(Bb) const;
 
-    PiMask checkers() const { assert (traits.checkers() == attacks[opKing]); return traits.checkers(); }
+    PiMask checkers() const { assert (traits.checkers() == attacks_[opKing]); return traits.checkers(); }
 
     PiMask promotables() const { return traits.promotables(); }
     bool isPromotable(Pi pi) const { assertOk(pi); return traits.isPromotable(pi); }
 
-    const PiBb& attacksMatrix() const { return attacks; }
-    Bb attacksOf(Pi pi) const { return attacks[pi]; }
-    PiMask attackersTo(Square sq) const { return attacks[sq]; }
+    Bb attacksOf(Pi pi) const { return attacks_[pi]; }
+    PiMask attackersTo(Square sq) const { return attacks_[sq]; }
     PiMask affectedBy(Square sq) const { return attackersTo(sq); }
     PiMask affectedBy(Square a, Square b) const { return affectedBy(a) | affectedBy(b); }
     PiMask affectedBy(Square a, Square b, Square c) const { return affectedBy(a) | affectedBy(b) | affectedBy(c); }
 
-    static Score evaluate(const PositionSide&, const PositionSide&);
-
-private:
-    void move(Pi, PieceType, Square, Square);
-    void updateMovedKing(Square);
-    void setLeaperAttacks();
-    void setLeaperAttack(Pi, PieceType, Square);
-    void setPinner(Pi, PieceType, Square);
-
-friend class Position;
-
+//friend class Position;
     static void swap(PositionSide&, PositionSide&);
 
     void setOpKing(Square);
@@ -120,8 +116,7 @@ friend class Position;
     bool dropValid(PieceType, Square);
     static void finalSetup(PositionSide&, PositionSide&);
 
-friend class UciRoot;
-
+// friend class UciRoot;
     bool setValidCastling(File);
     bool setValidCastling(CastlingSide);
 
