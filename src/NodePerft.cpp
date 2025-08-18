@@ -16,7 +16,7 @@ ReturnStatus NodePerft::visitRoot() {
     for (Pi pi : MY.pieces()) {
         Square from = MY.squareOf(pi);
 
-        for (Square to : movesOf(pi)) {
+        for (Square to : bbMovesOf(pi)) {
             auto previousPerft = perft;
 
             RETURN_IF_STOP (child->visitMove(from, to));
@@ -37,7 +37,7 @@ ReturnStatus NodePerft::visit() {
     for (Pi pi : MY.pieces()) {
         Square from = MY.squareOf(pi);
 
-        for (Square to : movesOf(pi)) {
+        for (Square to : bbMovesOf(pi)) {
             RETURN_IF_STOP (child->visitMove(from, to));
         }
     }

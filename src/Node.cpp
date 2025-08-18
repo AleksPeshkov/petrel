@@ -36,7 +36,7 @@ ReturnStatus Node::searchRoot() {
 
     for (draft = 1; draft <= root.limits.depth; ++draft) {
         setMoves(rootMovesClone);
-        movesMade = 0;
+
         score = NoScore;
         alpha = MinusInfinity;
         beta = PlusInfinity;
@@ -89,7 +89,6 @@ ReturnStatus Node::searchMove(Move move) {
     root.pvMoves.set(ply, UciMove{});
 
     origin = root.tt.prefetch<TtSlot>(zobrist());
-    ++parent->movesMade;
 
     if (rule50() < 2) { repMask = RepetitionMask{}; }
     else if (grandParent) { repMask = RepetitionMask{grandParent->repMask, grandParent->zobrist()}; }
@@ -212,7 +211,7 @@ ReturnStatus Node::search() {
                 lastPi = MY.pieceAt(from);
 
                 // new moves of the last moved piece
-                newMoves = movesOf(lastPi);
+                newMoves = bbMovesOf(lastPi);
 
                 if (from != parent->movedPieceFrom()) {
                     // unless it was a pawn promotion move
@@ -232,7 +231,7 @@ ReturnStatus Node::search() {
         // new safe quiet moves, except for the last moved piece (or king)
         for (Pi pi : MY.pieces() - lastPi) {
             Square from = MY.squareOf(pi);
-            for (Square to : movesOf(pi) % parent->MY.attacksOf(pi) % bbAttacked()) {
+            for (Square to : bbMovesOf(pi) % parent->MY.attacksOf(pi) % bbAttacked()) {
                 RETURN_CUTOFF (child->searchMove(from, to));
             }
         }
@@ -241,7 +240,7 @@ ReturnStatus Node::search() {
     // all the rest safe quiet moves
     for (Pi pi : MY.pieces()) {
         Square from = MY.squareOf(pi);
-        for (Square to : movesOf(pi) % bbAttacked()) {
+        for (Square to : bbMovesOf(pi) % bbAttacked()) {
             RETURN_CUTOFF (child->searchMove(from, to));
         }
     }
@@ -256,7 +255,7 @@ ReturnStatus Node::search() {
         }
 
         // the rest moves of the last moved piece
-        for (Square to : movesOf(pi)) {
+        for (Square to : bbMovesOf(pi)) {
             RETURN_CUTOFF (child->searchMove(from, to));
         }
     }
@@ -270,7 +269,7 @@ ReturnStatus Node::search() {
         Pi pi = pieces.leastValuable(); pieces -= pi;
         Square from = MY.squareOf(pi);
 
-        for (Square to : movesOf(pi)) {
+        for (Square to : bbMovesOf(pi)) {
             RETURN_CUTOFF (child->searchMove(from, to));
         }
     }
@@ -417,7 +416,7 @@ ReturnStatus Node::allCaptures(Node* child, Square to) {
 ReturnStatus Node::safePromotions(Node* child) {
     for (Pi pi : MY.promotables()) {
         // skip moves to the attacked square
-        for (Square to : movesOf(pi) % bbAttacked() & Bb{Rank8}) {
+        for (Square to : bbMovesOf(pi) % bbAttacked() & Bb{Rank8}) {
             Square from = MY.squareOf(pi);
             RETURN_CUTOFF( child->searchMove(from, to) );
         }
@@ -429,7 +428,7 @@ ReturnStatus Node::safePromotions(Node* child) {
 // all non capture queen promotions
 ReturnStatus Node::allPromotions(Node* child) {
     for (Pi pi : MY.promotables()) {
-        for (Square to : movesOf(pi) & Bb{Rank8}) {
+        for (Square to : bbMovesOf(pi) & Bb{Rank8}) {
             Square from = MY.squareOf(pi);
             RETURN_CUTOFF( child->searchMove(from, to) );
         }
