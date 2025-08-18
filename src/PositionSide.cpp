@@ -10,7 +10,7 @@
         Square sq = squares.squareOf(pi);
         assert (has(sq));
 
-        assert (types.isPawn(pi) == pawnsBb.has(sq));
+        assert (types.isPawn(pi) == bbPawns_.has(sq));
         assert (!types.isPawn(pi) || (!sq.on(Rank1) && !sq.on(Rank8)));
 
         assert (traits.isPromotable(pi) == (types.isPawn(pi) && sq.on(Rank7)));
@@ -27,13 +27,13 @@
 
 void PositionSide::swap(PositionSide& MY, PositionSide& OP) {
     using std::swap;
-    swap(MY.attacks, OP.attacks);
+    swap(MY.attacks_, OP.attacks_);
     swap(MY.types, OP.types);
     swap(MY.traits, OP.traits);
     swap(MY.squares, OP.squares);
-    swap(MY.piecesBb, OP.piecesBb);
-    swap(MY.pawnsBb, OP.pawnsBb);
-    swap(MY.evaluation, OP.evaluation);
+    swap(MY.bbSide_, OP.bbSide_);
+    swap(MY.bbPawns_, OP.bbPawns_);
+    swap(MY.evaluation_, OP.evaluation_);
     swap(MY.opKing, OP.opKing);
 }
 
@@ -53,10 +53,6 @@ void PositionSide::setLeaperAttacks() {
     }
 }
 
-Score PositionSide::evaluate(const PositionSide& MY, const PositionSide& OP) {
-    return Evaluation::evaluate(MY.evaluation, OP.evaluation);
-}
-
 void PositionSide::capture(Square from) {
     Pi pi = pieceAt(from);
     PieceType ty = typeOf(pi);
@@ -64,11 +60,11 @@ void PositionSide::capture(Square from) {
 
     assertOk(pi, ty, from);
 
-    piecesBb -= from;
-    pawnsBb &= piecesBb; //clear if pawn
+    bbSide_ -= from;
+    bbPawns_ &= bbSide_; //clear if pawn
 
-    evaluation.capture(ty, from);
-    attacks.clear(pi);
+    evaluation_.capture(ty, from);
+    attacks_.clear(pi);
     squares.clear(pi);
     types.clear(pi);
     traits.clear(pi);
@@ -79,8 +75,8 @@ void PositionSide::move(Pi pi, PieceType ty, Square from, Square to) {
     assertOk(pi, ty, from);
 
     squares.move(pi, to);
-    piecesBb.move(from, to);
-    evaluation.move(ty, from, to);
+    bbSide_.move(from, to);
+    evaluation_.move(ty, from, to);
 }
 
 // simple non king, non pawn move
@@ -110,7 +106,7 @@ void PositionSide::moveKing(Square from, Square to) {
 
 void PositionSide::movePawn(Pi pi, Square from, Square to) {
     move(pi, Pawn, from, to);
-    pawnsBb.move(from, to);
+    bbPawns_.move(from, to);
 
     assert (traits.isEmpty(pi));
     if (to.on(Rank7)) { traits.setPromotable(pi); }
@@ -126,12 +122,12 @@ Pi PositionSide::promote(Pi pawn, Square from, PromoType ty, Square to) {
     assert (traits.isPromotable(pawn));
     assertOk(pawn, Pawn, from);
 
-    piecesBb.move(from, to);
-    evaluation.promote(from, to, ty);
+    bbSide_.move(from, to);
+    evaluation_.promote(from, to, ty);
 
     // remove pawn
-    pawnsBb -= from;
-    attacks.clear(pawn);
+    bbPawns_ -= from;
+    attacks_.clear(pawn);
     squares.clear(pawn);
     traits.clear(pawn);
     types.clear(pawn);
@@ -159,7 +155,7 @@ void PositionSide::updateMovedKing(Square to) {
     //king move cannot check
     assert (traits.isEmpty(TheKing));
     assert (!::attacksFrom(King, to).has(opKing));
-    attacks.set(TheKing, ::attacksFrom(King, to));
+    attacks_.set(TheKing, ::attacksFrom(King, to));
     traits.clearCastlings();
 
     assertOk(TheKing, King, to);
@@ -171,12 +167,12 @@ void PositionSide::castle(Square kingFrom, Square kingTo, Pi rook, Square rookFr
 
     //possible overlap in Chess960
     squares.castle(kingTo, rook, rookTo);
-    piecesBb -= kingFrom;
-    piecesBb -= rookFrom;
-    piecesBb += kingTo;
-    piecesBb += rookTo;
+    bbSide_ -= kingFrom;
+    bbSide_ -= rookFrom;
+    bbSide_ += kingTo;
+    bbSide_ += rookTo;
 
-    evaluation.castle(kingFrom, kingTo, rookFrom, rookTo);
+    evaluation_.castle(kingFrom, kingTo, rookFrom, rookTo);
 
     traits.clearPinner(rook);
     setPinner(rook, Rook, rookTo);
@@ -190,7 +186,7 @@ void PositionSide::setLeaperAttack(Pi pi, PieceType ty, Square sq) {
     assert (isLeaper(ty));
     assert (traits.isEmpty(pi) || traits.isPromotable(pi));
 
-    attacks.set(pi, ::attacksFrom(ty, sq));
+    attacks_.set(pi, ::attacksFrom(ty, sq));
     if (::attacksFrom(ty, sq).has(opKing)) {
         traits.setChecker(pi);
     }
@@ -227,7 +223,7 @@ void PositionSide::updateSliders(PiMask affectedSliders, Bb occupiedBb) {
 
     for (Pi pi : affectedSliders) {
         Bb attack = blockers.attack(SliderType{typeOf(pi)}, squareOf(pi));
-        attacks.set(pi, attack);
+        attacks_.set(pi, attack);
 
         assert (!attack.has(opKing)); // king cannot be left in check
     }
@@ -242,7 +238,7 @@ void PositionSide::updateSlidersCheckers(PiMask affectedSliders, Bb occupiedBb) 
 
     for (Pi pi : affectedSliders) {
         Bb attack = blockers.attack(SliderType{typeOf(pi)}, squareOf(pi));
-        attacks.set(pi, attack);
+        attacks_.set(pi, attack);
 
         if (attack.has(opKing)) {
             traits.setChecker(pi);
@@ -279,6 +275,7 @@ void PositionSide::clearEnPassantKillers() {
 bool PositionSide::isPinned(Bb occupied) const {
     for (Pi pinner : pinners()) {
         Bb pinLine = ::inBetween(opKing, squareOf(pinner));
+        assert (pinLine.any());
         if ((pinLine & occupied).none()) {
             return true;
         }
@@ -288,19 +285,19 @@ bool PositionSide::isPinned(Bb occupied) const {
 }
 
 bool PositionSide::dropValid(PieceType ty, Square to) {
-    if (piecesBb.has(to)) { return false; }
-    piecesBb += to;
+    if (bbSide_.has(to)) { return false; }
+    bbSide_ += to;
 
     Pi pi = ty.is(King) ? Pi{TheKing} : PieceSet((pieces() | Pi{TheKing})).vacantMostValuable();
 
-    evaluation.drop(ty, to);
+    evaluation_.drop(ty, to);
     types.drop(pi, ty);
     squares.drop(pi, to);
 
     if (ty.is(Pawn)) {
         if (to.on(Rank1) || to.on(Rank8)) { return false; }
         if (to.on(Rank7)) { traits.setPromotable(pi);}
-        pawnsBb += to;
+        bbPawns_ += to;
     }
 
     assertOk(pi, ty, to);
