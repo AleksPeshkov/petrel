@@ -75,8 +75,8 @@ protected:
         makeMove(move);
         colorToMove_.flip();
 
-        if (rule50 == 0) { repetitions.clear(); }
-        repetitions.push(colorToMove_, zobrist);
+        if (rule50() == 0) { repetitions.clear(); }
+        repetitions.push(colorToMove_, zobrist());
     }
 
 public:
