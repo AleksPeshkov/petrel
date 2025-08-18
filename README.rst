@@ -35,7 +35,7 @@ Abbreviations in the code:
 * `Bb bb`: BitBoard – a well-known 64-bit bitset representing squares on the chessboard
 * `Pi pi`: Piece Index – one of 16 piece slots in a byte vector; `{TheKing = 0}` is the slot dedicated to the king
 *    pieces are sorted so that more valuable pieces occupy lower indexes
-* `PiBb`: matrix of Pi × Bb (128 bytes), used for storing and updating piece attack information and generating moves in bulk
+* `PiBbMatrix`: matrix of Pi × Bb (128 bytes), used for storing and updating piece attack information and generating moves from attacks
 * `Side side`: `{My, Op}` – side to move and opposite side
 * `Color color`: `{White, Black}` – rarely used, but required for correct output of internal moves in UCI notation
 * `PieceType ty`: `{Queen = 0, Rook = 1, Bishop = 2, Knight = 3, Pawn = 4, King = 5}` – colorless type of possible chess piece
