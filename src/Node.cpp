@@ -31,12 +31,12 @@ ReturnStatus Node::searchRoot() {
     root.newSearch();
     root.nodeCounter = { root.limits.nodes };
 
-    auto rootMovesClone = moves;
+    auto rootMovesClone = moves();
     repMask = root.repetitions.repMask(colorToMove());
     origin = root.tt.prefetch<TtSlot>(zobrist());
 
     for (draft = 1; draft <= root.limits.depth; ++draft) {
-        moves = rootMovesClone;
+        setMoves(rootMovesClone);
         movesMade = 0;
         score = NoScore;
         alpha = MinusInfinity;
@@ -100,11 +100,11 @@ ReturnStatus Node::searchMove(Move move) {
 
     canBeKiller = false;
 
-    if (moves.popcount() == 0) {
+    if (moves().popcount() == 0) {
         //checkmated or stalemated
-        score = inCheck ? Score::checkmated(ply) : Score{DrawScore};
+        score = inCheck() ? Score::checkmated(ply) : Score{DrawScore};
     }
-    else if (!inCheck && isDrawMaterial()) {
+    else if (!inCheck() && isDrawMaterial()) {
         score = DrawScore;
     }
     else if (rule50() >= 100 || isRepetition()) {
@@ -117,7 +117,7 @@ ReturnStatus Node::searchMove(Move move) {
     else if (isRepetition()) {
         score = DrawScore;
     }
-    else if (draft == 0 && !inCheck) {
+    else if (draft == 0 && !inCheck()) {
         RETURN_IF_STOP (quiescence());
     }
     else {
@@ -213,7 +213,7 @@ ReturnStatus Node::search() {
                 lastPi = MY.pieceAt(from);
 
                 // new moves of the last moved piece
-                newMoves = moves[lastPi];
+                newMoves = movesOf(lastPi);
 
                 if (from != parent->movedPieceFrom()) {
                     // unless it was a pawn promotion move
@@ -221,19 +221,19 @@ ReturnStatus Node::search() {
                 }
 
                 // try new safe moves of the last moved piece
-                for (Square to : newMoves % attackedSquares) {
+                for (Square to : newMoves % bbAttacked()) {
                     RETURN_CUTOFF (child->searchMove(from, to));
                 }
 
                 // keep unsafe news moves for later
-                newMoves &= attackedSquares;
+                newMoves &= bbAttacked();
             }
         }
 
         // new safe quiet moves, except for the last moved piece (or king)
         for (Pi pi : MY.pieces() - lastPi) {
             Square from = MY.squareOf(pi);
-            for (Square to : moves[pi] % parent->MY.attacksOf(pi) % attackedSquares) {
+            for (Square to : movesOf(pi) % parent->MY.attacksOf(pi) % bbAttacked()) {
                 RETURN_CUTOFF (child->searchMove(from, to));
             }
         }
@@ -242,7 +242,7 @@ ReturnStatus Node::search() {
     // all the rest safe quiet moves
     for (Pi pi : MY.pieces()) {
         Square from = MY.squareOf(pi);
-        for (Square to : moves[pi] % attackedSquares) {
+        for (Square to : movesOf(pi) % bbAttacked()) {
             RETURN_CUTOFF (child->searchMove(from, to));
         }
     }
@@ -257,7 +257,7 @@ ReturnStatus Node::search() {
         }
 
         // the rest moves of the last moved piece
-        for (Square to : moves[pi]) {
+        for (Square to : movesOf(pi)) {
             RETURN_CUTOFF (child->searchMove(from, to));
         }
     }
@@ -271,7 +271,7 @@ ReturnStatus Node::search() {
         Pi pi = pieces.leastValuable(); pieces -= pi;
         Square from = MY.squareOf(pi);
 
-        for (Square to : moves[pi]) {
+        for (Square to : movesOf(pi)) {
             RETURN_CUTOFF (child->searchMove(from, to));
         }
     }
@@ -281,7 +281,7 @@ ReturnStatus Node::search() {
 
 ReturnStatus Node::quiescence() {
     assert (MinusInfinity <= alpha && alpha < beta && beta <= PlusInfinity);
-    assert (!inCheck);
+    assert (!inCheck());
 
     //stand pat
     score = evaluate();
@@ -343,7 +343,7 @@ ReturnStatus Node::allCaptures(Node* child) {
 }
 
 ReturnStatus Node::goodCaptures(Node* child, Square to) {
-    PiMask attackers = moves[to];
+    PiMask attackers = canMoveTo(to);
 
     if (!to.on(Rank8)) {
         // skip underpromotion pseudo moves
@@ -351,7 +351,7 @@ ReturnStatus Node::goodCaptures(Node* child, Square to) {
     }
     if (attackers.none()) { return ReturnStatus::Continue; }
 
-    bool isVictimProtected = attackedSquares.has(to);
+    bool isVictimProtected = bbAttacked().has(to);
     assert (isVictimProtected == OP.attackersTo(~to).any());
     if (isVictimProtected) {
         // filter out more valuable attackers than the victim
@@ -370,7 +370,7 @@ ReturnStatus Node::goodCaptures(Node* child, Square to) {
 }
 
 ReturnStatus Node::notBadCaptures(Node* child, Square to) {
-    PiMask attackers = moves[to];
+    PiMask attackers = canMoveTo(to);
 
     if (!to.on(Rank8)) {
         // skip underpromotion pseudo moves
@@ -378,7 +378,7 @@ ReturnStatus Node::notBadCaptures(Node* child, Square to) {
     }
     if (attackers.none()) { return ReturnStatus::Continue; }
 
-    bool isVictimProtected = attackedSquares.has(to);
+    bool isVictimProtected = bbAttacked().has(to);
     assert (isVictimProtected == OP.attackersTo(~to).any());
     if (isVictimProtected) {
         // filter out more valuable attackers than the victim
@@ -397,7 +397,7 @@ ReturnStatus Node::notBadCaptures(Node* child, Square to) {
 }
 
 ReturnStatus Node::allCaptures(Node* child, Square to) {
-    PiMask attackers = moves[to];
+    PiMask attackers = canMoveTo(to);
     if (!to.on(Rank8)) {
         // skip underpromotion pseudo moves
         attackers %= MY.promotables();
@@ -418,7 +418,7 @@ ReturnStatus Node::allCaptures(Node* child, Square to) {
 ReturnStatus Node::safePromotions(Node* child) {
     for (Pi pi : MY.promotables()) {
         // skip moves to the attacked square
-        for (Square to : moves[pi] % attackedSquares & Bb{Rank8}) {
+        for (Square to : movesOf(pi) % bbAttacked() & Bb{Rank8}) {
             Square from = MY.squareOf(pi);
             RETURN_CUTOFF( child->searchMove(from, to) );
         }
@@ -430,7 +430,7 @@ ReturnStatus Node::safePromotions(Node* child) {
 // all non capture queen promotions
 ReturnStatus Node::allPromotions(Node* child) {
     for (Pi pi : MY.promotables()) {
-        for (Square to : moves[pi] & Bb{Rank8}) {
+        for (Square to : movesOf(pi) & Bb{Rank8}) {
             Square from = MY.squareOf(pi);
             RETURN_CUTOFF( child->searchMove(from, to) );
         }
