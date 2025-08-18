@@ -16,7 +16,7 @@ TtSlot::TtSlot (Z z, Score s, Bound b, Move move, Ply d) :
     draft_{d}
 {}
 
-TtSlot::TtSlot (Node* n, Bound b) : TtSlot{n->zobrist, n->score, b, n->childMove, n->draft} {}
+TtSlot::TtSlot (Node* n, Bound b) : TtSlot{n->zobrist(), n->score, b, n->childMove, n->draft} {}
 
 Node::Node (NodeRoot& r) :
     PositionMoves{r}, parent{nullptr}, grandParent{nullptr}, root{r}, ply{0} {}
@@ -33,7 +33,7 @@ ReturnStatus Node::searchRoot() {
 
     auto rootMovesClone = moves;
     repMask = root.repetitions.repMask(colorToMove());
-    origin = root.tt.prefetch<TtSlot>(zobrist);
+    origin = root.tt.prefetch<TtSlot>(zobrist());
 
     for (draft = 1; draft <= root.limits.depth; ++draft) {
         moves = rootMovesClone;
@@ -66,8 +66,8 @@ ReturnStatus Node::searchRoot() {
 
     const Move* pv = root.pvMoves;
     for (Move move; (move = *pv++);) {
-        auto o = root.tt.addr<TtSlot>(node.zobrist);
-        *o = TtSlot{node.zobrist, s, Exact, move, d};
+        auto o = root.tt.addr<TtSlot>(node.zobrist());
+        *o = TtSlot{node.zobrist(), s, Exact, move, d};
         ++root.tt.writes;
 
         node.makeMove(move.from(), move.to());
@@ -90,11 +90,11 @@ ReturnStatus Node::searchMove(Move move) {
     makeMove(parent, move);
     root.pvMoves.set(ply, UciMove{});
 
-    origin = root.tt.prefetch<TtSlot>(zobrist);
+    origin = root.tt.prefetch<TtSlot>(zobrist());
     ++parent->movesMade;
 
-    if (rule50 <= 1) { repMask = RepetitionMask{}; }
-    else if (grandParent) { repMask = RepetitionMask{grandParent->repMask, grandParent->zobrist}; }
+    if (rule50() <= 1) { repMask = RepetitionMask{}; }
+    else if (grandParent) { repMask = RepetitionMask{grandParent->repMask, grandParent->zobrist()}; }
     else { repMask = root.repetitions.repMask(colorToMove()); }
 
     canBeKiller = false;
@@ -106,7 +106,7 @@ ReturnStatus Node::searchMove(Move move) {
     else if (!inCheck && isDrawMaterial()) {
         score = DrawScore;
     }
-    else if (rule50 >= 100 || isRepetition()) {
+    else if (rule50() >= 100 || isRepetition()) {
         score = DrawScore;
     }
     else if (ply == MaxPly) {
@@ -174,7 +174,7 @@ ReturnStatus Node::search() {
     ++root.tt.reads;
     ttSlot = *origin;
 
-    isHit = (ttSlot == zobrist);
+    isHit = (ttSlot == zobrist());
     if (isHit) {
         ++root.tt.hits;
         RETURN_CUTOFF (child->searchIfLegal(ttSlot));
@@ -199,24 +199,24 @@ ReturnStatus Node::search() {
 
         // counter moves may refute the last opponent move
         Move move = parent->childMove;
-        PieceType ty = (*parent)[My].typeOf(move.from());
+        PieceType ty = parent->MY.typeOf(move.from());
         RETURN_CUTOFF (child->searchIfLegal( root.counterMove(colorToMove(), ty, move.to()) ));
 
         RETURN_CUTOFF (child->searchIfLegal(parent->killer2));
 
         // try quiet moves of the last moved piece (unless it was captured)
         {
-            Square from = parent->lastPieceTo;
-            if (MY.piecesSquares().has(from)) {
+            Square from = parent->movedPieceTo();
+            if (MY.bbSide().has(from)) {
                 // last moved piece
                 lastPi = MY.pieceAt(from);
 
                 // new moves of the last moved piece
                 newMoves = moves[lastPi];
 
-                if (from != parent->lastPieceFrom) {
+                if (from != parent->movedPieceFrom()) {
                     // unless it was a pawn promotion move
-                    newMoves %= (*parent)[My].attacksOf(lastPi);
+                    newMoves %= parent->MY.attacksOf(lastPi);
                 }
 
                 // try new safe moves of the last moved piece
@@ -232,7 +232,7 @@ ReturnStatus Node::search() {
         // new safe quiet moves, except for the last moved piece (or king)
         for (Pi pi : MY.pieces() - lastPi) {
             Square from = MY.squareOf(pi);
-            for (Square to : moves[pi] % (*parent)[My].attacksOf(pi) % attackedSquares) {
+            for (Square to : moves[pi] % parent->MY.attacksOf(pi) % attackedSquares) {
                 RETURN_CUTOFF (child->searchMove(from, to));
             }
         }
@@ -247,7 +247,7 @@ ReturnStatus Node::search() {
     }
 
     if (newMoves.any()) {
-        Square from = parent->lastPieceTo;
+        Square from = parent->movedPieceTo();
         Pi pi = MY.pieceAt(from);
 
         // unsafe new moves of the last moved piece
@@ -297,7 +297,7 @@ ReturnStatus Node::quiescence() {
     ttSlot = *origin;
     ++root.tt.reads;
 
-    isHit = (ttSlot == zobrist);
+    isHit = (ttSlot == zobrist());
     if (isHit) {
         ++root.tt.hits;
         RETURN_CUTOFF (child->searchIfLegal(ttSlot));
@@ -448,7 +448,7 @@ void Node::updateKillerMove() {
     }
 
     Move move = parent->childMove;
-    PieceType ty = (*parent)[My].typeOf(move.from());
+    PieceType ty = parent->MY.typeOf(move.from());
     root.counterMove.set(colorToMove(), ty, move.to(), childMove);
 }
 
@@ -466,8 +466,8 @@ Score Node::evaluate() const {
 
 // insufficient mate material
 bool Node::isDrawMaterial() const {
-    auto& my = MY.evaluation;
-    auto& op = OP.evaluation;
+    auto& my = MY.evaluation();
+    auto& op = OP.evaluation();
     if (my.piecesMat() + op.piecesMat() > 9) { return false; } // more then queen or 3 minor pieces
     if (my.count(Pawn) | op.count(Pawn) | my.count(Rook) | op.count(Rook)) { return false; }
     assert (my.count(Queen) + op.count(Queen) == 0);
@@ -489,14 +489,14 @@ bool Node::isDrawMaterial() const {
 }
 
 bool Node::isRepetition() const {
-    if (rule50 < 4) { return false; }
+    if (rule50() < 4) { return false; }
 
-    const Z& z = zobrist;
+    const Z& z = zobrist();
 
     if (grandParent) {
         auto next = grandParent;
         while ((next = next->grandParent)) {
-            if (next->zobrist == z) {
+            if (next->zobrist() == z) {
                 return true;
             }
             if (!next->repMask.has(z)) {

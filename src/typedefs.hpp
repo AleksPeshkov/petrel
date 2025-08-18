@@ -55,6 +55,10 @@ public:
         rule50.v = _rule50;
         return in;
     }
+
+    friend io::ostream& operator << (io::ostream& out, const Rule50& rule50) {
+        return out << rule50.v;
+    }
 };
 
 enum color_t { White, Black };
