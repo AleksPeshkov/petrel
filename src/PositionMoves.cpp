@@ -189,29 +189,26 @@ void PositionMoves::generateMoves() {
     generateLegalKingMoves<My>();
 }
 
-void PositionMoves::makeMoves() {
+void PositionMoves::generateMoves() {
     generateMoves<My>();
-}
-
-bool PositionMoves::isLegalMove(Square from, Square to) const {
-    return MY.has(from) && moves_.has(MY.pieceAt(from), to);
+    movesMade_ = 0;
 }
 
 // make move directly inside position itself
 void PositionMoves::makeMove(Square from, Square to) {
     assert (isLegalMove(from, to));
     Position::makeMove(from, to);
-    makeMoves();
+    generateMoves();
 }
 
 void PositionMoves::makeMove(PositionMoves* parent, Square from, Square to) {
-    parent->moves_.clear(parent->MY.pieceAt(from), to);
+    parent->clearMove(from, to);
     Position::makeMove(parent, from, to);
-    makeMoves();
+    generateMoves();
 }
 
 void PositionMoves::makeMoveNoZobrist(PositionMoves* parent, Square from, Square to) {
-    parent->moves_.clear(parent->MY.pieceAt(from), to);
+    parent->clearMove(from, to);
     Position::makeMoveNoZobrist(parent, from, to);
-    makeMoves();
+    generateMoves();
 }

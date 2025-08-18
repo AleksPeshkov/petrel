@@ -37,7 +37,7 @@ ReturnStatus Node::searchRoot() {
 
     for (draft = 1; draft <= root.limits.depth; ++draft) {
         setMoves(rootMovesClone);
-        movesMade = 0;
+
         score = NoScore;
         alpha = MinusInfinity;
         beta = PlusInfinity;
@@ -92,7 +92,6 @@ ReturnStatus Node::searchMove(Move move) {
     root.pvMoves.set(ply, UciMove{});
 
     origin = root.tt.prefetch<TtSlot>(zobrist());
-    ++parent->movesMade;
 
     if (rule50() <= 1) { repMask = RepetitionMask{}; }
     else if (grandParent) { repMask = RepetitionMask{grandParent->repMask, grandParent->zobrist()}; }
@@ -100,11 +99,7 @@ ReturnStatus Node::searchMove(Move move) {
 
     canBeKiller = false;
 
-    if (moves().popcount() == 0) {
-        //checkmated or stalemated
-        score = inCheck() ? Score::checkmated(ply) : Score{DrawScore};
-    }
-    else if (!inCheck() && isDrawMaterial()) {
+    if (!inCheck() && isDrawMaterial()) {
         score = DrawScore;
     }
     else if (rule50() >= 100 || isRepetition()) {
@@ -122,6 +117,11 @@ ReturnStatus Node::searchMove(Move move) {
     }
     else {
         RETURN_IF_STOP (search());
+
+        if (movesMade() == 0) {
+            //checkmated or stalemated
+            score = inCheck() ? Score::checkmated(ply) : Score{DrawScore};
+        }
     }
 
     return parent->negamax(this);
