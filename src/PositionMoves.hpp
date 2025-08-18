@@ -7,7 +7,7 @@
 
 class PositionMoves : public Position {
 public:
-    PiBb moves; //generated moves from My side
+    PiBb moves; // generated legal only moves
 
 protected:
     Bb attackedSquares; //squares attacked by all opponent pieces
