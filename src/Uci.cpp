@@ -104,7 +104,7 @@ void Uci::uciok() const {
     bool isChess960 = root.chessVariant().is(Chess960);
 
     OUTPUT(ob);
-    ob << "id name petrel\n";
+    ob << "id name petrel 1.1\n";
     ob << "id author Aleks Peshkov\n";
     ob << "option name Debug Log File type string default " << (logFileName.empty() ? "<empty>" : logFileName) << '\n';
     ob << "option name Hash type spin"
