@@ -42,13 +42,13 @@ public:
 
     HashAge hashAge;
 
-    Tt() { setSize(minSize()); }
+    Tt() { setSize(16 * 1025 * 1024); }
     ~Tt() { free(); }
 
     constexpr size_t size() const { return size_; }
 
-    // 1MB
-    constexpr size_t minSize() const { return 1024 * 1024; }
+    // 2MB to trigger huge pages if possible
+    constexpr size_t minSize() const { return 2 * 1024 * 1024; }
     static size_t maxSize();
 
     void setSize(size_t bytes) { allocate(bytes); newGame(); }
