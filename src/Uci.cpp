@@ -114,7 +114,7 @@ void Uci::uciok() const {
        << '\n';
     ob << "option name Ponder type check default " << (root.limits.canPonder ? "true" : "false") << '\n';
     ob << "option name UCI_Chess960 type check default " << (isChess960 ? "true" : "false") << '\n';
-    ob << "option name Move Overhead type spin min 0 default " << root.limits.moveOverhead << '\n';
+    ob << "option name Move Overhead type spin min 1 max 10000 default " << root.limits.moveOverhead << '\n';
     ob << "uciok\n";
 }
 
