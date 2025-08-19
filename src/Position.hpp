@@ -30,8 +30,10 @@ class Position {
 
     template <Side::_t> Zobrist generateZobrist() const;
 
-    // calculate Zobrist key from scratch
+    // update Zobrist key incrementally
     Zobrist createZobrist(Square, Square) const;
+
+    // calculate Zobrist key from scratch
     Zobrist generateZobrist() const;
 
 protected:
@@ -45,9 +47,6 @@ protected:
 
     // update the position and its zobrist hash
     void makeMove(const Position*, Square, Square);
-
-    // make move directly inside position itself
-    void makeMove(Square, Square);
 
     template <Side::_t> void setLegalEnPassant(Pi, Square);
     void setZobrist() { zobrist_ = generateZobrist(); }
@@ -74,6 +73,9 @@ public:
     Score evaluate() const { return Evaluation::evaluate(MY.evaluation(), OP.evaluation()); }
 
     bool isSpecial(Square, Square) const;
+
+    // make move directly inside position itself
+    void makeMove(Square, Square);
 
 // initial position setup
 
