@@ -99,7 +99,7 @@ void Uci::uciok() const {
        << " max "     << ::mebi(root.tt.maxSize())
        << " default " << ::mebi(root.tt.size())
        << '\n';
-    ob << "option name Move Overhead type spin min 0 default " << root.limits.moveOverhead << '\n';
+    ob << "option name Move Overhead type spin min 0 max 10000 default " << root.limits.moveOverhead << '\n';
     ob << "option name Ponder type check default " << (root.limits.canPonder ? "true" : "false") << '\n';
     ob << "option name UCI_Chess960 type check default " << (isChess960 ? "true" : "false") << '\n';
     ob << "uciok\n";
@@ -140,6 +140,8 @@ void Uci::setoption() {
         consume("value");
 
         inputLine >> root.limits.moveOverhead;
+        if (root.limits.moveOverhead == 0ms) { root.limits.moveOverhead = 100us; }
+
         if (!inputLine) { io::fail_rewind(inputLine); }
         return;
     }
