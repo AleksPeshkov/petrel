@@ -11,7 +11,7 @@ size_t getAvailableMemory() {
     auto pageSize = getPageSize();
 
     if (pages > 0 && pageSize > 0) {
-        return static_cast<size_t>(pages) * static_cast<size_t>(pageSize);
+        return static_cast<size_t>(pages) * pageSize;
     }
 
     return 0;
