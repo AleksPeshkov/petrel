@@ -42,12 +42,12 @@ ReturnStatus Node::searchRoot() {
         beta = PlusInfinity;
 
         auto status = search();
+        root.newIteration();
         updateTtPv();
 
         if (status == ReturnStatus::Stop) { return ReturnStatus::Stop; }
 
         root.uci.info_iteration(draft);
-        root.newIteration();
     }
 
     if (root.limits.infinite || root.limits.ponder) {
@@ -59,17 +59,18 @@ ReturnStatus Node::searchRoot() {
 
  // refresh PV in TT if it was overwritten
  void Node::updateTtPv() {
-    Node node{root};
+    Position pos{root};
     Score s = score;
     Ply d = draft;
 
     const Move* pv = root.pvMoves;
     for (Move move; (move = *pv++);) {
-        auto o = root.tt.addr<TtSlot>(node.zobrist());
-        *o = TtSlot{node.zobrist(), s, Exact, move, d};
+        auto o = root.tt.addr<TtSlot>(pos.zobrist());
+        *o = TtSlot{pos.zobrist(), s, Exact, move, d};
         ++root.tt.writes;
 
-        node.makeMove(move.from(), move.to());
+        //we cannot use makeZobrist() because of en passant legality validation
+        pos.makeMove(move.from(), move.to());
         s = -s;
         d = d > 0 ? d-1 : 0;
     }
