@@ -11,7 +11,7 @@ size_t Tt::maxSize() {
 
 void Tt::free() {
     if (size_) {
-        ::free(memory);
+        ::freeAligned(memory);
         memory = nullptr;
         size_ = 0;
     }
