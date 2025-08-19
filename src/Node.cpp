@@ -48,6 +48,8 @@ ReturnStatus Node::searchRoot() {
         if (status == ReturnStatus::Stop) { return ReturnStatus::Stop; }
 
         root.uci.info_iteration(draft);
+
+        if (root.limits.softDeadlineReached()) { return ReturnStatus::Stop; }
     }
 
     if (root.limits.infinite || root.limits.ponder) {
