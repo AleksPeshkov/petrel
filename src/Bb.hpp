@@ -87,9 +87,6 @@ constexpr Bb Square::operator() (signed df, signed dr) const {
     return Bb{ static_cast<square_t>((sq0x88 + (sq0x88 & 7)) >> 1) };
 }
 
-#include "Bb.hpp"
-#include "typedefs.hpp"
-
 // line (file, rank, diagonal) in between two squares (excluding both ends) or 0 (32k)
 class InBetween {
     Square::arrayOf< Square::arrayOf<Bb> > inBetween;
@@ -122,5 +119,93 @@ public:
 
 // line (file, rank, diagonal) in between two squares (excluding both ends) or 0
 extern const InBetween inBetween;
+
+//attack bitboards of the piece types on the empty board (3k)
+class AttacksFrom {
+    PieceType::arrayOf< Square::arrayOf<Bb> > attack;
+public:
+    constexpr AttacksFrom () {
+        FOR_EACH (Square, sq) {
+            attack[Rook][sq]   = sq.file() + sq.rank();
+            attack[Bishop][sq] = sq.diagonal() + sq.antidiag();
+            attack[Queen][sq]  = attack[Rook][sq] + attack[Bishop][sq];
+
+            attack[Pawn][sq] = sq(-1, Rank3 - Rank2) + sq(+1, Rank3 - Rank2);
+
+            attack[Knight][sq] =
+                sq(+2, +1) + sq(+2, -1) + sq(+1, +2) + sq(+1, -2) +
+                sq(-2, -1) + sq(-2, +1) + sq(-1, -2) + sq(-1, +2);
+
+            attack[King][sq] =
+                sq(+1, +1) + sq(+1, 0) + sq(0, +1) + sq(+1, -1) +
+                sq(-1, -1) + sq(-1, 0) + sq(0, -1) + sq(-1, +1);
+        }
+    }
+
+    constexpr const Bb& operator() (PieceType ty, Square sq) const { return attack[ty][sq]; }
+};
+
+extern const AttacksFrom attacksFrom;
+
+class CastlingRules {
+    struct Rules {
+        Bb unimpeded;
+        Bb unattacked;
+    };
+
+    File::arrayOf< File::arrayOf<Rules> > castlingRules;
+
+    static constexpr Bb exBetween(Square king, Square rook) { return ::inBetween(king, rook) + rook; }
+
+public:
+    constexpr CastlingRules () {
+        FOR_EACH(File, kingFile) {
+            FOR_EACH(File, rookFile) {
+                Square king{kingFile, Rank1};
+                Square rook{rookFile, Rank1};
+
+                if (king == rook) {
+                    castlingRules[kingFile][rookFile].unimpeded  = Bb{};
+                    castlingRules[kingFile][rookFile].unattacked = Bb{};
+                    continue;
+                }
+
+                switch (CastlingRules::castlingSide(king, rook)) {
+                    case QueenSide:
+                        castlingRules[kingFile][rookFile].unimpeded  = (exBetween(king, C1) | exBetween(rook, D1)) % (Bb{king} + rook);
+                        castlingRules[kingFile][rookFile].unattacked = exBetween(king, C1) | king;
+                        break;
+
+                    case KingSide:
+                        castlingRules[kingFile][rookFile].unimpeded  = (exBetween(king, G1) | exBetween(rook, F1)) % (Bb{king} + rook);
+                        castlingRules[kingFile][rookFile].unattacked = exBetween(king, G1) | king;
+                        break;
+                }
+            }
+        }
+    }
+
+    bool isLegal(Square king, Square rook, Bb occupied, Bb attacked) const {
+        assert (king.on(Rank1));
+        assert (rook.on(Rank1));
+        assert (king != rook);
+        return (occupied & castlingRules[File(king)][File(rook)].unimpeded).none() && (attacked & castlingRules[File(king)][File(rook)].unattacked).none();
+    }
+
+    static constexpr CastlingSide castlingSide(Square king, Square rook) {
+        return (rook < king) ? QueenSide : KingSide;
+    }
+
+    static constexpr Square castlingKingTo(Square king, Square rook) {
+        return castlingSide(king, rook).is(QueenSide) ? C1 : G1;
+    }
+
+    static constexpr Square castlingRookTo(Square king, Square rook) {
+        return castlingSide(king, rook).is(QueenSide) ? D1 : F1;
+    }
+
+};
+
+extern const CastlingRules castlingRules;
 
 #endif
