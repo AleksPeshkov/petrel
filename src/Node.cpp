@@ -28,7 +28,7 @@ Node::Node (const PositionMoves& p, const Uci& r) : PositionMoves{p}, root{r} {}
 Node::Node (const Node* p) :
     PositionMoves{}, root{p->root}, parent{p}, grandParent{p->parent},
     ply{p->ply + 1}, draft{p->draft > 0 ? p->draft-1 : 0},
-    alpha{-p->beta}, beta{-p->alpha},
+    alpha{-p->beta}, beta{-p->alpha}, isPv(p->isPv),
     pvIndex{p->pvIndex+1},
     killer1{grandParent ? grandParent->killer1 : Move{}},
     killer2{grandParent ? grandParent->killer2 : Move{}}
@@ -153,27 +153,43 @@ ReturnStatus Node::negamax(Node* child) const {
 
     auto childScore = -child->score;
 
-    if (score < childScore) {
-        score = childScore;
-
-        if (alpha < score) {
-            if (beta <= score) {
-                failHigh();
-                return ReturnStatus::BetaCutoff;
-            }
-
-            alpha = score;
-            updatePv(child);
+    if (childScore <= alpha) {
+        if (score < childScore) {
+            score = childScore;
         }
+    } else {
+        if (beta <= childScore) {
+            score = childScore;
+            failHigh();
+            return ReturnStatus::BetaCutoff;
+        }
+
+        assert (alpha < childScore && childScore < beta);
+        assert (isPv); // alpha < childScore < beta, so current window cannot be zero
+
+        if (!child->isPv) {
+            // Principal Variation Search (PVS) research with full window
+            child->isPv = true;
+            child->alpha = -beta;
+            assert (child->beta == -alpha);
+            assert (child->alpha < child->beta-1);
+            return negamax(child);
+        }
+
+        score = childScore;
+        alpha = childScore;
+        child->beta = -alpha;
+        updatePv(child);
     }
 
     if (ply == 0 && root.limits.isRootMoveDeadline()) {
         return ReturnStatus::Stop;
     }
 
-    // set window for the next move search
-    child->alpha = -beta;
-    child->beta = -alpha;
+    // set zero window for the next sibling move search
+    assert (child->beta == -alpha);
+    child->alpha = child->beta-1;
+    child->isPv = false;
     return ReturnStatus::Continue;
 }
 
@@ -254,7 +270,7 @@ ReturnStatus Node::search() {
         } else {
             ++root.tt.hits;
 
-            if (ttSlot.draft() >= draft) {
+            if (ttSlot.draft() >= draft && !isPv) {
                 Bound ttBound = ttSlot;
                 Score ttScore = ttSlot.score(ply);
 
