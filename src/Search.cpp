@@ -32,10 +32,6 @@ ReturnStatus NodeAb::visit(Move move) {
     beta = -parent->alpha;
     assert (MinusInfinity <= alpha && alpha < beta && beta <= PlusInfinity);
 
-    // mate-distance pruning
-    alpha = std::max(alpha, Score::checkmated(ply));
-    if (alpha >= beta) { return ReturnStatus::BetaCutoff; }
-
     draft = parent->draft > 0 ? parent->draft-1 : 0;
 
     RETURN_IF_ABORT (root.countNode());
@@ -100,6 +96,12 @@ ReturnStatus NodeAb::negamax(Score lastScore) {
 }
 
 ReturnStatus NodeAb::searchMoves() {
+    // mate-distance pruning
+    if (ply >= 1) {
+        alpha = std::max(alpha, Score::checkmated(ply));
+        if (alpha >= beta) { score = alpha; return ReturnStatus::BetaCutoff; }
+    }
+
     assert (MinusInfinity <= alpha && alpha < beta && beta <= PlusInfinity);
 
     NodeAb node{this};
