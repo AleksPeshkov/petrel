@@ -63,6 +63,7 @@ protected:
     Score beta = PlusInfinity; // alpha-beta window upper margin
     Score score = NoScore; // best score found so far
     bool alphaImproved = false; // alpha is improved (implies PV node)
+    bool isPv = true; // alpha < beta - 1, cannot use constexpr as alpha may change during search
 
     Move currentMove = {}; // last move made from *this into *child
 
@@ -76,7 +77,6 @@ protected:
     Node (Node* n); // prepare empty child node
 
     [[nodiscard]] ReturnStatus search();
-    [[nodiscard]] ReturnStatus searchMoves();
 
     // propagate child last move search result score
     [[nodiscard]] ReturnStatus negamax(Node* child);

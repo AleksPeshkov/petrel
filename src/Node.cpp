@@ -28,7 +28,7 @@ Node::Node (NodeRoot& r) :
 Node::Node (Node* n) :
     PositionMoves{}, parent{n}, grandParent{n->parent}, root{n->root},
     ply{n->ply + 1}, draft{n->draft > 0 ? n->draft-1 : 0},
-    alpha{-n->beta}, beta{-n->alpha},
+    alpha{-n->beta}, beta{-n->alpha}, isPv(n->isPv),
     killer1{grandParent ? grandParent->killer1 : Move{}},
     killer2{grandParent ? grandParent->killer2 : Move{}}
 {}
@@ -53,7 +53,6 @@ ReturnStatus Node::searchRoot() {
                     const auto child = &node;
 
                     child->makeMove(ttMove);
-                    child->origin = root.tt.prefetch<TtSlot>(child->zobrist());
                     ++root.tt.reads;
                     child->ttSlot = *child->origin;
                     child->isHit = (child->ttSlot == child->zobrist());
@@ -81,7 +80,7 @@ ReturnStatus Node::searchRoot() {
         setMoves(rootMovesClone);
         alpha = MinusInfinity;
         beta = PlusInfinity;
-        auto status = searchMoves();
+        auto status = search();
 
         root.newIteration();
         refreshTtPv();
@@ -123,39 +122,52 @@ void Node::makeMove(Move move) {
     parent->clearMove(from, to);
     Position::makeMove(parent, from, to);
     origin = root.tt.prefetch<TtSlot>(zobrist());
-
-    if (rule50() < 2) { repMask = RepetitionMask{}; }
-    else if (grandParent) { repMask = RepetitionMask{grandParent->repMask, grandParent->zobrist()}; }
-    else { repMask = root.repetitions.repMask(colorToMove()); }
-
-    root.pvMoves.set(ply, UciMove{});
 }
 
 ReturnStatus Node::searchMove(Move move) {
     RETURN_IF_STOP (root.uci.limits.countNode());
     makeMove(move);
 
-    RETURN_IF_STOP (search());
+    if (rule50() < 2) { repMask = RepetitionMask{}; }
+    else if (grandParent) { repMask = RepetitionMask{grandParent->repMask, grandParent->zobrist()}; }
+    else { repMask = root.repetitions.repMask(colorToMove()); }
+
+    root.pvMoves.set(ply, UciMove{});
     return parent->negamax(this);
 }
 
 ReturnStatus Node::negamax(Node* child) {
-    assert (MinusInfinity <= alpha && alpha < beta && beta <= PlusInfinity);
-
+    child->generateMoves();
+    RETURN_IF_STOP (child->search());
     auto childScore = -child->score;
 
-    if (score < childScore) {
+    assert (MinusInfinity <= alpha && alpha < beta && beta <= PlusInfinity);
+
+    if (beta <= childScore) {
         score = childScore;
+        failHigh();
+        return ReturnStatus::BetaCutoff;
+    }
 
-        if (alpha < score) {
-            if (beta <= score) {
-                failHigh();
-                return ReturnStatus::BetaCutoff;
-            }
-
-            alpha = score;
-            updatePv();
+    if (alpha < childScore) {
+        assert (isPv); // alpha < childScore < beta, so current window cannot be zero
+        if (!child->isPv) {
+            // Principal Variation Search:
+            // zero window search failed high, research with full window
+            child->alpha = -beta;
+            assert (child->beta == -alpha);
+            child->isPv = true;
+            assert (child->alpha < child->beta-1);
+            return negamax(child);
         }
+
+        score = childScore;
+        alphaImproved = true;
+        alpha = childScore;
+        child->beta = -alpha;
+        updatePv();
+    } else if (score < childScore) {
+        score = childScore;
     }
 
     if (ply == 0 && root.uci.limits.isRootMoveDeadline()) {
@@ -163,8 +175,9 @@ ReturnStatus Node::negamax(Node* child) {
     }
 
     // set window for the next move search
-    child->alpha = -beta;
-    child->beta = -alpha;
+    child->alpha = -alpha - 1;
+    assert (child->beta == -alpha);
+    child->isPv = false;
     child->score = NoScore;
     return ReturnStatus::Continue;
 }
@@ -187,11 +200,6 @@ void Node::updatePv() {
 }
 
 ReturnStatus Node::search() {
-    generateMoves();
-    return searchMoves();
-}
-
-ReturnStatus Node::searchMoves() {
     // mate-distance pruning
     if (ply >= 1) {
         alpha = std::max(alpha, Score::checkmated(ply));
@@ -225,7 +233,7 @@ ReturnStatus Node::searchMoves() {
         } else {
             ++root.tt.hits;
 
-            if (ttSlot.draft() >= draft) {
+            if (ttSlot.draft() >= draft && !isPv) {
                 Bound bound = ttSlot;
                 Score ttScore = ttSlot.score(ply);
 
