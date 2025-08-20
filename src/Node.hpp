@@ -63,6 +63,7 @@ protected:
     Score beta = PlusInfinity; // alpha-beta window upper margin
     mutable Score score = NoScore; // best score found so far
     mutable Bound bound = FailLow; // FailLow is default unless have found Exact or FailHigh move later
+    bool isPv = true; // alpha < beta-1, cannot use constexpr as alpha may change during search
 
     mutable Move currentMove = {}; // last move made from *this into *child
     PvMoves::Index pvIndex{0}; // start of subPV for the current ply
