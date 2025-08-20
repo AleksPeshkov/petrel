@@ -4,7 +4,6 @@
 #include "chrono.hpp"
 #include "typedefs.hpp"
 #include "Node.hpp"
-#include "PvMoves.hpp"
 #include "Repetitions.hpp"
 #include "Tt.hpp"
 #include "UciSearchLimits.hpp"
@@ -18,6 +17,30 @@ public:
     void clear() { std::memset(&v, 0, sizeof(v)); }
     const Move& operator() (Color c, PieceType ty, Square sq) const { return v[c][ty][sq]; }
     void set(Color c, PieceType ty, Square sq, const Move& move) { v[c][ty][sq] = move; }
+};
+
+// triangular array
+class CACHE_ALIGN PvMoves {
+    Ply::arrayOf< Ply::arrayOf<UciMove> > pv;
+
+public:
+    PvMoves () { clear(); }
+
+    void clear() { std::memset(&pv, 0, sizeof(pv)); }
+
+    void set(Ply ply, UciMove move) {
+        pv[ply][0] = move;
+        auto target = &pv[ply][1];
+        auto source = &pv[ply+1][0];
+        while ((*target++ = *source++));
+        pv[ply+1][0] = {};
+    }
+
+    operator const UciMove* () const { return &pv[0][0]; }
+
+    friend ostream& operator << (ostream& out, const PvMoves& pvMoves) {
+        return out << &pvMoves.pv[0][0];
+    }
 };
 
 class NodeCounter {

@@ -1,6 +1,4 @@
 #include "Position.hpp"
-#include "CastlingRules.hpp"
-#include "AttacksFrom.hpp"
 
 void Position::makeMove(Square from, Square to) {
     PositionSide::swap(MY, OP);
