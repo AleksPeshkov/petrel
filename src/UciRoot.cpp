@@ -1,7 +1,5 @@
 #include <set>
-
 #include "UciRoot.hpp"
-#include "CastlingRules.hpp"
 
 namespace {
 

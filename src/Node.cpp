@@ -1,5 +1,4 @@
 #include "Node.hpp"
-#include "AttacksFrom.hpp"
 #include "Uci.hpp"
 
 #define RETURN_CUTOFF(visitor) { ReturnStatus status = visitor; \
