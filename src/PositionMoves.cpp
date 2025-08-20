@@ -1,8 +1,5 @@
 #include "PositionMoves.hpp"
 
-#include "CastlingRules.hpp"
-#include "AttacksFrom.hpp"
-
 template <Side::_t My>
 void PositionMoves::generateEnPassantMoves() {
     constexpr Side Op{~My};

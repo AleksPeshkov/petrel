@@ -1,7 +1,5 @@
 #include "PositionSide.hpp"
 #include "Hyperbola.hpp"
-#include "CastlingRules.hpp"
-#include "AttacksFrom.hpp"
 
 #ifndef NDEBUG
     void PositionSide::assertOk(Pi pi) const {
