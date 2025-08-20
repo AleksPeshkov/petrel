@@ -62,6 +62,7 @@ protected:
     Score score = NoScore;
     Score alpha = MinusInfinity;
     Score beta = PlusInfinity;
+    bool isPv = true; // we cannot use constexpr alpha < beta - 1, as alpha and beta may change during search
 
     Move childMove = {}; // last move made from this node
     Move killer1 = {}; // first killer move to try at child-child nodes

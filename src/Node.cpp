@@ -28,7 +28,7 @@ Node::Node (NodeRoot& r) :
 Node::Node (Node* n) :
     PositionMoves{}, parent{n}, grandParent{n->parent}, root{n->root},
     ply{n->ply + 1}, draft{n->draft > 0 ? n->draft-1 : 0},
-    alpha{-n->beta}, beta{-n->alpha},
+    alpha{-n->beta}, beta{-n->alpha}, isPv(n->isPv),
     killer1{grandParent ? grandParent->killer1 : Move{}},
     killer2{grandParent ? grandParent->killer2 : Move{}}
 {}
@@ -145,17 +145,31 @@ ReturnStatus Node::negamax(Node* child) {
 
     auto childScore = -child->score;
 
-    if (score < childScore) {
+    if (beta <= childScore) {
         score = childScore;
+        return betaCutoff();
+    }
 
-        if (alpha < score) {
-            if (beta <= score) {
-                return betaCutoff();
-            }
-
-            alpha = score;
-            RETURN_IF_STOP (updatePv());
+    if (alpha < childScore) {
+        assert (isPv); // alpha < childScore < beta, so current window cannot be zero
+        if (!child->isPv) {
+            // Principal Variation Search:
+            // zero window search failed high, research with full window
+            child->alpha = -beta;
+            assert (child->beta == -alpha);
+            child->isPv = true;
+            assert (child->alpha < child->beta-1);
+            RETURN_IF_STOP (child->search());
+            return negamax(child);
         }
+
+        score = childScore;
+        RETURN_IF_STOP (updatePv());
+
+        alpha = childScore;
+        child->beta = -alpha;
+    } else if (score < childScore) {
+        score = childScore;
     }
 
     if (ply == 0 && root.limits.rootMoveDeadlineReached()) {
@@ -163,8 +177,9 @@ ReturnStatus Node::negamax(Node* child) {
     }
 
     // set window for the next move search
-    child->alpha = -beta;
-    child->beta = -alpha;
+    child->alpha = -alpha - 1;
+    assert (child->beta == -alpha);
+    child->isPv = false;
     return ReturnStatus::Continue;
 }
 
