@@ -119,22 +119,34 @@ ReturnStatus Node::negamax(Node* child) {
 
     auto childScore = -child->score;
 
-    if (score < childScore) {
+    if (beta <= childScore) {
         score = childScore;
+        return betaCutoff();
+    }
 
-        if (alpha < score) {
-            if (beta <= score) {
-                return betaCutoff();
-            }
-
-            alpha = score;
-            RETURN_IF_STOP (updatePv());
+    if (alpha < childScore) {
+        if (child->isZeroWindow) {
+            // Principal Variation Search:
+            // zero window search failed high, research with full window
+            child->alpha = -beta;
+            child->beta  = -alpha;
+            child->isZeroWindow = false;
+            RETURN_IF_STOP (child->search());
+            return negamax(child);
         }
+
+        score = childScore;
+        alpha = childScore;
+        RETURN_IF_STOP (updatePv());
+    } else if (score < childScore) {
+        score = childScore;
     }
 
     // set window for the next move search
-    child->alpha = -beta;
-    child->beta = -alpha;
+    //child->alpha = -beta;
+    child->alpha = -alpha - 1;
+    child->beta  = -alpha;
+    child->isZeroWindow = true;
     return ReturnStatus::Continue;
 }
 
