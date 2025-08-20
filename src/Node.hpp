@@ -53,6 +53,7 @@ protected:
     Score score = NoScore;
     Score alpha = MinusInfinity;
     Score beta = PlusInfinity;
+    bool isZeroWindow = false;
 
     Move childMove = {}; // last move made from this node
     Move killer1 = {}; // first killer move to try at child-child nodes
