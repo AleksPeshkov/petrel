@@ -1,27 +1,48 @@
-#debug = yes
-CXX = clang++
-#CXX = g++
-
+# === Configuration ===
 EXE = petrel
 BUILD_DIR ?= build
 TARGET ?= $(BUILD_DIR)/$(EXE)
 
-SRCDIR ?= src
+CXX = clang++
+#CXX = g++
+RM = rm -rf
+MKDIR = mkdir -p
+SRC_DIR ?= src
 TEST_DIR ?= test
 EXPECT ?= $(TEST_DIR)/expect.sh
 
-ifeq ($(debug),yes)
-	CXXFLAGS += -DDEBUG -ggdb
-	OPTIMIZATIONS = -Og -O0
-else
-	CXXFLAGS += -DNDEBUG
-	OPTIMIZATIONS = -Ofast -flto -finline-functions
+# === Default Flags (Release) ===
+BUILD_FLAGS = -Ofast -flto -finline-functions -DNDEBUG
+
+# === Tag Files for Build Type ===
+TAG_TEST  = $(BUILD_DIR)/.test
+TAG_DEBUG = $(BUILD_DIR)/.debug
+
+# === Set Flags Based on Tags ===
+ifeq ($(wildcard $(TAG_TEST)), $(TAG_TEST))
+	BUILD_FLAGS = -Og -ggdb -DDEBUG
+else ifeq ($(wildcard $(TAG_DEBUG)), $(TAG_DEBUG))
+	BUILD_FLAGS = -O0 -ggdb -DDEBUG
 endif
 
-CXXFLAGS += -std=c++23 -mssse3 -march=native -mtune=native
-CXXFLAGS += -fno-exceptions -fno-rtti
+CXXFLAGS = $(BUILD_FLAGS) -std=c++23 -mssse3 -march=native -mtune=native -fno-exceptions -fno-rtti
 
-WARNINGS += -Wall -Wpedantic -Wextra
+GIT_DATE := $(shell git log -1 --date=short --pretty=format:%cd 2>/dev/null || true)
+ifneq ($(GIT_DATE),)
+	CXXFLAGS += -DGIT_DATE=\"$(GIT_DATE)\"
+endif
+
+GIT_SHA := $(shell git log -1 --date=short --pretty=format:%h 2>/dev/null || true)
+ifneq ($(GIT_SHA),)
+	CXXFLAGS += -DGIT_SHA=\"$(GIT_SHA)\"
+endif
+
+GIT_ORIGIN := $(shell git remote get-url origin 2>/dev/null || true)
+ifneq ($(GIT_ORIGIN),)
+	CXXFLAGS += -DGIT_ORIGIN=\"$(GIT_ORIGIN)\"
+endif
+
+WARNINGS = -Wall -Wpedantic -Wextra
 WARNINGS += -Wno-ignored-attributes
 WARNINGS += -Wuninitialized -Wcast-qual -Wshadow -Wmissing-declarations -Wstrict-aliasing=1 -Wstrict-overflow=5 -Wsign-promo
 WARNINGS += -Wpacked -Wdisabled-optimization -Wredundant-decls -Winvalid-constexpr -Wextra-semi -Wsuggest-override
@@ -30,72 +51,74 @@ WARNINGS += -Wpacked -Wdisabled-optimization -Wredundant-decls -Winvalid-constex
 ifeq ($(CXX), g++)
 	CXXFLAGS += -flax-vector-conversions
 	WARNINGS += -Wno-class-memaccess -Wno-packed-bitfield-compat
-	WARNINGS += -Wuseless-cast -Wcast-align=strict -Wunsafe-loop-optimizations -Wsuggest-final-types -Wsuggest-final-methods
-	WARNINGS += -Wnormalized -Wvector-operation-performance
-endif
-
-ifeq ($(CXX), clang)
-	CXXFLAGS += -ferror-limit=10
+	WARNINGS += -Wuseless-cast -Wcast-align=strict -Wsuggest-final-types -Wsuggest-final-methods
+	WARNINGS += -Wnormalized -Wunsafe-loop-optimizations -Wvector-operation-performance
+else ifeq ($(CXX), clang)
 	WARNINGS += -Wcast-align -Wconditional-uninitialized -Wmissing-prototypes -Wconversion
 endif
 
-CXXFLAGS += $(OPTIMIZATIONS) $(WARNINGS)
+CXXFLAGS += $(WARNINGS)
 
+# === Linker Flags ===
 LDLIBS += -pthread
-LDFLAGS += $(LDLIBS) $(OPTIMIZATIONS) -Wl,--no-as-needed
+LDFLAGS += $(LDLIBS) $(BUILD_FLAGS) -Wl,--no-as-needed
 
+# === Precompiled Header ===
 HEADER = StdAfx.hpp
 PRECOMP = $(BUILD_DIR)/$(HEADER).gch
-HEADER_SRC = $(SRCDIR)/$(HEADER)
+HEADER_SRC = $(SRC_DIR)/$(HEADER)
 
-SOURCES = $(wildcard $(SRCDIR)/*.cpp)
-OBJECTS = $(patsubst $(SRCDIR)/%.cpp, $(BUILD_DIR)/%.o, $(SOURCES))
+SOURCES = $(wildcard $(SRC_DIR)/*.cpp)
+OBJECTS = $(patsubst $(SRC_DIR)/%.cpp, $(BUILD_DIR)/%.o, $(SOURCES))
 DEPS = $(patsubst %.o, %.d, $(OBJECTS))
 
+.PHONY: default release test debug clean run check _clear_console
 
-GIT_DATE := $(shell git log -1 --date=short --pretty=format:%cd)
-ifneq ($(GIT_DATE), )
-	CXXFLAGS += -DGIT_DATE=\"$(GIT_DATE)\"
-endif
+default: _clear_console $(BUILD_DIR) $(TARGET)
 
-GIT_SHA := $(shell git log -1 --date=short --pretty=format:%h)
-ifneq ($(GIT_SHA), )
-	CXXFLAGS += -DGIT_SHA=\"$(GIT_SHA)\"
-endif
+release: $(BUILD_DIR)
+	if [ -f $(TAG_TEST) ] || [ -f $(TAG_DEBUG) ]; then $(RM) $(BUILD_DIR); fi
+	$(MKDIR) $(BUILD_DIR)
+	$(MAKE) --no-print-directory $(TARGET)
 
-GIT_ORIGIN := $(shell git remote get-url origin)
-ifneq ($(GIT_ORIGIN), )
-	CXXFLAGS += -DGIT_ORIGIN=\"$(GIT_ORIGIN)\"
-endif
+test: $(BUILD_DIR)
+	if [ ! -f $(TAG_TEST) ]; then $(RM) $(BUILD_DIR); fi
+	$(MKDIR) $(BUILD_DIR)
+	touch $(TAG_TEST)
+	$(MAKE) --no-print-directory $(TARGET)
 
-
-.PHONY: all clean _clear_console test
-
-all: _clear_console $(TARGET)
+debug: $(BUILD_DIR)
+	if [ ! -f $(TAG_DEBUG) ]; then $(RM) $(BUILD_DIR); fi
+	$(MKDIR) $(BUILD_DIR)
+	touch $(TAG_DEBUG)
+	$(MAKE) --no-print-directory $(TARGET)
 
 clean:
-	$(RM) -r $(BUILD_DIR)
+	$(RM) $(BUILD_DIR)
+
+run: default
+	clear
+	$(TARGET)
+
+check: test _clear_console
+	$(EXPECT) $(TARGET) $(TEST_DIR)/test.rc
 
 _clear_console:
 	clear
 
-run: all
-	clear
-	$(TARGET)
-
-test: all
-	$(EXPECT) $(TARGET) $(TEST_DIR)/test.rc
+# === Build Rules ===
 
 $(TARGET): $(PRECOMP) $(OBJECTS)
 	$(CXX) -o $@ $(LDFLAGS) $(OBJECTS)
 
-$(BUILD_DIR)/%.o: $(SRCDIR)/%.cpp $(PRECOMP)
-	$(CXX) -c -o $@ $< -MMD $(CXXFLAGS) -Winvalid-pch -include $(HEADER_SRC)
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp $(PRECOMP)
+	$(CXX) -c -o $@ $< -MMD -include $(HEADER_SRC) -Winvalid-pch $(CXXFLAGS)
 
 $(PRECOMP): $(HEADER_SRC) | $(BUILD_DIR)
 	$(CXX) -o $@ $< -MD $(CXXFLAGS)
 
-$(BUILD_DIR):
-	mkdir -p $@
+$(BUILD_DIR): Makefile
+	$(RM) $@
+	$(MKDIR) $@
 
 -include $(DEPS)
