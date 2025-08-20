@@ -63,6 +63,7 @@ protected:
     Score beta = PlusInfinity; // alpha-beta window upper margin
     mutable Score score = NoScore; // best score found so far
     mutable bool alphaImproved = false; // alpha is improved (implies PV node)
+    bool isPv = true; // alpha < beta-1, cannot use constexpr as alpha may change during search
 
     mutable Move currentMove = {}; // last move made from *this into *child
 
