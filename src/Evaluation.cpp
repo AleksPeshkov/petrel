@@ -1,5 +1,6 @@
 #include "Evaluation.hpp"
 
+// https://www.chessprogramming.org/PeSTO%27s_Evaluation_Function
 PieceSquareTable::PieceSquareTable () {
     static_assert (sizeof(element_type) == sizeof(u64_t));
 
