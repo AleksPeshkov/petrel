@@ -47,12 +47,12 @@ class Uci {
     void setHash();
     void goPerft();
 
-    void infoPosition() const;
 
     bool isReady() const { return mainSearchThread.isReady(); }
 
     ostream& nps(ostream&) const;
     ostream& info_nps(ostream&) const;
+    ostream& info_fen(ostream&) const;
 
     void setDeadline(TimeInterval);
 
@@ -69,9 +69,9 @@ public:
     void info_pv(Ply, Score) const;
     void info_iteration(Ply) const;
 
-    void perft_depth(Ply, node_count_t) const;
-    void perft_currmove(index_t moveCount, const UciMove& currentMove, node_count_t) const;
-    void perft_finish() const;
+    void info_perft_depth(Ply, node_count_t) const;
+    void info_perft_currmove(index_t moveCount, const UciMove& currentMove, node_count_t) const;
+    void info_perft_bestmove() const;
 
     void waitStop() const { mainSearchThread.waitStop(); }
 
