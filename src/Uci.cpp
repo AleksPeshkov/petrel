@@ -88,26 +88,22 @@ void Uci::uciok() const {
     OUTPUT(ob);
     ob << "id name petrel\n";
     ob << "id author Aleks Peshkov\n";
-    ob << "option name UCI_Chess960 type check default " << (isChess960 ? "true" : "false") << '\n';
-    ob << "option name Ponder type check default " << (canPonder ? "true" : "false") << '\n';
     ob << "option name Hash type spin"
        << " min "     << ::mebi(root.tt.minSize())
        << " max "     << ::mebi(root.tt.maxSize())
        << " default " << ::mebi(root.tt.size())
        << '\n';
+    ob << "option name Ponder type check default " << (canPonder ? "true" : "false") << '\n';
+    ob << "option name UCI_Chess960 type check default " << (isChess960 ? "true" : "false") << '\n';
     ob << "uciok\n";
 }
 
 void Uci::setoption() {
     consume("name");
 
-    if (consume("UCI_Chess960")) {
+    if (consume("Hash")) {
         consume("value");
-
-        if (consume("true"))  { root.setChessVariant(Chess960); return; }
-        if (consume("false")) { root.setChessVariant(Orthodox); return; }
-
-        io::fail_rewind(inputLine);
+        setHash();
         return;
     }
 
@@ -121,9 +117,13 @@ void Uci::setoption() {
         return;
     }
 
-    if (consume("Hash")) {
+    if (consume("UCI_Chess960")) {
         consume("value");
-        setHash();
+
+        if (consume("true"))  { root.setChessVariant(Chess960); return; }
+        if (consume("false")) { root.setChessVariant(Orthodox); return; }
+
+        io::fail_rewind(inputLine);
         return;
     }
 }
@@ -171,7 +171,8 @@ void Uci::setHash() {
 
 void Uci::position() {
     if (!hasMoreInput()) {
-        infoPosition();
+        OUTPUT(ob);
+        info_fen(ob);
         return;
     }
 
@@ -260,7 +261,7 @@ void Uci::goPerft() {
 
     mainSearchThread.start([this, depth] {
         NodePerft{root, depth}.visitRoot();
-        perft_finish();
+        info_perft_bestmove();
     } );
 }
 
@@ -320,8 +321,14 @@ ostream& Uci::info_nps(ostream& o) const {
     return o;
 }
 
+ostream& Uci::info_fen(ostream& o) const {
+    o << "info" << root.evaluate() << " fen " << root << '\n';
+    return o;
+}
+
 void Uci::bestmove() const {
     OUTPUT(ob);
+    info_fen(ob);
     info_nps(ob);
     ob << "bestmove " << root.pvMoves[0];
     if (canPonder && root.pvMoves[1]) {
@@ -341,25 +348,19 @@ void Uci::info_pv(Ply draft, Score score) const {
     ob << "info depth " << draft; nps(ob) << score << " pv" << root.pvMoves << '\n';
 }
 
-void Uci::perft_depth(Ply draft, node_count_t perft) const {
+void Uci::info_perft_depth(Ply draft, node_count_t perft) const {
     OUTPUT(ob);
     ob << "info depth " << draft << " perft " << perft; nps(ob) << '\n';
 }
 
-void Uci::perft_currmove(index_t moveCount, const UciMove& currentMove, node_count_t perft) const {
+void Uci::info_perft_currmove(index_t moveCount, const UciMove& currentMove, node_count_t perft) const {
     OUTPUT(ob);
     ob << "info currmovenumber " << moveCount << " currmove " << currentMove << " perft " << perft;
     nps(ob) << '\n';
 }
 
-void Uci::perft_finish() const {
+void Uci::info_perft_bestmove() const {
     OUTPUT(ob);
     info_nps(ob);
     ob << "bestmove 0000\n";
-}
-
-void Uci::infoPosition() const {
-    OUTPUT(ob);
-    ob << "info fen " << root << '\n';
-    ob << "info" << root.evaluate() << '\n';
 }
