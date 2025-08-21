@@ -487,10 +487,6 @@ Color Node::colorToMove() const {
     return root.colorToMove(ply);
 }
 
-Score Node::evaluate() const {
-    return Position::evaluate().clamp();
-}
-
 // insufficient mate material
 bool Node::isDrawMaterial() const {
     auto& my = MY.evaluation();
