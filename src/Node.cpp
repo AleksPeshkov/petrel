@@ -5,16 +5,22 @@
     if (status == ReturnStatus::Stop) { return ReturnStatus::Stop; } \
     if (status == ReturnStatus::BetaCutoff) { return ReturnStatus::BetaCutoff; }} ((void)0)
 
-TtSlot::TtSlot (Z z, Score s, Bound b, Move move, Ply d) :
-    zobrist{z >> 40},
-    score{s},
-    bound{b},
-    from{move.from()},
-    to{move.to()},
-    draft_{d}
-{}
+TtSlot::TtSlot (Z z, Move move, Score score, Bound b, Ply d) : s{
+    move.from(),
+    move.to(),
+    score,
+    b,
+    static_cast<unsigned>(d),
+    static_cast<unsigned>(z >> DataBits)
+} {}
 
-TtSlot::TtSlot (Node* n, Bound b) : TtSlot{n->zobrist(), n->score, b, n->childMove, n->draft} {}
+TtSlot::TtSlot (Node* n, Bound b) : TtSlot{
+    n->zobrist(),
+    n->childMove,
+    n->score.toTt(n->ply),
+    b,
+    n->draft
+} {}
 
 Node::Node (NodeRoot& r) :
     PositionMoves{r}, parent{nullptr}, grandParent{nullptr}, root{r}, ply{0} {}
@@ -42,7 +48,7 @@ ReturnStatus Node::searchRoot() {
         isHit = (ttSlot == zobrist());
         if (isHit && static_cast<Move>(ttSlot)) {
             ++root.tt.hits;
-            score = ttSlot;
+            score = ttSlot.score(ply);
             root.pvMoves.set(ply, uciMove(ttSlot));
             return ReturnStatus::Stop;
         }
@@ -80,7 +86,7 @@ ReturnStatus Node::searchRoot() {
     const Move* pv = root.pvMoves;
     for (Move move; (move = *pv++);) {
         auto o = root.tt.addr<TtSlot>(pos.zobrist());
-        *o = TtSlot{pos.zobrist(), s, Exact, move, d};
+        *o = TtSlot{pos.zobrist(), move, s, Exact, d};
         ++root.tt.writes;
 
         //we cannot use makeZobrist() because of en passant legality validation
@@ -182,6 +188,18 @@ ReturnStatus Node::searchMoves() {
         return ReturnStatus::Continue;
     }
 
+    ++root.tt.reads;
+    ttSlot = *origin;
+    isHit = (ttSlot == zobrist());
+    if (isHit) {
+        if (Move{ttSlot} && !isLegalMove(Move{ttSlot})) {
+            root.uci.log("#TT move is illegal\n");
+            isHit = false;
+        } else {
+            ++root.tt.hits;
+        }
+    }
+
     if (ply == MaxPly) {
         // no room to search deeper
         score = evaluate();
@@ -194,16 +212,11 @@ ReturnStatus Node::searchMoves() {
 
     Node node{this};
     const auto child = &node;
-
-    score = NoScore;
     canBeKiller = false;
+    score = NoScore;
 
-    ++root.tt.reads;
-    ttSlot = *origin;
-    isHit = (ttSlot == zobrist());
-    if (isHit) {
-        ++root.tt.hits;
-        RETURN_CUTOFF (child->searchIfLegal(ttSlot));
+    if (isHit && Move{ttSlot}) {
+        RETURN_CUTOFF (child->searchMove(ttSlot));
     }
 
     RETURN_CUTOFF (goodCaptures(child));
@@ -319,15 +332,10 @@ ReturnStatus Node::quiescence() {
 
     Node node{this};
     const auto child = &node;
-
     canBeKiller = false;
 
-    ++root.tt.reads;
-    ttSlot = *origin;
-    isHit = (ttSlot == zobrist());
-    if (isHit) {
-        ++root.tt.hits;
-        RETURN_CUTOFF (child->searchIfLegal(ttSlot));
+    if (isHit && Move{ttSlot}) {
+        RETURN_CUTOFF (child->searchMove(ttSlot));
     }
 
     RETURN_CUTOFF (goodCaptures(child));
@@ -483,12 +491,8 @@ UciMove Node::uciMove(Square from, Square to) const {
     return UciMove{from, to, isSpecial(from, to), colorToMove(), root.uci.chessVariant()};
 }
 
-Color Node::colorToMove() const {
+constexpr Color Node::colorToMove() const {
     return root.colorToMove(ply);
-}
-
-Score Node::evaluate() const {
-    return Position::evaluate().clamp();
 }
 
 // insufficient mate material
