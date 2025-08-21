@@ -48,6 +48,9 @@ public:
         return MY.has(from) && moves_.has(MY.pieceAt(from), to);
     }
 
+    // capture or promotion (underpromotion) move
+    bool isCapture(Move move) const;
+
     // attacked squares by not side to move pieces (op)
     constexpr const Bb& bbAttacked() const { return bbAttacked_; }
 

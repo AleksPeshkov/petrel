@@ -3,35 +3,43 @@
 
 #include "PositionMoves.hpp"
 #include "Repetitions.hpp"
-#include "Score.hpp"
 #include "UciMove.hpp"
 
-class NodeRoot;
-class UciGoLimit;
 class Node;
 
 enum Bound { NoBound, LowerBound, UpperBound, Exact };
 
-class PACKED TtSlot {
-    z_t     zobrist:24;
-    Score::_t score:14;
-    Bound     bound:2;
-    Square::_t from:6;
-    Square::_t   to:6;
-    Ply::_t  draft_:6;
+// 8 byte, always replace slot, so no age field, only one score, depth and bound flags
+class TtSlot {
+    enum { DataBits =  34 }; // total size of all data fields
+    static constexpr u64_t HashMask = ~static_cast<u64_t>(0) ^ (::singleton<u64_t>(DataBits+1) - 1);
 
-    static inline constexpr z_t zMask = ::singleton<z_t>(40) - 1;
+    struct PACKED DataSmall {
+        unsigned  from :6;
+        unsigned    to :6;
+        signed   score :14;
+        unsigned bound :2;
+        unsigned draft :6;
+        unsigned      z:64 - DataBits;
+    };
+
+    union {
+        z_t zobrist;
+        DataSmall s;
+    };
 
 public:
     TtSlot () { static_assert (sizeof(TtSlot) == sizeof(u64_t)); }
-    TtSlot (Z z, Score s, Bound b, Move move, Ply d);
+    TtSlot (Z z, Move move, Score, Bound, Ply);
     TtSlot (Node* node, Bound b);
-    bool operator == (Z z) const { return zobrist == (z >> 40); }
-    operator Move () const { return {from, to}; }
-    operator Score () const { return {score}; }
-    operator Bound () const { return bound; }
-    Ply draft() const { return {draft_}; }
+    bool operator == (Z z) const { return (zobrist & HashMask) == (z & HashMask); }
+    operator Move () const { return { static_cast<Square::_t>(s.from), static_cast<Square::_t>(s.to) }; }
+    Score score(Ply ply) const { return Score{s.score}.fromTt(ply); }
+    operator Bound () const { return static_cast<Bound>(s.bound); }
+    Ply draft() const { return {static_cast<Ply::_t>(s.draft)}; }
 };
+
+class NodeRoot;
 
 class Node : public PositionMoves {
 protected:
@@ -91,14 +99,13 @@ protected:
     void updateKillerMove();
     void updateTtPv();
 
-    Color colorToMove() const;
+    constexpr Color colorToMove() const;
     bool isDrawMaterial() const;
     bool isRepetition() const;
 
 public:
     Node (NodeRoot& r);
     ReturnStatus searchRoot();
-    Score evaluate() const;
 };
 
 #endif
