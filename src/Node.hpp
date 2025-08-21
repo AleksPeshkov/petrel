@@ -70,27 +70,27 @@ protected:
 
     Node (Node* n);
 
-    ReturnStatus searchMove(Move move);
-    ReturnStatus searchMove(Square from, Square to) { return searchMove({from, to}); }
-    ReturnStatus searchIfLegal(Move move) { return parent->isLegalMove(move) ? searchMove(move) : ReturnStatus::Continue; }
-    ReturnStatus negamax(Node*);
-    ReturnStatus betaCutoff();
-    ReturnStatus updatePv();
+    [[nodiscard]] ReturnStatus searchMove(Move move);
+    [[nodiscard]] ReturnStatus searchMove(Square from, Square to) { return searchMove({from, to}); }
+    [[nodiscard]] ReturnStatus searchIfLegal(Move move) { return parent->isLegalMove(move) ? searchMove(move) : ReturnStatus::Continue; }
+    [[nodiscard]] ReturnStatus negamax(Node*);
+    [[nodiscard]] ReturnStatus betaCutoff();
+    [[nodiscard]] ReturnStatus updatePv();
 
-    ReturnStatus search();
-    ReturnStatus searchMoves();
-    ReturnStatus quiescence();
+    [[nodiscard]] ReturnStatus search();
+    [[nodiscard]] ReturnStatus searchMoves();
+    [[nodiscard]] ReturnStatus quiescence();
 
-    ReturnStatus goodCaptures(Node*);
-    ReturnStatus notBadCaptures(Node*);
-    ReturnStatus allCaptures(Node*);
+    [[nodiscard]] ReturnStatus goodCaptures(Node*);
+    [[nodiscard]] ReturnStatus notBadCaptures(Node*);
+    [[nodiscard]] ReturnStatus allCaptures(Node*);
 
-    ReturnStatus goodCaptures(Node*, Square);
-    ReturnStatus notBadCaptures(Node*, Square);
-    ReturnStatus allCaptures(Node*, Square);
+    [[nodiscard]] ReturnStatus goodCaptures(Node*, Square);
+    [[nodiscard]] ReturnStatus notBadCaptures(Node*, Square);
+    [[nodiscard]] ReturnStatus allCaptures(Node*, Square);
 
-    ReturnStatus safePromotions(Node*);
-    ReturnStatus allPromotions(Node*);
+    [[nodiscard]] ReturnStatus safePromotions(Node*);
+    [[nodiscard]] ReturnStatus allPromotions(Node*);
 
     UciMove uciMove(Move move) const { return uciMove(move.from(), move.to()); }
     UciMove uciMove(Square from, Square to) const;
