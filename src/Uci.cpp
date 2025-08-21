@@ -5,17 +5,12 @@
 #include "NodePerft.hpp"
 #include "TimerManager.hpp"
 
-template<class BasicLockable>
-class OutputBuffer : public std::ostringstream {
-    io::ostream& out;
-    BasicLockable& lock;
-    typedef std::lock_guard<decltype(lock)> Guard;
+class Output : public std::ostringstream {
+    const Uci& uci;
 public:
-    OutputBuffer (io::ostream& o, BasicLockable& l) : std::ostringstream{}, out(o), lock(l) {}
-    ~OutputBuffer () { Guard g{lock}; out << str() << std::flush; }
+    Output (const Uci* u) : std::ostringstream{}, uci{*u} {}
+    ~Output () { uci.output(str()); }
 };
-
-#define OUTPUT(ob) OutputBuffer<decltype(outLock)> ob(out, outLock)
 
 namespace {
     io::istream& operator >> (io::istream& in, TimeInterval& timeInterval) {
@@ -41,14 +36,12 @@ namespace {
 
     template <typename T>
     static constexpr T permil(T n, T m) { return (n * 1000) / m; }
-
-    ostream& uci_error(ostream& err, io::istream& context) {
-        return err << "parsing error: " << context.rdbuf() << std::endl;
-    }
 }
 
-void Uci::processCommands(io::istream& in, ostream& err) {
+void Uci::processInput(io::istream& in) {
     for (std::string currentLine; std::getline(in, currentLine); ) {
+        log('>' + currentLine + '\n');
+
         inputLine.clear(); //clear error state from the previous line
         inputLine.str(std::move(currentLine));
         inputLine >> std::ws;
@@ -67,7 +60,9 @@ void Uci::processCommands(io::istream& in, ostream& err) {
         else if (consume("exit"))      { break; }
 
         if (hasMoreInput()) {
-            uci_error(err, inputLine);
+            std::string unparsedInput;
+            std::getline(inputLine, unparsedInput);
+            log("#parsing error: " + unparsedInput + '\n');
         }
     }
 }
@@ -85,9 +80,10 @@ void Uci::ucinewgame() {
 void Uci::uciok() const {
     bool isChess960 = root.chessVariant().is(Chess960);
 
-    OUTPUT(ob);
+    Output ob{this};
     ob << "id name petrel\n";
     ob << "id author Aleks Peshkov\n";
+    ob << "option name Debug Log File type string default " << (logFileName.empty() ? "<empty>" : logFileName) << '\n';
     ob << "option name Hash type spin"
        << " min "     << ::mebi(root.tt.minSize())
        << " max "     << ::mebi(root.tt.maxSize())
@@ -100,6 +96,22 @@ void Uci::uciok() const {
 
 void Uci::setoption() {
     consume("name");
+
+    if (consume("Debug Log File")) {
+        consume("value");
+
+        inputLine >> std::ws;
+        logFileName.clear();
+        std::getline(inputLine, logFileName);
+        if (logFileName == "<empty>") { logFileName.clear(); }
+
+        if (logFileName.empty()) {
+            logFile.close();
+        } else {
+            logFile.open(logFileName, std::ios::app);
+        }
+        return;
+    }
 
     if (consume("Hash")) {
         consume("value");
@@ -171,8 +183,13 @@ void Uci::setHash() {
 
 void Uci::position() {
     if (!hasMoreInput()) {
-        OUTPUT(ob);
+        Output ob{this};
         info_fen(ob);
+        return;
+    }
+
+    if (!isReady()) {
+        io::fail_rewind(inputLine);
         return;
     }
 
@@ -266,36 +283,31 @@ void Uci::goPerft() {
 }
 
 void Uci::readyok() const {
-    OUTPUT(ob);
-    if (isReady()) {
-        isreadyWaiting = false;
-        ob << "readyok\n";
+    if (!isReady()) {
+        readyokWaiting = true;
+        return;
     }
-    else {
-        isreadyWaiting = true;
+
+    {
+        Output ob{this};
+        ob << "readyok\n";
+        readyokWaiting = false;
     }
 }
 
-void Uci::info_nps_readyok() const {
-    if (isreadyWaiting) {
-        std::ostringstream ob;
+void Uci::search_readyok() const {
+    if (!readyokWaiting) { return; }
+
+    {
+        Output ob{this};
         info_nps(ob);
         ob << "readyok\n";
-
-        if (outLock.try_lock()) {
-            if (isreadyWaiting) {
-                isreadyWaiting = false;
-                out << ob.str() << std::flush;
-            }
-            outLock.unlock();
-        }
+        readyokWaiting = false;
     }
 }
 
 ostream& Uci::nps(ostream& o) const {
-    if (lastInfoNodes == root.nodeCounter) {
-        return o;
-    }
+    if (lastInfoNodes == root.nodeCounter) { return o; }
 
     lastInfoNodes = root.nodeCounter;
     auto timeInterval = ::elapsedSince(root.searchStartTime);
@@ -312,10 +324,8 @@ ostream& Uci::info_nps(ostream& o) const {
         o << '\n';
     }
 
-    std::ostringstream ob;
-    nps(ob);
-    if (!ob.str().empty()) {
-        o << "info" << ob.str() << '\n';
+    if (lastInfoNodes < root.nodeCounter) {
+        o << "info"; nps(o) << '\n';
     }
 
     return o;
@@ -327,7 +337,7 @@ ostream& Uci::info_fen(ostream& o) const {
 }
 
 void Uci::bestmove() const {
-    OUTPUT(ob);
+    Output ob{this};
     info_fen(ob);
     info_nps(ob);
     ob << "bestmove " << root.pvMoves[0];
@@ -339,28 +349,64 @@ void Uci::bestmove() const {
 }
 
 void Uci::info_iteration(Ply draft) const {
-    OUTPUT(ob);
+    Output ob{this};
     ob << "info depth " << draft; nps(ob) << '\n';
 }
 
 void Uci::info_pv(Ply draft, Score score) const {
-    OUTPUT(ob);
+    Output ob{this};
     ob << "info depth " << draft; nps(ob) << score << " pv" << root.pvMoves << '\n';
 }
 
 void Uci::info_perft_depth(Ply draft, node_count_t perft) const {
-    OUTPUT(ob);
+    Output ob{this};
     ob << "info depth " << draft << " perft " << perft; nps(ob) << '\n';
 }
 
 void Uci::info_perft_currmove(index_t moveCount, const UciMove& currentMove, node_count_t perft) const {
-    OUTPUT(ob);
+    Output ob{this};
     ob << "info currmovenumber " << moveCount << " currmove " << currentMove << " perft " << perft;
     nps(ob) << '\n';
 }
 
 void Uci::info_perft_bestmove() const {
-    OUTPUT(ob);
+    Output ob{this};
     info_nps(ob);
     ob << "bestmove 0000\n";
+}
+
+void Uci::output(const std::string& message) const {
+    if (message.empty()) { return; }
+
+    {
+        Guard lock{outLock};
+        out << message << std::flush;
+
+        if (!logFile.is_open()) { return; }
+
+        logFile << message << std::flush;
+
+        // recover if the logFile is in a bad state
+        if (!logFile) {
+            logFile.clear();
+            logFile.close();
+            logFile.open(logFileName, std::ios::app);
+        }
+    }
+}
+
+void Uci::log(const std::string& message) const {
+    if (message.empty() || !logFile.is_open()) { return; }
+
+    {
+        Guard lock{outLock};
+        logFile << message << std::flush;
+
+        // recover if the logFile is in a bad state
+        if (!logFile) {
+            logFile.clear();
+            logFile.close();
+            logFile.open(logFileName, std::ios::app);
+        }
+    }
 }
