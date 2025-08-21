@@ -67,8 +67,11 @@ protected:
     ReturnStatus searchMove(Square from, Square to) { return searchMove({from, to}); }
     ReturnStatus searchIfLegal(Move move) { return parent->isLegalMove(move) ? searchMove(move) : ReturnStatus::Continue; }
     ReturnStatus negamax(Node*);
+    ReturnStatus betaCutoff();
+    void updatePv();
 
     ReturnStatus search();
+    ReturnStatus searchMoves();
     ReturnStatus quiescence();
 
     ReturnStatus goodCaptures(Node*);
