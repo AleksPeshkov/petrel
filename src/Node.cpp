@@ -20,7 +20,9 @@ Node::Node (NodeRoot& r) :
     PositionMoves{r}, parent{nullptr}, grandParent{nullptr}, root{r}, ply{0} {}
 
 Node::Node (Node* n) :
-    PositionMoves{}, parent{n}, grandParent{n->parent}, root{n->root}, ply{n->ply + 1},
+    PositionMoves{}, parent{n}, grandParent{n->parent}, root{n->root},
+    ply{n->ply + 1}, draft{n->draft > 0 ? n->draft-1 : 0},
+    alpha{-n->beta}, beta{-n->alpha},
     killer1{grandParent ? grandParent->killer1 : Move{}},
     killer2{grandParent ? grandParent->killer2 : Move{}}
 {}
@@ -35,12 +37,10 @@ ReturnStatus Node::searchRoot() {
 
     for (draft = 1; draft <= root.limits.depth; ++draft) {
         setMoves(rootMovesClone);
-
-        score = NoScore;
         alpha = MinusInfinity;
         beta = PlusInfinity;
+        auto status = searchMoves();
 
-        auto status = search();
         root.newIteration();
         updateTtPv();
 
@@ -90,44 +90,13 @@ void Node::makeMove(Move move) {
     else if (grandParent) { repMask = RepetitionMask{grandParent->repMask, grandParent->zobrist()}; }
     else { repMask = root.repetitions.repMask(colorToMove()); }
 
-    generateMoves();
     root.pvMoves.set(ply, UciMove{});
 }
 
 ReturnStatus Node::searchMove(Move move) {
-    alpha = -parent->beta;
-    beta = -parent->alpha;
-    assert (MinusInfinity <= alpha && alpha < beta && beta <= PlusInfinity);
-
-    draft = parent->draft > 0 ? parent->draft-1 : 0;
-
     RETURN_IF_STOP (root.countNode());
     makeMove(move);
-    canBeKiller = false;
 
-    if (moves().none()) {
-        // checkmate or stalemate
-        score = inCheck() ? Score::checkmated(ply) : Score{DrawScore};
-        return parent->negamax(this);
-    }
-
-    if (rule50().isDraw() || isRepetition() || isDrawMaterial()) {
-        score = DrawScore;
-        return parent->negamax(this);
-    }
-
-    if (ply == MaxPly) {
-        // no room to search deeper
-        score = evaluate();
-        return parent->negamax(this);
-    }
-
-    if (draft == 0 && !inCheck()) {
-        RETURN_IF_STOP (quiescence());
-        return parent->negamax(this);
-    }
-
-    score = NoScore;
     RETURN_IF_STOP (search());
     return parent->negamax(this);
 }
@@ -137,49 +106,83 @@ ReturnStatus Node::negamax(Node* child) {
 
     auto childScore = -child->score;
 
-    if (childScore > score) {
+    if (score < childScore) {
         score = childScore;
 
-        if (score >= beta) {
-            //beta cut off
-            updateKillerMove();
-            *origin = TtSlot{this, UpperBound};
-            ++root.tt.writes;
-            return ReturnStatus::BetaCutoff;
-        }
-
-        if (score > alpha) {
-            alpha = score;
-
-            root.pvMoves.set(ply, uciMove(childMove));
-            *origin = TtSlot{this, Exact};
-            ++root.tt.writes;
-
-            if (ply == 0) {
-                root.uci.info_pv(draft, score);
+        if (alpha < score) {
+            if (beta <= score) {
+                return betaCutoff();
             }
+
+            alpha = score;
+            updatePv();
         }
     }
 
-    assert (MinusInfinity <= alpha && alpha < beta && beta <= PlusInfinity);
+    // set window for the next move search
+    child->alpha = -beta;
+    child->beta = -alpha;
     return ReturnStatus::Continue;
 }
 
+ReturnStatus Node::betaCutoff() {
+    updateKillerMove();
+    *origin = TtSlot{this, UpperBound};
+    ++root.tt.writes;
+    return ReturnStatus::BetaCutoff;
+}
+
+void Node::updatePv() {
+    root.pvMoves.set(ply, uciMove(childMove));
+    *origin = TtSlot{this, Exact};
+    ++root.tt.writes;
+
+    if (ply == 0) {
+        root.uci.info_pv(draft, score);
+    }
+}
+
 ReturnStatus Node::search() {
+    generateMoves();
+    return searchMoves();
+}
+
+ReturnStatus Node::searchMoves() {
     // mate-distance pruning
     alpha = std::max(alpha, Score::checkmated(ply));
     if (alpha >= beta) { score = alpha; return ReturnStatus::BetaCutoff; }
 
     assert (MinusInfinity <= alpha && alpha < beta && beta <= PlusInfinity);
 
+    if (moves().none()) {
+        // checkmate or stalemate
+        score = inCheck() ? Score::checkmated(ply) : Score{DrawScore};
+        return ReturnStatus::Continue;
+    }
+
+    if (ply >= 1 && (rule50().isDraw() || isRepetition() || isDrawMaterial())) {
+        score = DrawScore;
+        return ReturnStatus::Continue;
+    }
+
+    if (ply == MaxPly) {
+        // no room to search deeper
+        score = evaluate();
+        return ReturnStatus::Continue;
+    }
+
+    if (draft == 0 && !inCheck()) {
+        return quiescence();
+    }
+
     Node node{this};
     const auto child = &node;
 
+    score = NoScore;
     canBeKiller = false;
 
     ++root.tt.reads;
     ttSlot = *origin;
-
     isHit = (ttSlot == zobrist());
     if (isHit) {
         ++root.tt.hits;
@@ -300,9 +303,10 @@ ReturnStatus Node::quiescence() {
     Node node{this};
     const auto child = &node;
 
-    ttSlot = *origin;
-    ++root.tt.reads;
+    canBeKiller = false;
 
+    ++root.tt.reads;
+    ttSlot = *origin;
     isHit = (ttSlot == zobrist());
     if (isHit) {
         ++root.tt.hits;
