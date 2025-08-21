@@ -1,14 +1,11 @@
 #!/bin/bash
 
-if [[ $# < 2 ]]
-then
-
+if [[ $# < 2 ]]; then
     cat << EOF
 Usage:
 $0 [engine] [scenario]
 EOF
-
-exit
+    exit
 fi
 
 engine=$1
@@ -22,50 +19,41 @@ expect=""
 send=""
 
 exec 4<$scenario
-while read -r -u4 line || [[ -n $line ]];
-do
-    #skip blank lines
-    if [[ $line != *[^[:space:]]* ]]
-    then
+while read -r -u4 line || [[ -n $line ]]; do
+    # skip blank lines
+    if [[ $line != *[^[:space:]]* ]]; then
         continue
     fi
 
-    #skip comment lines
-    if [[ $line = \#* ]]
-    then
+    # skip comment lines
+    if [[ $line = \#* ]]; then
         continue
     fi
 
-    #collect EXPECT lines together
-    if [[ $line = \<* ]]
-    then
-        if [[ -n $send ]]
-        then
-            script+="send \"$send\"$eol"
-            send=""
+    # collect SEND lines (starting with >)
+    if [[ $line = \>* ]]; then
+        if [[ -n $expect ]]; then
+            script+="expect \"$expect\"$eol"
+            expect=""
         fi
-        expect+="${line:1}\r\n"
+        send+="${line:1}\r"  # strip '>' and append to send
         continue
     fi
 
-    #collect SEND lines together
-
-    if [[ -n $expect ]]
-    then
-        script+="expect \"$expect\"$eol"
-        expect=""
+    # collect EXPECT lines (all other non-send lines)
+    if [[ -n $send ]]; then
+        script+="send \"$send\"$eol"
+        send=""
     fi
-
-    send+="$line\r"
+    expect+="$line\r\n"
 done
 
-if [[ -n $expect ]]
-then
+# flush any remaining expect or send
+if [[ -n $expect ]]; then
     script+="expect \"$expect\"$eol"
 fi
 
-if [[ -n $send ]]
-then
+if [[ -n $send ]]; then
     script+="send \"$send\"$eol"
 fi
 
