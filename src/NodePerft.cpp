@@ -22,11 +22,11 @@ ReturnStatus NodePerft::visitRoot() {
             RETURN_IF_STOP (child->visitMove(from, to));
 
             UciMove move{from, to, isSpecial(from, to), root.colorToMove(), root.uci.chessVariant()};
-            root.uci.perft_currmove(++moveCount, move, perft - previousPerft);
+            root.uci.info_perft_currmove(++moveCount, move, perft - previousPerft);
         }
     }
 
-    root.uci.perft_depth(draft, perft);
+    root.uci.info_perft_depth(draft, perft);
     return ReturnStatus::Continue;
 }
 
