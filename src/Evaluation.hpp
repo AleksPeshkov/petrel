@@ -1,12 +1,76 @@
 #ifndef EVALUATION_HPP
 #define EVALUATION_HPP
 
+#include <algorithm>
+#include "io.hpp"
 #include "typedefs.hpp"
-#include "Score.hpp"
+
+// position evaluation score, fits in 14 bits
+enum score_t : i16_t {
+    NoScore = -8192, //TRICK: assume two's complement
+    MinusInfinity = NoScore + 1, // negative bound, no position should eval to it
+    MinusMate = MinusInfinity +1, // mated in 0, only even negative values for mated positions
+    // negative mate range of scores
+    MinEval = MinusMate + static_cast<i16_t>(MaxPly), // minimal (negative) non mate score bound for a position
+    // negative evaluation range of scores
+    DrawScore = 0, // only for 50 moves rule draw score
+    // positive evalutation range of scores
+    MaxEval = -MinEval, // maximal (positive) non mate score bound for a position
+    // negative mate range of scores
+    PlusMate = -MinusMate, // mate in 0 (impossible), only odd positive values for mate positions
+    PlusInfinity = -MinusInfinity, // positive bound, no position should eval to it
+};
+
+// position evaluation score, fits in 14 bits
+struct Score {
+    typedef score_t _t;
+    _t v;
+
+    constexpr Score (int e) : v{static_cast<_t>(e)} {}
+    constexpr operator const _t& () const { return v; }
+
+    constexpr Score operator - () { return Score{-v}; }
+    constexpr const Score& operator += (int e) { v = static_cast<_t>(v + e); return *this; }
+    constexpr const Score& operator -= (int e) { v = static_cast<_t>(v - e); return *this; }
+    constexpr Score operator + (int e) { return Score{v + e}; }
+    constexpr Score operator - (int e) { return Score{v - e}; }
+
+    constexpr bool isMate() const { return v < MinEval || MaxEval < v; }
+
+    // MinusMate + ply
+    static constexpr Score checkmated(Ply ply) { return MinusMate + static_cast<int>(ply); }
+
+    // clamp evaluation from special scores
+    constexpr Score clamp() const {
+        if (v < MinEval) { return MinEval; }
+        if (MaxEval < v) { return MaxEval; }
+        return v;
+    }
+
+    friend ostream& operator << (ostream& out, const Score& score) {
+        out << " score ";
+
+        if (score == NoScore) {
+            return out << "none";
+        }
+
+        if (score <= MinEval) {
+            return out << "mate " << (MinusMate - score) / 2;
+        }
+
+        if (score >= MaxEval) {
+            return out << "mate " << (PlusMate - score + 1) / 2;
+        }
+
+        return out << "cp " << static_cast<signed>(score.v);
+    }
+};
 
 //https://www.chessprogramming.org/PeSTO%27s_Evaluation_Function
 class PieceSquareTable {
 public:
+    static constexpr unsigned PieceMatMax = 32; // initial chess position sum of non pawn pieces material points
+
     union element_type {
         struct PACKED {
             u16_t openingPst:14;
@@ -25,6 +89,11 @@ public:
 
         constexpr const element_type& operator += (const element_type& o) { v += o.v; return *this; }
         constexpr const element_type& operator -= (const element_type& o) { v -= o.v; return *this; }
+
+        constexpr Score score(unsigned material) const {
+            auto stage = std::min<unsigned>(material, PieceMatMax);
+            return (s.openingPst*stage + s.endgamePst*(PieceMatMax - stage)) / PieceMatMax;
+        }
     };
 
 protected:
@@ -44,23 +113,18 @@ public:
 private:
     _t v;
 
-    constexpr void from(PieceType::_t ty, Square f) { v -= pieceSquareTable(ty, f); }
-    constexpr void to(PieceType::_t ty, Square t) { v += pieceSquareTable(ty, t); }
+    constexpr void from(PieceType::_t ty, Square sq) { v -= pieceSquareTable(ty, sq); }
+    constexpr void to(PieceType::_t ty, Square sq) { v += pieceSquareTable(ty, sq); }
 
 public:
     constexpr Evaluation () : v{} {}
 
-    // https://www.chessprogramming.org/PeSTO%27s_Evaluation_Function
     static Score evaluate(const Evaluation& my, const Evaluation& op) {
-        constexpr const unsigned PieceMatMax = 32; // initial chess position sum of non pawn pieces material points
+        return my.v.score(my.v.s.piecesMat) - op.v.score(op.v.s.piecesMat);
+    }
 
-        auto myMaterial = std::min<unsigned>(my.v.s.piecesMat, PieceMatMax);
-        auto opMaterial = std::min<unsigned>(op.v.s.piecesMat, PieceMatMax);
-
-        auto myScore = my.v.s.openingPst * myMaterial + my.v.s.endgamePst * (PieceMatMax-myMaterial);
-        auto opScore = op.v.s.openingPst * opMaterial + op.v.s.endgamePst * (PieceMatMax-opMaterial);
-
-        return static_cast<Score>((myScore - opScore) / static_cast<Score>(PieceMatMax));
+    constexpr Score score(PieceType ty, Square sq) const {
+        return pieceSquareTable(ty, sq).score(v.s.piecesMat);
     }
 
     void drop(PieceType ty, Square t) { to(ty, t); }
