@@ -55,12 +55,9 @@ Universal Chess Interface (UCI) Extensions
 * `position`: parameters `fen` or `startpos` are optional; default is reusing previous position command
    So, `position moves e2e4` is sufficient to make the first move
 * `position` without any options displays the current position static evaluation and FEN
-* `setoption name Hash` accepts sizes in bytes `b`, kibibytes `k`, mebibytes `m` (UCI default), gibibytes `g`
 * `setoption` can be abbreviated to short forms like `set hash 1g`
+  `setoption Hash` accepts sizes in bytes `b`, kibibytes `k`, mebibytes `m`, UCI default), gibibytes `g`
 
-* `<setoption>` can be abbreviated to short forms like `<set hash 1g>`
-  `set hash` accepts sizes in bytes (b), kilobytes (k), megabytes (m, UCI default), gigabytes (g)
-
-* `<perft N>` performs PERFT using bulk counting and a transposition hash table
+* `perft N` performs PERFT to depth `N` using bulk counting and the transposition hash table
 
 Aleks Peshkov (mailto: a###s.p####v@gmail#com, telegram: @a###sp#####v)

@@ -38,6 +38,8 @@ struct Score {
     constexpr Score operator - (int e) { return Score{v - e}; }
 
     constexpr bool isMate() const { return v < MinEval || MaxEval < v; }
+
+    // MinusMate + ply
     static constexpr Score checkmated(Ply ply) { return MinusMate + static_cast<int>(ply); }
 
     // clamp evaluation from special scores
@@ -51,7 +53,7 @@ struct Score {
 
     friend out::ostream& operator << (out::ostream& out, Score score) {
         if (score == NoScore) {
-            return out;
+            return out << " score none";
         }
 
         if (score <= MinEval) {
