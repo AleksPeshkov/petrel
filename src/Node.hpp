@@ -3,7 +3,6 @@
 
 #include "PositionMoves.hpp"
 #include "Repetitions.hpp"
-#include "Score.hpp"
 #include "UciMove.hpp"
 
 class NodeRoot;
@@ -98,7 +97,6 @@ protected:
 public:
     Node (NodeRoot& r);
     ReturnStatus searchRoot();
-    Score evaluate() const;
 };
 
 #endif
