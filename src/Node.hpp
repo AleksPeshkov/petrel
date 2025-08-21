@@ -3,7 +3,6 @@
 
 #include "PositionMoves.hpp"
 #include "Repetitions.hpp"
-#include "Score.hpp"
 #include "UciMove.hpp"
 
 class NodeRoot;
