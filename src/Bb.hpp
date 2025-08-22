@@ -40,6 +40,8 @@ public:
 
     constexpr BitRank operator[] (Rank r) const { return BitRank{small_cast<BitRank::_t>(v >> 8*r)}; }
 
+    constexpr Bb pawnAttacks() const { return (*this % Bb{FileA} >> 9u) | (*this % Bb{FileH} >> 7u); }
+
     constexpr friend Bb operator << (Bb bb, unsigned offset) { return Bb{static_cast<_t>(bb) << offset}; }
     constexpr friend Bb operator >> (Bb bb, unsigned offset) { return Bb{static_cast<_t>(bb) >> offset}; }
 
