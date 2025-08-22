@@ -1,7 +1,7 @@
 #ifndef PI_TRAIT_H
 #define PI_TRAIT_H
 
-#include "typedefs.hpp"
+#include "PiMask.hpp"
 
 enum class Trait : u8_t {
     Empty      = 0,
@@ -10,11 +10,7 @@ enum class Trait : u8_t {
     Castling   = ::singleton<u8_t>(2), // rook with castling rights
     EnPassant  = ::singleton<u8_t>(3), // pawn can be legally captured en passant OR pawn can perform a legal en passant capture
     Promotable = ::singleton<u8_t>(4), // any pawn on the 7th rank
-    CheckerPinner = Pinner | Checker,
-    CastlingPinner = Castling | Pinner,
-    CastlingCheckerPinner = Castling | Pinner | Checker,
-    CheckerEnPassant  = Checker | EnPassant,
-    CheckerPromotable = Checker | Promotable,
+    CheckerPinner = Checker | Pinner,  // Checker + Pinner
 };
 
 class PiTrait {
