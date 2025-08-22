@@ -67,8 +67,8 @@ public:
     PiMask pawns() const { return types.piecesOfType(Pawn); }
     bool isPawn(Pi pi) const { assertOk(pi); return types.isPawn(pi); }
 
-    PiMask goodKillers(PieceType ty) const { return types.goodKillers(ty); }
-    PiMask notBadKillers(PieceType ty) const { return types.notBadKillers(ty); }
+    PiMask lessValue(PieceType ty) const { return types.lessValue(ty); }
+    PiMask lessOrEqualValue(PieceType ty) const { return types.lessOrEqualValue(ty); }
 
     PiMask castlingRooks() const { return traits.castlingRooks(); }
     bool isCastling(Pi pi) const { assertOk(pi); return traits.isCastling(pi); }
@@ -84,7 +84,10 @@ public:
 
     PiMask checkers() const { assert (traits.checkers() == attacks_[opKing]); return traits.checkers(); }
 
+    // pawns on the 7th rank
     PiMask promotables() const { return traits.promotables(); }
+
+    // is pawn and pawn is on the 7th rank
     bool isPromotable(Pi pi) const { assertOk(pi); return traits.isPromotable(pi); }
 
     Bb attacksOf(Pi pi) const { return attacks_[pi]; }
