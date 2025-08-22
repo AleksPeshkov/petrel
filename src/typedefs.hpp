@@ -96,6 +96,7 @@ enum piece_type_t {
 };
 typedef Index<3, piece_type_t> SliderType; // Queen, Rook, Bishop
 typedef Index<4, piece_type_t> PromoType; // Queen, Rook, Bishop, Knight
+typedef Index<5, piece_type_t> NonKingType; // Queen, Rook, Bishop, Knight, Pawn
 typedef Index<6, piece_type_t> PieceType; // Queen, Rook, Bishop, Knight, Pawn, King
 template <> io::czstring PieceType::The_string;
 template <> io::czstring PromoType::The_string;

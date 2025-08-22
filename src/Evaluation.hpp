@@ -180,4 +180,21 @@ public:
 
 };
 
+class DeltaPrunning {
+    NonKingType::arrayOf< Score > score = { 1200, 600, 400, 400, 150 };
+
+public:
+    // returns the lowest piece type that have score greater then delta
+    constexpr PieceType operator() (Score delta) const {
+        for (NonKingType ty = Pawn; ty >= Queen; --ty) {
+            if (score[ty] > delta) {
+                return PieceType{ty};
+            }
+        }
+        return King;
+    }
+};
+
+extern const DeltaPrunning deltaPrunning;
+
 #endif
