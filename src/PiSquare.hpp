@@ -1,9 +1,7 @@
 #ifndef PI_SQUARE_HPP
 #define PI_SQUARE_HPP
 
-#include "typedefs.hpp"
 #include "PiMask.hpp"
-#include "VectorOfAll.hpp"
 
 enum class Sq : u8_t {
     A8, B8, C8, D8, E8, F8, G8, H8,

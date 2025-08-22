@@ -81,16 +81,12 @@ protected:
     [[nodiscard]] ReturnStatus searchMoves();
     [[nodiscard]] ReturnStatus quiescence();
 
-    [[nodiscard]] ReturnStatus goodCaptures(Node*);
-    [[nodiscard]] ReturnStatus notBadCaptures(Node*);
-    [[nodiscard]] ReturnStatus allCaptures(Node*);
+    [[nodiscard]] ReturnStatus goodCaptures(Node*, const PiMask&);
+
+    [[nodiscard]] ReturnStatus allCaptures(Node*, const PiMask&);
 
     [[nodiscard]] ReturnStatus goodCaptures(Node*, Square);
-    [[nodiscard]] ReturnStatus notBadCaptures(Node*, Square);
     [[nodiscard]] ReturnStatus allCaptures(Node*, Square);
-
-    [[nodiscard]] ReturnStatus safePromotions(Node*);
-    [[nodiscard]] ReturnStatus allPromotions(Node*);
 
     UciMove uciMove(Move move) const { return uciMove(move.from(), move.to()); }
     UciMove uciMove(Square from, Square to) const;
