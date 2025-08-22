@@ -310,7 +310,9 @@ ReturnStatus Node::quiescence() {
         RETURN_CUTOFF (child->searchIfLegal(ttSlot));
     }
 
-    PiMask victims = OP.pieces() - PiMask{TheKing};
+    // Delta prunning
+    PieceType lowestVictimType = ::deltaPrunning(alpha - score);
+    PiMask victims = OP.pieces() % OP.lessValue(lowestVictimType);
 
     RETURN_CUTOFF (goodCaptures(child, victims));
     RETURN_CUTOFF (allCaptures(child, victims));

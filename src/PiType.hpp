@@ -13,6 +13,7 @@ enum class Type : u8_t {
     King   = ::singleton<u8_t>(piece_type_t::King),
     Slider = Queen | Rook | Bishop,
     Leaper = Pawn | Knight | King,
+    PNBRQK = Pawn | Knight | Bishop | Rook | Queen | King,
     PNBRQ  = Pawn | Knight | Bishop | Rook | Queen,
     PNBR   = Pawn | Knight | Bishop | Rook,
     PNB    = Pawn | Knight | Bishop,
@@ -23,20 +24,20 @@ class PiType {
 
     static constexpr PieceType::arrayOf<element_type> LessOrEqualValue = {
         Type::PNBRQ, // Queen
-        Type::PNBR, // Rook
-        Type::PNB,  // Bishop
-        Type::PNB,  // Knight
-        Type::Pawn, // Pawn
-        Type::Empty, // King
+        Type::PNBR,  // Rook
+        Type::PNB,   // Bishop
+        Type::PNB,   // Knight
+        Type::Pawn,  // Pawn
+        Type::PNBRQK,// King
     };
 
     static constexpr PieceType::arrayOf<element_type> LessValue = {
-        Type::PNBR, // Queen
-        Type::PNB,  // Rook
-        Type::Pawn, // Bishop
-        Type::Pawn, // Knight
+        Type::PNBR,  // Queen
+        Type::PNB,   // Rook
+        Type::Pawn,  // Bishop
+        Type::Pawn,  // Knight
         Type::Empty, // Pawn
-        Type::Empty, // King
+        Type::PNBRQ, // King
     };
 
     union {
