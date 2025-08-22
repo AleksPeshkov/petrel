@@ -31,6 +31,7 @@ void PositionSide::swap(PositionSide& MY, PositionSide& OP) {
     swap(MY.squares, OP.squares);
     swap(MY.bbSide_, OP.bbSide_);
     swap(MY.bbPawns_, OP.bbPawns_);
+    swap(MY.bbPawnAttacks_, OP.bbPawnAttacks_);
     swap(MY.evaluation_, OP.evaluation_);
     swap(MY.opKing, OP.opKing);
 }
@@ -59,7 +60,10 @@ void PositionSide::capture(Square from) {
     assertOk(pi, ty, from);
 
     bbSide_ -= Bb{from};
-    bbPawns_ &= bbSide_; //clear if pawn
+    if (ty.is(Pawn)) {
+        bbPawns_ -= Bb{from};
+        bbPawnAttacks_ = bbPawns_.pawnAttacks();
+    }
 
     evaluation_.capture(ty, from);
     attacks_.clear(pi);
@@ -105,6 +109,7 @@ void PositionSide::moveKing(Square from, Square to) {
 void PositionSide::movePawn(Pi pi, Square from, Square to) {
     move(pi, Pawn, from, to);
     bbPawns_.move(from, to);
+    bbPawnAttacks_ = bbPawns_.pawnAttacks();
 
     assert (traits.isEmpty(pi));
     if (to.on(Rank7)) { traits.setPromotable(pi); }
@@ -125,6 +130,7 @@ Pi PositionSide::promote(Pi pawn, Square from, PromoType ty, Square to) {
 
     // remove pawn
     bbPawns_ -= Bb{from};
+    bbPawnAttacks_ = bbPawns_.pawnAttacks();
     attacks_.clear(pawn);
     squares.clear(pawn);
     traits.clear(pawn);
@@ -302,6 +308,7 @@ bool PositionSide::dropValid(PieceType ty, Square to) {
         }
         if (to.on(Rank7)) { traits.setPromotable(pi);}
         bbPawns_ += Bb{to};
+        bbPawnAttacks_ = bbPawns_.pawnAttacks();
     }
 
     assertOk(pi, ty, to);
