@@ -243,11 +243,8 @@ ReturnStatus Node::searchMoves() {
         RETURN_CUTOFF (child->searchMove(ttSlot));
     }
 
-    RETURN_CUTOFF (goodCaptures(child));
-    RETURN_CUTOFF (safePromotions(child));
-    RETURN_CUTOFF (notBadCaptures(child));
-    RETURN_CUTOFF (allPromotions(child));
-    //TODO: underpromotions
+    PiMask victims = OP.pieces() - PiMask{TheKing};
+    RETURN_CUTOFF (goodCaptures(child, victims));
 
     canBeKiller = true;
 
@@ -325,9 +322,9 @@ ReturnStatus Node::searchMoves() {
     }
 
     // unsafe (bad) captures
-    RETURN_CUTOFF (allCaptures(child));
+    RETURN_CUTOFF (allCaptures(child, victims));
 
-    // all the rest moves, LV first
+    // all the rest moves, including underpromotions with or without capture, LVA order
     auto pieces = MY.pieces();
     while (pieces.any()) {
         Pi pi = pieces.leastValuable(); pieces -= pi;
@@ -362,18 +359,35 @@ ReturnStatus Node::quiescence() {
     const auto child = &node;
     canBeKiller = false;
 
-    RETURN_CUTOFF (goodCaptures(child));
-    RETURN_CUTOFF (safePromotions(child));
-    RETURN_CUTOFF (notBadCaptures(child));
-    RETURN_CUTOFF (allPromotions(child));
-    RETURN_CUTOFF (allCaptures(child));
+    PiMask victims = OP.pieces() - PiMask{TheKing};
+
+    RETURN_CUTOFF (goodCaptures(child, victims));
+    RETURN_CUTOFF (allCaptures(child, victims));
 
     return ReturnStatus::Continue;
 }
 
-ReturnStatus Node::goodCaptures(Node* child) {
+ReturnStatus Node::goodCaptures(Node* child, const PiMask& victims) {
+    if (MY.promotables().any()) {
+        // queen promotion with capture, always good
+        for (Pi victim : OP.pieces() & OP.piecesOn(Rank8)) {
+            Square to = ~OP.squareOf(victim);
+            for (Pi attacker : MY.attackersTo(to) & MY.promotables()) {
+                Square from = MY.squareOf(attacker);
+                RETURN_CUTOFF (child->searchMove(from, to));
+            }
+        }
+
+        // queen promotions without capture
+        for (Pi pawn : MY.promotables()) {
+            Square from = MY.squareOf(pawn);
+            Square to{File{from}, Rank8};
+            RETURN_CUTOFF (child->searchIfLegal({from, to}));
+        }
+    }
+
     // MVV (most valuable victim) order
-    for (Pi victim : OP.pieces() % PiMask{TheKing}) {
+    for (Pi victim : victims) {
         Square to = ~OP.squareOf(victim);
         RETURN_CUTOFF (goodCaptures(child, to));
     }
@@ -381,19 +395,32 @@ ReturnStatus Node::goodCaptures(Node* child) {
     return ReturnStatus::Continue;
 }
 
-ReturnStatus Node::notBadCaptures(Node* child) {
-    // MVV (most valuable victim) order
-    for (Pi victim : OP.pieces() % PiMask{TheKing}) {
-        Square to = ~OP.squareOf(victim);
-        RETURN_CUTOFF (notBadCaptures(child, to));
+ReturnStatus Node::goodCaptures(Node* child, Square to) {
+    // exclude promotions
+    PiMask attackers = canMoveTo(to) % MY.promotables();
+    if (attackers.none()) { return ReturnStatus::Continue; }
+
+    bool isVictimProtected = bbAttacked().has(to);
+    assert (isVictimProtected == OP.attackersTo(~to).any());
+    if (isVictimProtected) {
+        // try only less or equal value attackers
+        attackers &= MY.lessOrEqualValue( OP.typeOf(OP.pieceAt(~to)) );
+    }
+
+    while (attackers.any()) {
+        // LVA (least valuable attacker) order
+        Pi attacker = attackers.leastValuable(); attackers -= attacker;
+
+        Square from = MY.squareOf(attacker);
+        RETURN_CUTOFF (child->searchMove(from, to));
     }
 
     return ReturnStatus::Continue;
 }
 
-ReturnStatus Node::allCaptures(Node* child) {
+ReturnStatus Node::allCaptures(Node* child, const PiMask& victims) {
     // MVV (most valuable victim)
-    for (Pi victim : OP.pieces() % PiMask{TheKing}) {
+    for (Pi victim : victims) {
         Square to = ~OP.squareOf(victim);
         RETURN_CUTOFF (allCaptures(child, to));
     }
@@ -401,66 +428,9 @@ ReturnStatus Node::allCaptures(Node* child) {
     return ReturnStatus::Continue;
 }
 
-ReturnStatus Node::goodCaptures(Node* child, Square to) {
-    PiMask attackers = canMoveTo(to);
-
-    if (!to.on(Rank8)) {
-        // skip underpromotion pseudo moves
-        attackers %= MY.promotables();
-    }
-    if (attackers.none()) { return ReturnStatus::Continue; }
-
-    bool isVictimProtected = bbAttacked().has(to);
-    assert (isVictimProtected == OP.attackersTo(~to).any());
-    if (isVictimProtected) {
-        // filter out more valuable attackers than the victim
-        attackers &= MY.goodKillers( OP.typeOf(OP.pieceAt(~to)) );
-    }
-
-    while (attackers.any()) {
-        // LVA (least valuable attacker)
-        Pi attacker = attackers.leastValuable(); attackers -= attacker;
-
-        Square from = MY.squareOf(attacker);
-        RETURN_CUTOFF (child->searchMove(from, to));
-    }
-
-    return ReturnStatus::Continue;
-}
-
-ReturnStatus Node::notBadCaptures(Node* child, Square to) {
-    PiMask attackers = canMoveTo(to);
-
-    if (!to.on(Rank8)) {
-        // skip underpromotion pseudo moves
-        attackers %= MY.promotables();
-    }
-    if (attackers.none()) { return ReturnStatus::Continue; }
-
-    bool isVictimProtected = bbAttacked().has(to);
-    assert (isVictimProtected == OP.attackersTo(~to).any());
-    if (isVictimProtected) {
-        // filter out more valuable attackers than the victim
-        attackers &= MY.notBadKillers( OP.typeOf(OP.pieceAt(~to)) );
-    }
-
-    while (attackers.any()) {
-        // LVA (least valuable attacker)
-        Pi attacker = attackers.leastValuable(); attackers -= attacker;
-
-        Square from = MY.squareOf(attacker);
-        RETURN_CUTOFF (child->searchMove(from, to));
-    }
-
-    return ReturnStatus::Continue;
-}
-
 ReturnStatus Node::allCaptures(Node* child, Square to) {
-    PiMask attackers = canMoveTo(to);
-    if (!to.on(Rank8)) {
-        // skip underpromotion pseudo moves
-        attackers %= MY.promotables();
-    }
+    // exclude promotions
+    PiMask attackers = canMoveTo(to) % MY.promotables();
 
     while (attackers.any()) {
         // LVA (least valuable attacker)
@@ -468,31 +438,6 @@ ReturnStatus Node::allCaptures(Node* child, Square to) {
 
         Square from = MY.squareOf(attacker);
         RETURN_CUTOFF (child->searchMove(from, to));
-    }
-
-    return ReturnStatus::Continue;
-}
-
-// non capture queen promotions to the unattacked squares
-ReturnStatus Node::safePromotions(Node* child) {
-    for (Pi pi : MY.promotables()) {
-        // skip moves to the attacked square
-        for (Square to : movesOf(pi) % bbAttacked() & Bb{Rank8}) {
-            Square from = MY.squareOf(pi);
-            RETURN_CUTOFF( child->searchMove(from, to) );
-        }
-    }
-
-    return ReturnStatus::Continue;
-}
-
-// all non capture queen promotions
-ReturnStatus Node::allPromotions(Node* child) {
-    for (Pi pi : MY.promotables()) {
-        for (Square to : movesOf(pi) & Bb{Rank8}) {
-            Square from = MY.squareOf(pi);
-            RETURN_CUTOFF( child->searchMove(from, to) );
-        }
     }
 
     return ReturnStatus::Continue;
