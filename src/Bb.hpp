@@ -37,6 +37,8 @@ public:
 
     constexpr BitRank operator[] (Rank r) const { return BitRank{small_cast<BitRank::_t>(v >> 8*r)}; }
 
+    constexpr Bb pawnAttacks() const { return (*this % Bb{FileA} >> 9u) | (*this % Bb{FileH} >> 7u); }
+
     // bidirectional signed rank shift
     constexpr Bb shiftRank(signed r) { return Bb{ r >= 0 ? (v << 8*r) : (v >> -8*r) }; }
 
