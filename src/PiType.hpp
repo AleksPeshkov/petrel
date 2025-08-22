@@ -1,7 +1,7 @@
 #ifndef PI_TYPE_H
 #define PI_TYPE_H
 
-#include "typedefs.hpp"
+#include "PiMask.hpp"
 
 enum class Type : u8_t {
     Empty   = 0,
@@ -21,7 +21,7 @@ enum class Type : u8_t {
 class PiType {
     typedef Type element_type;
 
-    static constexpr PieceType::arrayOf<element_type> GoodOrEqualKillers = {
+    static constexpr PieceType::arrayOf<element_type> LessOrEqualValue = {
         Type::PNBRQ, // Queen
         Type::PNBR, // Rook
         Type::PNB,  // Bishop
@@ -30,7 +30,7 @@ class PiType {
         Type::Empty, // King
     };
 
-    static constexpr PieceType::arrayOf<element_type> GoodKillers = {
+    static constexpr PieceType::arrayOf<element_type> LessValue = {
         Type::PNBR, // Queen
         Type::PNB,  // Rook
         Type::Pawn, // Bishop
@@ -84,10 +84,10 @@ public:
     PiMask leapers() const { return any(Type::Leaper); }
 
     // mask of less valuable piece types
-    PiMask goodKillers(PieceType ty) const {return any(GoodKillers[ty]); }
+    PiMask lessValue(PieceType ty) const {return any(LessValue[ty]); }
 
     // mask of equal or less valuable types
-    PiMask notBadKillers(PieceType ty) const { return any(GoodOrEqualKillers[ty]); }
+    PiMask lessOrEqualValue(PieceType ty) const { return any(LessOrEqualValue[ty]); }
 };
 
 #endif
