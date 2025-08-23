@@ -25,7 +25,7 @@ public:
     }
 
     constexpr void clear(Pi pi, Square sq) {
-        matrix[Rank(sq)] -= PiRank{File(sq)} & PiMask{pi};
+        matrix[Rank{sq}] -= PiRank{File{sq}} & PiMask{pi};
     }
 
     constexpr void clear(Pi pi) {
@@ -50,11 +50,11 @@ public:
     }
 
     constexpr void add(Pi pi, Square sq) {
-        add(pi, Rank(sq), File(sq));
+        add(pi, Rank{sq}, File{sq});
     }
 
     constexpr bool has(Pi pi, Square sq) const {
-        return (matrix[Rank(sq)] & PiRank{File(sq)} & PiMask{pi}).any();
+        return (matrix[Rank{sq}] & PiRank{File{sq}} & PiMask{pi}).any();
     }
 
     constexpr const PiRank& operator[] (Rank rank) const {
@@ -67,7 +67,7 @@ public:
 
     //pieces affecting the given square
     PiMask operator[] (Square sq) const {
-        return matrix[Rank(sq)][File(sq)];
+        return matrix[Rank{sq}][File{sq}];
     }
 
     //bitboard of the given piece
