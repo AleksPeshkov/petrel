@@ -69,6 +69,8 @@ struct Score {
 //https://www.chessprogramming.org/PeSTO%27s_Evaluation_Function
 class PieceSquareTable {
 public:
+    static constexpr unsigned PieceMatMax = 32; // initial chess position sum of non pawn pieces material points
+
     union element_type {
         struct PACKED {
             u16_t openingPst:14;
@@ -87,6 +89,11 @@ public:
 
         constexpr const element_type& operator += (const element_type& o) { v += o.v; return *this; }
         constexpr const element_type& operator -= (const element_type& o) { v -= o.v; return *this; }
+
+        constexpr Score score(unsigned material) const {
+            auto stage = std::min<unsigned>(material, PieceMatMax);
+            return (s.openingPst*stage + s.endgamePst*(PieceMatMax - stage)) / PieceMatMax;
+        }
     };
 
 protected:
@@ -106,23 +113,18 @@ public:
 private:
     _t v;
 
-    constexpr void from(PieceType::_t ty, Square f) { v -= pieceSquareTable(ty, f); }
-    constexpr void to(PieceType::_t ty, Square t) { v += pieceSquareTable(ty, t); }
+    constexpr void from(PieceType::_t ty, Square sq) { v -= pieceSquareTable(ty, sq); }
+    constexpr void to(PieceType::_t ty, Square sq) { v += pieceSquareTable(ty, sq); }
 
 public:
     constexpr Evaluation () : v{} {}
 
-    // https://www.chessprogramming.org/PeSTO%27s_Evaluation_Function
     static Score evaluate(const Evaluation& my, const Evaluation& op) {
-        constexpr const unsigned PieceMatMax = 32; // initial chess position sum of non pawn pieces material points
+        return my.v.score(my.v.s.piecesMat) - op.v.score(op.v.s.piecesMat);
+    }
 
-        auto myMaterial = std::min<unsigned>(my.v.s.piecesMat, PieceMatMax);
-        auto opMaterial = std::min<unsigned>(op.v.s.piecesMat, PieceMatMax);
-
-        auto myScore = my.v.s.openingPst * myMaterial + my.v.s.endgamePst * (PieceMatMax-myMaterial);
-        auto opScore = op.v.s.openingPst * opMaterial + op.v.s.endgamePst * (PieceMatMax-opMaterial);
-
-        return static_cast<Score>((myScore - opScore) / static_cast<Score>(PieceMatMax));
+    constexpr Score score(PieceType ty, Square sq) const {
+        return pieceSquareTable(ty, sq).score(v.s.piecesMat);
     }
 
     void drop(PieceType ty, Square t) { to(ty, t); }
