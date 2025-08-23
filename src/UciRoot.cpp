@@ -7,12 +7,12 @@ namespace {
 class FenToBoard {
     struct SquareImportance {
         bool operator () (Square sq1, Square sq2) const {
-            if (Rank(sq1) != Rank(sq2)) {
-                return Rank(sq1) < Rank(sq2); //Rank8 < Rank1
+            if (Rank{sq1} != Rank{sq2}) {
+                return Rank{sq1} < Rank{sq2}; //Rank8 < Rank1
             }
             else {
-                constexpr Rank::arrayOf<index_t> order{6, 4, 2, 0, 1, 3, 5, 7};
-                return order[File(sq1)] < order[File(sq2)]; //FileD < FileE < FileC < FileF < FileB < FileG < FileA < FileH
+                constexpr Rank::arrayOf<int> order{6, 4, 2, 0, 1, 3, 5, 7};
+                return order[File{sq1}] < order[File{sq2}]; //FileD < FileE < FileC < FileF < FileB < FileG < FileA < FileH
             }
         }
     };
@@ -166,7 +166,7 @@ class CastlingToFen {
 
             switch (chessVariant) {
                 case Chess960:
-                    castlingSymbol = File(positionSide.squareOf(pi)).to_char();
+                    castlingSymbol = File{positionSide.squareOf(pi)}.to_char();
                     break;
 
                 case Orthodox:
@@ -239,12 +239,12 @@ istream& UciRoot::readMove(istream& in, Square& from, Square& to) const {
             PromoType promo{Queen};
             read(in, promo);
             in.clear(); //promotion piece is optional
-            to = Square{File(to), static_cast<Rank::_t>(+promo)};
+            to = Square{File{to}, static_cast<Rank::_t>(+promo)};
             return in;
         }
 
-        if (from.on(Rank5) && OP.hasEnPassant() && OP.enPassantFile().is(File(to))) {
-            to = Square{File(to), Rank5};
+        if (from.on(Rank5) && OP.hasEnPassant() && OP.enPassantFile().is(File{to})) {
+            to = Square{File{to}, Rank5};
             return in;
         }
 
@@ -294,7 +294,7 @@ void UciRoot::limitMoves(istream& in) {
 
         Pi pi = MY.pieceAt(from);
         if (!movesMatrix.has(pi, to)) {
-            movesMatrix.set(pi, to);
+            movesMatrix.add(pi, to);
             ++n;
         }
     }
@@ -403,7 +403,7 @@ istream& UciRoot::readEnPassant(istream& in) {
 
     auto beforeSquare = in.tellg();
     if (read(in, ep)) {
-        if (!ep.on(colorToMove_.is(White) ? Rank6 : Rank3) || !setEnPassant( File(ep) )) {
+        if (!ep.on(colorToMove_.is(White) ? Rank6 : Rank3) || !setEnPassant( File{ep} )) {
             return io::fail_pos(in, beforeSquare);
         }
     }

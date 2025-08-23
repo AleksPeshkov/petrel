@@ -23,7 +23,7 @@ ostream& operator << (ostream& out, const UciMove& move) {
     if (from_.on(Rank5)) {
         //en passant capture move internally encoded as pawn captures pawn
         assert (to_.on(Rank5));
-        return out << from << Square{File(to), isWhite ? Rank6 : Rank3};
+        return out << from << Square{File{to}, isWhite ? Rank6 : Rank3};
     }
 
     //castling
@@ -31,8 +31,8 @@ ostream& operator << (ostream& out, const UciMove& move) {
         //castling move internally encoded as the rook captures the king
 
         if (move.variant == Orthodox) {
-            if (from.on(FileA)) { return out << to << Square{FileC, Rank(from)}; }
-            if (from.on(FileH)) { return out << to << Square{FileG, Rank(from)}; }
+            if (from.on(FileA)) { return out << to << Square{FileC, Rank{from}}; }
+            if (from.on(FileH)) { return out << to << Square{FileG, Rank{from}}; }
         }
 
         // Chess960:
