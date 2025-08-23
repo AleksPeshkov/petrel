@@ -294,7 +294,7 @@ void UciRoot::limitMoves(istream& in) {
 
         Pi pi = MY.pieceAt(from);
         if (!movesMatrix.has(pi, to)) {
-            movesMatrix.set(pi, to);
+            movesMatrix.add(pi, to);
             ++n;
         }
     }
