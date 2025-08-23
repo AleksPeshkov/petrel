@@ -84,7 +84,7 @@ void PositionMoves::correctCheckEvasionsByPawns(Bb checkLine, Square checkFrom) 
 
     Bb affectedPawns = MY.bbPawns() & (potentialBlockers | pawnDiagonalMoves);
     for (Square from : affectedPawns) {
-        Bb bb = (Bb{from.rankForward()} & checkLine) + (::attacksFrom(Pawn, from) & checkFrom);
+        Bb bb = (Bb{from.rankForward()} & checkLine) + (::attacksFrom(Pawn, from) & Bb{checkFrom});
         Rank rankTo = ::rankForward(Rank(from));
         moves_.set(MY.pieceAt(from), rankTo, bb[rankTo]);
     }
@@ -116,7 +116,7 @@ void PositionMoves::excludePinnedMoves(PiMask opPinners) {
             Pi pinned = MY.pieceAt(piecesOnPinLine.index());
 
             //exclude all pinned piece moves except those over the pin line
-            moves_.filter(pinned, pinLine + pinFrom);
+            moves_.filter(pinned, pinLine + Bb{pinFrom});
         }
     }
 }
@@ -135,7 +135,7 @@ void PositionMoves::generateCheckEvasions() {
         const Bb& checkLine = ::inBetween(MY.kingSquare(), checkFrom);
 
         //general case: check evasion moves of all pieces
-        moves_ = MY.attacks() & (checkLine + checkFrom);
+        moves_ = MY.attacks() & (checkLine + Bb{checkFrom});
 
         //pawns moves are special case
         correctCheckEvasionsByPawns<My>(checkLine, checkFrom);
