@@ -258,7 +258,7 @@ void Position::setLegalEnPassant(Pi victim, Square to) {
     for (Square from : killers) {
         assert (from.on(Rank4));
 
-        if (!MY.isPinned(OCCUPIED - from + ep - to)) {
+        if (!MY.isPinned(OCCUPIED - Bb{from} + Bb{ep} - Bb{to})) {
             MY.setEnPassantVictim(victim);
             OP.setEnPassantKiller(OP.pieceAt(~from));
         }
@@ -356,11 +356,11 @@ Zobrist Position::createZobrist(Square from, Square to) const {
             Square ep{file, Rank3};
 
             Bb killers = ~OP.bbPawns() & ::attacksFrom(Pawn, ep);
-            if (killers.any() && !MY.isPinned(OCCUPIED - from + ep)) {
+            if (killers.any() && !MY.isPinned(OCCUPIED - Bb{from} + Bb{ep})) {
                 for (Square killer : killers) {
                     assert (killer.on(Rank4));
 
-                    if (!MY.isPinned(OCCUPIED - killer + ep)) {
+                    if (!MY.isPinned(OCCUPIED - Bb{killer} + Bb{ep})) {
                         mz.enPassant(to);
                         goto zobrist;
                     }

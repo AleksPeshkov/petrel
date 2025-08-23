@@ -8,7 +8,7 @@
         Square sq = squares.squareOf(pi);
         assert (has(sq));
 
-        assert (types.isPawn(pi) == bbPawns_.has(sq));
+        assert (types.isPawn(pi) == bbPawns().has(sq));
         assert (!types.isPawn(pi) || (!sq.on(Rank1) && !sq.on(Rank8)));
 
         assert (traits.isPromotable(pi) == (types.isPawn(pi) && sq.on(Rank7)));
@@ -58,7 +58,7 @@ void PositionSide::capture(Square from) {
 
     assertOk(pi, ty, from);
 
-    bbSide_ -= from;
+    bbSide_ -= Bb{from};
     bbPawns_ &= bbSide_; //clear if pawn
 
     evaluation_.capture(ty, from);
@@ -124,7 +124,7 @@ Pi PositionSide::promote(Pi pawn, Square from, PromoType ty, Square to) {
     evaluation_.promote(from, to, ty);
 
     // remove pawn
-    bbPawns_ -= from;
+    bbPawns_ -= Bb{from};
     attacks_.clear(pawn);
     squares.clear(pawn);
     traits.clear(pawn);
@@ -165,10 +165,10 @@ void PositionSide::castle(Square kingFrom, Square kingTo, Pi rook, Square rookFr
 
     //possible overlap in Chess960
     squares.castle(kingTo, rook, rookTo);
-    bbSide_ -= kingFrom;
-    bbSide_ -= rookFrom;
-    bbSide_ += kingTo;
-    bbSide_ += rookTo;
+    bbSide_ -= Bb{kingFrom};
+    bbSide_ -= Bb{rookFrom};
+    bbSide_ += Bb{kingTo};
+    bbSide_ += Bb{rookTo};
 
     evaluation_.castle(kingFrom, kingTo, rookFrom, rookTo);
 
@@ -232,7 +232,7 @@ void PositionSide::updateSlidersCheckers(PiMask affectedSliders, Bb occupiedBb) 
     assert (affectedSliders.any());
 
     //TRICK: attacks calculated without opponent's king for implicit out of check king moves generation
-    Hyperbola blockers{ occupiedBb - opKing };
+    Hyperbola blockers{ occupiedBb - Bb{opKing} };
 
     for (Pi pi : affectedSliders) {
         Bb attack = blockers.attack(SliderType{typeOf(pi)}, squareOf(pi));
@@ -284,7 +284,7 @@ bool PositionSide::isPinned(Bb occupied) const {
 
 bool PositionSide::dropValid(PieceType ty, Square to) {
     if (bbSide_.has(to)) { return false; }
-    bbSide_ += to;
+    bbSide_ += Bb{to};
 
     Pi pi = ty.is(King) ? Pi{TheKing} : PieceSet((pieces() | Pi{TheKing})).vacantMostValuable();
 
@@ -295,7 +295,7 @@ bool PositionSide::dropValid(PieceType ty, Square to) {
     if (ty.is(Pawn)) {
         if (to.on(Rank1) || to.on(Rank8)) { return false; }
         if (to.on(Rank7)) { traits.setPromotable(pi);}
-        bbPawns_ += to;
+        bbPawns_ += Bb{to};
     }
 
     assertOk(pi, ty, to);
