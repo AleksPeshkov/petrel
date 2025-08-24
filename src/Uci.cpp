@@ -53,12 +53,12 @@ void Uci::processInput(istream& in) {
 #endif
 
         inputLine.clear(); //clear error state from the previous line
-        inputLine.str(std::move(currentLine));
+        inputLine.str(currentLine);
         inputLine >> std::ws;
 
         if      (consume("go"))        { go(); }
         else if (consume("position"))  { position(); }
-        else if (consume("stop"))      { mainSearchThread.stop(); }
+        else if (consume("stop"))      { stop(); }
         else if (consume("ponderhit")) { ponderhit(); }
         else if (consume("isready"))   { readyok(); }
         else if (consume("setoption")) { setoption(); }
@@ -71,18 +71,15 @@ void Uci::processInput(istream& in) {
 
         if (hasMoreInput()) {
             std::string unparsedInput;
+            inputLine.clear();
             std::getline(inputLine, unparsedInput);
-            log("#parsing error: " + unparsedInput + '\n');
+
+            log(currentLine + "\n#unparsed input->" + unparsedInput + '\n');
         }
     }
 }
 
 void Uci::ucinewgame() {
-    if (!isReady()) {
-        io::fail_rewind(inputLine);
-        return;
-    }
-
     root.newGame();
     root.setStartpos();
 }
@@ -91,7 +88,7 @@ void Uci::uciok() const {
     bool isChess960 = root.chessVariant().is(Chess960);
 
     Output ob{this};
-    ob << "id name petrel\n";
+    ob << "id name " << io::app_version << '\n';
     ob << "id author Aleks Peshkov\n";
     ob << "option name Debug Log File type string default " << (logFileName.empty() ? "<empty>" : logFileName) << '\n';
     ob << "option name Hash type spin"
@@ -168,11 +165,6 @@ void Uci::setoption() {
 }
 
 void Uci::setHash() {
-    if (!isReady()) {
-        io::fail_rewind(inputLine);
-        return;
-    }
-
     size_t quantity = 0;
     inputLine >> quantity;
     if (!inputLine) {
@@ -215,11 +207,6 @@ void Uci::position() {
         return;
     }
 
-    if (!isReady()) {
-        io::fail_rewind(inputLine);
-        return;
-    }
-
     if (consume("startpos")) { root.setStartpos(); }
     if (consume("fen")) { root.readFen(inputLine); }
 
@@ -228,11 +215,6 @@ void Uci::position() {
 }
 
 void Uci::go() {
-    if (!isReady()) {
-        io::fail_rewind(inputLine);
-        return;
-    }
-
     {
         auto whiteSide = root.sideOf(White);
         auto blackSide = root.sideOf(Black);
@@ -253,25 +235,21 @@ void Uci::go() {
             else if (consume("searchmoves")) { root.limitMoves(inputLine); }
             else { io::fail(inputLine); return; }
         }
+
+        root.limits.setSearchDeadline();
     }
 
     mainSearchThread.start([this] {
         Node{root}.searchRoot();
         bestmove();
     });
-
-    root.limits.setDeadline(mainSearchThread);
 }
 
 void Uci::ponderhit() {
-    root.limits.ponderhit(mainSearchThread);
+    root.limits.ponderhit();
 }
 
 void Uci::goPerft() {
-    if (!isReady()) {
-        io::fail_rewind(inputLine);
-        return;
-    }
 
     Ply depth;
     inputLine >> depth;
@@ -285,33 +263,22 @@ void Uci::goPerft() {
 }
 
 void Uci::readyok() const {
-    if (!isReady()) {
-        readyokWaiting = true;
-        return;
+    if (isStopped()) {
+        mainSearchThread.waitReady();
     }
-
-    {
-        Output ob{this};
-        ob << "readyok\n";
-        readyokWaiting = false;
-    }
-}
-
-void Uci::search_readyok() const {
-    if (!readyokWaiting) { return; }
 
     {
         Output ob{this};
         info_nps(ob);
         ob << "readyok\n";
-        readyokWaiting = false;
     }
 }
 
 ostream& Uci::nps(ostream& o) const {
+    // avoid printing identical nps info in a row
     if (lastInfoNodes == root.nodeCounter) { return o; }
-
     lastInfoNodes = root.nodeCounter;
+
     o << " nodes " << lastInfoNodes;
 
     auto elapsedTime = ::elapsedSince(root.limits.searchStartTime);
@@ -323,6 +290,8 @@ ostream& Uci::nps(ostream& o) const {
 }
 
 ostream& Uci::info_nps(ostream& o) const {
+    if (lastInfoNodes == root.nodeCounter) { return o; }
+
     if (root.tt.reads > 0) {
         o << "info";
         o << " hwrites " << root.tt.writes;
@@ -332,10 +301,7 @@ ostream& Uci::info_nps(ostream& o) const {
         o << '\n';
     }
 
-    if (lastInfoNodes < root.nodeCounter) {
-        o << "info"; nps(o) << '\n';
-    }
-
+    o << "info"; nps(o) << '\n';
     return o;
 }
 
@@ -353,7 +319,6 @@ void Uci::bestmove() const {
         ob << " ponder " << root.pvMoves[1];
     }
     ob << '\n';
-    lastInfoNodes = 0;
 }
 
 void Uci::info_iteration(Ply draft) const {
@@ -387,20 +352,11 @@ void Uci::output(const std::string& message) const {
     if (message.empty()) { return; }
 
     {
-        Guard lock{outLock};
+        ScopedLock lock{mutex};
         out << message << std::flush;
 
 #ifndef NDEBUG
-        if (!logFile.is_open()) { return; }
-
-        logFile << message << std::flush;
-
-        // recover if the logFile is in a bad state
-        if (!logFile) {
-            logFile.clear();
-            logFile.close();
-            logFile.open(logFileName, std::ios::app);
-        }
+        if (logFile.is_open()) { _log(message); }
 #endif
 
     }
@@ -410,14 +366,19 @@ void Uci::log(const std::string& message) const {
     if (message.empty() || !logFile.is_open()) { return; }
 
     {
-        Guard lock{outLock};
-        logFile << message << std::flush;
+        ScopedLock lock{mutex};
+        _log(message);
+    }
+}
 
-        // recover if the logFile is in a bad state
-        if (!logFile) {
-            logFile.clear();
-            logFile.close();
-            logFile.open(logFileName, std::ios::app);
-        }
+void Uci::_log(const std::string& message) const {
+    logFile << message << std::flush;
+
+    // recover if the logFile is in a bad state
+    if (!logFile) {
+        logFile.clear();
+        logFile.close();
+        logFile.open(logFileName, std::ios::app);
+        logFile << "#logFile recovered from a bad state\n" << std::flush;
     }
 }
