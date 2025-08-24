@@ -25,7 +25,8 @@ class PositionMoves : public Position {
 
 protected:
     void setMoves(const PiBbMatrix& moves) { moves_ = moves; movesMade_ = 0; }
-    void clearMove(Square from, Square to) { moves_.clear(MY.pieceAt(from), to); ++movesMade_; }
+    void clearMove(Pi pi, Square to) { moves_.clear(pi, to); ++movesMade_; }
+    void clearMove(Square from, Square to) { clearMove(MY.pieceAt(from), to); }
 
     void makeMoveNoZobrist(PositionMoves* parent, Square from, Square to);
 
