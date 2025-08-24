@@ -138,13 +138,13 @@ public:
 
                 if (board.whitePieces.has(sq)) {
                     if (emptySqCount != 0) { out << emptySqCount; emptySqCount = 0; }
-                    out << static_cast<io::char_type>(std::toupper( board.whitePieces.typeOf(sq).to_char() ));
+                    out << static_cast<io::char_type>(std::toupper( board.whitePieces.typeAt(sq).to_char() ));
                     continue;
                 }
 
                 if (board.blackPieces.has(~sq)) {
                     if (emptySqCount != 0) { out << emptySqCount; emptySqCount = 0; }
-                    out << board.blackPieces.typeOf(~sq).to_char();
+                    out << board.blackPieces.typeAt(~sq).to_char();
                     continue;
                 }
 

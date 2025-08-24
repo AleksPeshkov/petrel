@@ -196,7 +196,7 @@ ReturnStatus Node::search() {
 
         // counter moves may refute the last opponent move
         Move move = parent->childMove;
-        PieceType ty = parent->MY.typeOf(move.from());
+        PieceType ty = parent->MY.typeAt(move.from());
         RETURN_CUTOFF (child->searchIfLegal( root.counterMove(colorToMove(), ty, move.to()) ));
 
         RETURN_CUTOFF (child->searchIfLegal(parent->killer2));
@@ -445,7 +445,7 @@ void Node::updateKillerMove() {
     }
 
     Move move = parent->childMove;
-    PieceType ty = parent->MY.typeOf(move.from());
+    PieceType ty = parent->MY.typeAt(move.from());
     root.counterMove.set(colorToMove(), ty, move.to(), childMove);
 }
 
