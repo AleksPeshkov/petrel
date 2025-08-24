@@ -25,7 +25,7 @@ public:
     bool infinite = false;
 
     bool canPonder = false;
-    TimeInterval moveOverhead = 1ms;
+    TimeInterval moveOverhead = 0ms;
 
     // clear all limits except canPonder and moveOverhead
     void clear() {

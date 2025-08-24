@@ -266,33 +266,16 @@ void Uci::goPerft() {
 }
 
 void Uci::readyok() const {
-    if (!isReady()) {
-        readyokWaiting = true;
-        return;
-    }
-
-    {
-        Output ob{this};
-        ob << "readyok\n";
-        readyokWaiting = false;
-    }
-}
-
-void Uci::search_readyok() const {
-    if (!readyokWaiting) { return; }
-
-    {
-        Output ob{this};
-        info_nps(ob);
-        ob << "readyok\n";
-        readyokWaiting = false;
-    }
+    Output ob{this};
+    info_nps(ob);
+    ob << "readyok\n";
 }
 
 ostream& Uci::nps(ostream& o) const {
+    // avoid printing identical nps info in a row
     if (lastInfoNodes == root.nodeCounter) { return o; }
-
     lastInfoNodes = root.nodeCounter;
+
     o << " nodes " << lastInfoNodes;
 
     auto elapsedTime = ::elapsedSince(root.limits.searchStartTime);
@@ -304,6 +287,8 @@ ostream& Uci::nps(ostream& o) const {
 }
 
 ostream& Uci::info_nps(ostream& o) const {
+    if (lastInfoNodes == root.nodeCounter) { return o; }
+
     if (root.tt.reads > 0) {
         o << "info";
         o << " hwrites " << root.tt.writes;
@@ -313,10 +298,7 @@ ostream& Uci::info_nps(ostream& o) const {
         o << '\n';
     }
 
-    if (lastInfoNodes < root.nodeCounter) {
-        o << "info"; nps(o) << '\n';
-    }
-
+    o << "info"; nps(o) << '\n';
     return o;
 }
 
@@ -334,7 +316,6 @@ void Uci::bestmove() const {
         ob << " ponder " << root.pvMoves[1];
     }
     ob << '\n';
-    lastInfoNodes = 0;
 }
 
 void Uci::info_iteration(Ply draft) const {

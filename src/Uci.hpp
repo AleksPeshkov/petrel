@@ -24,10 +24,7 @@ class Uci {
     mutable std::mutex mutex;
     typedef std::lock_guard<decltype(mutex)> ScopedLock;
 
-    // used to respond to "isready" command with "info nps"
-    mutable std::atomic<bool> readyokWaiting = false;
-
-    // to avoid printing identical nps info lines in a row
+    // avoid printing identical 'info nps' lines in a row
     mutable node_count_t lastInfoNodes = 0;
 
     std::string logFileName;
@@ -85,7 +82,6 @@ public:
 
     // called from NodeCounter::refreshQuota()
     bool isStopped() const { return mainSearchThread.isStopped(); }
-    void search_readyok() const;
 };
 
 #endif

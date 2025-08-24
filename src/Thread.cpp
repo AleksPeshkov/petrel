@@ -6,12 +6,14 @@ TimerThread::TimerThread() : stdThread{ std::thread([this] {
         ScopedLock lock{mutex};
 
         if (!isActive()) {
-            timerChanged.wait(lock); // wait for a new schedule
+            auto condition = [this] { return isAborting || isActive(); };
+            timerChanged.wait(lock, condition); // wait for a new schedule
             continue;
         }
 
         if (::timeNow() < triggerTime) {
-            timerChanged.wait_until(lock, triggerTime); // sleep until trigger time
+            auto condition = [this] { return isAborting || !isActive() || ::timeNow() >= triggerTime; };
+            timerChanged.wait_until(lock, triggerTime, condition); // sleep until trigger time
             continue;
         }
 
@@ -36,11 +38,11 @@ TimerThread::~TimerThread() {
     if (stdThread.joinable()) { stdThread.join(); }
 }
 
-void TimerThread::scheduleTask(TimePoint timePoint, ThreadTask task) {
+void TimerThread::scheduleTask(TimePoint timePoint, ThreadTask timerTask) {
     {
         ScopedLock lock{mutex};
         triggerTime = timePoint;
-        task = std::move(task);
+        task = std::move(timerTask);
     }
     timerChanged.notify_all();
 }

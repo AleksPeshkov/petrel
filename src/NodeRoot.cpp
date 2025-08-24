@@ -69,8 +69,5 @@ ReturnStatus NodeCounter::refreshQuota(const Uci& uci) {
     --nodesQuota; //count current node
     assertOk();
 
-    //inform UCI that search is responsive
-    uci.search_readyok();
-
     return ReturnStatus::Continue;
 }
