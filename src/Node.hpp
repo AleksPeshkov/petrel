@@ -74,12 +74,10 @@ protected:
     [[nodiscard]] ReturnStatus searchMoves();
     [[nodiscard]] ReturnStatus quiescence();
 
-    [[nodiscard]] ReturnStatus goodCaptures(Node*, const PiMask&);
-
-    [[nodiscard]] ReturnStatus allCaptures(Node*, const PiMask&);
-
-    [[nodiscard]] ReturnStatus goodCaptures(Node*, Square);
-    [[nodiscard]] ReturnStatus allCaptures(Node*, Square);
+    template <bool isQs> [[nodiscard]] ReturnStatus goodCaptures(Node*, const PiMask&);
+    template <bool isQs> [[nodiscard]] ReturnStatus allCaptures(Node*, const PiMask&);
+    template <bool isQS> [[nodiscard]] ReturnStatus goodCaptures(Node*, Square);
+    template <bool isQs> [[nodiscard]] ReturnStatus allCaptures(Node*, Square);
 
     UciMove uciMove(Move move) const { return uciMove(move.from(), move.to()); }
     UciMove uciMove(Square from, Square to) const;
