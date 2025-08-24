@@ -246,7 +246,7 @@ ReturnStatus Node::searchMoves() {
     }
 
     PiMask victims = OP.pieces() - PiMask{TheKing};
-    RETURN_CUTOFF (goodCaptures(child, victims));
+    RETURN_CUTOFF (goodCaptures<false>(child, victims));
 
     canBeKiller = true;
 
@@ -324,7 +324,7 @@ ReturnStatus Node::searchMoves() {
     }
 
     // unsafe (bad) captures
-    RETURN_CUTOFF (allCaptures(child, victims));
+    RETURN_CUTOFF (allCaptures<false>(child, victims));
 
     // all the rest moves, including underpromotions with or without capture, LVA order
     auto pieces = MY.pieces();
@@ -399,12 +399,13 @@ ReturnStatus Node::quiescence() {
     PieceType lowestVictimType = ::deltaPrunning(alpha - score);
     PiMask victims = OP.pieces() % OP.lessValue(lowestVictimType);
 
-    RETURN_CUTOFF (goodCaptures(child, victims));
-    RETURN_CUTOFF (allCaptures(child, victims));
+    RETURN_CUTOFF (goodCaptures<false>(child, victims));
+    RETURN_CUTOFF (allCaptures<false>(child, victims));
 
     return ReturnStatus::Continue;
 }
 
+template <bool inQS>
 ReturnStatus Node::goodCaptures(Node* child, const PiMask& victims) {
     if (MY.promotables().any()) {
         // queen promotion with capture, always good
@@ -430,23 +431,70 @@ ReturnStatus Node::goodCaptures(Node* child, const PiMask& victims) {
     // MVV (most valuable victim) order
     for (Pi victim : victims) {
         Square to = ~OP.squareOf(victim);
-        RETURN_CUTOFF (goodCaptures(child, to));
+        RETURN_CUTOFF (goodCaptures<inQS>(child, to));
     }
 
     return ReturnStatus::Continue;
 }
 
+template <bool inQS>
 ReturnStatus Node::goodCaptures(Node* child, Square to) {
     // exclude promotions
     PiMask attackers = canMoveTo(to) % MY.promotables();
     if (attackers.none()) { return ReturnStatus::Continue; }
 
-    bool isVictimProtected = bbAttacked().has(to);
-    assert (isVictimProtected == OP.attackersTo(~to).any());
-    if (isVictimProtected) {
-        // try only less or equal value attackers
-        attackers &= MY.lessOrEqualValue( OP.typeOf(OP.pieceAt(~to)) );
+    Score victimValue = OP.scoreAt(~to);
+    Score delta = alpha - score;
+    assert (delta >= 0);
+
+    // delta prunning
+    // after this capture opponent will fail high with stand pat score >= beta
+    // so we just skip this insufficient valued victim capture
+    if (victimValue < delta) {
+        if constexpr (inQS) {
+            for (Pi attacker : attackers) {
+                // remove insufficient capture completelly from QS
+                clearMove(attacker, to);
+            }
+        }
+        return ReturnStatus::Continue;
     }
+
+    if (attackers.isSingleton()) {
+        Pi attacker = attackers.index();
+        Square from = MY.squareOf(attacker);
+        if (bbAttacked().has(to)) {
+            //TODO: check X-Ray attacks
+            // attacker is singleton and victim is protected
+            // skip captures of the more valuable attacker
+            if (victimValue <= MY.scoreAt(from) + delta) {
+                if constexpr (inQS) { clearMove(attacker, to); }
+                return ReturnStatus::Continue;
+            }
+        }
+
+        return child->searchMove(from, to);
+    }
+
+    auto opPawnAttacks = OP.bbPawns().pawnAttacks();
+    if (opPawnAttacks.has(~to)) {
+        // victim is protected by at least one pawn
+        // try captures of less or equal value types of attackers
+        attackers &= MY.lessOrEqualValue( OP.typeOf(OP.pieceAt(~to)) );
+
+        while (attackers.any()) {
+            // LVA (least valuable attacker) order
+            Pi attacker = attackers.leastValuable(); attackers -= attacker;
+
+            Square from = MY.squareOf(attacker);
+            if (victimValue > MY.scoreAt(from) + delta) {
+                return child->searchMove(from, to);
+            }
+        }
+    }
+
+    // case of non pawn defenders
+    // TODO: more exact SEE
 
     while (attackers.any()) {
         // LVA (least valuable attacker) order
@@ -459,16 +507,26 @@ ReturnStatus Node::goodCaptures(Node* child, Square to) {
     return ReturnStatus::Continue;
 }
 
+template <bool inQS>
 ReturnStatus Node::allCaptures(Node* child, const PiMask& victims) {
     // MVV (most valuable victim)
     for (Pi victim : victims) {
         Square to = ~OP.squareOf(victim);
-        RETURN_CUTOFF (allCaptures(child, to));
+
+        if constexpr (inQS) {
+            // delta prunning
+            Score victimValue = OP.scoreAt(~to);
+            Score delta = alpha - score;
+            if (victimValue < delta) { continue; }
+        }
+
+        RETURN_CUTOFF (allCaptures<inQS>(child, to));
     }
 
     return ReturnStatus::Continue;
 }
 
+template <bool inQS>
 ReturnStatus Node::allCaptures(Node* child, Square to) {
     // exclude promotions
     PiMask attackers = canMoveTo(to) % MY.promotables();
