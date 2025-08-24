@@ -11,14 +11,14 @@ typedef std::function<void()> ThreadTask;
 
 class TimerThread {
     TimePoint  triggerTime = TimePoint::max();
-    ThreadTask timerTask;
+    ThreadTask task;
 
-    std::mutex timerLock;
-    typedef std::unique_lock<decltype(timerLock)> Guard;
+    std::mutex mutex;
+    typedef std::unique_lock<decltype(mutex)> ScopedLock;
     std::condition_variable timerChanged;
 
     std::thread stdThread;
-    bool abort = false;
+    bool isAborting = false; // the thread is being destructed on program termination
 
     constexpr bool isActive() const { return triggerTime != TimePoint::max(); }
 
@@ -26,8 +26,8 @@ public:
     TimerThread();
     ~TimerThread();
 
-    void schedule(TimePoint, ThreadTask);
-    void cancel() { schedule(TimePoint::max(), nullptr); }
+    void scheduleTask(TimePoint, ThreadTask);
+    void cancelTask() { scheduleTask(TimePoint::max(), nullptr); }
 };
 
 class Thread {
@@ -42,9 +42,9 @@ class Thread {
     ThreadTask threadTask = nullptr;
 
     Status status = Status::Ready;
-    std::mutex statusLock;
-    typedef std::unique_lock<decltype(statusLock)> Guard;
-    std::condition_variable_any statusChanged;
+    std::mutex mutex;
+    typedef std::unique_lock<decltype(mutex)> ScopedLock;
+    std::condition_variable statusChanged;
 
     bool is(Status to) const { return status == to; }
     template <typename Condition> void wait(Condition);
@@ -69,10 +69,10 @@ public:
     void start(ThreadTask task) {
         Thread::start([this, task]() {
             task();
-            timer.cancel();
+            timer.cancelTask();
         });
     }
-    void setDeadline(TimePoint deadline) { timer.schedule(deadline, [this]() { stop(); }); }
+    void setTaskDeadline(TimePoint deadline) { timer.scheduleTask(deadline, [this]() { stop(); }); }
 };
 
 #endif

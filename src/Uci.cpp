@@ -241,7 +241,7 @@ void Uci::go() {
         bestmove();
     });
 
-    root.limits.setDeadline(mainSearchThread);
+    root.limits.setSearchDeadline(mainSearchThread);
 }
 
 void Uci::ponderhit() {
@@ -368,7 +368,7 @@ void Uci::output(const std::string& message) const {
     if (message.empty()) { return; }
 
     {
-        Guard lock{outLock};
+        ScopedLock lock{mutex};
         out << message << std::flush;
 
         if (!logFile.is_open()) { return; }
@@ -388,7 +388,7 @@ void Uci::log(const std::string& message) const {
     if (message.empty() || !logFile.is_open()) { return; }
 
     {
-        Guard lock{outLock};
+        ScopedLock lock{mutex};
         logFile << message << std::flush;
 
         // recover if the logFile is in a bad state

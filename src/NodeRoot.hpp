@@ -50,7 +50,7 @@ class NodeCounter {
     typedef unsigned nodes_quota_t;
     enum : nodes_quota_t { QuotaLimit = 100 }; // < 100us
 
-    //number of remaining nodes before slow checking for search abort
+    //number of remaining nodes before slow checking for search stop
     nodes_quota_t nodesQuota = 0; // (0 <= nodesQuota && nodesQuota <= QuotaLimit)
 
     constexpr void assertOk() const {

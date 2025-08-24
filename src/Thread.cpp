@@ -2,8 +2,8 @@
 #include "Thread.hpp"
 
 TimerThread::TimerThread() : stdThread{ std::thread([this] {
-    while (!abort) {
-        Guard lock{timerLock};
+    while (!isAborting) {
+        ScopedLock lock{mutex};
 
         if (!isActive()) {
             timerChanged.wait(lock); // wait for a new schedule
@@ -17,30 +17,30 @@ TimerThread::TimerThread() : stdThread{ std::thread([this] {
 
         lock.unlock();
 
-        if (timerTask) {
-            timerTask();
-            timerTask = nullptr;
+        if (task) {
+            task();
+            task = nullptr;
         }
     }
 }) } {}
 
 TimerThread::~TimerThread() {
     {
-        Guard lock{timerLock};
-        abort = true;
+        ScopedLock lock{mutex};
+        isAborting = true;
         triggerTime = TimePoint::max();
-        timerTask = nullptr;
+        task = nullptr;
     }
     timerChanged.notify_all();
 
     if (stdThread.joinable()) { stdThread.join(); }
 }
 
-void TimerThread::schedule(TimePoint timePoint, ThreadTask task) {
+void TimerThread::scheduleTask(TimePoint timePoint, ThreadTask task) {
     {
-        Guard lock{timerLock};
+        ScopedLock lock{mutex};
         triggerTime = timePoint;
-        timerTask = std::move(task);
+        task = std::move(task);
     }
     timerChanged.notify_all();
 }
@@ -48,7 +48,7 @@ void TimerThread::schedule(TimePoint timePoint, ThreadTask task) {
 template <typename Condition>
 void Thread::wait(Condition condition) {
     if (!condition()) {
-        Guard lock{statusLock};
+        ScopedLock lock{mutex};
         statusChanged.wait(lock, condition);
     }
 }
@@ -56,7 +56,7 @@ void Thread::wait(Condition condition) {
 template <typename Condition>
 void Thread::signal(Condition condition, Status to) {
     {
-        Guard lock{statusLock};
+        ScopedLock lock{mutex};
         if (!condition()) { return; }
         status = to;
     }
@@ -81,7 +81,7 @@ Thread::Thread() : stdThread{ std::thread([this] {
 
 Thread::~Thread() {
     {
-        Guard lock{statusLock};
+        ScopedLock lock{mutex};
         status = Status::Abort;
     }
     statusChanged.notify_all();
@@ -91,7 +91,7 @@ Thread::~Thread() {
 void Thread::start(ThreadTask task) {
     assert (isReady());
     {
-        Guard g{statusLock};
+        ScopedLock g{mutex};
         threadTask = std::move(task);
         status = Status::Run;
     }

@@ -21,8 +21,8 @@ class Uci {
     ostream& out;
 
     // avoid race conditions betweeen Uci output and main search thread output
-    mutable std::mutex outLock;
-    typedef std::lock_guard<decltype(outLock)> Guard;
+    mutable std::mutex mutex;
+    typedef std::lock_guard<decltype(mutex)> ScopedLock;
 
     // used to respond to "isready" command with "info nps"
     mutable std::atomic<bool> readyokWaiting = false;

@@ -64,10 +64,10 @@ public:
     void ponderhit(ThreadWithDeadline& searchThread) {
         ponder = false;
         time[Op] -= std::min(::elapsedSince(searchStartTime), time[Op]);
-        setDeadline(searchThread);
+        setSearchDeadline(searchThread);
     }
 
-    void setDeadline(ThreadWithDeadline& searchThread) {
+    void setSearchDeadline(ThreadWithDeadline& searchThread) {
         calculateDeadline();
         if (isNoDeadline()) { return; }
 
@@ -77,7 +77,7 @@ public:
             depth = 1;
             return;
         }
-        searchThread.setDeadline(searchStartTime + deadline);
+        searchThread.setTaskDeadline(searchStartTime + deadline);
     }
 
     constexpr bool softDeadlineReached() const {
