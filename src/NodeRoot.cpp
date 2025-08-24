@@ -21,14 +21,14 @@ void NodeRoot::newIteration() {
 }
 
 ReturnStatus NodeRoot::countNode() {
-    return nodeCounter.count(uci);
+    return nodeCounter.count(root);
 }
 
-ReturnStatus NodeCounter::count(const Uci& uci) {
+ReturnStatus NodeCounter::count(NodeRoot& root) {
     assertOk();
 
     if (nodesQuota == 0) {
-        return refreshQuota(uci);
+        return refreshQuota(root);
     }
 
     assert (nodesQuota > 0);
@@ -38,7 +38,7 @@ ReturnStatus NodeCounter::count(const Uci& uci) {
     return ReturnStatus::Continue;
 }
 
-ReturnStatus NodeCounter::refreshQuota(const Uci& uci) {
+ReturnStatus NodeCounter::refreshQuota(NodeRoot& root) {
     assertOk();
     assert (nodesQuota == 0);
     //nodes -= nodesQuota;
@@ -55,7 +55,16 @@ ReturnStatus NodeCounter::refreshQuota(const Uci& uci) {
         }
     }
 
-    if (uci.isStopped()) {
+    if (root.uci.isStopped()) {
+        nodesLimit = nodes;
+        nodesQuota = 0;
+
+        assertOk();
+        return ReturnStatus::Stop;
+    }
+
+    if (root.limits.hardDeadlineReached()) {
+        root.uci.stop();
         nodesLimit = nodes;
         nodesQuota = 0;
 
@@ -67,9 +76,6 @@ ReturnStatus NodeCounter::refreshQuota(const Uci& uci) {
     nodes += nodesQuota;
     --nodesQuota; //count current node
     assertOk();
-
-    //inform UCI that search is responsive
-    uci.search_readyok();
 
     return ReturnStatus::Continue;
 }
