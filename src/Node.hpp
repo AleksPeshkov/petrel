@@ -62,13 +62,12 @@ protected:
 
     Node (Node* n);
 
-    void makeMove(Move move);
     ReturnStatus searchMove(Move move);
     ReturnStatus searchMove(Square from, Square to) { return searchMove({from, to}); }
     ReturnStatus searchIfLegal(Move move) { return parent->isLegalMove(move) ? searchMove(move) : ReturnStatus::Continue; }
     ReturnStatus negamax(Node*);
     ReturnStatus betaCutoff();
-    void updatePv();
+    ReturnStatus updatePv();
 
     ReturnStatus search();
     ReturnStatus searchMoves();
@@ -88,6 +87,7 @@ protected:
     UciMove uciMove(Move move) const { return uciMove(move.from(), move.to()); }
     UciMove uciMove(Square from, Square to) const;
 
+    void makeMove(Move move);
     void updateKillerMove();
     void updateTtPv();
 

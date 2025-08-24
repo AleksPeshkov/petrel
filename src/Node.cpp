@@ -35,6 +35,20 @@ ReturnStatus Node::searchRoot() {
     repMask = root.repetitions.repMask(colorToMove());
     origin = root.tt.prefetch<TtSlot>(zobrist());
 
+    if (root.limits.softDeadlineReached()) {
+        // we have no time to search, return TT move if found
+        ++root.tt.reads;
+        ttSlot = *origin;
+        isHit = (ttSlot == zobrist());
+        if (isHit && static_cast<Move>(ttSlot)) {
+            ++root.tt.hits;
+            score = ttSlot;
+            root.pvMoves.set(ply, uciMove(ttSlot));
+            return ReturnStatus::Stop;
+        }
+        // otherwise we will search at least one root move to get minimal legal PV
+    }
+
     for (draft = 1; draft <= root.limits.depth; ++draft) {
         setMoves(rootMovesClone);
         alpha = MinusInfinity;
@@ -115,7 +129,7 @@ ReturnStatus Node::negamax(Node* child) {
             }
 
             alpha = score;
-            updatePv();
+            RETURN_IF_STOP (updatePv());
         }
     }
 
@@ -132,14 +146,16 @@ ReturnStatus Node::betaCutoff() {
     return ReturnStatus::BetaCutoff;
 }
 
-void Node::updatePv() {
+ReturnStatus Node::updatePv() {
     root.pvMoves.set(ply, uciMove(childMove));
     *origin = TtSlot{this, Exact};
     ++root.tt.writes;
 
     if (ply == 0) {
         root.uci.info_pv(draft, score);
+        //if (root.limits.softDeadlineReached()) { return ReturnStatus::Stop; }
     }
+    return ReturnStatus::Continue;
 }
 
 ReturnStatus Node::search() {
