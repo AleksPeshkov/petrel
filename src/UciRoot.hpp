@@ -23,7 +23,7 @@ class UciRoot : public NodeRoot {
     ostream& fen(ostream&) const;
 
 public:
-    UciRoot(const Uci& u) : NodeRoot{u} {}
+    UciRoot(Uci& u) : NodeRoot{u} {}
 
     constexpr const ChessVariant& chessVariant() const { return chessVariant_; }
     void setChessVariant(ChessVariant v) { chessVariant_ = v; }
