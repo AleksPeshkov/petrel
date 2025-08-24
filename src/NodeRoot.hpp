@@ -9,6 +9,7 @@
 #include "UciSearchLimits.hpp"
 
 class Uci;
+class NodeRoot;
 
 class HistoryMoves {
     typedef Side::arrayOf<PieceType::arrayOf< Square::arrayOf<Move> >> _t;
@@ -48,9 +49,9 @@ class NodeCounter {
     node_count_t nodesLimit; // search limit
 
     typedef unsigned nodes_quota_t;
-    enum : nodes_quota_t { QuotaLimit = 100 }; // < 100us
+    enum : nodes_quota_t { QuotaLimit = 1000 }; // < 0.2ms
 
-    //number of remaining nodes before slow checking for search abort
+    //number of remaining nodes before slow checking for search stop
     nodes_quota_t nodesQuota = 0; // (0 <= nodesQuota && nodesQuota <= QuotaLimit)
 
     constexpr void assertOk() const {
@@ -73,8 +74,8 @@ public:
         return nodes == nodesLimit;
     }
 
-    ReturnStatus count(const Uci&);
-    ReturnStatus refreshQuota(const Uci&);
+    ReturnStatus count(NodeRoot&);
+    ReturnStatus refreshQuota(NodeRoot&);
 
 };
 
@@ -89,13 +90,13 @@ public:
     NodeCounter nodeCounter;
 
     UciSearchLimits limits;
-    const Uci& uci;
+    Uci& uci;
 
 protected:
     Color colorToMove_ = White; //root position side to move color
 
 public:
-    NodeRoot(const Uci& u) : Node{*this}, uci{u} {}
+    NodeRoot(Uci& u) : Node{*this}, uci{u} {}
 
     constexpr Side sideOf(Color color) const { return colorToMove_.is(color) ? My : Op; }
     constexpr Color colorToMove(Ply d = 0) const { return colorToMove_ << d; }
