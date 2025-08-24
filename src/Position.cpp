@@ -101,7 +101,7 @@ void Position::makeMove(Square from, Square to) {
             if (OP.has(~to)) {
                 if constexpr (Z) {
                     if (OP.isCastling(~to)) { zobrist_.opCastling(~to); } // captured the rook with castling right
-                    zobrist_.op(OP.typeOf(~to), ~to);
+                    zobrist_.op(OP.typeAt(~to), ~to);
                 }
                 OP.capture(~to);
 
@@ -121,7 +121,7 @@ void Position::makeMove(Square from, Square to) {
         //possible en passant capture and capture with promotion already treated
         if (OP.has(~to)) {
             if constexpr (Z) {
-                zobrist_.op(OP.typeOf(~to), ~to);
+                zobrist_.op(OP.typeAt(~to), ~to);
             }
             OP.capture(~to);
 
@@ -153,7 +153,7 @@ void Position::makeMove(Square from, Square to) {
             rule50_.clear();
             if constexpr (Z) {
                 if (OP.isCastling(~to)) { zobrist_.opCastling(~to); } // captured the rook with castling right
-                zobrist_.op(OP.typeOf(~to), ~to);
+                zobrist_.op(OP.typeAt(~to), ~to);
             }
             OP.capture(~to);
 
@@ -199,7 +199,7 @@ void Position::makeMove(Square from, Square to) {
         rule50_.clear();
         if constexpr (Z) {
             if (OP.isCastling(~to)) { zobrist_.opCastling(~to); } // captured the rook with castling right
-            zobrist_.op(OP.typeOf(~to), ~to);
+            zobrist_.op(OP.typeAt(~to), ~to);
         }
         OP.capture(~to);
 
