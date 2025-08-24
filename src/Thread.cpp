@@ -1,108 +1,86 @@
-#include "assert.hpp"
 #include "Thread.hpp"
 
-TimerThread::TimerThread() : stdThread{ std::thread([this] {
-    while (!abort) {
-        Guard lock{timerLock};
+Thread::Thread() : stdThread([this] {
+    for (;;) {
+        auto currenStatus = status.load(std::memory_order_acquire);
+        if (currenStatus == Status::Abort) { return; }
 
-        if (!isActive()) {
-            timerChanged.wait(lock); // wait for a new schedule
-            continue;
+        if (currenStatus != Status::Ready) {
+            {
+                std::lock_guard<std::mutex> lock(readyMutex);
+                currenStatus = status.load(std::memory_order_relaxed);
+                if (currenStatus == Status::Abort) { return; }
+                if (currenStatus == Status::Ready) { continue; }
+
+                status.store(Status::Ready, std::memory_order_release);
+            }
+            // signal Ready
+            ready_.notify_all();
         }
 
-        if (::timeNow() < triggerTime) {
-            timerChanged.wait_until(lock, triggerTime); // sleep until trigger time
-            continue;
+        // wait for start()
+        {
+            std::unique_lock<std::mutex> lock(readyMutex);
+            ready_.wait(lock, [this] { return !isReady(); });
         }
 
-        lock.unlock();
-
-        if (timerTask) {
-            timerTask();
-            timerTask = nullptr;
-        }
-    }
-}) } {}
-
-TimerThread::~TimerThread() {
-    {
-        Guard lock{timerLock};
-        abort = true;
-        triggerTime = TimePoint::max();
-        timerTask = nullptr;
-    }
-    timerChanged.notify_all();
-
-    if (stdThread.joinable()) { stdThread.join(); }
-}
-
-void TimerThread::schedule(TimePoint timePoint, ThreadTask task) {
-    {
-        Guard lock{timerLock};
-        triggerTime = timePoint;
-        timerTask = std::move(task);
-    }
-    timerChanged.notify_all();
-}
-
-template <typename Condition>
-void Thread::wait(Condition condition) {
-    if (!condition()) {
-        Guard lock{statusLock};
-        statusChanged.wait(lock, condition);
-    }
-}
-
-template <typename Condition>
-void Thread::signal(Condition condition, Status to) {
-    {
-        Guard lock{statusLock};
-        if (!condition()) { return; }
-        status = to;
-    }
-    statusChanged.notify_all();
-}
-
-Thread::Thread() : stdThread{ std::thread([this] {
-    for(;;) {
-        signal([this]() { return !is(Status::Ready); }, Status::Ready);
-        wait([this] { return !is(Status::Ready); });
-        if (is(Status::Abort)) { return; }
-
-        if (threadTask) {
+        if (threadTask && status.load(std::memory_order_acquire) == Status::Start ) {
             threadTask();
             threadTask = nullptr;
         }
-
-        if (is(Status::Abort)) { return; }
     }
-})}
-{}
+}) {}
 
 Thread::~Thread() {
-    {
-        Guard lock{statusLock};
-        status = Status::Abort;
+    status.store(Status::Abort, std::memory_order_release);
+    ready_.notify_all();
+    stop_.notify_all();
+
+    if (stdThread.joinable()) {
+        stdThread.join();
     }
-    statusChanged.notify_all();
-    if (stdThread.joinable()) { stdThread.join(); }
+}
+
+bool Thread::isReady() const {
+    return status.load(std::memory_order_acquire) == Status::Ready;
+}
+
+void Thread::waitReady() {
+    if (!isReady()) {
+        std::unique_lock<std::mutex> lock(readyMutex);
+        ready_.wait(lock, [this] { return isReady(); });
+    }
 }
 
 void Thread::start(ThreadTask task) {
-    assert (isReady());
+    waitReady();
     {
-        Guard g{statusLock};
+        std::lock_guard<std::mutex> lock(readyMutex);
         threadTask = std::move(task);
-        status = Status::Run;
+        status.store(Status::Start, std::memory_order_release);
     }
-    statusChanged.notify_all();
+    ready_.notify_all();
 }
 
 void Thread::stop() {
-    signal([this]() { return !is(Status::Abort); }, Status::Stop);
-    wait([this] { return is(Status::Ready); });
+    if (status.load(std::memory_order_acquire) != Status::Start) { return; }
+
+    {
+        std::lock_guard<std::mutex> lock(stopMutex);
+        if (status.load(std::memory_order_relaxed) != Status::Start) { return; }
+        status.store(Status::Stop, std::memory_order_release);
+    }
+    stop_.notify_all();
+}
+
+bool Thread::isStopped() const {
+    auto currentStatus = status.load(std::memory_order_acquire);
+    return currentStatus == Status::Stop || currentStatus == Status::Abort;
 }
 
 void Thread::waitStop() {
-    wait([this] { return is(Status::Stop) || is(Status::Abort); });
+    if (!isStopped()) {
+        std::unique_lock<std::mutex> lock(stopMutex);
+        stop_.wait(lock, [this] { return isStopped(); });
+    }
 }
