@@ -191,19 +191,6 @@ void PositionMoves::generateMoves() {
     movesMade_ = 0;
 }
 
-// make move directly inside position itself
-void PositionMoves::makeMove(Square from, Square to) {
-    assert (isLegalMove(from, to));
-    Position::makeMove(from, to);
-    generateMoves();
-}
-
-void PositionMoves::makeMove(PositionMoves* parent, Square from, Square to) {
-    parent->clearMove(from, to);
-    Position::makeMove(parent, from, to);
-    generateMoves();
-}
-
 void PositionMoves::makeMoveNoZobrist(PositionMoves* parent, Square from, Square to) {
     parent->clearMove(from, to);
     Position::makeMoveNoZobrist(parent, from, to);
