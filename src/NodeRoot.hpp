@@ -94,14 +94,6 @@ public:
 protected:
     Color colorToMove_ = White; //root position side to move color
 
-    void playMove(Move move) {
-        makeMove(move);
-        colorToMove_.flip();
-
-        if (rule50() < 1) { repetitions.clear(); }
-        repetitions.push(colorToMove_, zobrist());
-    }
-
 public:
     NodeRoot(const Uci& u) : Node{*this}, uci{u} {}
 
