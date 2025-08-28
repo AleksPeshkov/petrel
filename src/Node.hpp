@@ -62,6 +62,7 @@ protected:
 
     Node (Node* n);
 
+    void makeMove(Move move);
     ReturnStatus searchMove(Move move);
     ReturnStatus searchMove(Square from, Square to) { return searchMove({from, to}); }
     ReturnStatus searchIfLegal(Move move) { return parent->isLegalMove(move) ? searchMove(move) : ReturnStatus::Continue; }
