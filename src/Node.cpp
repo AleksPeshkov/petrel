@@ -77,6 +77,23 @@ ReturnStatus Node::searchRoot() {
     }
 }
 
+void Node::makeMove(Move move) {
+    Square from = move.from();
+    Square to = move.to();
+
+    parent->childMove = move;
+    parent->clearMove(from, to);
+    Position::makeMove(parent, from, to);
+    origin = root.tt.prefetch<TtSlot>(zobrist());
+
+    if (rule50() < 2) { repMask = RepetitionMask{}; }
+    else if (grandParent) { repMask = RepetitionMask{grandParent->repMask, grandParent->zobrist()}; }
+    else { repMask = root.repetitions.repMask(colorToMove()); }
+
+    generateMoves();
+    root.pvMoves.set(ply, UciMove{});
+}
+
 ReturnStatus Node::searchMove(Move move) {
     alpha = -parent->beta;
     beta = -parent->alpha;
@@ -85,16 +102,7 @@ ReturnStatus Node::searchMove(Move move) {
     draft = parent->draft > 0 ? parent->draft-1 : 0;
 
     RETURN_IF_STOP (root.countNode());
-    parent->childMove = move;
-    makeMove(parent, move);
-    root.pvMoves.set(ply, UciMove{});
-
-    origin = root.tt.prefetch<TtSlot>(zobrist());
-
-    if (rule50() < 2) { repMask = RepetitionMask{}; }
-    else if (grandParent) { repMask = RepetitionMask{grandParent->repMask, grandParent->zobrist()}; }
-    else { repMask = root.repetitions.repMask(colorToMove()); }
-
+    makeMove(move);
     canBeKiller = false;
 
     if (moves().none()) {

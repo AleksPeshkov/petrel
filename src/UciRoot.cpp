@@ -321,7 +321,13 @@ void UciRoot::playMoves(istream& in) {
             return;
         }
 
-        playMove(Move{from, to});
+        Position::makeMove(from, to);
+        generateMoves();
+        colorToMove_.flip();
+
+        if (rule50() < 1) { repetitions.clear(); }
+        repetitions.push(colorToMove_, zobrist());
+
         if (colorToMove_.is(White)) { ++fullMoveNumber; }
     }
 
