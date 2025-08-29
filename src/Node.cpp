@@ -35,8 +35,8 @@ ReturnStatus Node::searchRoot() {
     repMask = root.repetitions.repMask(colorToMove());
     origin = root.tt.prefetch<TtSlot>(zobrist());
 
-    if (root.limits.softDeadlineReached()) {
-        // we have no time to search, return TT move if found
+    if (root.limits.iterationDeadlineReached()) {
+        // we have no time to search, return TT move immediately if found
         ++root.tt.reads;
         ttSlot = *origin;
         isHit = (ttSlot == zobrist());
@@ -46,7 +46,6 @@ ReturnStatus Node::searchRoot() {
             root.pvMoves.set(ply, uciMove(ttSlot));
             return ReturnStatus::Stop;
         }
-        // otherwise we will search at least one root move to get minimal legal PV
     }
 
     for (draft = 1; draft <= root.limits.depth; ++draft) {
@@ -62,7 +61,7 @@ ReturnStatus Node::searchRoot() {
 
         root.uci.info_iteration(draft);
 
-        if (root.limits.softDeadlineReached()) { return ReturnStatus::Stop; }
+        if (root.limits.iterationDeadlineReached()) { return ReturnStatus::Stop; }
     }
 
     if (root.limits.infinite || root.limits.ponder) {
@@ -153,7 +152,7 @@ ReturnStatus Node::updatePv() {
 
     if (ply == 0) {
         root.uci.info_pv(draft, score);
-        //if (root.limits.softDeadlineReached()) { return ReturnStatus::Stop; }
+        if (root.limits.updatePvDeadlineReached()) { return ReturnStatus::Stop; }
     }
     return ReturnStatus::Continue;
 }
