@@ -215,11 +215,11 @@ void Uci::position() {
 }
 
 void Uci::go() {
+    root.limits.clear();
     {
         auto whiteSide = root.sideOf(White);
         auto blackSide = root.sideOf(Black);
 
-        root.limits.clear();
         while (inputLine >> std::ws, !inputLine.eof()) {
             if      (consume("depth"))    { inputLine >> root.limits.depth; }
             else if (consume("nodes"))    { inputLine >> root.limits.nodes; }
@@ -236,8 +236,8 @@ void Uci::go() {
             else { io::fail(inputLine); return; }
         }
 
-        root.limits.setSearchDeadline();
     }
+    root.limits.setSearchDeadline();
 
     mainSearchThread.start([this] {
         Node{root}.searchRoot();
