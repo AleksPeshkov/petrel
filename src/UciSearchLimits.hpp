@@ -8,8 +8,9 @@
 class UciSearchLimits {
 public:
     TimePoint searchStartTime;
-    TimePoint hardDeadline = TimePoint::max();
-    TimePoint softDeadline = TimePoint::max();
+    TimePoint hardDeadline = TimePoint::max(); // tested every 100 nodes
+    TimePoint iterationDeadline = TimePoint::max(); // tested when iteration ends
+    TimePoint updatePvDeadline = TimePoint::max(); // tested when pv updates at root
 
     TimeInterval movetime = 0ms;
 
@@ -45,23 +46,24 @@ public:
 
     constexpr void setNoDeadline() {
         hardDeadline = TimePoint::max();
-        softDeadline = TimePoint::max();
+        iterationDeadline = TimePoint::max();
+        updatePvDeadline = TimePoint::max();
     }
 
     constexpr TimeInterval average(Side my) const {
-        auto moves = movestogo ? movestogo : 30;
+        auto moves = (movestogo > 0) ? movestogo : 30;
         return (time[my] + (moves-1)*inc[my]) / moves;
     }
 
-    constexpr void calculateDeadline() {
+    constexpr void setSearchDeadline(TimeInterval elapsed = 0ms) {
         if (infinite || ponder) {
             setNoDeadline();
             return;
         }
 
         if (movetime > 0ms) {
+            setNoDeadline();
             hardDeadline = searchStartTime + movetime - moveOverhead;
-            softDeadline = TimePoint::max();
             return;
         }
 
@@ -72,36 +74,52 @@ public:
             return;
         }
 
-        auto timeInterval = std::min(time[My], myAverage) - moveOverhead;
-        hardDeadline = searchStartTime + timeInterval;
-        softDeadline = searchStartTime + (timeInterval * 3 / 4);
+        auto timeInterval = std::max<TimeInterval>(0ms, std::min(time[My], myAverage * 4 / 3) - moveOverhead); // 125% average time
+
+        if (timeInterval > 100us) {
+            // normal time management
+            hardDeadline = searchStartTime + timeInterval;
+            iterationDeadline = searchStartTime + (timeInterval / 2); // ~ 67% average time
+            updatePvDeadline = searchStartTime + (timeInterval * 3 / 4); // ~ 100% average time
+            return;
+        }
+
+        if (timeInterval < elapsed) {
+            // ponderhit and we spend more time than planned
+            // stop search immediately
+            hardDeadline = searchStartTime;
+            iterationDeadline = searchStartTime;
+            updatePvDeadline = searchStartTime;
+            return;
+        }
+
+        // almost no time left
+        // return hash move if any
+        // or finish draft == 1 iteration to get a reasonable best move
+        setNoDeadline();
+        iterationDeadline = searchStartTime;
+
     }
 
     void ponderhit() {
+        if (!ponder) { return; } // ignore ponderhit if not pondering
+
         ponder = false;
-        time[Op] -= std::min(::elapsedSince(searchStartTime), time[Op]);
-        setSearchDeadline();
-    }
-
-    void setSearchDeadline() {
-        calculateDeadline();
-        if (hardDeadline == TimePoint::max()) { return; }
-
-        auto now = ::timeNow();
-        if (hardDeadline < now + 100us) {
-            // have got almost 0 time to think, search at least 1 root move to get minimal legal PV
-            hardDeadline = TimePoint::max();
-            softDeadline = now;
-            return;
-        }
+        auto elapsed = ::elapsedSince(searchStartTime);
+        time[Op] -= std::min(elapsed, time[Op]);
+        setSearchDeadline(elapsed);
     }
 
     constexpr bool hardDeadlineReached() const {
         return hardDeadline != TimePoint::max() && hardDeadline < ::timeNow();
     }
 
-    constexpr bool softDeadlineReached() const {
-        return softDeadline != TimePoint::max() && softDeadline < ::timeNow();
+    constexpr bool iterationDeadlineReached() const {
+        return iterationDeadline != TimePoint::max() && iterationDeadline < ::timeNow();
+    }
+
+    constexpr bool updatePvDeadlineReached() const {
+        return updatePvDeadline != TimePoint::max() && updatePvDeadline < ::timeNow();
     }
 };
 
