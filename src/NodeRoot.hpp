@@ -99,7 +99,7 @@ public:
     NodeRoot(Uci& u) : Node{*this}, uci{u} {}
 
     constexpr Side sideOf(Color color) const { return colorToMove_.is(color) ? My : Op; }
-    constexpr Color colorToMove(Ply d = 0) const { return colorToMove_ << d; }
+    constexpr Color colorToMove(Ply d = {0}) const { return colorToMove_ << d; }
 
     void newGame();
     void newSearch();
