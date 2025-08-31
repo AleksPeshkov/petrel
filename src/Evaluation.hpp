@@ -55,6 +55,7 @@ struct Score {
 
     // MinusMate + ply
     static constexpr Score checkmated(Ply ply) { return Score{MinusMate} + ply; }
+    static constexpr bool isZeroWindow(Score alpha, Score beta) { return alpha.v == beta.v-1; }
 
     // clamp [MinEval, MaxEval] static evaluation to distinguish from mate scores
     constexpr Score clamp() const {

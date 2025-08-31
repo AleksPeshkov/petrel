@@ -99,6 +99,7 @@ protected:
     Color colorToMove() const;
     bool isDrawMaterial() const;
     bool isRepetition() const;
+    constexpr bool isZeroWindow() const { return Score::isZeroWindow(alpha, beta); }
 
 public:
     Node (NodeRoot& r);
