@@ -75,7 +75,7 @@ public:
     void info_iteration(Ply) const;
 
     void info_perft_depth(Ply, node_count_t) const;
-    void info_perft_currmove(index_t moveCount, const UciMove& currentMove, node_count_t) const;
+    void info_perft_currmove(int moveCount, const UciMove& currentMove, node_count_t) const;
     void info_perft_bestmove() const;
 
     void stop() { mainSearchThread.stop(); }
