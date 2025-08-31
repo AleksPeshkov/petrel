@@ -61,7 +61,7 @@ void Position::makeMove(Square from, Square to) {
 
         //en passant capture encoded as the pawn captures the pawn
         if (MY.isPawn(pi) && from.on(Rank5) && to.on(Rank5)) {
-            Square ep{File(to), Rank6};
+            Square ep{File{to}, Rank6};
             movedPieceTo_ = ep;
             rule50_.clear();
 
@@ -87,7 +87,7 @@ void Position::makeMove(Square from, Square to) {
 
         if (from.on(Rank7)) {
             PromoType promo = ::promoTypeFrom(Rank{to});
-            to = {File(to), Rank8};
+            to = {File{to}, Rank8};
             movedPieceFrom_ = to; // promoted pieces has no previous square
             movedPieceTo_ = to;
 
@@ -245,7 +245,7 @@ void Position::setLegalEnPassant(Pi victim, Square to) {
     assert (!MY.hasEnPassant());
     assert (!OP.hasEnPassant());
 
-    Square ep{File(to), Rank3};
+    Square ep{File{to}, Rank3};
 
     // check if there are any pawns to capture ep victim
     Bb killers = ~OP.bbPawns() & ::attacksFrom(Pawn, ep);
@@ -299,7 +299,6 @@ bool Position::isSpecial(Square from, Square to) const {
     return false; // normal move
 }
 
-
 template <Side::_t My>
 Zobrist Position::generateZobrist() const {
     Zobrist z{0};
@@ -352,7 +351,7 @@ Zobrist Position::createZobrist(Square from, Square to) const {
         if (from.on(Rank2) && to.on(Rank4)) {
             mz.move(ty, from, to);
 
-            File file = File{from};
+            File file{from};
             Square ep{file, Rank3};
 
             Bb killers = ~OP.bbPawns() & ::attacksFrom(Pawn, ep);
