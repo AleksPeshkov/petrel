@@ -92,7 +92,7 @@ void PositionMoves::correctCheckEvasionsByPawns(Bb checkLine, Square checkFrom) 
     //pawns double push over check line
     Bb pawnJumpEvasions = MY.bbPawns() & Bb{Rank2} & (checkLine << 16u) % (OCCUPIED << 8u);
     for (Square from : pawnJumpEvasions) {
-        moves_.add(MY.pieceAt(from), Rank4, File(from));
+        moves_.add(MY.pieceAt(from), Rank4, File{from});
     }
 
 }

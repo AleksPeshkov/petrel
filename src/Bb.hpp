@@ -62,10 +62,10 @@ public:
 
 };
 
-constexpr Bb Square::rank() const { return Bb{Rank(*this)} - Bb{*this}; }
-constexpr Bb Square::file() const { return Bb{File(*this)} - Bb{*this}; }
-constexpr Bb Square::diagonal() const { return Bb{ULL(0x0102040810204080), Rank(*this) + +File(*this) - 7} - Bb{*this}; }
-constexpr Bb Square::antidiag() const { return Bb{ULL(0x8040201008040201), Rank(*this) - +File(*this)} - Bb{*this}; }
+constexpr Bb Square::rank() const { return Bb{Rank{*this}} - Bb{*this}; }
+constexpr Bb Square::file() const { return Bb{File{*this}} - Bb{*this}; }
+constexpr Bb Square::diagonal() const { return Bb{ULL(0x0102040810204080), static_cast<int>(Rank{*this}) + File{*this} - 7} - Bb{*this}; }
+constexpr Bb Square::antidiag() const { return Bb{ULL(0x8040201008040201), static_cast<int>(Rank{*this}) - File{*this}} - Bb{*this}; }
 
 constexpr Bb Square::line(Direction dir) const {
     switch (dir) {
@@ -190,7 +190,7 @@ public:
         assert (king.on(Rank1));
         assert (rook.on(Rank1));
         assert (king != rook);
-        return (occupied & castlingRules[File(king)][File(rook)].unimpeded).none() && (attacked & castlingRules[File(king)][File(rook)].unattacked).none();
+        return (occupied & castlingRules[File{king}][File{rook}].unimpeded).none() && (attacked & castlingRules[File{king}][File{rook}].unattacked).none();
     }
 
     static constexpr CastlingSide castlingSide(Square king, Square rook) {
