@@ -122,7 +122,7 @@ protected:
 
 public:
     PieceSquareTable ();
-    constexpr const element_type& operator() (PieceType ty, Square sq) const { return pst[ty][sq]; }
+    constexpr const element_type& operator() (PieceType::_t ty, Square sq) const { return pst[ty][sq]; }
 };
 
 extern const PieceSquareTable pieceSquareTable;
