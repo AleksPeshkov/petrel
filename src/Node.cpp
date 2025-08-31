@@ -48,7 +48,7 @@ ReturnStatus Node::searchRoot() {
         }
     }
 
-    for (draft = 1; draft <= root.limits.depth; ++draft) {
+    for (draft = {1}; draft <= root.limits.depth; ++draft) {
         setMoves(rootMovesClone);
         alpha = MinusInfinity;
         beta = PlusInfinity;
@@ -86,7 +86,7 @@ ReturnStatus Node::searchRoot() {
         //we cannot use makeZobrist() because of en passant legality validation
         pos.makeMove(move.from(), move.to());
         s = -s;
-        d = d > 0 ? d-1 : 0;
+        d = Ply{d > 0 ? d-1 : 0};
     }
 }
 

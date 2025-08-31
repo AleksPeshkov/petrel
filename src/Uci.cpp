@@ -253,7 +253,7 @@ void Uci::goPerft() {
 
     Ply depth;
     inputLine >> depth;
-    depth = std::min<Ply>(depth, 18); // current Tt implementation limit
+    depth = std::min<Ply>(depth, {18}); // current Tt implementation limit
 
     root.limits.clear();
     mainSearchThread.start([this, depth] {
@@ -336,7 +336,7 @@ void Uci::info_perft_depth(Ply draft, node_count_t perft) const {
     ob << "info depth " << draft << " perft " << perft; nps(ob) << '\n';
 }
 
-void Uci::info_perft_currmove(index_t moveCount, const UciMove& currentMove, node_count_t perft) const {
+void Uci::info_perft_currmove(int moveCount, const UciMove& currentMove, node_count_t perft) const {
     Output ob{this};
     ob << "info currmovenumber " << moveCount << " currmove " << currentMove << " perft " << perft;
     nps(ob) << '\n';

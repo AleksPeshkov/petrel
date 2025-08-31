@@ -8,18 +8,7 @@
 
 // search tree distance in halfmoves
 struct Ply : Index<64> {
-    using Index::Index;
-
-    Ply(signed ply) : Index{static_cast<_t>(ply)} {}
-    Ply(index_t ply) : Index{ply} {}
-
     friend ostream& operator << (ostream& out, Ply ply) { return out << static_cast<unsigned>(ply); }
-    friend istream& operator >> (istream& in, Ply& ply) {
-        index_t n = Ply::Last;
-        in >> n;
-        ply = { std::min(n, static_cast<index_t>(Ply::Last)) };
-        return in;
-    }
 };
 constexpr Ply::_t MaxPly = Ply::Last; // Ply is limited to [0 .. MaxPly]
 
