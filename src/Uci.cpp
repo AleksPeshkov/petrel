@@ -291,8 +291,6 @@ ostream& Uci::nps(ostream& o) const {
 }
 
 ostream& Uci::info_nps(ostream& o) const {
-    if (lastInfoNodes == root.nodeCounter) { return o; }
-
     if (root.tt.reads > 0) {
         o << "info";
         o << " hwrites " << root.tt.writes;
@@ -301,6 +299,8 @@ ostream& Uci::info_nps(ostream& o) const {
         o << " hhitratio " << ::permil(root.tt.hits, root.tt.reads);
         o << '\n';
     }
+
+    if (lastInfoNodes == root.nodeCounter) { return o; }
 
     o << "info"; nps(o) << '\n';
     return o;
