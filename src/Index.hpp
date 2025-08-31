@@ -11,8 +11,6 @@
 
 template <int _Size, typename _element_type = int, int _Mask = _Size-1>
 class Index {
-    static io::czstring The_string;
-
 public:
     typedef _element_type _t;
     enum { Size = _Size, Last = Size-1, Mask = _Mask };
@@ -38,20 +36,36 @@ public:
     constexpr Index& flip() { assertOk(); v = static_cast<_t>(v ^ static_cast<_t>(Mask)); return *this; }
     constexpr Index operator ~ () const { return Index{v}.flip(); }
 
-    constexpr io::char_type to_char() const { return The_string[v]; }
-    friend ostream& operator << (ostream& out, Index i) { return out << i.to_char(); }
+    friend ostream& operator << (ostream& out, Index& index) { return out << static_cast<int>(index.v); }
 
     friend istream& operator >> (istream& in, Index& index) {
         int n;
         auto before = in.tellg();
         in >> n;
         if (n < 0 || Last < n) { return io::fail_pos(in, before); }
-        index.v = n;
+        index.v = static_cast<Index::_t>(n);
         return in;
     }
+};
+
+template <int _Size, typename _element_type = int, int _Mask = _Size-1>
+class IndexChar : public Index<_Size, _element_type, _Mask> {
+    typedef Index<_Size, _element_type, _Mask> Base;
+    using Base::v;
+
+    static io::czstring The_string;
+
+public:
+    using typename Base::_t;
+    using Base::Base;
+    using Base::assertOk;
+    constexpr operator const _t& () const { return v; }
+
+    constexpr io::char_type to_char() const { return The_string[v]; }
+    friend ostream& operator << (ostream& out, IndexChar index) { return out << index.to_char(); }
 
     bool from_char(io::char_type c) {
-        auto p = std::memchr(The_string, c, Size);
+        auto p = std::memchr(The_string, c, _Size);
         if (!p) { return false; }
         v = static_cast<_t>(static_cast<io::czstring>(p) - The_string);
         assertOk();
@@ -59,10 +73,10 @@ public:
         return true;
     }
 
-    friend istream& read(istream& in, Index& i) {
+    friend istream& read(istream& in, IndexChar& index) {
         io::char_type c;
         if (in.get(c)) {
-            if (!i.from_char(c)) { io::fail_char(in); }
+            if (!index.from_char(c)) { io::fail_char(in); }
         }
         return in;
     }

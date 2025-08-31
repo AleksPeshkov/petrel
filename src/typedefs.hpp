@@ -7,9 +7,7 @@
 #include "Square.hpp"
 
 // search tree distance in halfmoves
-struct Ply : Index<64> {
-    friend ostream& operator << (ostream& out, Ply ply) { return out << static_cast<unsigned>(ply); }
-};
+using Ply = Index<64>;
 constexpr Ply::_t MaxPly = Ply::Last; // Ply is limited to [0 .. MaxPly]
 
 typedef u8_t MovesNumber; // number of (legal) moves in the position
@@ -49,11 +47,11 @@ public:
 };
 
 enum color_t { White, Black };
-typedef Index<2, color_t> Color;
+typedef IndexChar<2, color_t> Color;
 template <> io::czstring Color::The_string;
 
 // color to move of the given ply
-constexpr Color operator << (Color c, Ply ply) { return static_cast<Color::_t>((ply ^ static_cast<unsigned>(c)) & Color::Mask); }
+constexpr Color::_t operator << (Color c, Ply ply) { return static_cast<Color::_t>((ply ^ static_cast<unsigned>(c)) & Color::Mask); }
 
 enum side_to_move_t {
     My, // side to move
@@ -66,12 +64,11 @@ enum chess_variant_t { Orthodox, Chess960 };
 typedef Index<2, chess_variant_t> ChessVariant;
 
 enum castling_side_t { KingSide, QueenSide };
-typedef Index<2, castling_side_t> CastlingSide;
+typedef IndexChar<2, castling_side_t> CastlingSide;
 template <> io::czstring CastlingSide::The_string;
 
 enum piece_index_t { TheKing }; // king index is always 0
 typedef Index<16, piece_index_t> Pi; //piece index 0..15
-template <> io::czstring Pi::The_string;
 
 enum piece_type_t {
     Queen = 0,
@@ -82,8 +79,8 @@ enum piece_type_t {
     King = 5,
 };
 typedef Index<3, piece_type_t> SliderType; // Queen, Rook, Bishop
-typedef Index<4, piece_type_t> PromoType; // Queen, Rook, Bishop, Knight
-typedef Index<6, piece_type_t> PieceType; // Queen, Rook, Bishop, Knight, Pawn, King
+typedef IndexChar<4, piece_type_t> PromoType; // Queen, Rook, Bishop, Knight
+typedef IndexChar<6, piece_type_t> PieceType; // Queen, Rook, Bishop, Knight, Pawn, King
 template <> io::czstring PieceType::The_string;
 template <> io::czstring PromoType::The_string;
 
