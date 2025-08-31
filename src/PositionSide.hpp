@@ -77,7 +77,7 @@ public:
     PiMask enPassantPawns() const { return traits.enPassantPawns(); }
     bool hasEnPassant() const { return enPassantPawns().any(); }
     Square enPassantSquare() const { Square ep = squareOf(traits.getEnPassant()); assert (ep.on(Rank4)); return ep; }
-    File enPassantFile() const { return File( enPassantSquare() ); }
+    File enPassantFile() const { return File{enPassantSquare()}; }
 
     PiMask pinners() const { return traits.pinners(); }
     bool isPinned(Bb) const;
