@@ -90,29 +90,29 @@ struct Score {
 //https://www.chessprogramming.org/PeSTO%27s_Evaluation_Function
 class PieceSquareTable {
 public:
-    static constexpr unsigned PieceMatMax = 32; // initial chess position sum of non pawn pieces material points
+    static constexpr int PieceMatMax = 32; // initial chess position sum of non pawn pieces material points
 
     union element_type {
         struct PACKED {
-            u16_t openingPst:14;
-            u16_t endgamePst:14;
+            unsigned openingPst:14;
+            unsigned endgamePst:14;
 
-            u8_t queens:4;  // number of queens
-            u8_t rooks:4;   // number of rooks
-            u8_t bishops:4; // number of bishops
-            u8_t knights:4; // number of knights
-            u8_t pawns:4;   // number of pawns
+            unsigned queens:4;  // number of queens
+            unsigned rooks:4;   // number of rooks
+            unsigned bishops:4; // number of bishops
+            unsigned knights:4; // number of knights
+            unsigned pawns:4;   // number of pawns
 
-            u8_t piecesMat:8; // sum of non pawn pieces material points (pawn = 1)
-            u8_t totalMat:8;  // sum of all pieces material points (pawn = 1)
+            unsigned piecesMat:8; // sum of non pawn pieces material points (pawn = 1)
+            unsigned totalMat:8;  // sum of all pieces material points (pawn = 1)
         } s;
         u64_t v;
 
         constexpr const element_type& operator += (const element_type& o) { v += o.v; return *this; }
         constexpr const element_type& operator -= (const element_type& o) { v -= o.v; return *this; }
 
-        constexpr Score score(unsigned material) const {
-            auto stage = std::min<unsigned>(material, PieceMatMax);
+        constexpr Score score(int material) const {
+            auto stage = std::min(material, PieceMatMax);
             return Score{(s.openingPst*stage + s.endgamePst*(PieceMatMax - stage)) / PieceMatMax};
         }
     };
@@ -166,7 +166,7 @@ public:
         to(Rook, rookTo); to(King, kingTo);
     }
 
-    constexpr index_t count(PieceType ty) const {
+    constexpr int count(PieceType ty) const {
         switch (ty) {
             case Queen:
                 return v.s.queens;
@@ -185,12 +185,12 @@ public:
     }
 
     // 10, 5, 3, 3, 0
-    constexpr index_t piecesMat() const {
+    constexpr int piecesMat() const {
         return v.s.piecesMat;
     }
 
     // 12, 6, 4, 4, 1
-    constexpr index_t material() const {
+    constexpr int material() const {
         return v.s.totalMat;
     }
 
