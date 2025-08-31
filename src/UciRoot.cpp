@@ -19,7 +19,7 @@ class FenToBoard {
     typedef std::set<Square, SquareImportance> Squares;
 
     Color::arrayOf< PieceType::arrayOf<Squares> > pieces;
-    Color::arrayOf<index_t> pieceCount = {{0, 0}};
+    Color::arrayOf<int> pieceCount = {{0, 0}};
 
     bool drop(Color, PieceType, Square);
 
@@ -129,7 +129,7 @@ public:
 
     friend ostream& operator << (ostream& out, const BoardToFen& board) {
         FOR_EACH(Rank, rank) {
-            index_t emptySqCount = 0;
+            int emptySqCount = 0;
 
             FOR_EACH(File, file) {
                 Square sq(file,rank);
@@ -280,7 +280,7 @@ istream& UciRoot::readMove(istream& in, Square& from, Square& to) const {
 void UciRoot::limitMoves(istream& in) {
     PiBbMatrix movesMatrix;
     movesMatrix.clear();
-    index_t n = 0;
+    int n = 0;
 
     while (in >> std::ws && !in.eof()) {
         auto beforeMove = in.tellg();

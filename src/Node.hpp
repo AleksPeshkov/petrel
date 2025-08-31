@@ -29,7 +29,7 @@ public:
     operator Move () const { return {from, to}; }
     operator Score () const { return {score}; }
     operator Bound () const { return bound; }
-    Ply draft() const { return draft_; }
+    Ply draft() const { return {draft_}; }
 };
 
 class Node : public PositionMoves {
@@ -44,7 +44,7 @@ protected:
     RepetitionMask repMask;
 
     Ply ply; //distance from root
-    Ply draft = 0; //remaining depth
+    Ply draft = {0}; //remaining depth
 
     TtSlot* origin;
     TtSlot  ttSlot;
