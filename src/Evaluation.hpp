@@ -35,8 +35,9 @@ struct Score {
     _t v;
 
     constexpr bool isOk() const { return MinusInfinity <= v && v <= PlusInfinity; }
-    constexpr bool isMate() const { assertOk(); return v < MinEval || MaxEval < v; }
+    constexpr bool isMate() const { assertOk(); return !(MinEval <= v && v <= MaxEval); }
     constexpr void assertOk() const { assert (isOk()); }
+    constexpr void assertEval() const { assert (!isMate()); }
     constexpr void assertMate() const { assert (isMate()); }
 
     constexpr Score () : v{NoScore} {} // not isOk()
@@ -46,13 +47,11 @@ struct Score {
 
     constexpr Score operator - () const { assertOk(); return Score{-v}; }
     constexpr Score operator ~ () const { assertOk(); return Score{-v}; }
-    constexpr Score& operator += (int e) { assertOk(); v = static_cast<_t>(v + e); assertOk(); return *this; }
-    constexpr Score& operator -= (int e) { assertOk(); v = static_cast<_t>(v - e); assertOk(); return *this; }
 
-    constexpr friend Score operator + (Score s, int e) { return Score{static_cast<int>(s) + e}; }
-    constexpr friend Score operator - (Score s, int e) { return Score{static_cast<int>(s) - e}; }
-    constexpr friend Score operator + (Score s, Ply ply) { assert(s.isMate()); Score r{static_cast<int>(s) + ply}; assert(r.isMate()); return r; }
-    constexpr friend Score operator - (Score s, Ply ply) { assert(s.isMate()); Score r{static_cast<int>(s) - ply}; assert(r.isMate()); return r; }
+    constexpr friend Score operator + (Score s, int e) { s.assertOk(); Score r{static_cast<int>(s) + e}; r.assertOk(); return r; }
+    constexpr friend Score operator - (Score s, int e) { s.assertOk(); Score r{static_cast<int>(s) - e}; r.assertOk(); return r; }
+    constexpr friend Score operator + (Score s, Ply p) { s.assertMate(); Score r{static_cast<int>(s) + p}; r.assertMate(); return r; }
+    constexpr friend Score operator - (Score s, Ply p) { s.assertMate(); Score r{static_cast<int>(s) - p}; r.assertMate(); return r; }
 
     // MinusMate + ply
     static constexpr Score checkmated(Ply ply) { return Score{MinusMate} + ply; }
@@ -65,6 +64,20 @@ struct Score {
         return *this;
     }
 
+    constexpr Score toTt(Ply ply) const {
+        assertOk();
+        if (v < MinEval) { assertMate(); Score r = *this - ply; r.assertMate(); return r; }
+        if (MaxEval < v) { assertMate(); Score r = *this + ply; r.assertMate(); return r; }
+        return *this;
+    }
+
+    constexpr Score fromTt(Ply ply) const {
+        assertOk();
+        if (v < MinEval) { assertMate(); Score r = *this + ply; r.assertMate(); return r; }
+        if (MaxEval < v) { assertMate(); Score r = *this - ply; r.assertMate(); return r; }
+        return *this;
+    }
+
     friend ostream& operator << (ostream& out, const Score& score) {
         out << " score ";
 
@@ -74,15 +87,15 @@ struct Score {
 
         score.assertOk();
 
-        if (score <= MinEval) {
+        if (score < MinEval) {
             return out << "mate " << (MinusMate - score) / 2;
         }
 
-        if (score >= MaxEval) {
+        if (MaxEval < score) {
             return out << "mate " << (PlusMate - score + 1) / 2;
         }
 
-        assert (!score.isMate());
+        score.assertEval();
         return out << "cp " << static_cast<signed>(score.v);
     }
 };
