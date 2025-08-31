@@ -334,15 +334,6 @@ ReturnStatus Node::quiescence() {
     assert (MinusInfinity <= alpha && alpha < beta && beta <= PlusInfinity);
     assert (!inCheck());
 
-    //stand pat
-    score = evaluate();
-    if (beta <= score) {
-        return ReturnStatus::BetaCutoff;
-    }
-    if (alpha < score) {
-        alpha = score;
-    }
-
     ++root.tt.reads;
     ttSlot = *origin;
     isHit = (ttSlot == zobrist());
@@ -369,12 +360,21 @@ ReturnStatus Node::quiescence() {
         }
     }
 
+    //stand pat
+    score = evaluate();
+    if (beta <= score) {
+        return ReturnStatus::BetaCutoff;
+    }
+    if (alpha < score) {
+        alpha = score;
+    }
+
     Node node{this};
     const auto child = &node;
 
     canBeKiller = false;
 
-    if (isHit && Move{ttSlot} /*&& isCapture(ttSlot)*/) {
+    if (isHit && isCapture(ttSlot)) {
         RETURN_CUTOFF (child->searchMove(ttSlot));
     }
 
