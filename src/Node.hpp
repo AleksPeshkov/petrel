@@ -81,10 +81,11 @@ protected:
     [[nodiscard]] ReturnStatus searchMoves();
     [[nodiscard]] ReturnStatus quiescence();
 
+    // promotions to queen, winning or equal captures, also uncertain by current SEE captures
     [[nodiscard]] ReturnStatus goodCaptures(Node*, const PiMask&);
-    [[nodiscard]] ReturnStatus allCaptures(Node*, const PiMask&);
-    [[nodiscard]] ReturnStatus goodCaptures(Node*, Square);
-    [[nodiscard]] ReturnStatus allCaptures(Node*, Square);
+
+    // remaining (bad) captures and all underpromotions
+    [[nodiscard]] ReturnStatus badCaptures(Node*, const PiMask&);
 
     UciMove uciMove(Move move) const { return uciMove(move.from(), move.to()); }
     UciMove uciMove(Square from, Square to) const;

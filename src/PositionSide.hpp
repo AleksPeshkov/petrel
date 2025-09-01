@@ -19,6 +19,7 @@ class PositionSide {
 
     Bb bbSide_; // bitboard of squares of all current side pieces
     Bb bbPawns_; // bitboard of squares of current side pawns
+    Bb bbPawnAttacks_; // bitboard of squares attacked by pawns
 
     Evaluation evaluation_; // PST incremental evaluation
     Square opKing; // square of the opponent's king (from current side point of view)
@@ -46,6 +47,9 @@ public:
     // bitboard of squares occupied by current side pawns
     constexpr const Bb& bbPawns() const { return bbPawns_; }
 
+    // bitboard of squares attacked by pawns
+    constexpr const Bb& bbPawnAttacks() const { assert (bbPawnAttacks_ == bbPawns_.pawnAttacks()); return bbPawnAttacks_; }
+
     // static evaluation data of pieces and piece-squares
     constexpr const Evaluation& evaluation() const { return evaluation_; }
 
@@ -63,12 +67,16 @@ public:
     PiMask piecesOfType(PieceType ty) const { return types.piecesOfType(ty); }
     PieceType typeOf(Pi pi) const { assertOk(pi); return types.typeOf(pi); }
     PieceType typeAt(Square sq) const { return typeOf(pieceAt(sq)); }
+    Score score(PieceType ty, Square sq) const { return evaluation().score(ty, sq); }
+    Score scoreAt(Square sq) const { return score(typeOf(pieceAt(sq)), sq); }
 
     PiMask pawns() const { return types.piecesOfType(Pawn); }
     bool isPawn(Pi pi) const { assertOk(pi); return types.isPawn(pi); }
 
     PiMask lessValue(PieceType ty) const { return types.lessValue(ty); }
     PiMask lessOrEqualValue(PieceType ty) const { return types.lessOrEqualValue(ty); }
+    bool isLessValue(Pi attacker, PieceType victim) const { return types.isLessValue(attacker, victim); }
+    bool isLessOrEqualValue(Pi attacker, PieceType victim) const { return types.isLessOrEqualValue(attacker, victim); }
 
     PiMask castlingRooks() const { return traits.castlingRooks(); }
     bool isCastling(Pi pi) const { assertOk(pi); return traits.isCastling(pi); }
