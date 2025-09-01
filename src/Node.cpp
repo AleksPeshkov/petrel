@@ -209,6 +209,10 @@ ReturnStatus Node::searchMoves() {
         return ReturnStatus::Continue;
     }
 
+    if (draft == 0 && !inCheck()) {
+        return quiescence();
+    }
+
     ++root.tt.reads;
     ttSlot = *origin;
     isHit = (ttSlot == zobrist());
@@ -225,10 +229,6 @@ ReturnStatus Node::searchMoves() {
         // no room to search deeper
         score = evaluate();
         return ReturnStatus::Continue;
-    }
-
-    if (draft == 0 && !inCheck()) {
-        return quiescence();
     }
 
     Node node{this};
@@ -347,6 +347,10 @@ ReturnStatus Node::quiescence() {
     if (beta <= score) {
         return ReturnStatus::BetaCutoff;
     }
+    if (ply == MaxPly) {
+        // no room to search deeper
+        return ReturnStatus::Continue;
+    }
     if (alpha < score) {
         alpha = score;
     }
@@ -354,10 +358,6 @@ ReturnStatus Node::quiescence() {
     Node node{this};
     const auto child = &node;
     canBeKiller = false;
-
-    if (isHit && Move{ttSlot}) {
-        RETURN_CUTOFF (child->searchMove(ttSlot));
-    }
 
     RETURN_CUTOFF (goodCaptures(child));
     RETURN_CUTOFF (safePromotions(child));
