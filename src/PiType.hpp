@@ -23,18 +23,18 @@ class PiType {
 
     static constexpr PieceType::arrayOf<element_type> LessOrEqualValue = {
         Type::PNBRQ, // Queen
-        Type::PNBR, // Rook
-        Type::PNB,  // Bishop
-        Type::PNB,  // Knight
-        Type::Pawn, // Pawn
+        Type::PNBR,  // Rook
+        Type::PNB,   // Bishop
+        Type::PNB,   // Knight
+        Type::Pawn,  // Pawn
         Type::Empty, // King
     };
 
     static constexpr PieceType::arrayOf<element_type> LessValue = {
-        Type::PNBR, // Queen
-        Type::PNB,  // Rook
-        Type::Pawn, // Bishop
-        Type::Pawn, // Knight
+        Type::PNBR,  // Queen
+        Type::PNB,   // Rook
+        Type::Pawn,  // Bishop
+        Type::Pawn,  // Knight
         Type::Empty, // Pawn
         Type::Empty, // King
     };
@@ -85,9 +85,11 @@ public:
 
     // mask of less valuable piece types
     PiMask lessValue(PieceType ty) const {return any(LessValue[ty]); }
+    bool isLessValue(Pi attacker, PieceType victim) const { return has(attacker, LessValue[victim]); }
 
     // mask of equal or less valuable types
     PiMask lessOrEqualValue(PieceType ty) const { return any(LessOrEqualValue[ty]); }
+    bool isLessOrEqualValue(Pi attacker, PieceType victim) const { return has(attacker, LessOrEqualValue[victim]); }
 };
 
 #endif
