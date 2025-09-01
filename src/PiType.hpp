@@ -85,9 +85,11 @@ public:
 
     // mask of less valuable piece types
     PiMask lessValue(PieceType ty) const {return any(LessValue[ty]); }
+    bool isLessValue(Pi attacker, PieceType victim) const { return has(attacker, LessValue[victim]); }
 
     // mask of equal or less valuable types
     PiMask lessOrEqualValue(PieceType ty) const { return any(LessOrEqualValue[ty]); }
+    bool isLessOrEqualValue(Pi attacker, PieceType victim) const { return has(attacker, LessOrEqualValue[victim]); }
 };
 
 #endif

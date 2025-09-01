@@ -398,12 +398,34 @@ ReturnStatus Node::goodCaptures(Node* child, Square to) {
     PiMask attackers = canMoveTo(to) % MY.promotables();
     if (attackers.none()) { return ReturnStatus::Continue; }
 
-    bool isVictimProtected = bbAttacked().has(to);
-    assert (isVictimProtected == OP.attackersTo(~to).any());
-    if (isVictimProtected) {
-        // try only less or equal value attackers
-        attackers &= MY.lessOrEqualValue( OP.typeOf(OP.pieceAt(~to)) );
+    PieceType victimType = OP.typeOf(OP.pieceAt(~to));
+
+    if (attackers.isSingleton()) {
+        Pi attacker = attackers.index();
+        Square from = MY.squareOf(attacker);
+        if (bbAttacked().has(to)) {
+            //TODO: check X-Ray attacks
+            // attacker is singleton and victim is protected
+            // skip captures of the more valuable attacker
+            if (!MY.isLessOrEqualValue(attacker, victimType)) {
+                return ReturnStatus::Continue;
+            }
+        }
+
+        return child->searchMove(from, to);
     }
+
+    auto opPawnAttacks = OP.bbPawnAttacks();
+    assert (opPawnAttacks == OP.bbPawns().pawnAttacks());
+    if (opPawnAttacks.has(~to)) {
+        //TODO: check if pawn is pinned
+        // victim is protected by at least one pawn
+        // try captures of less or equal value types of attackers
+        attackers &= MY.lessOrEqualValue(victimType);
+    }
+
+    // case of non pawn defenders
+    //TODO: more exact SEE
 
     while (attackers.any()) {
         // LVA (least valuable attacker) order
