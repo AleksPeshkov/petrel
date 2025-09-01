@@ -321,10 +321,10 @@ ReturnStatus Node::searchMoves() {
         }
     }
 
-    // unsafe (bad) captures
-    RETURN_CUTOFF (allCaptures(child, victims));
+    // remaining (bad) captures and all underpromotions
+    RETURN_CUTOFF (badCaptures(child, victims));
 
-    // all the rest moves, including underpromotions with or without capture, LVA order
+    // all the rest (quiet) moves, LVA order
     auto pieces = MY.pieces();
     while (pieces.any()) {
         Pi pi = pieces.leastValuable(); pieces -= pi;
@@ -360,16 +360,15 @@ ReturnStatus Node::quiescence() {
     canBeKiller = false;
 
     PiMask victims = OP.pieces() - PiMask{TheKing};
-
     RETURN_CUTOFF (goodCaptures(child, victims));
-    RETURN_CUTOFF (allCaptures(child, victims));
+    RETURN_CUTOFF (badCaptures(child, victims));
 
     return ReturnStatus::Continue;
 }
 
 ReturnStatus Node::goodCaptures(Node* child, const PiMask& victims) {
     if (MY.promotables().any()) {
-        // queen promotion with capture, always good
+        // queen promotions with capture, always good
         for (Pi victim : OP.pieces() & OP.piecesOn(Rank8)) {
             Square to = ~OP.squareOf(victim);
             for (Pi attacker : canMoveTo(to) & MY.promotables()) {
@@ -389,55 +388,82 @@ ReturnStatus Node::goodCaptures(Node* child, const PiMask& victims) {
     // MVV (most valuable victim) order
     for (Pi victim : victims) {
         Square to = ~OP.squareOf(victim);
-        RETURN_CUTOFF (goodCaptures(child, to));
+
+        // exclude underpromotions, should be no queen promotions anymore
+        PiMask attackers = canMoveTo(to) % MY.promotables();
+        if (attackers.none()) { continue; }
+
+        PieceType victimType = OP.typeAt(~to);
+
+        // simple SEE function, checks only two cases:
+        // 1) prune as bad capture if solo attacker tries to capture defended lower valued victim
+        // 2) prune as bad capture if lower valued victim defended by a pawn
+        // the rest captures considered as good (value of any knight considered the same as any bishop)
+
+        if (attackers.isSingleton()) {
+            Pi attacker = attackers.index();
+
+            if (bbAttacked().has(to)) {
+                // singleton attacker and victim is protected
+                //TODO: check X-Ray attacks
+                if (!MY.isLessOrEqualValue(attacker, victimType)) {
+                    // skip bad capture of defended victim
+                    //TODO: check if bad capture makes discovered check
+                    continue;
+                }
+            }
+
+            Square from = MY.squareOf(attacker);
+            RETURN_CUTOFF (child->searchMove(from, to));
+            continue;
+        }
+
+        if (OP.bbPawnAttacks().has(~to)) {
+            // victim is protected by at least one pawn
+            // try only winning or equal captures
+            //TODO: check if defending pawn is pinned
+            //TODO: check if bad capture(s) makes discovered check
+            attackers &= MY.lessOrEqualValue(victimType);
+        }
+
+        // remaining captures are too complex to forward prune
+        //TODO: more exact SEE
+        //TODO: try killer heuristics for uncertain and bad captures
+
+        while (attackers.any()) {
+            // LVA (least valuable attacker) order
+            Pi attacker = attackers.leastValuable(); attackers -= attacker;
+
+            Square from = MY.squareOf(attacker);
+            RETURN_CUTOFF (child->searchMove(from, to));
+        }
     }
 
     return ReturnStatus::Continue;
 }
 
-ReturnStatus Node::goodCaptures(Node* child, Square to) {
-    // exclude promotions
-    PiMask attackers = canMoveTo(to) % MY.promotables();
-    if (attackers.none()) { return ReturnStatus::Continue; }
-
-    bool isVictimProtected = bbAttacked().has(to);
-    assert (isVictimProtected == OP.attackersTo(~to).any());
-    if (isVictimProtected) {
-        // try only less or equal value attackers
-        attackers &= MY.lessOrEqualValue( OP.typeOf(OP.pieceAt(~to)) );
-    }
-
-    while (attackers.any()) {
-        // LVA (least valuable attacker) order
-        Pi attacker = attackers.leastValuable(); attackers -= attacker;
-
-        Square from = MY.squareOf(attacker);
-        RETURN_CUTOFF (child->searchMove(from, to));
-    }
-
-    return ReturnStatus::Continue;
-}
-
-ReturnStatus Node::allCaptures(Node* child, const PiMask& victims) {
+ReturnStatus Node::badCaptures(Node* child, const PiMask& victims) {
     // MVV (most valuable victim)
     for (Pi victim : victims) {
         Square to = ~OP.squareOf(victim);
-        RETURN_CUTOFF (allCaptures(child, to));
+
+        // exclude underpromotions because of illegal phantom captures
+        PiMask attackers = canMoveTo(to) % MY.promotables();
+        while (attackers.any()) {
+            // LVA (least valuable attacker)
+            Pi attacker = attackers.leastValuable(); attackers -= attacker;
+
+            Square from = MY.squareOf(attacker);
+            RETURN_CUTOFF (child->searchMove(from, to));
+        }
     }
 
-    return ReturnStatus::Continue;
-}
-
-ReturnStatus Node::allCaptures(Node* child, Square to) {
-    // exclude promotions
-    PiMask attackers = canMoveTo(to) % MY.promotables();
-
-    while (attackers.any()) {
-        // LVA (least valuable attacker)
-        Pi attacker = attackers.leastValuable(); attackers -= attacker;
-
-        Square from = MY.squareOf(attacker);
-        RETURN_CUTOFF (child->searchMove(from, to));
+    // unsorted (under)promotions with or without capture
+    for (Pi pawn : MY.promotables()) {
+        Square from = MY.squareOf(pawn);
+        for (Square to : movesOf(pawn)) {
+            RETURN_CUTOFF (child->searchMove(from, to));
+        }
     }
 
     return ReturnStatus::Continue;
