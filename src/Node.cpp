@@ -46,11 +46,35 @@ ReturnStatus Node::searchRoot() {
         ++root.tt.reads;
         ttSlot = *origin;
         isHit = (ttSlot == zobrist());
-        if (isHit && static_cast<Move>(ttSlot)) {
-            ++root.tt.hits;
-            score = ttSlot.score(ply);
-            root.pvMoves.set(ply, uciMove(ttSlot));
-            return ReturnStatus::Stop;
+        if (isHit) {
+            Move ttMove = {ttSlot};
+            if (isLegalMove(ttMove)) {
+                if (root.limits.canPonder) {
+                    Node node{this};
+                    const auto child = &node;
+
+                    child->makeMove(ttMove);
+                    child->origin = root.tt.prefetch<TtSlot>(child->zobrist());
+                    ++root.tt.reads;
+                    child->ttSlot = *child->origin;
+                    child->isHit = (child->ttSlot == child->zobrist());
+                    if (child->isHit) {
+                        Move ttMove2 = {child->ttSlot};
+                        if (ttMove2) {
+                            child->generateMoves();
+                            if (child->isLegalMove(ttMove2)) {
+                                ++root.tt.hits;
+                                root.pvMoves.set(1, child->uciMove(ttMove2));
+                            }
+                        }
+                    }
+                }
+
+                ++root.tt.hits;
+                root.pvScore = ttSlot.score(ply);
+                root.pvMoves.set(0, uciMove(ttMove));
+                return ReturnStatus::Stop;
+            }
         }
     }
 
@@ -80,7 +104,7 @@ ReturnStatus Node::searchRoot() {
  // refresh PV in TT if it was overwritten
  void Node::updateTtPv() {
     Position pos{root};
-    Score s = score;
+    Score s = root.pvScore;
     Ply d = draft;
 
     const Move* pv = root.pvMoves;
@@ -157,7 +181,8 @@ ReturnStatus Node::updatePv() {
     ++root.tt.writes;
 
     if (ply == 0) {
-        root.uci.info_pv(draft, score);
+        root.pvScore = score;
+        root.uci.info_pv(draft);
         if (root.limits.updatePvDeadlineReached()) { return ReturnStatus::Stop; }
     }
     return ReturnStatus::Continue;
