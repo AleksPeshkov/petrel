@@ -63,14 +63,21 @@ void Thread::start(ThreadTask task) {
 }
 
 void Thread::stop() {
-    if (status.load(std::memory_order_acquire) != Status::Start) { return; }
+    auto currentStatus = status.load(std::memory_order_acquire);
+    if (currentStatus != Status::Start && currentStatus != Status::Finish) { return; }
 
     {
         std::lock_guard<std::mutex> lock(stopMutex);
-        if (status.load(std::memory_order_relaxed) != Status::Start) { return; }
+        currentStatus = status.load(std::memory_order_relaxed);
+        if (currentStatus != Status::Start && currentStatus != Status::Finish) { return; }
         status.store(Status::Stop, std::memory_order_release);
     }
     stop_.notify_all();
+}
+
+void Thread::stopIfFinished() {
+    auto currentStatus = status.load(std::memory_order_acquire);
+    if (currentStatus == Status::Finish) { stop(); }
 }
 
 bool Thread::isStopped() const {
@@ -78,7 +85,12 @@ bool Thread::isStopped() const {
     return currentStatus == Status::Stop || currentStatus == Status::Abort;
 }
 
-void Thread::waitStop() {
+void Thread::finishedWaitStop() {
+    auto currentStatus = status.load(std::memory_order_relaxed);
+    if (currentStatus == Status::Start) {
+        status.store(Status::Finish, std::memory_order_relaxed);
+    }
+
     if (!isStopped()) {
         std::unique_lock<std::mutex> lock(stopMutex);
         stop_.wait(lock, [this] { return isStopped(); });

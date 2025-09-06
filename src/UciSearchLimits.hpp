@@ -55,7 +55,7 @@ public:
         return (time[my] + (moves-1)*inc[my]) / moves;
     }
 
-    constexpr void setSearchDeadline(TimeInterval elapsed = 0ms) {
+    constexpr void setSearchDeadline(TimeInterval ponderElapsed = 0ms) {
         if (infinite || ponder) {
             setNoDeadline();
             return;
@@ -67,38 +67,30 @@ public:
             return;
         }
 
-        auto myAverage = average(My) + (canPonder ? average(Op) / 2 : 0ms);
-        if (myAverage == 0ms) {
-            // 'go' command without any time limits
+        if (time[My] == 0ms) {
             setNoDeadline();
             return;
         }
 
-        auto timeInterval = std::max<TimeInterval>(0ms, std::min(time[My], myAverage * 4 / 3) - moveOverhead); // 125% average time
+        // average remaining time per move
+        auto myAverage = average(My) + (canPonder ? average(Op) / 2 : 0ms);
 
-        if (timeInterval > 100us) {
+        auto hardInterval = std::max<TimeInterval>(0ms, std::min(time[My], myAverage * 6 / 5) - moveOverhead); // 120% average time
+
+        if (hardInterval > 100us || ponderElapsed > 100us) {
             // normal time management
-            hardDeadline = searchStartTime + timeInterval;
-            iterationDeadline = searchStartTime + (timeInterval / 2); // ~ 67% average time
-            updatePvDeadline = searchStartTime + (timeInterval * 3 / 4); // ~ 100% average time
+            hardDeadline = searchStartTime + hardInterval;
+            iterationDeadline = searchStartTime + (hardInterval / 2); // 60% average time
+            updatePvDeadline = searchStartTime + (hardInterval * 3 / 4); // 90% average time
             return;
         }
 
-        if (timeInterval < elapsed) {
-            // ponderhit and we spend more time than planned
-            // stop search immediately
-            hardDeadline = searchStartTime;
-            iterationDeadline = searchStartTime;
-            updatePvDeadline = searchStartTime;
-            return;
-        }
+        io::log("#hardInterval too small");
 
         // almost no time left
-        // return hash move if any
-        // or finish draft == 1 iteration to get a reasonable best move
+        // return hash move or finish iteration 1 to get a reasonable best move
         setNoDeadline();
         iterationDeadline = searchStartTime;
-
     }
 
     void ponderhit() {

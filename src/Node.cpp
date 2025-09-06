@@ -94,10 +94,6 @@ ReturnStatus Node::searchRoot() {
         if (root.limits.iterationDeadlineReached()) { return ReturnStatus::Stop; }
     }
 
-    if (root.limits.infinite || root.limits.ponder) {
-        root.uci.waitStop();
-    }
-
     return ReturnStatus::Continue;
 }
 
