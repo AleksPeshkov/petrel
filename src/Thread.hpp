@@ -2,42 +2,59 @@
 #define THREAD_HPP
 
 #include <atomic>
-#include <condition_variable>
 #include <functional>
-#include <mutex>
 #include <thread>
 
 using ThreadTask = std::function<void()>;
 
 class Thread {
     enum class Status {
-        Ready, // the thread is ready to get a new task
-        Start, // the thread has started working on a task
-        Stop,  // the thread has received a stop signal
-        Abort  // the thread has received an abort signal
+        Ready, // ready to accept a new task
+        Busy,  // busy working on a task
+        Abort  // abort signal on program exit
     };
-    std::atomic<Status> status = Status::Ready;
+    std::atomic<Status> status{Status::Ready};
 
-    std::mutex readyMutex;
-    std::condition_variable ready_;
-    std::mutex stopMutex;
-    std::condition_variable stop_;
-
+    ThreadTask threadTask{nullptr};
     std::thread stdThread;
-    ThreadTask threadTask = nullptr;
+
+    Status getStatus() const { return status.load(std::memory_order_acquire); }
+    void waitStatus(Status old) { status.wait(old, std::memory_order_acquire); }
+    void setStatus(Status desired) { status.store(desired, std::memory_order_release); status.notify_all(); }
 
 public:
-    Thread();
-    ~Thread();
+    Thread() : stdThread([this] {
+        while (getStatus() != Status::Abort) {
+            threadTask = nullptr;
+            setStatus(Status::Ready);
+            waitStatus(Status::Ready);
 
-    bool isReady() const;
-    void waitReady();
+            if (getStatus() == Status::Busy && threadTask) {
+                threadTask();
+            }
+        }
+    }) {}
 
-    void start(ThreadTask task);
+    ~Thread() {
+        setStatus(Status::Abort);
+        if (stdThread.joinable()) { stdThread.join(); }
+    }
 
-    void stop();
-    bool isStopped() const;
-    void waitStop();
+    void waitReady() {
+        while (true) {
+            auto current = getStatus();
+            if (current != Status::Busy) { break; }
+            waitStatus(current);
+        }
+    }
+
+    bool start(ThreadTask&& task) {
+        if (getStatus() != Status::Ready || threadTask != nullptr) { return false; }
+
+        threadTask = std::move(task);
+        setStatus(Status::Busy);
+        return true;
+    }
 };
 
 #endif
