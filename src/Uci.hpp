@@ -71,7 +71,7 @@ public:
 
     ChessVariant chessVariant() const { return root.chessVariant(); }
 
-    void info_pv(Ply, Score) const;
+    void info_pv(Ply) const;
     void info_iteration(Ply) const;
 
     void info_perft_depth(Ply, node_count_t) const;
