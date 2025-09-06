@@ -70,14 +70,14 @@ info depth 6 perft 102040304*
 #avoid illegal en passant capture:
 >position fen 8/5bk1/8/2Pp4/8/1K6/8/8 w - d6 0 1
 >position
-info * fen 8/5bk1/8/2Pp4/8/1K6/8/8 w - -*
+info* fen 8/5bk1/8/2Pp4/8/1K6/8/8 w - -*
 >perft 6
 info depth 6 perft 824064*
 
 #complex ep case
 >position fen 3k4/8/8/K1Pp3r/8/8/8/8 w - d6 0 1
 >position
-info * fen 3k4/8/8/K1Pp3r/8/8/8/8 w - -*
+info* fen 3k4/8/8/K1Pp3r/8/8/8/8 w - -*
 >perft 6
 info depth 6 perft 1020480*
 
@@ -230,7 +230,7 @@ info depth 5 perft 29179893*
 
 >position fen rnbqkbnr/pppppppp///4P//PPPP1PPP/RNBQKBNR b qkQK e3 0 1 moves g8h6 e4e5 f7f5
 >position
-info * fen rnbqkb1r/ppppp1pp/7n/4Pp2/8/8/PPPP1PPP/RNBQKBNR w KQkq f6*
+info* fen rnbqkb1r/ppppp1pp/7n/4Pp2/8/8/PPPP1PPP/RNBQKBNR w KQkq f6*
 >perft 6
 info depth 6 perft 244063299*
 
@@ -291,7 +291,7 @@ info depth 6 perft 281330710*
 >set UCI_Chess960 false
 >position startpos moves e2e4 e7e5 f1c4 g8f6 d2d4 c7c6 d4e5 f6e4 g1e2 e4f2 e5e6 f8e7 e6d7 e8f8
 >position
-info * fen rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 *
+info* fen rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 *
 >perft 5
 info depth 5 perft 89941194*
 
