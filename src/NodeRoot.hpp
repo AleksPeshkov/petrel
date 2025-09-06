@@ -85,6 +85,7 @@ public:
     Tt tt;
     Repetitions repetitions;
     PvMoves pvMoves;
+    Score pvScore = NoScore;
     HistoryMoves counterMove;
 
     NodeCounter nodeCounter;
