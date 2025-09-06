@@ -78,7 +78,6 @@ public:
     void info_perft_bestmove() const;
 
     void stop() { mainSearchThread.stop(); }
-    void waitStop() const { mainSearchThread.waitStop(); }
 
     // called from NodeCounter::refreshQuota()
     bool isStopped() const { return mainSearchThread.isStopped(); }
