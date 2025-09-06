@@ -245,10 +245,6 @@ void Uci::go() {
     });
 }
 
-void Uci::ponderhit() {
-    root.limits.ponderhit();
-}
-
 void Uci::goPerft() {
 
     Ply depth;
@@ -311,7 +307,16 @@ ostream& Uci::info_fen(ostream& o) const {
     return o;
 }
 
+void Uci::ponderhit() {
+    root.limits.ponderhit();
+    mainSearchThread.stopIfFinished();
+}
+
 void Uci::bestmove() const {
+    if (root.limits.infinite || root.limits.ponder) {
+        mainSearchThread.finishedWaitStop();
+    }
+
     Output ob{this};
     ob << "info"; nps(ob) << root.pvScore << " pv" << root.pvMoves << '\n';
     ob << "bestmove " << root.pvMoves[0];

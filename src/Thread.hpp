@@ -11,10 +11,11 @@ using ThreadTask = std::function<void()>;
 
 class Thread {
     enum class Status {
-        Ready, // the thread is ready to get a new task
-        Start, // the thread has started working on a task
-        Stop,  // the thread has received a stop signal
-        Abort  // the thread has received an abort signal
+        Ready, // ready to accept a new task
+        Start, // started working on a task
+        Finish,// finished working on a task
+        Stop,  // signal to stop a task as fast as possible
+        Abort  // abort signal on program exit
     };
     std::atomic<Status> status = Status::Ready;
 
@@ -36,8 +37,10 @@ public:
     void start(ThreadTask task);
 
     void stop();
+    void stopIfFinished();
     bool isStopped() const;
-    void waitStop();
+
+    void finishedWaitStop();
 };
 
 #endif
