@@ -14,6 +14,7 @@ void NodeRoot::newGame() {
 void NodeRoot::newSearch() {
     tt.newSearch();
     pvMoves.clear();
+    pvScore = NoScore;
 }
 
 void NodeRoot::newIteration() {

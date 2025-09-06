@@ -269,6 +269,7 @@ void Uci::readyok() const {
 
     {
         Output ob{this};
+        info_fen(ob);
         info_nps(ob);
         ob << "readyok\n";
     }
@@ -290,6 +291,8 @@ ostream& Uci::nps(ostream& o) const {
 }
 
 ostream& Uci::info_nps(ostream& o) const {
+    if (lastInfoNodes == root.nodeCounter) { return o; }
+
     if (root.tt.reads > 0) {
         o << "info";
         o << " hwrites " << root.tt.writes;
@@ -299,21 +302,18 @@ ostream& Uci::info_nps(ostream& o) const {
         o << '\n';
     }
 
-    if (lastInfoNodes == root.nodeCounter) { return o; }
-
     o << "info"; nps(o) << '\n';
     return o;
 }
 
 ostream& Uci::info_fen(ostream& o) const {
-    o << "info" << root.evaluate() << " fen " << root << '\n';
+    o << "info fen " << root << '\n';
     return o;
 }
 
 void Uci::bestmove() const {
     Output ob{this};
-    info_fen(ob);
-    info_nps(ob);
+    ob << "info"; nps(ob) << root.pvScore << " pv" << root.pvMoves << '\n';
     ob << "bestmove " << root.pvMoves[0];
     if (root.limits.canPonder && root.pvMoves[1]) {
         ob << " ponder " << root.pvMoves[1];
@@ -326,9 +326,9 @@ void Uci::info_iteration(Ply draft) const {
     ob << "info depth " << draft; nps(ob) << '\n';
 }
 
-void Uci::info_pv(Ply draft, Score score) const {
+void Uci::info_pv(Ply draft) const {
     Output ob{this};
-    ob << "info depth " << draft; nps(ob) << score << " pv" << root.pvMoves << '\n';
+    ob << "info depth " << draft; nps(ob) << root.pvScore << " pv" << root.pvMoves << '\n';
 }
 
 void Uci::info_perft_depth(Ply draft, node_count_t perft) const {
