@@ -76,8 +76,8 @@ public:
         return nodes == nodesLimit;
     }
 
-    ReturnStatus count(NodeRoot&);
-    ReturnStatus refreshQuota(NodeRoot&);
+    ReturnStatus count(UciSearchLimits&);
+    ReturnStatus refreshQuota(UciSearchLimits&);
 
 };
 
