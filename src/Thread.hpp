@@ -2,42 +2,56 @@
 #define THREAD_HPP
 
 #include <atomic>
-#include <condition_variable>
 #include <functional>
-#include <mutex>
 #include <thread>
 
 using ThreadTask = std::function<void()>;
 
 class Thread {
     enum class Status {
-        Ready, // the thread is ready to get a new task
-        Start, // the thread has started working on a task
-        Stop,  // the thread has received a stop signal
-        Abort  // the thread has received an abort signal
+        Ready, // ready to accept a new task
+        Busy,  // busy working on a task
+        Abort  // abort signal on program exit
     };
-    std::atomic<Status> status = Status::Ready;
+    std::atomic<Status> status{Status::Ready};
 
-    std::mutex readyMutex;
-    std::condition_variable ready_;
-    std::mutex stopMutex;
-    std::condition_variable stop_;
-
+    ThreadTask threadTask{nullptr};
     std::thread stdThread;
-    ThreadTask threadTask = nullptr;
 
 public:
-    Thread();
-    ~Thread();
+    Thread() : stdThread([this] {
+        for (;;) {
+            // wait for Status::Busy
+            while (true) {
+                auto current = status.load(std::memory_order_acquire);
+                if (current == Status::Abort) { return; }
+                if (current == Status::Busy) { break; }
+                status.wait(current, std::memory_order_acquire);
+            }
 
-    bool isReady() const;
-    void waitReady();
+            if (threadTask) {
+                threadTask();
+                threadTask = nullptr;
+            }
 
-    void start(ThreadTask task);
+            auto current = status.load(std::memory_order_acquire);
+            if (current == Status::Abort) { return; }
 
-    void stop();
-    bool isStopped() const;
-    void waitStop();
+            status.store(Status::Ready, std::memory_order_release);
+        }
+    }) {}
+
+    ~Thread() {
+        status.store(Status::Abort, std::memory_order_release);
+        status.notify_all();
+        if (stdThread.joinable()) { stdThread.join(); }
+    }
+
+    void start(ThreadTask&& task) {
+        threadTask = std::move(task);
+        status.store(Status::Busy, std::memory_order_release);
+        status.notify_one(); // wake up the worker thread
+    }
 };
 
 #endif

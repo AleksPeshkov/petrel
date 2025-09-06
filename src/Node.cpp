@@ -94,10 +94,6 @@ ReturnStatus Node::searchRoot() {
         if (root.limits.iterationDeadlineReached()) { return ReturnStatus::Stop; }
     }
 
-    if (root.limits.infinite || root.limits.ponder) {
-        root.uci.waitStop();
-    }
-
     return ReturnStatus::Continue;
 }
 
@@ -162,6 +158,10 @@ ReturnStatus Node::negamax(Node* child) {
         }
     }
 
+    if (ply == 0 && root.limits.rootMoveDeadlineReached()) {
+        return ReturnStatus::Stop;
+    }
+
     // set window for the next move search
     child->alpha = -beta;
     child->beta = -alpha;
@@ -183,7 +183,6 @@ ReturnStatus Node::updatePv() {
     if (ply == 0) {
         root.pvScore = score;
         root.uci.info_pv(draft);
-        if (root.limits.updatePvDeadlineReached()) { return ReturnStatus::Stop; }
     }
     return ReturnStatus::Continue;
 }
