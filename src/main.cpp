@@ -39,8 +39,10 @@ int main(int argc, const char* argv[]) {
     setup_signal_handler();
 #endif
 
-    if (argc > 1) {
-        std::string option = argv[1];
+    std::string initFileName;
+
+    for (int i = 1; i < argc; ++i) {
+        std::string option = argv[i];
 
         if (option == "--version" || option == "-v") {
             std::cout
@@ -53,10 +55,19 @@ int main(int argc, const char* argv[]) {
         if (option == "--help" || option == "-h") {
             std::cout
                 << "    Petrel chess engine. The UCI protocol compatible.\n\n"
+                << "Options:\n"
                 << "      -h, --help        display this help\n"
                 << "      -v, --version     display version information\n"
+                << "      -f, --file [FILE] read file for initial UCI commands\n"
             ;
             return EXIT_SUCCESS;
+        }
+
+        if (option == "--file" || option == "-f") {
+            if (i < argc) {
+                initFileName = argv[++i];
+                break;
+            }
         }
 
         std::cerr << "petrel: unknown option\n";
@@ -70,6 +81,16 @@ int main(int argc, const char* argv[]) {
 
     Uci uci(std::cout);
     The_uci = &uci;
+
+    if (!initFileName.empty()) {
+        std::ifstream initFile{initFileName};
+        if (initFile) {
+            uci.processInput(initFile);
+        } else {
+            std::cerr << "petrel: error opening file: " << initFileName << '\n';
+            return EINVAL;
+        }
+    }
 
     uci.processInput(std::cin);
 
