@@ -216,7 +216,7 @@ ReturnStatus Node::searchMoves() {
     isHit = (ttSlot == zobrist());
     if (isHit) {
         if (Move{ttSlot} && !isLegalMove(Move{ttSlot})) {
-            root.uci.log("#TT move is illegal\n");
+            io::log("#illegal TT move");
             isHit = false;
         } else {
             ++root.tt.hits;
