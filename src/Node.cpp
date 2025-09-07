@@ -90,7 +90,7 @@ ReturnStatus Node::searchMove(Move move) {
     origin = root.tt.prefetch<TtSlot>(zobrist());
     ++parent->movesMade;
 
-    if (rule50() <= 1) { repMask = RepetitionMask{}; }
+    if (rule50() < 2) { repMask = RepetitionMask{}; }
     else if (grandParent) { repMask = RepetitionMask{grandParent->repMask, grandParent->zobrist()}; }
     else { repMask = root.repetitions.repMask(colorToMove()); }
 
@@ -100,7 +100,7 @@ ReturnStatus Node::searchMove(Move move) {
         //checkmated or stalemated
         score = inCheck ? Score::checkmated(ply) : Score{DrawScore};
     }
-    else if (rule50() >= 100 || isRepetition() || isDrawMaterial()) {
+    else if (rule50().isDraw() || isRepetition() || isDrawMaterial()) {
         score = DrawScore;
     }
     else if (ply == MaxPly) {
