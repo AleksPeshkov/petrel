@@ -49,6 +49,8 @@ Abbreviations in the code:
 
 Universal Chess Interface (UCI) Extensions
 ------------------------------------------
+Engine accepts command option `--file` (`-f`) to pass UCI initial commands from a file.
+
 * `position`: parameters `fen` or `startpos` are optional; default is reusing previous position command.
    So, `position moves e2e4` is sufficient to make the first move.
 * `position` without any options displays the current position static evaluation and FEN.
