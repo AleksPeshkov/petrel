@@ -38,26 +38,24 @@ enum class NodeControl {
 };
 
 // number of halfmoves without capture or pawn move
-class Rule50 : Index<101> {
+class Rule50 {
+    typedef int _t;
+    static constexpr _t Draw = 100;
+    _t v;
 public:
-    using Index::operator const _t&;
-    constexpr Rule50() : Index{0} {}
+    constexpr Rule50() : v{0} {}
     constexpr void clear() { v = 0; }
-    constexpr void next() { v = v < Last ? v + 1 : static_cast<_t>(Last); }
-    constexpr bool isEmpty() const { return v == 0; }
-    constexpr bool isDraw() const { return v == Last; }
+    constexpr void next() { v = v < Draw ? v + 1 : Draw; }
+    constexpr bool isDraw() const { return v == Draw; }
+
+    friend constexpr bool operator < (const Rule50& rule50, int ply) { return rule50.v < ply; }
+
+    friend ostream& operator << (ostream& out, const Rule50& rule50) { return out << rule50.v; }
 
     friend istream& operator >> (istream& in, Rule50& rule50) {
-        auto beforeRule50 = in.tellg();
-        unsigned _rule50 = 0; // default value
-        in >> _rule50;
-        if (_rule50 > Last) { return io::fail_pos(in, beforeRule50); }
-        rule50.v = _rule50;
+        in >> rule50.v;
+        if (in) { assert (0 <= rule50.v && rule50.v <= 100); }
         return in;
-    }
-
-    friend ostream& operator << (ostream& out, const Rule50& rule50) {
-        return out << rule50.v;
     }
 };
 
