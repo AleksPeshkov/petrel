@@ -1,32 +1,45 @@
 #ifndef UCI_SEARCH_LIMITS_HPP
 #define UCI_SEARCH_LIMITS_HPP
 
+#include <atomic>
 #include "typedefs.hpp"
 #include "chrono.hpp"
 #include "Thread.hpp"
 
 class UciSearchLimits {
-public:
+    std::atomic_bool stop_{false};
+    std::atomic_bool infinite{false};
+    std::atomic_bool ponder{false};
+
     TimePoint searchStartTime;
     TimePoint hardDeadline = TimePoint::max(); // tested every 100 nodes
     TimePoint iterationDeadline = TimePoint::max(); // tested when iteration ends
     TimePoint updatePvDeadline = TimePoint::max(); // tested when pv updates at root
 
-    TimeInterval movetime = 0ms;
-
     Side::arrayOf<TimeInterval> time = {{ 0ms, 0ms }};
     Side::arrayOf<TimeInterval> inc = {{ 0ms, 0ms }};
-
-    node_count_t nodes = NodeCountMax;
-    Ply depth = {MaxPly};
+    TimeInterval movetime = 0ms;
 
     int movestogo = 0;
     int mate = 0;
 
-    bool ponder = false;
-    bool infinite = false;
+    constexpr void setNoDeadline() {
+        hardDeadline = TimePoint::max();
+        iterationDeadline = TimePoint::max();
+        updatePvDeadline = TimePoint::max();
+    }
 
-    bool canPonder = false;
+    constexpr TimeInterval average(Side my) const {
+        auto moves = (movestogo > 0) ? movestogo : 30;
+        return (time[my] + (moves-1)*inc[my]) / moves;
+    }
+
+public:
+    Ply depth = {MaxPly};
+    node_count_t nodes = NodeCountMax;
+
+    bool canPonder{false};
+
     TimeInterval moveOverhead = 100us;
 
     // clear all limits except canPonder and moveOverhead
@@ -40,23 +53,35 @@ public:
         depth = {MaxPly};
         movestogo = 0;
         mate = 0;
-        ponder = false;
-        infinite = false;
+        stop_.store(false, std::memory_order_relaxed);
+        ponder.store(false, std::memory_order_relaxed);
+        infinite.store(false, std::memory_order_relaxed);
     }
 
-    constexpr void setNoDeadline() {
-        hardDeadline = TimePoint::max();
-        iterationDeadline = TimePoint::max();
-        updatePvDeadline = TimePoint::max();
+    istream& go(istream& in, Side white) {
+        clear();
+
+        while (in >> std::ws, !in.eof()) {
+            if      (io::consume(in, "depth"))    { in >> depth; }
+            else if (io::consume(in, "nodes"))    { in >> nodes; }
+            else if (io::consume(in, "movetime")) { in >> movetime; }
+            else if (io::consume(in, "wtime"))    { in >> time[white]; }
+            else if (io::consume(in, "btime"))    { in >> time[~white]; }
+            else if (io::consume(in, "winc"))     { in >> inc[white]; }
+            else if (io::consume(in, "binc"))     { in >> inc[~white]; }
+            else if (io::consume(in, "movestogo")){ in >> movestogo; }
+            else if (io::consume(in, "mate"))     { in >> mate; } // TODO: implement mate in n moves
+            else if (io::consume(in, "ponder"))   { ponder.store(true, std::memory_order_relaxed); }
+            else if (io::consume(in, "infinite")) { infinite.store(true, std::memory_order_relaxed); }
+            else { break; }
+        }
+
+        setSearchDeadline();
+        return in;
     }
 
-    constexpr TimeInterval average(Side my) const {
-        auto moves = (movestogo > 0) ? movestogo : 30;
-        return (time[my] + (moves-1)*inc[my]) / moves;
-    }
-
-    constexpr void setSearchDeadline(TimeInterval ponderElapsed = 0ms) {
-        if (infinite || ponder) {
+    void setSearchDeadline(TimeInterval ponderElapsed = 0ms) {
+        if (waitBestmove()) {
             setNoDeadline();
             return;
         }
@@ -73,15 +98,15 @@ public:
         }
 
         // average remaining time per move
-        auto myAverage = average(My) + (canPonder ? average(Op) / 2 : 0ms);
+        auto myAverage = average(My) + (canPonder ? average(Op) / 3 : 0ms);
 
-        auto hardInterval = std::max<TimeInterval>(0ms, std::min(time[My], myAverage * 6 / 5) - moveOverhead); // 120% average time
+        auto hardInterval = std::max<TimeInterval>(0ms, std::min(time[My], myAverage * 3 / 2) - moveOverhead); // 150% average time
 
         if (hardInterval > 100us || ponderElapsed > 100us) {
             // normal time management
             hardDeadline = searchStartTime + hardInterval;
-            iterationDeadline = searchStartTime + (hardInterval / 2); // 60% average time
-            updatePvDeadline = searchStartTime + (hardInterval * 3 / 4); // 90% average time
+            iterationDeadline = searchStartTime + (hardInterval / 3); // 50% average time
+            updatePvDeadline = searchStartTime + (hardInterval * 2 / 3); // 100% average time
             return;
         }
 
@@ -93,25 +118,50 @@ public:
         iterationDeadline = searchStartTime;
     }
 
-    void ponderhit() {
-        if (!ponder) { return; } // ignore ponderhit if not pondering
+    constexpr void ponderhit() {
+        if (!ponder.load(std::memory_order_relaxed)) { return; } // ignore ponderhit if not pondering
 
-        ponder = false;
+        ponder.store(false, std::memory_order_relaxed);
         auto elapsed = ::elapsedSince(searchStartTime);
         time[Op] -= std::min(elapsed, time[Op]);
         setSearchDeadline(elapsed);
     }
 
-    constexpr bool hardDeadlineReached() const {
-        return hardDeadline != TimePoint::max() && hardDeadline < ::timeNow();
+    constexpr bool isStopped() const { return stop_.load(std::memory_order_acquire); }
+
+    void stop() {
+        infinite.store(false, std::memory_order_relaxed);
+        ponder.store(false, std::memory_order_relaxed);
+        stop_.store(true, std::memory_order_release);
     }
 
-    constexpr bool iterationDeadlineReached() const {
-        return iterationDeadline != TimePoint::max() && iterationDeadline < ::timeNow();
+    // ponder || infinite
+    bool waitBestmove() { return ponder.load(std::memory_order_relaxed) || infinite.load(std::memory_order_relaxed); }
+
+    bool hardDeadlineReached() {
+        auto deadline = hardDeadline != TimePoint::max() && hardDeadline < ::timeNow();
+        if (deadline) { stop(); }
+        return deadline;
     }
 
-    constexpr bool updatePvDeadlineReached() const {
-        return updatePvDeadline != TimePoint::max() && updatePvDeadline < ::timeNow();
+    bool iterationDeadlineReached() {
+        auto deadline = iterationDeadline != TimePoint::max() && iterationDeadline < ::timeNow();
+        if (deadline) { stop(); }
+        return deadline;
+    }
+
+    bool updatePvDeadlineReached() {
+        auto deadline = updatePvDeadline != TimePoint::max() && updatePvDeadline < ::timeNow();
+        if (deadline) { stop(); }
+        return deadline;
+    }
+
+    TimeInterval elapsedSinceStart() const { return ::elapsedSince(searchStartTime); }
+
+    friend ostream& operator << (ostream& out, const UciSearchLimits& limits) {
+        out << "option name Move Overhead type spin min 0 max 10000 default " << limits.moveOverhead << '\n';
+        out << "option name Ponder type check default " << (limits.canPonder ? "true" : "false") << '\n';
+        return out;
     }
 };
 
