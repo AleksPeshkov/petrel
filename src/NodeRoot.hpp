@@ -49,7 +49,7 @@ class NodeCounter {
     node_count_t nodesLimit; // search limit
 
     typedef unsigned nodes_quota_t;
-    enum : nodes_quota_t { QuotaLimit = 1000 }; // < 0.2ms
+    enum : nodes_quota_t { QuotaLimit = 100 }; // < 0.2ms
 
     //number of remaining nodes before slow checking for search stop
     nodes_quota_t nodesQuota = 0; // (0 <= nodesQuota && nodesQuota <= QuotaLimit)
@@ -74,8 +74,8 @@ public:
         return nodes == nodesLimit;
     }
 
-    ReturnStatus count(NodeRoot&);
-    ReturnStatus refreshQuota(NodeRoot&);
+    ReturnStatus count(UciSearchLimits&);
+    ReturnStatus refreshQuota(UciSearchLimits&);
 
 };
 
