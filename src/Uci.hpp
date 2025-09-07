@@ -22,7 +22,6 @@ class Uci {
 
     // avoid race conditions betweeen Uci output and main search thread output
     mutable std::mutex mutex;
-    typedef std::lock_guard<decltype(mutex)> ScopedLock;
 
     // avoid printing identical 'info nps' lines in a row
     mutable node_count_t lastInfoNodes = 0;

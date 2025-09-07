@@ -49,7 +49,7 @@ void Uci::processInput(istream& in) {
     while (std::getline(in, currentLine)) {
 
 #ifndef NDEBUG
-        log('>' + currentLine + '\n');
+        log('>' + currentLine);
 #endif
 
         inputLine.clear(); //clear error state from the previous line
@@ -74,7 +74,7 @@ void Uci::processInput(istream& in) {
             inputLine.clear();
             std::getline(inputLine, unparsedInput);
 
-            log(currentLine + "\n#unparsed input->" + unparsedInput + '\n');
+            log(currentLine + "\n#unparsed input->" + unparsedInput);
         }
     }
 }
@@ -99,7 +99,7 @@ void Uci::uciok() const {
     ob << "option name Move Overhead type spin min 0 max 10000 default " << root.limits.moveOverhead << '\n';
     ob << "option name Ponder type check default " << (root.limits.canPonder ? "true" : "false") << '\n';
     ob << "option name UCI_Chess960 type check default " << (isChess960 ? "true" : "false") << '\n';
-    ob << "uciok\n";
+    ob << "uciok";
 }
 
 void Uci::setoption() {
@@ -269,9 +269,9 @@ void Uci::readyok() const {
 
     {
         Output ob{this};
-        info_fen(ob);
+        info_fen(ob) << '\n';
         info_nps(ob);
-        ob << "readyok\n";
+        ob << "readyok";
     }
 }
 
@@ -307,7 +307,7 @@ ostream& Uci::info_nps(ostream& o) const {
 }
 
 ostream& Uci::info_fen(ostream& o) const {
-    o << "info fen " << root << '\n';
+    o << "info fen " << root;
     return o;
 }
 
@@ -318,42 +318,41 @@ void Uci::bestmove() const {
     if (root.limits.canPonder && root.pvMoves[1]) {
         ob << " ponder " << root.pvMoves[1];
     }
-    ob << '\n';
 }
 
 void Uci::info_iteration(Ply draft) const {
     Output ob{this};
-    ob << "info depth " << draft; nps(ob) << '\n';
+    ob << "info depth " << draft; nps(ob);
 }
 
 void Uci::info_pv(Ply draft) const {
     Output ob{this};
-    ob << "info depth " << draft; nps(ob) << root.pvScore << " pv" << root.pvMoves << '\n';
+    ob << "info depth " << draft; nps(ob) << root.pvScore << " pv" << root.pvMoves;
 }
 
 void Uci::info_perft_depth(Ply draft, node_count_t perft) const {
     Output ob{this};
-    ob << "info depth " << draft << " perft " << perft; nps(ob) << '\n';
+    ob << "info depth " << draft << " perft " << perft; nps(ob);
 }
 
 void Uci::info_perft_currmove(int moveCount, const UciMove& currentMove, node_count_t perft) const {
     Output ob{this};
     ob << "info currmovenumber " << moveCount << " currmove " << currentMove << " perft " << perft;
-    nps(ob) << '\n';
+    nps(ob);
 }
 
 void Uci::info_perft_bestmove() const {
     Output ob{this};
     info_nps(ob);
-    ob << "bestmove 0000\n";
+    ob << "bestmove 0000";
 }
 
 void Uci::output(const std::string& message) const {
     if (message.empty()) { return; }
 
     {
-        ScopedLock lock{mutex};
-        out << message << std::flush;
+        std::lock_guard<decltype(mutex)> lock{mutex};
+        out << message << std::endl;
 
 #ifndef NDEBUG
         if (logFile.is_open()) { _log(message); }
@@ -366,19 +365,19 @@ void Uci::log(const std::string& message) const {
     if (message.empty() || !logFile.is_open()) { return; }
 
     {
-        ScopedLock lock{mutex};
+        std::lock_guard<decltype(mutex)> lock{mutex};
         _log(message);
     }
 }
 
 void Uci::_log(const std::string& message) const {
-    logFile << message << std::flush;
+    logFile << message << std::endl;
 
     // recover if the logFile is in a bad state
     if (!logFile) {
         logFile.clear();
         logFile.close();
         logFile.open(logFileName, std::ios::app);
-        logFile << "#logFile recovered from a bad state\n" << std::flush;
+        logFile << "#logFile recovered from a bad state" << std::endl;
     }
 }

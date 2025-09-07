@@ -283,7 +283,10 @@ bool PositionSide::isPinned(Bb occupied) const {
 }
 
 bool PositionSide::dropValid(PieceType ty, Square to) {
-    if (bbSide_.has(to)) { return false; }
+    if (bbSide_.has(to)) {
+        io::log("#invalid fen: square already occupied");
+        return false;
+    }
     bbSide_ += Bb{to};
 
     Pi pi = ty.is(King) ? Pi{TheKing} : PieceSet((pieces() | Pi{TheKing})).vacantMostValuable();
@@ -293,7 +296,10 @@ bool PositionSide::dropValid(PieceType ty, Square to) {
     squares.drop(pi, to);
 
     if (ty.is(Pawn)) {
-        if (to.on(Rank1) || to.on(Rank8)) { return false; }
+        if (to.on(Rank1) || to.on(Rank8)) {
+            io::log("#invalid fen: pawn on impossible rank");
+            return false;
+        }
         if (to.on(Rank7)) { traits.setPromotable(pi);}
         bbPawns_ += Bb{to};
     }
@@ -303,7 +309,10 @@ bool PositionSide::dropValid(PieceType ty, Square to) {
 }
 
 bool PositionSide::setValidCastling(CastlingSide castlingSide) {
-    if (!kingSquare().on(Rank1)) { return false; }
+    if (!kingSquare().on(Rank1)) {
+        io::log("#invalid fen castling: king on bad rank");
+        return false;
+    }
 
     Square outerSquare = kingSquare();
     for (Pi rook : piecesOfType(Rook) & piecesOn(Rank1)) {
@@ -311,24 +320,42 @@ bool PositionSide::setValidCastling(CastlingSide castlingSide) {
             outerSquare = squareOf(rook);
         }
     }
-    if (outerSquare == kingSquare()) { return false; } //no rook found
+    if (outerSquare == kingSquare()) {
+        io::log("#invalid fen castling: no castling rook found");
+        return false;
+    }
 
     Pi rook = pieceAt(outerSquare);
-    if (isCastling(rook)) { return false; }
+    if (isCastling(rook)) {
+        io::log("#invalid fen castling: rook is already set castling");
+        return false;
+    }
 
     traits.setCastling(rook);
     return true;
 }
 
 bool PositionSide::setValidCastling(File file) {
-    if (!kingSquare().on(Rank1)) { return false; }
+    if (!kingSquare().on(Rank1)) {
+        io::log("#invalid fen castling: king on bad rank");
+        return false;
+    }
 
     Square rookFrom(file, Rank1);
-    if (!has(rookFrom)) { return false; }
+    if (!has(rookFrom)) {
+        io::log("#invalid fen castling: no castling piece found");
+        return false;
+    }
 
     Pi rook = pieceAt(rookFrom);
-    if (!types.isRook(rook)) { return false; }
-    if (isCastling(rook)) { return false; }
+    if (!types.isRook(rook)) {
+        io::log("#invalid fen castling: castling piece is not rook");
+        return false;
+    }
+    if (isCastling(rook)) {
+        io::log("#invalid fen castling: rook is already set castling");
+        return false;
+    }
 
     traits.setCastling(rook);
     return true;
