@@ -160,7 +160,7 @@ public:
 
     friend ostream& operator << (ostream& out, const UciSearchLimits& limits) {
         out << "option name Move Overhead type spin min 0 max 10000 default " << limits.moveOverhead << '\n';
-        out << "option name Ponder type check default " << (limits.canPonder ? "true" : "false") << '\n';
+        //out << "option name Ponder type check default " << (limits.canPonder ? "true" : "false") << '\n';
         return out;
     }
 };
