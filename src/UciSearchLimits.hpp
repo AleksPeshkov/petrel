@@ -12,9 +12,9 @@ class UciSearchLimits {
     std::atomic_bool ponder{false};
 
     TimePoint searchStartTime;
-    TimePoint hardDeadline = TimePoint::max(); // tested every 100 nodes
+    TimePoint hardDeadline = TimePoint::max(); // tested every 200 nodes
+    TimePoint rootMoveDeadline = TimePoint::max(); // tested before next root move search
     TimePoint iterationDeadline = TimePoint::max(); // tested when iteration ends
-    TimePoint updatePvDeadline = TimePoint::max(); // tested when pv updates at root
 
     Side::arrayOf<TimeInterval> time = {{ 0ms, 0ms }};
     Side::arrayOf<TimeInterval> inc = {{ 0ms, 0ms }};
@@ -26,12 +26,38 @@ class UciSearchLimits {
     constexpr void setNoDeadline() {
         hardDeadline = TimePoint::max();
         iterationDeadline = TimePoint::max();
-        updatePvDeadline = TimePoint::max();
+        rootMoveDeadline = TimePoint::max();
     }
 
     constexpr TimeInterval average(Side my) const {
         auto moves = (movestogo > 0) ? movestogo : 30;
         return (time[my] + (moves-1)*inc[my]) / moves;
+    }
+
+    void setSearchDeadline() {
+        setNoDeadline();
+
+        if (infinite.load(std::memory_order_relaxed)) {
+            return;
+        }
+
+        if (movetime > 0ms) {
+            hardDeadline = searchStartTime + movetime - moveOverhead;
+            return;
+        }
+
+        if (time[My] == 0ms) {
+            return;
+        }
+
+        // average remaining time per move
+        auto myAverage = average(My) + (canPonder ? average(Op) / 3 : 0ms);
+
+        auto hardInterval = std::min(time[My], myAverage * 3 / 2); // 150% average time
+
+        hardDeadline = searchStartTime + hardInterval - moveOverhead;
+        rootMoveDeadline = searchStartTime + (hardInterval * 2 / 3) - moveOverhead; // 100% average time
+        iterationDeadline = searchStartTime + (hardInterval / 3) - moveOverhead; // 50% average time
     }
 
 public:
@@ -80,54 +106,9 @@ public:
         return in;
     }
 
-    void setSearchDeadline(TimeInterval ponderElapsed = 0ms) {
-        if (waitBestmove()) {
-            setNoDeadline();
-            return;
-        }
+    void ponderhit() { ponder.store(false, std::memory_order_relaxed); }
 
-        if (movetime > 0ms) {
-            setNoDeadline();
-            hardDeadline = searchStartTime + movetime - moveOverhead;
-            return;
-        }
-
-        if (time[My] == 0ms) {
-            setNoDeadline();
-            return;
-        }
-
-        // average remaining time per move
-        auto myAverage = average(My) + (canPonder ? average(Op) / 3 : 0ms);
-
-        auto hardInterval = std::max<TimeInterval>(0ms, std::min(time[My], myAverage * 3 / 2) - moveOverhead); // 150% average time
-
-        if (hardInterval > 100us || ponderElapsed > 100us) {
-            // normal time management
-            hardDeadline = searchStartTime + hardInterval;
-            iterationDeadline = searchStartTime + (hardInterval / 3); // 50% average time
-            updatePvDeadline = searchStartTime + (hardInterval * 2 / 3); // 100% average time
-            return;
-        }
-
-        io::log("#hardInterval too small");
-
-        // almost no time left
-        // return hash move or finish iteration 1 to get a reasonable best move
-        setNoDeadline();
-        iterationDeadline = searchStartTime;
-    }
-
-    constexpr void ponderhit() {
-        if (!ponder.load(std::memory_order_relaxed)) { return; } // ignore ponderhit if not pondering
-
-        ponder.store(false, std::memory_order_relaxed);
-        auto elapsed = ::elapsedSince(searchStartTime);
-        time[Op] -= std::min(elapsed, time[Op]);
-        setSearchDeadline(elapsed);
-    }
-
-    constexpr bool isStopped() const { return stop_.load(std::memory_order_acquire); }
+    bool isStopped() const { return stop_.load(std::memory_order_acquire); }
 
     void stop() {
         infinite.store(false, std::memory_order_relaxed);
@@ -138,20 +119,23 @@ public:
     // ponder || infinite
     bool waitBestmove() { return ponder.load(std::memory_order_relaxed) || infinite.load(std::memory_order_relaxed); }
 
+    // !ponder && hardDeadline
     bool hardDeadlineReached() {
-        auto deadline = hardDeadline != TimePoint::max() && hardDeadline < ::timeNow();
+        auto deadline = !ponder.load(std::memory_order_relaxed) && hardDeadline != TimePoint::max() && hardDeadline < ::timeNow();
         if (deadline) { stop(); }
         return deadline;
     }
 
+    // !ponder && iterationDeadline
     bool iterationDeadlineReached() {
-        auto deadline = iterationDeadline != TimePoint::max() && iterationDeadline < ::timeNow();
+        auto deadline = !ponder.load(std::memory_order_relaxed) && iterationDeadline != TimePoint::max() && iterationDeadline < ::timeNow();
         if (deadline) { stop(); }
         return deadline;
     }
 
-    bool updatePvDeadlineReached() {
-        auto deadline = updatePvDeadline != TimePoint::max() && updatePvDeadline < ::timeNow();
+    // !ponder && rootMoveDeadline
+    bool rootMoveDeadlineReached() {
+        auto deadline = !ponder.load(std::memory_order_relaxed) && rootMoveDeadline != TimePoint::max() && rootMoveDeadline < ::timeNow();
         if (deadline) { stop(); }
         return deadline;
     }
