@@ -233,6 +233,7 @@ void Uci::go() {
         Node{root}.searchRoot();
         bestmove();
     });
+    std::this_thread::yield();
 }
 
 void Uci::bestmove() {
@@ -261,6 +262,7 @@ void Uci::bestmove() {
 
 void Uci::stop() {
     root.limits.stop();
+    std::this_thread::yield();
 
     {
         std::lock_guard<decltype(bestmoveMutex)> lock{bestmoveMutex};
@@ -275,6 +277,7 @@ void Uci::stop() {
 
 void Uci::ponderhit() {
     root.limits.ponderhit();
+    std::this_thread::yield();
 
     {
         std::lock_guard<decltype(bestmoveMutex)> lock{bestmoveMutex};
@@ -307,6 +310,7 @@ void Uci::info_perft_bestmove() {
 }
 
 void Uci::readyok() const {
+    std::this_thread::sleep_for(1ms);
     Output ob{this};
     info_fen(ob) << '\n';
     info_nps(ob);
