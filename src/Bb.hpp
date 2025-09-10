@@ -28,8 +28,8 @@ public:
     constexpr explicit Bb (Square sq) : BitSet(sq) {}
     constexpr explicit Bb (Square::_t sq) : BitSet(sq) {}
 
-    constexpr explicit Bb (File::_t f) : Bb{ULL(0x0101010101010101) << f} {}
-    constexpr explicit Bb (Rank::_t r) : Bb{ULL(0xff) << 8*r} {}
+    constexpr explicit Bb (File::_t f) : Bb{U64(0x0101010101010101) << f} {}
+    constexpr explicit Bb (Rank::_t r) : Bb{U64(0xff) << 8*r} {}
 
     // bidirectional signed rank shift
     constexpr Bb (_t bb, signed r) : Bb{ r >= 0 ? (bb << 8*r) : (bb >> -8*r) } {}
@@ -62,8 +62,8 @@ public:
 
 constexpr Bb Square::rank() const { return Bb{Rank{*this}} - Bb{*this}; }
 constexpr Bb Square::file() const { return Bb{File{*this}} - Bb{*this}; }
-constexpr Bb Square::diagonal() const { return Bb{ULL(0x0102040810204080), static_cast<int>(Rank{*this}) + File{*this} - 7} - Bb{*this}; }
-constexpr Bb Square::antidiag() const { return Bb{ULL(0x8040201008040201), static_cast<int>(Rank{*this}) - File{*this}} - Bb{*this}; }
+constexpr Bb Square::diagonal() const { return Bb{U64(0x0102040810204080), static_cast<int>(Rank{*this}) + File{*this} - 7} - Bb{*this}; }
+constexpr Bb Square::antidiag() const { return Bb{U64(0x8040201008040201), static_cast<int>(Rank{*this}) - File{*this}} - Bb{*this}; }
 
 constexpr Bb Square::line(Direction dir) const {
     switch (dir) {

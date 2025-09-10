@@ -4,8 +4,8 @@
 
 class CACHE_ALIGN HashBucket {
 public:
-    typedef ::Index<4> Index;
-    typedef vu64x2_t _t;
+    using _t = vu64x2_t;
+    using Index = ::Index<4>;
 
 private:
     Index::arrayOf<_t> v;
@@ -14,7 +14,7 @@ public:
     constexpr HashBucket() : v{{{0,0}, {0,0}, {0,0}, {0,0}}} {}
     constexpr const _t& operator[] (Index i) const { return v[i]; }
 
-    HashBucket& operator = (const HashBucket& a) {
+    constexpr HashBucket& operator = (const HashBucket& a) {
         v[0] = a[0];
         v[1] = a[1];
         v[2] = a[2];
@@ -22,7 +22,7 @@ public:
         return *this;
     }
 
-    void set(Index i, _t m) {
+    constexpr void set(Index i, _t m) {
         v[i] = m;
     }
 
@@ -33,7 +33,7 @@ class PerftRecordSmall {
     u32_t perft;
 
 public:
-    void set(z_t z, Ply d, node_count_t n) {
+    constexpr void set(z_t z, Ply d, node_count_t n) {
         assert (small_cast<decltype(perft)>(n) == n);
         perft = static_cast<decltype(perft)>(n);
 
@@ -43,28 +43,26 @@ public:
         assert (getDepth() == d);
     }
 
-    static u32_t makeKey(z_t z, Ply d) {
+    constexpr static u32_t makeKey(z_t z, Ply d) {
         assert (d == (d & 0xf));
         return ((static_cast<decltype(key)>(z >> 32) | 0xf) ^ 0xf) | (d & 0xf);
     }
 
-    bool isKeyMatch(z_t z, Ply d) const {
+    constexpr bool isKeyMatch(z_t z, Ply d) const {
         return key == makeKey(z, d);
     }
 
-    node_count_t getNodes() const {
+    constexpr node_count_t getNodes() const {
         return perft;
     }
 
-    Ply getDepth() const {
+    constexpr Ply getDepth() const {
         return {static_cast<Ply::_t>(key & 0xf)};
     }
 
 };
 
 class PerftRecord {
-    typedef unsigned age_t;
-
     z_t key;
     node_count_t nodes;
 
@@ -80,32 +78,32 @@ class PerftRecord {
     }
 
 public:
-    bool isKeyMatch(z_t z, Ply d) const {
+    constexpr bool isKeyMatch(z_t z, Ply d) const {
         return (getKey() == z) && (getDepth() == d);
     }
 
-    bool isAgeMatch(HashAge::_t age) const {
-        return ((nodes & AgeMask) >> AgeShift) == age;
+    constexpr bool isAgeMatch(HashAge::_t age) const {
+        return ((nodes & AgeMask) >> AgeShift) == static_cast<decltype(nodes)>(age);
     }
 
-    const z_t& getKey() const {
+    constexpr const z_t& getKey() const {
         return key;
     }
 
-    Ply getDepth() const {
+    constexpr Ply getDepth() const {
         return Ply{static_cast<Ply::_t>((nodes & DepthMask) >> DepthShift)};
     }
 
-    node_count_t getNodes() const {
+    constexpr node_count_t getNodes() const {
         return nodes & ~NodesMask;
     }
 
-    void set(z_t z, Ply d, node_count_t n, HashAge::_t age) {
+    constexpr void set(z_t z, Ply d, node_count_t n, HashAge::_t age) {
         key = z;
         nodes = createNodes(n, d, age);
     }
 
-    void setAge(HashAge::_t age) {
+    constexpr void setAge(HashAge::_t age) {
         nodes = (nodes & ~AgeMask) | (static_cast<decltype(nodes)>(age) << AgeShift);
     }
 
@@ -119,7 +117,7 @@ union BucketUnion {
     HashBucket m;
 };
 
-node_count_t TtPerft::get(const Z& z, Ply d) {
+node_count_t TtPerft::get(ZArg z, Ply d) {
     ++reads;
 
     auto origin = addr<BucketUnion>(z);
@@ -165,7 +163,7 @@ node_count_t TtPerft::get(const Z& z, Ply d) {
     return NodeCountNone;
 }
 
-void TtPerft::set(const Z& z, Ply d, node_count_t n) {
+void TtPerft::set(ZArg z, Ply d, node_count_t n) {
     ++writes;
 
     auto origin = addr<BucketUnion>(z);

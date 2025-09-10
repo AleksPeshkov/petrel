@@ -19,7 +19,7 @@ enum class Type : u8_t {
 };
 
 class PiType {
-    typedef Type element_type;
+    using element_type = Type;
 
     static constexpr PieceType::arrayOf<element_type> GoodOrEqualKillers = {
         Type::PNBRQ, // Queen

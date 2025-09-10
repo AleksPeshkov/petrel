@@ -11,17 +11,17 @@
  * class used for enumeration of piece vectors
  */
 class PieceSet : public BitSet<PieceSet, Pi::_t> {
-    typedef BitSet<PieceSet, Pi::_t> Base;
+    using Base = BitSet<PieceSet, Pi::_t>;
 public:
     using Base::Base;
 
-    Pi vacantMostValuable() const {
+    constexpr Pi vacantMostValuable() const {
         _t x = v;
         x = ~x & (x+1); //TRICK: isolate the lowest unset bit
         return PieceSet{x}.index();
     }
 
-    int popcount() const {
+    constexpr int popcount() const {
         return ::popcount(v);
     }
 
@@ -35,7 +35,7 @@ public:
 };
 
 class PiSingle {
-    typedef vu8x16_t _t;
+    using _t = vu8x16_t;
 
     Pi::arrayOf<_t> v;
 
@@ -71,7 +71,7 @@ extern const PiSingle piSingle;
 ///piece vector of boolean values: false (0) or true (0xff)
 class PiMask : public BitArray<PiMask, vu8x16_t> {
 public:
-    typedef BitArray<PiMask, vu8x16_t> Base;
+    using Base = BitArray<PiMask, vu8x16_t>;
     using typename Base::_t;
     using Base::v;
 
@@ -80,22 +80,20 @@ public:
     constexpr PiMask () : Base{zero()} {}
     constexpr PiMask (Pi pi) : Base( ::piSingle[pi] ) {}
 
-    explicit PiMask (_t a) : Base{a} { assertOk(); }
+    constexpr explicit PiMask (_t a) : Base{a} { assertOk(); }
     constexpr PiMask (_t a, _t b) : Base{a == b} {}
     constexpr operator const _t& () const { return v; }
 
     // check if either 0 or 0xff bytes are set
-    bool isOk() const { return ::equals(v, __builtin_convertvector(v != zero(), vu8x16_t)); }
+    bool isOk() const { return ::equals(v, v != zero()); }
 
     // assert if either 0 or 0xff bytes are set
-    void assertOk() const { assert (isOk()); }
+    constexpr void assertOk() const { assert (isOk()); }
 
     using Base::any;
     // create a mask of non empty bytes
     static PiMask any(_t a) { return PiMask{a != zero()}; }
     static PiMask all() { return PiMask{::all(0xff)}; }
-
-    PiMask operator ~ () { return PiMask{*this, zero()}; }
 
     explicit operator PieceSet() const {
         assertOk();
@@ -127,34 +125,77 @@ public:
 class PiOrder {
     vu8x16_t v;
 
-    bool isOk() const {
-        return ::equals(::shufflevector(v, v), vu8x16_t{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15});
+    constexpr static Pi::arrayOf<vu8x16_t> forwardMask = {{
+        {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15},
+        {1,0,2,3,4,5,6,7,8,9,10,11,12,13,14,15},
+        {2,0,1,3,4,5,6,7,8,9,10,11,12,13,14,15},
+        {3,0,1,2,4,5,6,7,8,9,10,11,12,13,14,15},
+        {4,0,1,2,3,5,6,7,8,9,10,11,12,13,14,15},
+        {5,0,1,2,3,4,6,7,8,9,10,11,12,13,14,15},
+        {6,0,1,2,3,4,5,7,8,9,10,11,12,13,14,15},
+        {7,0,1,2,3,4,5,6,8,9,10,11,12,13,14,15},
+        {8,0,1,2,3,4,5,6,7,9,10,11,12,13,14,15},
+        {9,0,1,2,3,4,5,6,7,8,10,11,12,13,14,15},
+        {10,0,1,2,3,4,5,6,7,8,9,11,12,13,14,15},
+        {11,0,1,2,3,4,5,6,7,8,9,10,12,13,14,15},
+        {12,0,1,2,3,4,5,6,7,8,9,10,11,13,14,15},
+        {13,0,1,2,3,4,5,6,7,8,9,10,11,12,14,15},
+        {14,0,1,2,3,4,5,6,7,8,9,10,11,12,13,15},
+        {15,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14},
+    }};
+
+    constexpr static vu8x16_t ordered = forwardMask[0];
+
+    constexpr bool isOk() const {
+        // check all values [0, 15] are represented
+        u32_t mask = 0;
+        for (int i = 0; i < 16; ++i) {
+            mask |= ::singleton<int>(::u8(v, i));
+        }
+        return ::popcount(mask) == 16;
     }
 
-public:
-    constexpr PiOrder () : v{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15} {}
-    PiOrder (const vu8x16_t& o) : v{o} { assert (isOk()); }
+    constexpr void assertOk() const { assert (isOk()); }
 
-    PiMask order(PiMask a) const {
-        return PiMask{::shufflevector(static_cast<vu8x16_t>(a), v)};
+public:
+    constexpr PiOrder () : v{ordered} { assertOk(); }
+
+    constexpr PiMask operator () (PiMask pieces) const {
+        return PiMask{::shufflevector(static_cast<vu8x16_t>(pieces), v)};
     }
 
     Pi operator[] (Pi pi) const {
         return static_cast<Pi::_t>(::u8(v, pi));
     }
+
+    PiOrder& forward(Pi pi) {
+        // find index of pi in the shuffled vector
+        PiMask piMask{v, ::vectorOfAll[pi]};
+        Pi pos = piMask.index();
+
+        v = ::shufflevector(v, forwardMask[pos]);
+        assertOk();
+        return *this;
+    }
 };
 
-class PiOrderedIterator {
-    PiOrder order;
-    PieceSet mask;
+class PiOrdered {
+    PiOrder order; // vector of piece indices
+    PieceSet mask; // shuffled PiMask bitset
+
+    constexpr explicit operator const PieceSet& () const { return mask; }
 
 public:
-    PiOrderedIterator (PiOrder o, PiMask m) : order(o), mask(o.order(m)) {}
+    PiOrdered (PiMask pieces, PiOrder o)
+        : order{o}, mask{order(pieces)}
+    {}
 
-    Pi operator * () const { return order[*mask]; }
-    PiOrderedIterator& operator ++ () { ++mask; return *this; }
-    PiOrderedIterator begin() const { return *this; }
-    PiOrderedIterator end() const { return PiOrderedIterator(order, {}); }
+    constexpr friend bool operator == (const PiOrdered& a, const PieceSet& b) { return a.mask == b; }
+
+    constexpr Pi operator * () const { return order[*mask]; }
+    constexpr PiOrdered& operator ++ () { ++mask; return *this; }
+    PiOrdered begin() const { return *this; }
+    constexpr PieceSet end() const { return {}; }
 };
 
 #endif
