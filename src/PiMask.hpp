@@ -11,7 +11,7 @@
  * class used for enumeration of piece vectors
  */
 class PieceSet : public BitSet<PieceSet, Pi::_t> {
-    typedef BitSet<PieceSet, Pi::_t> Base;
+    using Base = BitSet<PieceSet, Pi::_t>;
 public:
     using Base::Base;
 
@@ -35,7 +35,7 @@ public:
 };
 
 class PiSingle {
-    typedef vu8x16_t _t;
+    using _t = vu8x16_t;
 
     Pi::arrayOf<_t> v;
 
@@ -71,7 +71,7 @@ extern const PiSingle piSingle;
 ///piece vector of boolean values: false (0) or true (0xff)
 class PiMask : public BitArray<PiMask, vu8x16_t> {
 public:
-    typedef BitArray<PiMask, vu8x16_t> Base;
+    using Base = BitArray<PiMask, vu8x16_t>;
     using typename Base::_t;
     using Base::v;
 
