@@ -8,39 +8,35 @@
 
 template <typename _vector_type>
 struct BitArrayOps {
-    typedef _vector_type _t;
+    using _t = _vector_type;
     static constexpr bool equals(const _t& a, const _t& b) { return a == b; }
-    static constexpr void and_assign(_t& a, const _t& b) { a &= b; }
-    static constexpr void or_assign(_t& a, const _t& b) { a |= b; }
-    static constexpr void xor_assign(_t& a, const _t& b) { a ^= b; }
 };
 
 //typesafe BitArray implementation using "curiously recurring template pattern"
-template <class _Self, typename _vector_type>
+template <class self_type, typename vector_type>
 class BitArray {
 public:
-    typedef _vector_type _t;
-    typedef _vector_type vector_type;
+    using _t = vector_type;
 
 protected:
-    typedef _Self Self;
-    typedef const Self& Arg;
-    typedef BitArrayOps<vector_type> Ops;
+    using Self = self_type;
+    using Arg = const Self&;
+    using Ops = BitArrayOps<_t>;
 
-    vector_type v;
+    _t v;
 
 public:
     constexpr BitArray () : v{} {}
-    constexpr explicit BitArray (const vector_type& b) : v{b} {}
+    constexpr explicit BitArray (const _t& b) : v{b} {}
     constexpr Self& operator = (Arg b) { v = b.v; return SELF; }
-    constexpr operator const vector_type& () const { return v; }
+    constexpr operator const _t& () const { return v; }
 
     constexpr friend bool operator == (Arg a, Arg b) { return Ops::equals(a.v, b.v); }
-    constexpr Self& operator &= (Arg b) { Ops::and_assign(v, b.v); return SELF; }
-    constexpr Self& operator |= (Arg b) { Ops::or_assign(v, b.v); return SELF; }
-    constexpr Self& operator ^= (Arg b) { Ops::xor_assign(v, b.v); return SELF; }
+    constexpr Self& operator &= (Arg b) { v &= b.v; return SELF; }
+    constexpr Self& operator |= (Arg b) { v |= b.v; return SELF; }
+    constexpr Self& operator ^= (Arg b) { v ^= b.v; return SELF; }
 
-    constexpr Self& operator %= (Arg b) { Ops::or_assign(v, b.v); Ops::xor_assign(v, b.v); return SELF; } // andnot_assign
+    constexpr Self& operator %= (Arg b) { *this |= b; *this ^= b; return SELF; } // andnot_assign
     constexpr Self& operator += (Arg b) { assert (none(b)); return SELF ^= b; }
     constexpr Self& operator -= (Arg b) { assert (CONST_SELF >= b); return SELF ^= b; }
 
