@@ -6,7 +6,7 @@
 #include "typedefs.hpp"
 
 // position evaluation score, fits in 14 bits
-enum score_t {
+enum score_enum {
     NoScore = -8192, //TRICK: assume two's complement
     MinusInfinity = NoScore + 1, // negative bound, no position should eval to it
     MinusMate = MinusInfinity + 1, // mated in 0, only even negative values for mated positions
@@ -31,7 +31,7 @@ enum score_t {
 
 // position evaluation score, fits in 14 bits
 struct Score {
-    typedef score_t _t;
+    using _t = score_enum;
     _t v;
 
     constexpr bool isOk() const { return MinusInfinity <= v && v <= PlusInfinity; }
@@ -142,7 +142,7 @@ extern const PieceSquareTable pieceSquareTable;
 
 class Evaluation {
 public:
-    typedef PieceSquareTable::element_type _t;
+    using _t = PieceSquareTable::element_type;
 
 private:
     _t v;

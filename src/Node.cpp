@@ -531,7 +531,7 @@ bool Node::isDrawMaterial() const {
 bool Node::isRepetition() const {
     if (rule50() < 4) { return false; }
 
-    const Z& z = zobrist();
+    auto& z = zobrist();
 
     if (grandParent) {
         auto next = grandParent;
