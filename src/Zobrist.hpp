@@ -5,20 +5,23 @@
 #include "io.hpp"
 #include "typedefs.hpp"
 
-typedef u64_t z_t;
+class Z;
+using ZArg = const Z&;
 
 class Z {
-    typedef const Z& Arg;
+public:
+    using Arg = ZArg;
+    using _t = u64_t;
 
 protected:
-    z_t v;
+    _t v;
 
     constexpr Z& operator ^= (Arg b) { v ^= b.v; return *this; }
     constexpr friend Z operator ^ (Arg a, Arg b) { return Z{a} ^= b; }
 
 public:
-    constexpr Z(z_t n = 0) : v{n} {}
-    constexpr operator const z_t& () const { return v; }
+    explicit constexpr Z(_t n = 0) : v{n} {}
+    constexpr operator const _t& () const { return v; }
 
     constexpr friend bool operator == (Arg a, Arg b) { return a.v == b.v; }
     constexpr friend bool operator != (Arg a, Arg b) { return a.v != b.v; }
@@ -27,7 +30,7 @@ public:
         auto flags = out.flags();
 
         out << " [" << std::hex << std::setw(16) << std::setfill('0') << "]";
-        out << static_cast<z_t>(z);
+        out << z.v;
 
         out.flags(flags);
         return out;
@@ -35,31 +38,31 @@ public:
 };
 
 class Zobrist : public Z {
-    typedef const Zobrist& Arg;
+    using Arg = const Zobrist&;
 
     //hand picked set of de Bruijn numbers
-    enum : z_t {
-        ZQueen  = ULL(0x0218a392cd5d3dbf),
-        ZRook   = ULL(0x024530decb9f8ead),
-        ZBishop = ULL(0x02b91efc4b53a1b3),
-        ZKnight = ULL(0x02dc61d5ecfc9a51),
-        ZPawn   = ULL(0x031faf09dcda2ca9),
-        ZKing   = ULL(0x0352138afdd1e65b),
+    enum : _t {
+        ZQueen  = U64(0x0218a392cd5d3dbf),
+        ZRook   = U64(0x024530decb9f8ead),
+        ZBishop = U64(0x02b91efc4b53a1b3),
+        ZKnight = U64(0x02dc61d5ecfc9a51),
+        ZPawn   = U64(0x031faf09dcda2ca9),
+        ZKing   = U64(0x0352138afdd1e65b),
         ZCastling = ZRook ^ ZPawn,
         ZEnPassant = ::rotateleft(ZPawn, 32), // A4 => A8
-        // ZExtra  = ULL(0x03ac4dfb48546797), // reserved
+        // ZExtra  = U64(0x03ac4dfb48546797), // reserved
     };
 
     enum { Castling = 6, EnPassant = 7 };
-    typedef ::Index<8> Index;
+    using Index = ::Index<8>;
 
-    inline static constexpr Index::arrayOf<z_t> zKey = {{
+    inline static constexpr Index::arrayOf<_t> zKey = {{
         ZQueen, ZRook, ZBishop, ZKnight, ZPawn, ZKing, ZCastling, ZEnPassant
     }};
 
-    constexpr static z_t r(const z_t& z, Square::_t sq) { return ::rotateleft(z, sq); }
-    constexpr static z_t z(Index ty, Square::_t sq) { return r(zKey[ty], sq); }
-    constexpr static z_t flip(z_t z) { return ::byteswap(z); }
+    constexpr static _t r(const _t& z, Square::_t sq) { return ::rotateleft(z, sq); }
+    constexpr static _t z(Index::_t ty, Square::_t sq) { return r(zKey[ty], sq); }
+    constexpr static _t flip(_t z) { return ::byteswap(z); }
 
     constexpr void my(Index ty, Square sq) { v ^= z(ty, sq); }
     constexpr void op(Index ty, Square sq) { v ^= flip(z(ty, sq)); }

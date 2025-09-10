@@ -18,11 +18,11 @@ enum class Sq : u8_t {
 };
 
 class PiSquare {
-    typedef Sq element_type;
+    using element_type = Sq;
 
     union {
         vu8x16_t vu8x16;
-        Sq square[16];
+        element_type square[16];
     };
 
     constexpr void set(Pi pi, Square::_t sq) { square[pi] = static_cast<Sq>(sq); }
@@ -73,7 +73,7 @@ public:
     PiMask pieces() const { return PiMask{vu8x16 != ::all(static_cast<u8_t>(Sq::Empty))}; }
     PiMask piecesAt(Square sq) const { return PiMask{vu8x16, vector(sq)}; }
     PiMask piecesOn(Rank rank) const { return PiMask{
-        vu8x16 & vector(static_cast<Sq>(0xff ^ File::Mask)),
+        vu8x16 & vector(static_cast<element_type>(0xff ^ File::Mask)),
         vector(Square{static_cast<file_t>(0), rank})
     }; }
 };
