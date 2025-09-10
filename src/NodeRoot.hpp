@@ -12,7 +12,7 @@ class Uci;
 class NodeRoot;
 
 class HistoryMoves {
-    typedef Side::arrayOf<PieceType::arrayOf< Square::arrayOf<Move> >> _t;
+    using _t = Side::arrayOf< PieceType::arrayOf<Square::arrayOf<Move>> >;
     _t v;
 public:
     void clear() { std::memset(&v, 0, sizeof(v)); }
@@ -48,15 +48,17 @@ class NodeCounter {
     node_count_t nodes = 0; // (0 <= nodes && nodes <= nodesLimit)
     node_count_t nodesLimit; // search limit
 
-    typedef unsigned nodes_quota_t;
-    enum : nodes_quota_t { QuotaLimit = 1000 }; // < 0.2ms
+    static constexpr int QuotaLimit = 200; // < 0.05ms
 
     //number of remaining nodes before slow checking for search stop
-    nodes_quota_t nodesQuota = 0; // (0 <= nodesQuota && nodesQuota <= QuotaLimit)
+    int nodesQuota = 0; // (0 <= nodesQuota && nodesQuota <= QuotaLimit)
 
     constexpr void assertOk() const {
-        assert (nodesQuota <= nodes && nodes <= nodesLimit);
-        assert (/* 0 <= nodesQuota && */ nodesQuota < QuotaLimit);
+        assert (0 <= nodesQuota);
+        assert (nodesQuota < QuotaLimit);
+        //assert (0 <= nodes);
+        assert (nodes <= nodesLimit);
+        assert (static_cast<decltype(nodesLimit)>(nodesQuota) <= nodes);
     }
 
 public:

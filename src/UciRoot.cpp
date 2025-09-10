@@ -16,7 +16,7 @@ class FenToBoard {
             }
         }
     };
-    typedef std::set<Square, SquareImportance> Squares;
+    using Squares = std::set<Square, SquareImportance>;
 
     Color::arrayOf< PieceType::arrayOf<Squares> > pieces;
     Color::arrayOf<int> pieceCount = {{0, 0}};

@@ -24,7 +24,7 @@ class TtSlot {
     };
 
     union {
-        z_t zobrist;
+        Z::_t zobrist;
         DataSmall s;
     };
 

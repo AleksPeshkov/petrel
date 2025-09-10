@@ -7,7 +7,7 @@
 #include <mutex>
 #include <thread>
 
-typedef std::function<void()> ThreadTask;
+using ThreadTask = std::function<void()>;
 
 class Thread {
     enum class Status {

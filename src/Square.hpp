@@ -5,7 +5,7 @@
 #include "Index.hpp"
 
 enum direction_t { FileDir, RankDir, DiagonalDir, AntidiagDir };
-typedef Index<4, direction_t> Direction;
+using Direction = Index<4, direction_t>;
 
 enum file_t { FileA, FileB, FileC, FileD, FileE, FileF, FileG, FileH, };
 

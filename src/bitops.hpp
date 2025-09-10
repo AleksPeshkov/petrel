@@ -5,7 +5,26 @@
 #include <cstdint>
 #include <type_traits>
 #include "assert.hpp"
-#include "types.hpp"
+
+using std::size_t;
+
+using i8_t = std::int8_t;
+using u8_t = std::uint8_t;
+
+using i16_t = std::int16_t;
+using u16_t = std::uint16_t;
+
+using i32_t = std::int32_t;
+using u32_t = std::uint32_t;
+
+using i64_t = std::int64_t;
+using u64_t = std::uint64_t;
+
+#if defined _WIN32
+#   define U64(number) number##ull
+#else
+#   define U64(number) number##ul
+#endif
 
 #define CACHE_ALIGN __attribute__((__aligned__(64)))
 #define PACKED __attribute__((packed))
@@ -26,35 +45,35 @@ constexpr T clearFirst(T n) { return n & static_cast<T>(n-1); }
 template <typename T>
 constexpr bool isSingleton(T n) { return (n != 0) && (::clearFirst(n) == 0); }
 
-constexpr inline std::uint64_t rotateleft(std::uint64_t b, int n) {
+constexpr u64_t rotateleft(u64_t b, int n) {
     if  (n == 0) { return b; }
     return b << n | b >> (64 - n);
 }
 
-constexpr inline std::uint64_t byteswap(std::uint64_t b) {
+constexpr u64_t byteswap(u64_t b) {
     return __builtin_bswap64(b);
 }
 
 // the least significant bit in a non-zero bitset
-constexpr inline int lsb(std::uint32_t b) {
+constexpr int lsb(u32_t b) {
     assert (b != 0);
     return __builtin_ctz(b);
 }
 
 // the most significant bit in a non-zero bitset
-constexpr inline int msb(std::uint32_t b) {
+constexpr int msb(u32_t b) {
     assert (b != 0);
     return 31 ^ __builtin_clz(b);
 }
 
 // the least significant bit in a non-zero bitset
-constexpr inline int lsb(std::uint64_t b) {
+constexpr int lsb(u64_t b) {
     assert (b != 0);
     return __builtin_ctzll(b);
 }
 
 // the most significant bit in a non-zero bitset
-constexpr inline int msb(std::uint64_t b) {
+constexpr int msb(u64_t b) {
     assert (b != 0);
     return 63 ^ __builtin_clzll(b);
 }
@@ -65,11 +84,11 @@ constexpr T round(T n) {
     return ::singleton<decltype(n)>(::msb(n));
 }
 
-constexpr inline int popcount(std::uint32_t b) {
+constexpr inline int popcount(u32_t b) {
     return __builtin_popcount(b);
 }
 
-constexpr inline int popcount(std::uint64_t b) {
+constexpr inline int popcount(u64_t b) {
     return __builtin_popcountll(b);
 }
 
