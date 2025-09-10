@@ -5,10 +5,8 @@
 #include "typedefs.hpp"
 
 class VectorOfAll {
-    typedef vu8x16_t _t;
-    typedef Index<0x100> ByteIndex;
-
-    ByteIndex::arrayOf<_t> v;
+    using _t = vu8x16_t;
+    Index<0x100>::arrayOf<_t> v;
 
 public:
     constexpr VectorOfAll () : v {

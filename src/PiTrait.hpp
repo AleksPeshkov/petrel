@@ -18,7 +18,7 @@ enum class Trait : u8_t {
 };
 
 class PiTrait {
-    typedef Trait element_type;
+    using element_type = Trait;
 
     union {
         element_type trait[16];
