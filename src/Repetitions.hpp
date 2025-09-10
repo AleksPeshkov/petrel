@@ -4,22 +4,20 @@
 #include "typedefs.hpp"
 #include "Zobrist.hpp"
 
-typedef const Z& Zr;
-
 class RepetitionMask {
-    typedef u64_t _t;
+    using _t = u64_t;
     _t v{0};
 
-    static constexpr _t mask(Zr z) { return ::singleton<u64_t>(z & 077); }
+    static constexpr _t mask(ZArg z) { return ::singleton<_t>(z & 077); }
 public:
     constexpr RepetitionMask () : v{0} {}
-    constexpr RepetitionMask (const RepetitionMask& m, Zr z) : v{m.v | mask(z)} {}
-    constexpr bool has(Zr z) const { return (v & mask(z)) != 0; }
+    constexpr RepetitionMask (const RepetitionMask& m, ZArg z) : v{m.v | mask(z)} {}
+    constexpr bool has(ZArg z) const { return (v & mask(z)) != 0; }
 };
 
 class Repetitions {
     class RepRootSide {
-        typedef Index<50> RepIndex;
+        using RepIndex = Index<50>;
 
         struct RepEntry {
             Z z;
@@ -45,7 +43,7 @@ class Repetitions {
             last  = last > 0 ? RepIndex{last-1} : RepIndex::Last;
         }
 
-        void push(Zr z) {
+        void push(ZArg z) {
             RepetitionMask mask{reps[last].mask, reps[last].z};
             last  = last < RepIndex::Last ? last+1 : 0;
             count = count < RepIndex::Size ? count+1 : count;
@@ -89,7 +87,7 @@ class Repetitions {
             last = RepIndex::Last;
         }
 
-        bool has(Zr z) const {
+        bool has(ZArg z) const {
             RepIndex i = 0;
             while (true) {
                 if (z == reps[i].z) {
@@ -112,7 +110,7 @@ class Repetitions {
     Color::arrayOf<RepRootSide> v;
 
 public:
-    void push(Color c, Zr z) {
+    void push(Color c, ZArg z) {
         return v[c].push(z);
     }
 
@@ -130,7 +128,7 @@ public:
         }
     }
 
-    bool has(Color c, Zr z) const {
+    bool has(Color c, ZArg z) const {
         return v[c].has(z);
     }
 

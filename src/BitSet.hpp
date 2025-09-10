@@ -10,10 +10,10 @@
 template <class Self, typename _index_type, class Value = unsigned>
 class BitSet : public BitArray<Self, Value> {
 public:
-    typedef BitArray<Self, Value> Base;
+    using Base = BitArray<Self, Value>;
     using typename Base::_t;
     using Base::v;
-    typedef _index_type index_type;
+    using index_type = _index_type;
 
     constexpr BitSet () : Base{} {}
     constexpr explicit BitSet (_t b) : Base{b} {}
@@ -29,7 +29,7 @@ public:
     }
 
     // one and only one bit set
-    bool isSingleton() const {
+    constexpr bool isSingleton() const {
         assert (CONST_SELF.any());
         return clearFirst() == 0;
     }

@@ -2,7 +2,6 @@
 #define TYPEDEFS_HPP
 
 #include <limits>
-#include "types.hpp"
 #include "Index.hpp"
 #include "Square.hpp"
 
@@ -10,9 +9,9 @@
 using Ply = Index<64>;
 constexpr Ply::_t MaxPly = Ply::Last; // Ply is limited to [0 .. MaxPly]
 
-typedef u8_t MovesNumber; // number of (legal) moves in the position
+using MovesNumber = int; // number of (legal) moves in the position
 
-typedef u64_t node_count_t;
+using node_count_t = u64_t;
 enum : node_count_t {
     NodeCountNone = std::numeric_limits<node_count_t>::max(),
     NodeCountMax  = NodeCountNone - 1
@@ -26,9 +25,8 @@ enum class NodeControl {
 
 // number of halfmoves without capture or pawn move
 class Rule50 {
-    typedef int _t;
-    static constexpr _t Draw = 100;
-    _t v;
+    int v;
+    static constexpr int Draw = 100;
 public:
     constexpr Rule50() : v{0} {}
     constexpr void clear() { v = 0; }
@@ -47,7 +45,7 @@ public:
 };
 
 enum color_t { White, Black };
-typedef IndexChar<2, color_t> Color;
+using Color = IndexChar<2, color_t>;
 template <> io::czstring Color::The_string;
 
 // color to move of the given ply
@@ -57,18 +55,18 @@ enum side_to_move_t {
     My, // side to move
     Op  // opposite to side to move
 };
-typedef Index<2, side_to_move_t> Side;
+using Side = Index<2, side_to_move_t>;
 constexpr Side::_t operator ~ (Side::_t my) { return static_cast<Side::_t>(my ^ static_cast<Side::_t>(Side::Mask)); }
 
 enum chess_variant_t { Orthodox, Chess960 };
-typedef Index<2, chess_variant_t> ChessVariant;
+using ChessVariant = Index<2, chess_variant_t>;
 
 enum castling_side_t { KingSide, QueenSide };
-typedef IndexChar<2, castling_side_t> CastlingSide;
+using CastlingSide = IndexChar<2, castling_side_t>;
 template <> io::czstring CastlingSide::The_string;
 
 enum piece_index_t { TheKing }; // king index is always 0
-typedef Index<16, piece_index_t> Pi; //piece index 0..15
+using Pi = Index<16, piece_index_t>; //piece index 0..15
 
 enum piece_type_t {
     Queen = 0,
@@ -78,11 +76,11 @@ enum piece_type_t {
     Pawn = 4,
     King = 5,
 };
-typedef Index<3, piece_type_t> SliderType; // Queen, Rook, Bishop
-typedef IndexChar<4, piece_type_t> PromoType; // Queen, Rook, Bishop, Knight
-typedef IndexChar<6, piece_type_t> PieceType; // Queen, Rook, Bishop, Knight, Pawn, King
-template <> io::czstring PieceType::The_string;
+using SliderType = Index<3, piece_type_t>; // Queen, Rook, Bishop
+using PromoType = IndexChar<4, piece_type_t>; // Queen, Rook, Bishop, Knight
+using PieceType = IndexChar<6, piece_type_t>; // Queen, Rook, Bishop, Knight, Pawn, King
 template <> io::czstring PromoType::The_string;
+template <> io::czstring PieceType::The_string;
 
 constexpr bool isSlider(piece_type_t ty) { return ty < Knight; } // Queen, Rook, Bishop
 constexpr bool isLeaper(piece_type_t ty) { return ty >= Knight; } // Knight, Pawn, King
@@ -118,7 +116,7 @@ public:
         Normal, // normal move or capture
         Special // castling, promotion or en passant capture
     };
-    typedef Index<2, move_type_t> MoveType;
+    using MoveType = Index<2, move_type_t>;
 
 protected:
     Square::_t from_:6 = static_cast<Square::_t>(0);

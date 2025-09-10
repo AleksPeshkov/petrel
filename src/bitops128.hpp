@@ -3,8 +3,8 @@
 
 #include "bitops.hpp"
 
-typedef u8_t  vu8x16_t __attribute__((vector_size(16)));
-typedef u64_t vu64x2_t __attribute__((vector_size(16)));
+using vu8x16_t = u8_t __attribute__((vector_size(16)));
+using vu64x2_t = u64_t __attribute__((vector_size(16)));
 
 constexpr u8_t u8(const vu8x16_t& v, int i) {
     union {
@@ -15,17 +15,17 @@ constexpr u8_t u8(const vu8x16_t& v, int i) {
     return u.u8[i];
 }
 
-constexpr u64_t u64(const vu64x2_t& v) {
+constexpr u64_t u64(const vu64x2_t& v, int i = 0) {
     union {
         vu64x2_t v;
         u64_t u64[2];
     } u;
     u.v = v;
-    return u.u64[0];
+    return u.u64[i];
 }
 
 template <typename vector_type>
-inline constexpr vector_type shufflevector(vector_type vector, vector_type mask) {
+constexpr vector_type shufflevector(vector_type vector, vector_type mask) {
 #if __clang__
     return __builtin_shufflevector(vector, mask);
 #else
@@ -33,16 +33,15 @@ inline constexpr vector_type shufflevector(vector_type vector, vector_type mask)
 #endif
 }
 
-inline int popcount(vu64x2_t v) {
-    return popcount(v[0]) + popcount(v[1]);
+constexpr int popcount(vu64x2_t v) {
+    return popcount(::u64(v, 0)) + popcount(::u64(v, 1));
 }
 
 inline int mask(vu8x16_t v) {
     return __builtin_ia32_pmovmskb128(v);
 }
 
-template <typename vector_type>
-inline bool equals(const vector_type& a, const vector_type& b) {
+inline bool equals(const vu8x16_t& a, const vu8x16_t& b) {
     return mask(a == b) == 0xffffu;
 }
 

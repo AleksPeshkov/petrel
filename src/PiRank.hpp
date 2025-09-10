@@ -7,7 +7,7 @@
 #include "VectorOfAll.hpp"
 
 class PiRank : public BitArray<PiRank, vu8x16_t> {
-    typedef BitArray<PiRank, vu8x16_t> Base;
+    using Base = BitArray<PiRank, vu8x16_t>;
 
 public:
     using Base::Base;
