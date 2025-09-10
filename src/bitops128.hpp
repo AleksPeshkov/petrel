@@ -3,8 +3,8 @@
 
 #include "bitops.hpp"
 
-typedef u8_t  vu8x16_t __attribute__((vector_size(16)));
-typedef u64_t vu64x2_t __attribute__((vector_size(16)));
+using vu8x16_t = u8_t __attribute__((vector_size(16)));
+using vu64x2_t = u64_t __attribute__((vector_size(16)));
 
 constexpr u8_t u8(const vu8x16_t& v, int i) {
     union {
@@ -41,8 +41,7 @@ inline int mask(vu8x16_t v) {
     return __builtin_ia32_pmovmskb128(v);
 }
 
-template <typename vector_type>
-inline bool equals(const vector_type& a, const vector_type& b) {
+inline bool equals(const vu8x16_t& a, const vu8x16_t& b) {
     return mask(a == b) == 0xffffu;
 }
 
