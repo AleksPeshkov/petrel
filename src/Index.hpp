@@ -3,7 +3,6 @@
 
 #include <array>
 #include <cstring>
-#include "types.hpp"
 #include "bitops.hpp"
 #include "io.hpp"
 
@@ -12,7 +11,7 @@
 template <int _Size, typename _element_type = int, int _Mask = _Size-1>
 class Index {
 public:
-    typedef _element_type _t;
+    using _t = _element_type;
     enum { Size = _Size, Last = Size-1, Mask = _Mask };
     template <typename T> using arrayOf = std::array<T, Size>;
 
@@ -50,7 +49,7 @@ public:
 
 template <int _Size, typename _element_type = int, int _Mask = _Size-1>
 class IndexChar : public Index<_Size, _element_type, _Mask> {
-    typedef Index<_Size, _element_type, _Mask> Base;
+    using Base = Index<_Size, _element_type, _Mask>;
     using Base::v;
 
     static io::czstring The_string;
