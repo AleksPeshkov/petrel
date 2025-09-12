@@ -7,7 +7,7 @@
 
 class Node;
 
-enum Bound { NoBound, LowerBound, UpperBound, Exact };
+enum Bound { NoBound, LowerBound, UpperBound, ExactScore = UpperBound | LowerBound };
 
 // 8 byte, always replace slot, so no age field, only one score, depth and bound flags
 class TtSlot {
@@ -63,7 +63,9 @@ protected:
     Score alpha = MinusInfinity;
     Score beta = PlusInfinity;
 
-    Move childMove = {}; // last move made from this node
+    bool alphaImproved = false; // alpha is improved (implies PV node)
+
+    Move currentMove = {}; // last move made from this node and it currently searching
     Move killer1 = {}; // first killer move to try at child-child nodes
     Move killer2 = {}; // second killer move to try at child-child nodes
     bool canBeKiller = false; // only moves at after killer stage will update killers
@@ -74,8 +76,6 @@ protected:
     [[nodiscard]] ReturnStatus searchMove(Square from, Square to) { return searchMove({from, to}); }
     [[nodiscard]] ReturnStatus searchIfLegal(Move move) { return parent->isLegalMove(move) ? searchMove(move) : ReturnStatus::Continue; }
     [[nodiscard]] ReturnStatus negamax(Node*);
-    [[nodiscard]] ReturnStatus betaCutoff();
-    [[nodiscard]] ReturnStatus updatePv();
 
     [[nodiscard]] ReturnStatus search();
     [[nodiscard]] ReturnStatus searchMoves();
@@ -92,7 +92,9 @@ protected:
 
     void makeMove(Move move);
     void updateKillerMove();
-    void updateTtPv();
+    void refreshTtPv();
+    void failHigh();
+    void updatePv();
 
     constexpr Color colorToMove() const;
     bool isDrawMaterial() const;
