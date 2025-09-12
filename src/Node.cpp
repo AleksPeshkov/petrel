@@ -185,7 +185,7 @@ ReturnStatus Node::negamax(Node* child) {
 
 ReturnStatus Node::betaCutoff() {
     updateKillerMove();
-    *origin = TtSlot{this, UpperBound};
+    *origin = TtSlot{this, LowerBound};
     ++root.tt.writes;
     return ReturnStatus::BetaCutoff;
 }
@@ -240,6 +240,22 @@ ReturnStatus Node::searchMoves() {
             isHit = false;
         } else {
             ++root.tt.hits;
+
+            if (ttSlot.draft() >= draft && !isPv) {
+                Bound bound = ttSlot;
+                Score ttScore = ttSlot.score(ply);
+
+                if (bound == LowerBound && beta <= ttScore) {
+                    score = ttScore;
+                    return ReturnStatus::BetaCutoff;
+                } else if (bound == UpperBound && ttScore <= alpha) {
+                    score = ttScore;
+                    return ReturnStatus::Continue;
+                } else if (bound == Exact) {
+                    score = ttScore;
+                    return beta <= ttScore ? ReturnStatus::BetaCutoff : ReturnStatus::Continue;
+                }
+            }
         }
     }
 
@@ -350,6 +366,10 @@ ReturnStatus Node::searchMoves() {
         }
     }
 
+    // fail low
+    childMove = isHit && Move{ttSlot} ? Move{ttSlot} : Move{}; // pass the previous TT move
+    *origin = TtSlot(this, UpperBound);
+    ++root.tt.writes;
     return ReturnStatus::Continue;
 }
 
