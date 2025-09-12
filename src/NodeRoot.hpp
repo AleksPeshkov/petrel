@@ -88,7 +88,8 @@ public:
     Repetitions repetitions;
     PvMoves pvMoves;
     Score pvScore = NoScore;
-    HistoryMoves counterMove;
+    HistoryMoves counterMove; // move in response to the last opponent move
+    HistoryMoves followMove; // move in response to the previous move of the same color
 
     NodeCounter nodeCounter;
 

@@ -285,15 +285,22 @@ ReturnStatus Node::searchMoves() {
     //TODO: checking moves
 
     if (parent) {
-        // killer move to be tried first
         RETURN_CUTOFF (child->searchIfLegal(parent->killer1));
-
-        // counter moves may refute the last opponent move
-        Move move = parent->childMove;
-        PieceType ty = parent->MY.typeAt(move.from());
-        RETURN_CUTOFF (child->searchIfLegal( root.counterMove(colorToMove(), ty, move.to()) ));
-
         RETURN_CUTOFF (child->searchIfLegal(parent->killer2));
+
+        // counter move may refute the last opponent move
+        Move opMove = parent->childMove;
+        RETURN_CUTOFF (child->searchIfLegal( root.counterMove(
+            colorToMove(), parent->MY.typeAt(opMove.from()), opMove.to()
+        ) ));
+
+        // follow move to continue previous side to move idea
+        if (grandParent) {
+            Move myMove = grandParent->childMove;
+            RETURN_CUTOFF (child->searchIfLegal( root.followMove(
+                colorToMove(), grandParent->MY.typeAt(myMove.from()), myMove.to()
+            ) ));
+        }
 
         // try quiet moves of the last moved piece (unless it was captured)
         {
@@ -507,9 +514,13 @@ void Node::updateKillerMove() {
         parent->killer1 = childMove;
     }
 
-    Move move = parent->childMove;
-    PieceType ty = parent->MY.typeAt(move.from());
-    root.counterMove.set(colorToMove(), ty, move.to(), childMove);
+    Move myMove = parent->childMove;
+    root.counterMove.set(colorToMove(), parent->MY.typeAt(myMove.from()), myMove.to(), childMove);
+
+    if (!grandParent) { return; }
+
+    Move opMove = grandParent->childMove;
+    root.followMove.set(colorToMove(), grandParent->MY.typeAt(opMove.from()), opMove.to(), childMove);
 }
 
 UciMove Node::uciMove(Square from, Square to) const {

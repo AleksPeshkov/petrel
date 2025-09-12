@@ -8,6 +8,7 @@ void NodeRoot::setHash(size_t bytes) {
 void NodeRoot::newGame() {
     tt.newGame();
     counterMove.clear();
+    followMove.clear();
     newSearch();
 }
 
