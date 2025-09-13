@@ -12,7 +12,7 @@ TEST_DIR ?= test
 EXPECT ?= $(TEST_DIR)/expect.sh
 
 # === Default Flags (Release) ===
-BUILD_FLAGS = -Ofast -flto -finline-functions -DNDEBUG
+BUILD_FLAGS = -Ofast -flto -finline-functions -static -DNDEBUG
 
 # === Tag Files for Build Type ===
 TAG_TEST  = $(BUILD_DIR)/.test
