@@ -261,103 +261,112 @@ ReturnStatus Node::searchMoves() {
         return ReturnStatus::Continue;
     }
 
+    // reset current node, as it reused for searching all sibling moves
+    score = NoScore;
+
     // prepare empty child node to make moves into
     Node node{this};
     const auto child = &node;
-
-    // reset current node, as it reused for all sibling moves
-    canBeKiller = false;
-    score = NoScore;
 
     if (isHit && Move{ttSlot}) {
         RETURN_CUTOFF (child->searchMove(ttSlot));
     }
 
-    PiMask victims = OP.pieces() - PiMask{TheKing};
-    RETURN_CUTOFF (goodCaptures(child, victims));
-
+    // cannot capture the king, so do not even try
+    RETURN_CUTOFF (goodCaptures(child, OP.pieces() - PiMask{TheKing}));
     canBeKiller = true;
 
-    Pi lastPi = TheKing;
-    Bb newMoves = {};
-
-    //TODO: checking moves
+    Bb opPawnAttacks = ~OP.bbPawnAttacks();
 
     if (parent) {
-        // killer move to be tried first
+        /**
+         * Dynamic move ordering heuristics
+         */
+
+        // first killer move
         RETURN_CUTOFF (child->searchIfLegal(parent->killer1));
 
-        // counter moves may refute the last opponent move
-        Move move = parent->currentMove;
-        PieceType ty = parent->MY.typeAt(move.from());
-        RETURN_CUTOFF (child->searchIfLegal( root.counterMove(colorToMove(), ty, move.to()) ));
+        // countermove heuristic: refutation of the last opponent's move
+        Move opMove = parent->currentMove;
+        RETURN_CUTOFF (child->searchIfLegal( root.counterMove(
+            colorToMove(), parent->MY.typeAt(opMove.from()), opMove.to()
+        ) ));
 
+        // second killer move
         RETURN_CUTOFF (child->searchIfLegal(parent->killer2));
 
-        // try quiet moves of the last moved piece (unless it was captured)
-        {
-            Square from = parent->movedPieceTo();
-            if (MY.bbSide().has(from)) {
-                // last moved piece
-                lastPi = MY.pieceAt(from);
+        /**
+         * Static move ordering heuristics
+         */
 
-                // new moves of the last moved piece
-                newMoves = movesOf(lastPi);
-
-                if (from != parent->movedPieceFrom()) {
-                    // unless it was a pawn promotion move
-                    newMoves %= parent->OP.attacksOf(lastPi);
-                }
-
-                // try new safe moves of the last moved piece
-                for (Square to : newMoves % bbAttacked()) {
-                    RETURN_CUTOFF (child->searchMove(from, to));
-                }
-
-                // keep unsafe news moves for later
-                newMoves &= bbAttacked();
-            }
-        }
-
-        // new safe quiet moves, except for the last moved piece (or king)
-        for (Pi pi : MY.pieces() - lastPi) {
+        // a few discovered moves are tactically important even if unsafe
+        for (Pi pi : MY.sliders()) {
+            //TRICK: normally pi == parent->OP.pieceAt(from), but lets do it extra safe
             Square from = MY.squareOf(pi);
-            for (Square to : movesOf(pi) % parent->OP.attacksOf(pi) % bbAttacked()) {
+            Bb previousAttacks = parent->OP.attacksOf(parent->OP.pieceAt(from));
+
+            // new moves of all sliders (last moved piece or not)
+            // avoid moves on squares attacked by opponent pawns
+            for (Square to : movesOf(pi) % previousAttacks % opPawnAttacks) {
                 RETURN_CUTOFF (child->searchMove(from, to));
             }
         }
+
+        // static continuation heuristic:
+        // try quiet moves of the last moved piece of the same side (ply-2)
+        do {
+            Square from = parent->opMovedTo();
+            if (!MY.bbSide().has(from)) {
+                // last moved piece was just captured
+                break;
+            }
+
+            Pi lastMovedPi = MY.pieceAt(from);
+            if (lastMovedPi == TheKing) {
+                if (grandParent && grandParent->inCheck()) {
+                    // do not search new king moves first if previous move was check evasion
+                    break;
+                }
+                if (from == parent->opMovedFrom()) {
+                    // previous was null move, so no real last moved piece
+                    break;
+                }
+            }
+
+            if (MY.isSlider(lastMovedPi)) {
+                // we already searched all new moves of the last moved slider piece
+                break;
+            }
+
+            Bb lastMovedNewMoves = movesOf(lastMovedPi);
+
+            if (MY.isPawn(lastMovedPi)) {
+                // the single non capture follow up pawn move needs special treatment
+            } else if (from == parent->opMovedFrom()) {
+                assert (from.on(Rank8));
+                // all moves are new of the newly promoted piece
+            } else {
+                //TRICK: normally pi == parent->OP.pieceAt(from), but lets do it extra safe
+                Bb previousAttacks = parent->OP.attacksOf(parent->OP.pieceAt(from));
+                lastMovedNewMoves -= movesOf(lastMovedPi) % previousAttacks;
+            }
+
+            // try all new moves of the last moved piece
+            // avoid moves on squares attacked by opponent pawns
+            for (Square to : lastMovedNewMoves % opPawnAttacks) {
+                RETURN_CUTOFF (child->searchMove(from, to));
+            }
+        } while (false);
     }
 
-    // all the rest safe quiet moves
-    for (Pi pi : MY.pieces()) {
-        Square from = MY.squareOf(pi);
-        for (Square to : movesOf(pi) % bbAttacked()) {
-            RETURN_CUTOFF (child->searchMove(from, to));
-        }
-    }
-
-    if (newMoves.any()) {
-        Square from = parent->movedPieceTo();
-        Pi pi = MY.pieceAt(from);
-
-        // unsafe new moves of the last moved piece
-        for (Square to : newMoves) {
-            RETURN_CUTOFF (child->searchIfLegal({from, to}));
-        }
-
-        // the rest moves of the last moved piece
-        for (Square to : movesOf(pi)) {
-            RETURN_CUTOFF (child->searchMove(from, to));
-        }
-    }
+    //TODO: try checking moves somewhere
 
     // remaining (bad) captures and all underpromotions
-    RETURN_CUTOFF (badCaptures(child, victims));
+    RETURN_CUTOFF (badCaptures(child, OP.pieces() - PiMask{TheKing}));
 
-    // all the rest (quiet) moves, LVA order
-    auto pieces = MY.pieces();
-    while (pieces.any()) {
-        Pi pi = pieces.leastValuable(); pieces -= pi;
+    // all the rest (quiet) moves
+    //TODO: search safe moves first
+    for (Pi pi : MY.pieces()) {
         Square from = MY.squareOf(pi);
 
         for (Square to : movesOf(pi)) {
@@ -391,22 +400,17 @@ ReturnStatus Node::quiescence() {
         alpha = score;
     }
 
-
     // prepare empty child node to make moves into
     //TODO: create lighter quiescence search node
     Node node{this};
     const auto child = &node;
 
-    // reset current node, as it reused for all sibling moves
-    canBeKiller = false;
-
-    PiMask victims = OP.pieces() - PiMask{TheKing};
-    RETURN_CUTOFF (goodCaptures(child, victims));
-
-    return ReturnStatus::Continue;
+    // king cannot be captured, so do not even try
+    return goodCaptures(child, OP.pieces() - PiMask{TheKing});
 }
 
 ReturnStatus Node::goodCaptures(Node* child, const PiMask& victims) {
+    canBeKiller = false;
     if (MY.promotables().any()) {
         // queen promotions with capture, always good
         for (Pi victim : OP.pieces() & OP.piecesOn(Rank8)) {

@@ -65,7 +65,12 @@ protected:
     bool alphaImproved = false; // alpha is improved (implies PV node)
     bool isPv = true; // alpha < beta - 1, cannot use constexpr as alpha may change during search
 
-    Move currentMove = {}; // last move made from *this into *child
+    /**
+     * Last move made from *this into *child
+     * this->currentMove == Move{child->opMovedFrom(), child->opMovedTo()};
+     * unless it is special or null move
+     */
+    Move currentMove = {};
 
     /**
      * Killer heuristic
