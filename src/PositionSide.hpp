@@ -57,7 +57,7 @@ public:
     PiMask pieces() const { assert (squares.pieces() == types.pieces()); return squares.pieces(); }
     PiMask sliders() const { return types.sliders(); }
 
-    Pi pieceAt(Square sq) const { Pi pi = squares.pieceAt(sq); assertOk(pi); return pi; }
+    Pi pieceAt(Square sq) const { assert (has(sq)); Pi pi = squares.pieceAt(sq); assertOk(pi); return pi; }
     PiMask piecesOn(Rank rank) const { return squares.piecesOn(rank); }
 
     PiMask piecesOfType(PieceType ty) const { return types.piecesOfType(ty); }
@@ -87,7 +87,7 @@ public:
     PiMask promotables() const { return traits.promotables(); }
     bool isPromotable(Pi pi) const { assertOk(pi); return traits.isPromotable(pi); }
 
-    Bb attacksOf(Pi pi) const { return attacks_[pi]; }
+    Bb attacksOf(Pi pi) const { assertOk(pi); return attacks_[pi]; }
     PiMask attackersTo(Square sq) const { return attacks_[sq]; }
     PiMask affectedBy(Square sq) const { return attackersTo(sq); }
     PiMask affectedBy(Square a, Square b) const { return affectedBy(a) | affectedBy(b); }
