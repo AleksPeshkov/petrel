@@ -16,7 +16,7 @@ TtSlot::TtSlot (Z z, Move move, Score score, Bound b, Ply d) : s{
 
 TtSlot::TtSlot (Node* n, Bound b) : TtSlot{
     n->zobrist(),
-    n->childMove,
+    n->currentMove,
     n->score.toTt(n->ply),
     b,
     n->draft
@@ -85,7 +85,7 @@ ReturnStatus Node::searchRoot() {
         auto status = searchMoves();
 
         root.newIteration();
-        updateTtPv();
+        refreshTtPv();
 
         if (status == ReturnStatus::Stop) { return ReturnStatus::Stop; }
 
@@ -97,8 +97,8 @@ ReturnStatus Node::searchRoot() {
     return ReturnStatus::Continue;
 }
 
- // refresh PV in TT if it was overwritten
- void Node::updateTtPv() {
+ // refresh PV in TT before new search iteration if it was occasionally overwritten
+ void Node::refreshTtPv() {
     Position pos{root};
     Score s = root.pvScore;
     Ply d = draft;
@@ -106,7 +106,7 @@ ReturnStatus Node::searchRoot() {
     const Move* pv = root.pvMoves;
     for (Move move; (move = *pv++);) {
         auto o = root.tt.addr<TtSlot>(pos.zobrist());
-        *o = TtSlot{pos.zobrist(), move, s, Exact, d};
+        *o = TtSlot{pos.zobrist(), move, s, ExactScore, d};
         ++root.tt.writes;
 
         //we cannot use makeZobrist() because of en passant legality validation
@@ -120,7 +120,7 @@ void Node::makeMove(Move move) {
     Square from = move.from();
     Square to = move.to();
 
-    parent->childMove = move;
+    parent->currentMove = move;
     parent->clearMove(from, to);
     Position::makeMove(parent, from, to);
     origin = root.tt.prefetch<TtSlot>(zobrist());
@@ -150,11 +150,12 @@ ReturnStatus Node::negamax(Node* child) {
 
         if (alpha < score) {
             if (beta <= score) {
-                return betaCutoff();
+                failHigh();
+                return ReturnStatus::BetaCutoff;
             }
 
             alpha = score;
-            RETURN_IF_STOP (updatePv());
+            updatePv();
         }
     }
 
@@ -168,23 +169,21 @@ ReturnStatus Node::negamax(Node* child) {
     return ReturnStatus::Continue;
 }
 
-ReturnStatus Node::betaCutoff() {
+void Node::failHigh() {
     updateKillerMove();
-    *origin = TtSlot{this, LowerBound};
+    *origin = TtSlot{this, FailHigh};
     ++root.tt.writes;
-    return ReturnStatus::BetaCutoff;
 }
 
-ReturnStatus Node::updatePv() {
-    root.pvMoves.set(ply, uciMove(childMove));
-    *origin = TtSlot{this, Exact};
+void Node::updatePv() {
+    root.pvMoves.set(ply, uciMove(currentMove));
+    *origin = TtSlot{this, ExactScore};
     ++root.tt.writes;
 
     if (ply == 0) {
         root.pvScore = score;
         root.uci.info_pv(draft);
     }
-    return ReturnStatus::Continue;
 }
 
 ReturnStatus Node::search() {
@@ -234,8 +233,11 @@ ReturnStatus Node::searchMoves() {
         return ReturnStatus::Continue;
     }
 
+    // prepare empty child node to make moves into
     Node node{this};
     const auto child = &node;
+
+    // reset current node, as it reused for all sibling moves
     canBeKiller = false;
     score = NoScore;
 
@@ -258,7 +260,7 @@ ReturnStatus Node::searchMoves() {
         RETURN_CUTOFF (child->searchIfLegal(parent->killer1));
 
         // counter moves may refute the last opponent move
-        Move move = parent->childMove;
+        Move move = parent->currentMove;
         PieceType ty = parent->MY.typeAt(move.from());
         RETURN_CUTOFF (child->searchIfLegal( root.counterMove(colorToMove(), ty, move.to()) ));
 
@@ -342,7 +344,7 @@ ReturnStatus Node::quiescence() {
     assert (MinusInfinity <= alpha && alpha < beta && beta <= PlusInfinity);
     assert (!inCheck());
 
-    //stand pat
+    // stand pat
     score = evaluate();
     if (beta <= score) {
         return ReturnStatus::BetaCutoff;
@@ -355,8 +357,13 @@ ReturnStatus Node::quiescence() {
         alpha = score;
     }
 
+
+    // prepare empty child node to make moves into
+    //TODO: create lighter quiescence search node
     Node node{this};
     const auto child = &node;
+
+    // reset current node, as it reused for all sibling moves
     canBeKiller = false;
 
     PiMask victims = OP.pieces() - PiMask{TheKing};
@@ -472,17 +479,18 @@ void Node::updateKillerMove() {
     if (!canBeKiller) { return; }
     if (!parent) { return; }
 
-    if (parent->killer1 != childMove) {
+    if (parent->killer1 != currentMove) {
         parent->killer2 = parent->killer1;
-        parent->killer1 = childMove;
+        parent->killer1 = currentMove;
     }
 
-    Move move = parent->childMove;
+    Move move = parent->currentMove;
     PieceType ty = parent->MY.typeAt(move.from());
-    root.counterMove.set(colorToMove(), ty, move.to(), childMove);
+    root.counterMove.set(colorToMove(), ty, move.to(), currentMove);
 }
 
-UciMove Node::uciMove(Square from, Square to) const {
+UciMove Node::uciMove(Move move) const {
+    Square from{move.from()}; Square to{move.to()};
     return UciMove{from, to, isSpecial(from, to), colorToMove(), root.uci.chessVariant()};
 }
 
