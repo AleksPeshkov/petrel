@@ -240,6 +240,19 @@ ReturnStatus Node::search() {
             isHit = false;
         } else {
             ++root.tt.hits;
+
+            if (ttSlot.draft() >= draft) {
+                Bound bound = ttSlot;
+                Score ttScore = ttSlot.score(ply);
+
+                if ((bound & FailHigh) && beta <= ttScore) {
+                    score = ttScore;
+                    return ReturnStatus::BetaCutoff;
+                } else if ((bound & FailLow) && ttScore <= alpha) {
+                    score = ttScore;
+                    return ReturnStatus::Continue;
+                }
+            }
         }
     }
 
@@ -352,6 +365,12 @@ ReturnStatus Node::search() {
         }
     }
 
+    if (!alphaImproved) {
+        // fail low, currenMove used to write into TT
+        currentMove = isHit && Move{ttSlot} ? Move{ttSlot} : Move{}; // pass the previous TT move
+        *origin = TtSlot(this, FailLow);
+        ++root.tt.writes;
+    }
     return ReturnStatus::Continue;
 }
 

@@ -62,6 +62,7 @@ protected:
     mutable Score alpha = MinusInfinity; // alpha-beta window lower margin
     Score beta = PlusInfinity; // alpha-beta window upper margin
     mutable Score score = NoScore; // best score found so far
+    mutable bool alphaImproved = false; // alpha is improved (implies PV node)
 
     mutable Move currentMove = {}; // last move made from *this into *child
 
