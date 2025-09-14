@@ -191,7 +191,7 @@ void PositionSide::setLeaperAttack(Pi pi, PieceType ty, Square sq) {
 }
 
 void PositionSide::setPinner(Pi pi, PieceType ty, Square sq) {
-    assert (isSlider(ty));
+    assert (::isSlider(ty));
     assert (!traits.isPinner(pi));
 
     if (::attacksFrom(ty, sq).has(opKing) && ::inBetween(opKing, sq).any()) {
