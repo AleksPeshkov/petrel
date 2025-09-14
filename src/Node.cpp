@@ -370,7 +370,6 @@ ReturnStatus Node::quiescence() {
 
     PiMask victims = OP.pieces() - PiMask{TheKing};
     RETURN_CUTOFF (goodCaptures(child, victims));
-    RETURN_CUTOFF (badCaptures(child, victims));
 
     return ReturnStatus::Continue;
 }
