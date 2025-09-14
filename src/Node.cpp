@@ -280,7 +280,7 @@ ReturnStatus Node::searchMoves() {
 
                 if (from != parent->movedPieceFrom()) {
                     // unless it was a pawn promotion move
-                    newMoves %= parent->MY.attacksOf(lastPi);
+                    newMoves %= parent->OP.attacksOf(lastPi);
                 }
 
                 // try new safe moves of the last moved piece
@@ -296,7 +296,7 @@ ReturnStatus Node::searchMoves() {
         // new safe quiet moves, except for the last moved piece (or king)
         for (Pi pi : MY.pieces() - lastPi) {
             Square from = MY.squareOf(pi);
-            for (Square to : movesOf(pi) % parent->MY.attacksOf(pi) % bbAttacked()) {
+            for (Square to : movesOf(pi) % parent->OP.attacksOf(pi) % bbAttacked()) {
                 RETURN_CUTOFF (child->searchMove(from, to));
             }
         }
