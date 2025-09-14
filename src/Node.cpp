@@ -162,6 +162,7 @@ ReturnStatus Node::negamax(Node* child) const {
             }
 
             alpha = score;
+            alphaImproved = true;
             updatePv(child);
         }
     }
@@ -243,6 +244,19 @@ ReturnStatus Node::search() {
             isHit = false;
         } else {
             ++root.tt.hits;
+
+            if (ttSlot.draft() >= draft) {
+                Bound bound = ttSlot;
+                Score ttScore = ttSlot.score(ply);
+
+                if ((bound & FailHigh) && beta <= ttScore) {
+                    score = ttScore;
+                    return ReturnStatus::BetaCutoff;
+                } else if ((bound & FailLow) && ttScore <= alpha) {
+                    score = ttScore;
+                    return ReturnStatus::Continue;
+                }
+            }
         }
     }
 
@@ -354,6 +368,13 @@ ReturnStatus Node::search() {
         }
     }
 
+    if (!alphaImproved) {
+        // fail low, no good move found, write back previous TT move if any
+        //TODO: store the first searched move to avoid small move generation overhead
+        currentMove = isHit ? Move{ttSlot} : Move{};
+        *origin = TtSlot(this, FailLow);
+        ++root.tt.writes;
+    }
     return ReturnStatus::Continue;
 }
 
