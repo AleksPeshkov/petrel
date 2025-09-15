@@ -61,7 +61,7 @@ public:
     PiMask pieces() const { assert (squares.pieces() == types.pieces()); return squares.pieces(); }
     PiMask sliders() const { return types.sliders(); }
 
-    Pi pieceAt(Square sq) const { Pi pi = squares.pieceAt(sq); assertOk(pi); return pi; }
+    Pi pieceAt(Square sq) const { assert (has(sq)); Pi pi = squares.pieceAt(sq); assertOk(pi); return pi; }
     PiMask piecesOn(Rank rank) const { return squares.piecesOn(rank); }
 
     PiMask piecesOfType(PieceType ty) const { return types.piecesOfType(ty); }
