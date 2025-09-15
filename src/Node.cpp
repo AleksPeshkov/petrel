@@ -359,14 +359,22 @@ ReturnStatus Node::searchMoves() {
         } while (false);
     }
 
-    //TODO: try checking moves somewhere
+    // quiet moves on squares not attacked by opponent pawns
+    for (Pi pi : MY.pieces() - MY.pawns()) {
+        Square from = MY.squareOf(pi);
+
+        for (Square to : movesOf(pi) % opPawnAttacks) {
+            RETURN_CUTOFF (child->searchMove(from, to));
+        }
+    }
 
     // remaining (bad) captures and all underpromotions
     RETURN_CUTOFF (badCaptures(child, OP.pieces() - PiMask{TheKing}));
 
-    // all the rest (quiet) moves
-    //TODO: search safe moves first
-    for (Pi pi : MY.pieces()) {
+    // pawn pushes, all the rest (bad) moves, LVA order
+    auto pieces = MY.pieces();
+    while (pieces.any()) {
+        Pi pi = pieces.leastValuable(); pieces -= pi;
         Square from = MY.squareOf(pi);
 
         for (Square to : movesOf(pi)) {
