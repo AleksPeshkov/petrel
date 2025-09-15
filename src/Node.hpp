@@ -72,6 +72,7 @@ protected:
      */
     Move killer1 = {}; // first killer move to try at child-child nodes
     Move killer2 = {}; // second killer move to try at child-child nodes
+    Move killer3 = {}; // third killer move to try at child-child nodes
     bool canBeKiller = false; // good captures should not waste killer slots
 
     Node (Node* n); // prepare empty child node

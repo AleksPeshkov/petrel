@@ -30,7 +30,8 @@ Node::Node (Node* n) :
     ply{n->ply + 1}, draft{n->draft > 0 ? n->draft-1 : 0},
     alpha{-n->beta}, beta{-n->alpha}, isPv(n->isPv),
     killer1{grandParent ? grandParent->killer1 : Move{}},
-    killer2{grandParent ? grandParent->killer2 : Move{}}
+    killer2{grandParent ? grandParent->killer2 : Move{}},
+    killer3{grandParent ? grandParent->killer3 : Move{}}
 {}
 
 ReturnStatus Node::searchRoot() {
@@ -289,6 +290,9 @@ ReturnStatus Node::searchMoves() {
 
         // second killer move
         RETURN_CUTOFF (child->searchIfLegal(parent->killer2));
+
+        // third killer move
+        RETURN_CUTOFF (child->searchIfLegal(parent->killer3));
     }
 
     // safe quiet nonpawn moves
@@ -468,6 +472,7 @@ void Node::updateKillerMove() {
     if (!parent) { return; }
 
     if (parent->killer1 != currentMove) {
+        parent->killer3 = parent->killer2;
         parent->killer2 = parent->killer1;
         parent->killer1 = currentMove;
     }
