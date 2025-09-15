@@ -359,11 +359,21 @@ ReturnStatus Node::searchMoves() {
         } while (false);
     }
 
-    // quiet moves on squares not attacked by opponent pawns
+    // safe quiet nonpawn moves
     for (Pi pi : MY.pieces() - MY.pawns()) {
         Square from = MY.squareOf(pi);
 
-        for (Square to : movesOf(pi) % opPawnAttacks) {
+        Bb moves = movesOf(pi) % opPawnAttacks;
+
+        for (Square to : moves % bbAttacked()) {
+            RETURN_CUTOFF (child->searchMove(from, to));
+        }
+
+        for (Square to : moves & bbAttacked()) {
+            if (MY.attackersTo(to).none()) {
+                //skip move on attacked unprotected square
+                continue;
+            }
             RETURN_CUTOFF (child->searchMove(from, to));
         }
     }
