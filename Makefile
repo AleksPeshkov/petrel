@@ -25,7 +25,7 @@ else ifeq ($(wildcard $(TAG_DEBUG)), $(TAG_DEBUG))
 	BUILD_FLAGS = -O0 -ggdb -DDEBUG
 endif
 
-CXXFLAGS = $(BUILD_FLAGS) -std=c++23 -mssse3 -march=native -mtune=native -fno-exceptions -fno-rtti
+CXXFLAGS = $(BUILD_FLAGS) -std=c++20 -mssse3 -march=native -mtune=native -fno-exceptions -fno-rtti
 
 GIT_DATE := $(shell git log -1 --date=short --pretty=format:%cd 2>/dev/null || true)
 ifneq ($(GIT_DATE),)
