@@ -147,7 +147,6 @@ public:
     constexpr Square to() const { return to_; }
 
     friend constexpr bool operator == (Move a, Move b) { return a.from_ == b.from_ && a.to_ == b.to_; }
-    friend constexpr bool operator != (Move a, Move b) { return !(a == b); }
 };
 
 #endif
