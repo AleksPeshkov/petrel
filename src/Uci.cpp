@@ -103,7 +103,7 @@ void Uci::uciok() const {
        << " max "     << ::mebi(root.tt.maxSize())
        << " default " << ::mebi(root.tt.size())
        << '\n';
-    ob << root.limits;
+    limits.options(ob);
     ob << "option name UCI_Chess960 type check default " << (isChess960 ? "true" : "false") << '\n';
     ob << "uciok";
 }
@@ -142,8 +142,8 @@ void Uci::setoption() {
     if (consume("Move Overhead")) {
         consume("value");
 
-        inputLine >> root.limits.moveOverhead;
-        if (root.limits.moveOverhead == 0ms) { root.limits.moveOverhead = 100us; }
+        inputLine >> limits.moveOverhead;
+        if (limits.moveOverhead == 0ms) { limits.moveOverhead = 100us; }
 
         if (!inputLine) { io::fail_rewind(inputLine); }
         return;
@@ -152,8 +152,8 @@ void Uci::setoption() {
     if (consume("Ponder")) {
         consume("value");
 
-        if (consume("true"))  { root.limits.canPonder = true; return; }
-        if (consume("false")) { root.limits.canPonder = false; return; }
+        if (consume("true"))  { limits.canPonder = true; return; }
+        if (consume("false")) { limits.canPonder = false; return; }
 
         io::fail_rewind(inputLine);
         return;
@@ -226,7 +226,7 @@ void Uci::position() {
 }
 
 void Uci::go() {
-    root.limits.go(inputLine, root.sideOf(White));
+    limits.go(inputLine, root.sideOf(White));
     if (consume("searchmoves")) { root.limitMoves(inputLine); }
 
     mainSearchThread.start([this] {
@@ -243,25 +243,25 @@ void Uci::bestmove() {
 
     o.str("");
     o << "bestmove " << root.pvMoves[0];
-    if (root.limits.canPonder && root.pvMoves[1]) {
+    if (limits.canPonder && root.pvMoves[1]) {
         o << " ponder " << root.pvMoves[1];
     }
 
     std::string sBestmove{o.str()};
     {
         std::lock_guard<decltype(bestmoveMutex)> lock{bestmoveMutex};
-        if (root.limits.waitBestmove()) {
+        if (limits.waitBestmove()) {
             bestmove_ = sBestmove;
             return;
         }
     }
 
     output(sBestmove);
-    root.limits.clear();
+    limits.clear();
 }
 
 void Uci::stop() {
-    root.limits.stop();
+    limits.stop();
     std::this_thread::yield();
 
     {
@@ -269,14 +269,14 @@ void Uci::stop() {
         if (!bestmove_.empty()) {
             output(bestmove_);
             bestmove_.clear();
-            root.limits.clear();
+            limits.clear();
             return;
         }
     }
 }
 
 void Uci::ponderhit() {
-    root.limits.ponderhit();
+    limits.ponderhit();
     std::this_thread::yield();
 
     {
@@ -284,7 +284,7 @@ void Uci::ponderhit() {
         if (!bestmove_.empty()) {
             output(bestmove_);
             bestmove_.clear();
-            root.limits.clear();
+            limits.clear();
             return;
         }
     }
@@ -295,7 +295,7 @@ void Uci::goPerft() {
     inputLine >> depth;
     depth = std::min<Ply>(depth, {18}); // current Tt implementation limit
 
-    root.limits.clear();
+    limits.clear();
     mainSearchThread.start([this, depth] {
         NodePerft{root, depth}.visitRoot();
         info_perft_bestmove();
@@ -306,7 +306,7 @@ void Uci::info_perft_bestmove() {
     Output ob{this};
     info_nps(ob);
     ob << "bestmove 0000";
-    root.limits.clear();
+    limits.clear();
 }
 
 void Uci::readyok() const {
@@ -319,12 +319,12 @@ void Uci::readyok() const {
 
 ostream& Uci::nps(ostream& o) const {
     // avoid printing identical nps info in a row
-    if (lastInfoNodes == root.nodeCounter) { return o; }
-    lastInfoNodes = root.nodeCounter;
+    if (lastInfoNodes == limits.getNodes()) { return o; }
+    lastInfoNodes = limits.getNodes();
 
     o << " nodes " << lastInfoNodes;
 
-    auto elapsedTime = root.limits.elapsedSinceStart();
+    auto elapsedTime = limits.elapsedSinceStart();
     if (elapsedTime >= 1ms) {
         o << " time " << elapsedTime << " nps " << ::nps(lastInfoNodes, elapsedTime);
     }
@@ -333,7 +333,7 @@ ostream& Uci::nps(ostream& o) const {
 }
 
 ostream& Uci::info_nps(ostream& o) const {
-    if (lastInfoNodes == root.nodeCounter) { return o; }
+    if (lastInfoNodes == limits.getNodes()) { return o; }
 
     if (root.tt.reads > 0) {
         o << "info";

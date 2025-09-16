@@ -6,10 +6,6 @@
 #include "Node.hpp"
 #include "Repetitions.hpp"
 #include "Tt.hpp"
-#include "UciSearchLimits.hpp"
-
-class Uci;
-class NodeRoot;
 
 class HistoryMoves {
     using _t = Side::arrayOf< PieceType::arrayOf<Square::arrayOf<Move>> >;
@@ -44,42 +40,7 @@ public:
     }
 };
 
-class NodeCounter {
-    node_count_t nodes = 0; // (0 <= nodes && nodes <= nodesLimit)
-    node_count_t nodesLimit; // search limit
-
-    static constexpr int QuotaLimit = 200; // < 0.05ms
-
-    //number of remaining nodes before slow checking for search stop
-    int nodesQuota = 0; // (0 <= nodesQuota && nodesQuota <= QuotaLimit)
-
-    constexpr void assertOk() const {
-        assert (0 <= nodesQuota);
-        assert (nodesQuota < QuotaLimit);
-        //assert (0 <= nodes);
-        assert (nodes <= nodesLimit);
-        assert (static_cast<decltype(nodesLimit)>(nodesQuota) <= nodes);
-    }
-
-public:
-    constexpr NodeCounter(node_count_t n = NodeCountMax) : nodesLimit{n} {}
-
-    /// exact number of visited nodes
-    constexpr operator node_count_t () const {
-        assertOk();
-        return nodes - nodesQuota;
-    }
-
-    constexpr bool isAborted() const {
-        assertOk();
-        assert (nodes - nodesQuota < nodesLimit || nodesQuota == 0);
-        return nodes == nodesLimit;
-    }
-
-    ReturnStatus count(UciSearchLimits&);
-    ReturnStatus refreshQuota(UciSearchLimits&);
-
-};
+class Uci;
 
 // position extended with repetition history
 class NodeRoot : public Node {
@@ -90,9 +51,6 @@ public:
     Score pvScore = NoScore;
     HistoryMoves counterMove;
 
-    NodeCounter nodeCounter;
-
-    UciSearchLimits limits;
     Uci& uci;
 
 protected:
@@ -104,13 +62,23 @@ public:
     constexpr Side sideOf(Color color) const { return colorToMove_.is(color) ? My : Op; }
     constexpr Color colorToMove(Ply d = {0}) const { return colorToMove_ << d; }
 
-    void newGame();
-    void newSearch();
-    void newIteration();
+    void newGame() {
+        tt.newGame();
+        counterMove.clear();
+        newSearch();
+    }
 
-    void setHash(size_t);
+    void newSearch() {
+        tt.newSearch();
+        pvMoves.clear();
+        pvScore = NoScore;
+    }
 
-    ReturnStatus countNode();
+    void newIteration() {
+        tt.newIteration();
+    }
+
+    void setHash(size_t bytes) { tt.setSize(bytes); }
 };
 
 #endif

@@ -35,13 +35,12 @@ Node::Node (Node* n) :
 
 ReturnStatus Node::searchRoot() {
     root.newSearch();
-    root.nodeCounter = { root.limits.nodes };
 
     auto rootMovesClone = moves();
     repMask = root.repetitions.repMask(colorToMove());
     origin = root.tt.prefetch<TtSlot>(zobrist());
 
-    if (root.limits.iterationDeadlineReached()) {
+    if (root.uci.limits.isIterationDeadline()) {
         // we have no time to search, return TT move immediately if found
         ++root.tt.reads;
         ttSlot = *origin;
@@ -49,7 +48,7 @@ ReturnStatus Node::searchRoot() {
         if (isHit) {
             Move ttMove = {ttSlot};
             if (isLegalMove(ttMove)) {
-                if (root.limits.canPonder) {
+                if (root.uci.limits.canPonder) {
                     Node node{this};
                     const auto child = &node;
 
@@ -78,7 +77,7 @@ ReturnStatus Node::searchRoot() {
         }
     }
 
-    for (draft = {1}; draft <= root.limits.depth; ++draft) {
+    for (draft = {1}; draft <= root.uci.limits.depth; ++draft) {
         setMoves(rootMovesClone);
         alpha = MinusInfinity;
         beta = PlusInfinity;
@@ -91,7 +90,7 @@ ReturnStatus Node::searchRoot() {
 
         root.uci.info_iteration(draft);
 
-        if (root.limits.iterationDeadlineReached()) { return ReturnStatus::Stop; }
+        if (root.uci.limits.isIterationDeadline()) { return ReturnStatus::Stop; }
     }
 
     return ReturnStatus::Continue;
@@ -133,7 +132,7 @@ void Node::makeMove(Move move) {
 }
 
 ReturnStatus Node::searchMove(Move move) {
-    RETURN_IF_STOP (root.countNode());
+    RETURN_IF_STOP (root.uci.limits.countNode());
     makeMove(move);
 
     RETURN_IF_STOP (search());
@@ -159,7 +158,7 @@ ReturnStatus Node::negamax(Node* child) {
         }
     }
 
-    if (ply == 0 && root.limits.rootMoveDeadlineReached()) {
+    if (ply == 0 && root.uci.limits.isRootMoveDeadline()) {
         return ReturnStatus::Stop;
     }
 

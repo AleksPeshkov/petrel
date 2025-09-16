@@ -8,10 +8,16 @@
 #include "io.hpp"
 #include "Thread.hpp"
 #include "UciRoot.hpp"
+#include "UciSearchLimits.hpp"
 
 /// Handling input and output of UCI (Universal Chess Interface)
 class Uci {
+    friend class Node;
+    friend class NodePerft;
+
     UciRoot root;
+    UciSearchLimits limits;
+
     Thread mainSearchThread;
 
     // stream buffer for parsing current input line
