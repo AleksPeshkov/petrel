@@ -24,7 +24,6 @@ public:
     constexpr operator const _t& () const { return v; }
 
     constexpr friend bool operator == (Arg a, Arg b) { return a.v == b.v; }
-    constexpr friend bool operator != (Arg a, Arg b) { return a.v != b.v; }
 
     friend ostream& operator << (ostream& out, Z z) {
         auto flags = out.flags();
