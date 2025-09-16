@@ -40,7 +40,6 @@ public:
     constexpr Self& operator += (Arg b) { assert (none(b)); return SELF ^= b; }
     constexpr Self& operator -= (Arg b) { assert (CONST_SELF >= b); return SELF ^= b; }
 
-    constexpr friend bool operator != (Arg a, Arg b) { return !(a == b); }
     constexpr friend bool operator <  (Arg a, Arg b) { return !(a >= b); }
     constexpr friend bool operator >  (Arg a, Arg b) { return !(a <= b); }
     constexpr friend bool operator <= (Arg a, Arg b) { return (a & b) == a; }
