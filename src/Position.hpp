@@ -18,8 +18,7 @@ class Position {
     Side::arrayOf<Bb> occupied_; // both color pieces combined, updated from positionSide[] after each move
 
     Zobrist zobrist_; // incrementally updated position hash
-    Square movedPieceFrom_; // last moved piece (rook in case of castling) initial square
-    Square movedPieceTo_; // last moved piece actual destination square (rook square in case of castling or en passant capture pawn square)
+    Square movedPieceTo_; // last moved piece actual destination square (fixed for castling and en passant capture moves)
     Rule50 rule50_; // number of halfmoves since last capture or pawn move, incremented or reset by makeMove()
 
     template <Side::_t> void updateSliderAttacks(PiMask);
@@ -60,9 +59,6 @@ public:
 
     // position hash
     constexpr const Zobrist& zobrist() const { return zobrist_; }
-
-    // last moved piece from square (differs from last move.from() in case of special move)
-    constexpr Square movedPieceFrom() const { return movedPieceFrom_; }
 
     // last moved piece to square (differs from last move.to() in case of special move)
     constexpr Square movedPieceTo() const { return movedPieceTo_; }

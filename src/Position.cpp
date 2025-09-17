@@ -42,7 +42,6 @@ template <Side::_t My, Position::UpdateZobrist Z>
 void Position::makeMove(Square from, Square to) {
     constexpr Side Op{~My};
 
-    movedPieceFrom_ = from;
     movedPieceTo_ = to; // will be corrected later in case of castling, underpromotion and en passant capture
     rule50_.next(); // will be reset later if the move is a capture or pawn move
 
@@ -88,7 +87,6 @@ void Position::makeMove(Square from, Square to) {
         if (from.on(Rank7)) {
             PromoType promo = ::promoTypeFrom(Rank{to});
             to = {File{to}, Rank8};
-            movedPieceFrom_ = to; // promoted pieces has no previous square
             movedPieceTo_ = to;
 
             if constexpr (Z) {
@@ -275,7 +273,6 @@ bool Position::afterDrop() {
     rule50_.clear();
 
     // initalize last move piece squares to something sensible
-    movedPieceFrom_ = OP.kingSquare();
     movedPieceTo_ = OP.kingSquare();
 
     //opponent should not be in check
