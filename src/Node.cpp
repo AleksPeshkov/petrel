@@ -292,9 +292,6 @@ ReturnStatus Node::search() {
 
     canBeKiller = true;
 
-    Pi lastPi = TheKing;
-    Bb newMoves = {};
-
     if (parent) {
         // primary killer move, updated by previous siblings
         RETURN_CUTOFF (child->searchIfLegal(parent->killer1));
@@ -307,73 +304,43 @@ ReturnStatus Node::search() {
 
         // secondary killer move, backup of previous primary killer
         RETURN_CUTOFF (child->searchIfLegal(parent->killer2));
-
-        // try quiet moves of the last moved piece (unless it was captured)
-        {
-            Square from = parent->movedPieceTo();
-            if (MY.bbSide().has(from)) {
-                // last moved piece
-                lastPi = MY.pieceAt(from);
-
-                // new moves of the last moved piece
-                newMoves = movesOf(lastPi);
-
-                if (from != parent->movedPieceFrom()) {
-                    // unless it was a pawn promotion move
-                    newMoves %= parent->OP.attacksOf(lastPi);
-                }
-
-                // try new safe moves of the last moved piece
-                for (Square to : newMoves % bbAttacked()) {
-                    RETURN_CUTOFF (child->searchMove({from, to}));
-                }
-
-                // keep unsafe news moves for later
-                newMoves &= bbAttacked();
-            }
-        }
-
-        // new safe quiet moves, except for the last moved piece (or king)
-        for (Pi pi : MY.pieces() - lastPi) {
-            Square from = MY.squareOf(pi);
-            for (Square to : movesOf(pi) % parent->OP.attacksOf(pi) % bbAttacked()) {
-                RETURN_CUTOFF (child->searchMove({from, to}));
-            }
-        }
     }
 
-    // all the rest safe quiet moves
-    for (Pi pi : MY.pieces()) {
+    // going to search only non-captures, mask out remaining unsafe captures to avoid redundant safety checks
+    //TRICK: ~ is not a negate bitwise operation but byteswap -- flip opponent's bitboard
+    Bb badSquares = ~(OP.bbPawnAttacks() | OP.bbSide());
+
+    // safe (good) quiet non-pawn, non-king moves
+    // skip king moves because they ordered first, safe anyway and rarely best moves in chess
+    // skip pawns to avoid wasting time on safety check as pawns comes first in the final loop anyway
+    // castling move is a rook move and picked early (safety check of castling rook is not very exact, but who cares?)
+    //TODO: make king ordered last in default (MV first) piece order
+    for (Pi pi : MY.pieces() - MY.pawns() - PiMask{TheKing}) {
         Square from = MY.squareOf(pi);
-        for (Square to : movesOf(pi) % bbAttacked()) {
+        PieceType ty = MY.typeOf(pi);
+
+        for (Square to : movesOf(pi) % badSquares) {
+            if (bbAttacked().has(to)) {
+                Pi defender = OP.attackersTo(~to).leastValuable();
+                if (OP.isLessValue(defender, ty)) {
+                    // skip move if square defended by less valued piece
+                    continue;
+                }
+                if ((MY.attackersTo(to) % PiMask{pi}).none()) {
+                    // skip move at defended square if nobody helps to attack it
+                    continue;
+                }
+            }
+            assert (!OP.bbSide().has(~to));
             RETURN_CUTOFF (child->searchMove({from, to}));
         }
     }
 
-    if (newMoves.any()) {
-        Square from = parent->movedPieceTo();
-        Pi pi = MY.pieceAt(from);
-
-        // unsafe new moves of the last moved piece
-        for (Square to : newMoves) {
-            RETURN_CUTOFF (child->searchIfLegal({from, to}));
-        }
-
-        // the rest moves of the last moved piece
-        for (Square to : movesOf(pi)) {
-            RETURN_CUTOFF (child->searchMove({from, to}));
-        }
-    }
-
-    // remaining (bad) captures and all underpromotions
-    RETURN_CUTOFF (badCaptures(child, OP.pieces() - PiMask{TheKing}));
-
-    // all the rest (quiet) moves, LVA order
-    auto pieces = MY.pieces();
-    while (pieces.any()) {
+    // all remaining unsorted moves, starting with pawns, all king moves are last
+    for (PiMask pieces = MY.pieces(); pieces.any(); ) {
         Pi pi = pieces.leastValuable(); pieces -= pi;
-        Square from = MY.squareOf(pi);
 
+        Square from = MY.squareOf(pi);
         for (Square to : movesOf(pi)) {
             RETURN_CUTOFF (child->searchMove({from, to}));
         }
@@ -461,33 +428,6 @@ ReturnStatus Node::goodCaptures(Node* child, const PiMask& victims) {
             Pi attacker = attackers.leastValuable(); attackers -= attacker;
 
             Square from = MY.squareOf(attacker);
-            RETURN_CUTOFF (child->searchMove({from, to}));
-        }
-    }
-
-    return ReturnStatus::Continue;
-}
-
-ReturnStatus Node::badCaptures(Node* child, const PiMask& victims) {
-    // MVV (most valuable victim)
-    for (Pi victim : victims) {
-        Square to = ~OP.squareOf(victim);
-
-        // exclude underpromotions because of illegal phantom captures
-        PiMask attackers = canMoveTo(to) % MY.promotables();
-        while (attackers.any()) {
-            // LVA (least valuable attacker)
-            Pi attacker = attackers.leastValuable(); attackers -= attacker;
-
-            Square from = MY.squareOf(attacker);
-            RETURN_CUTOFF (child->searchMove({from, to}));
-        }
-    }
-
-    // unsorted (under)promotions with or without capture
-    for (Pi pawn : MY.promotables()) {
-        Square from = MY.squareOf(pawn);
-        for (Square to : movesOf(pawn)) {
             RETURN_CUTOFF (child->searchMove({from, to}));
         }
     }
