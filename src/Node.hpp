@@ -96,6 +96,9 @@ protected:
         return parent->isLegalMove(move) ? searchMove(move) : ReturnStatus::Continue;
     }
 
+    // non-capture moves on safe squares
+    [[nodiscard]] ReturnStatus safeNonCaptures(Node*, Square, Bb);
+
     [[nodiscard]] ReturnStatus searchMove(Move move);
     [[nodiscard]] ReturnStatus searchNullMove(Ply);
     void makeMove(Move move);

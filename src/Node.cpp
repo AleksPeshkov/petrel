@@ -303,6 +303,11 @@ ReturnStatus Node::search() {
 
     canBeKiller = true;
 
+    // going to search non-captures, mask out remaining unsafe captures to avoid redundant checks
+    //TRICK: ~ is not a negate bitwise operation but byteswap -- flip opponent's bitboard
+    Bb badSquares = ~(OP.bbPawnAttacks() | OP.bbSide());
+    PiMask goodPieces = MY.pieces() - MY.pawns() - PiMask{TheKing};
+
     if (parent) {
         // first killer move
         RETURN_CUTOFF (child->searchIfLegal(parent->killer1));
@@ -317,25 +322,22 @@ ReturnStatus Node::search() {
 
         // second killer move
         RETURN_CUTOFF (child->searchIfLegal(parent->killer2));
+
+        // safe non-capture moves of the last moved piece (unless it was just captured)
+        Square from = parent->movedPieceTo();
+        if (MY.bbSide().has(from)) {
+            Pi lastPi = MY.pieceAt(from); // the last moved piece on the previous move
+            RETURN_CUTOFF (safeNonCaptures(child, from, movesOf(lastPi) % badSquares));
+            goodPieces %= lastPi; // avoid lookup of lastPi again
+        }
     }
 
-    // going to search non-captures, mask out remaining unsafe captures to avoid redundant checks
-    //TRICK: ~ is not a negate bitwise operation but byteswap -- flip opponent's bitboard
-    Bb badSquares = ~(OP.bbPawnAttacks() | OP.bbSide());
-
     // safe (good) quiet non-pawn, non-king moves
+    // safe (good) quiet moves of non-pawn, non-king, non last moved piece
     // (castling is a rook move and somewhere in the middle)
-    for (Pi pi : MY.pieces() - MY.pawns() - PiMask{TheKing}) {
+    for (Pi pi : goodPieces) {
         Square from = MY.squareOf(pi);
-
-        for (Square to : movesOf(pi) % badSquares) {
-            if (bbAttacked().has(to) && (MY.attackersTo(to) % PiMask{pi}).none()) {
-                //skip move on defended square if nobody helps to attack it
-                continue;
-            }
-            assert (!OP.bbSide().has(~to));
-            RETURN_CUTOFF (child->searchMove({from, to}));
-        }
+        RETURN_CUTOFF (safeNonCaptures(child, from, movesOf(pi) % badSquares));
     }
 
     // all remaining unsorted moves, starting with pawns, all king moves are last
@@ -354,6 +356,19 @@ ReturnStatus Node::search() {
         *origin = TtSlot(this, FailLow);
         ++root.tt.writes;
     }
+    return ReturnStatus::Continue;
+}
+
+ReturnStatus Node::safeNonCaptures(Node* child, Square from, Bb moves) {
+    for (Square to : moves) {
+        if (bbAttacked().has(to) && MY.attackersTo(to).none()) {
+            //skip move on attacked unprotected square
+            continue;
+        }
+        assert (!OP.bbSide().has(~to));
+        RETURN_CUTOFF (child->searchMove({from, to}));
+    }
+
     return ReturnStatus::Continue;
 }
 
