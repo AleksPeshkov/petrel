@@ -323,11 +323,19 @@ ReturnStatus Node::search() {
         // second killer move
         RETURN_CUTOFF (child->searchIfLegal(parent->killer2));
 
-        // safe non-capture moves of the last moved piece (unless it was just captured)
+        // discovered (new) safe non-capture moves of the last moved piece (unless it was just captured)
         Square from = parent->movedPieceTo();
         if (MY.bbSide().has(from)) {
             Pi lastPi = MY.pieceAt(from); // the last moved piece on the previous move
-            RETURN_CUTOFF (safeNonCaptures(child, from, movesOf(lastPi) % badSquares));
+
+            Bb newMoves = movesOf(lastPi);
+            //if (from != parent->movedPieceFrom()) {
+                // unless it was a pawn promotion move
+                newMoves %= parent->OP.attacksOf(lastPi);
+                //newMoves %= Bb{parent->movedPieceFrom()};
+            //}
+
+            RETURN_CUTOFF (safeNonCaptures(child, from, newMoves % badSquares));
             goodPieces %= lastPi; // avoid lookup of lastPi again
         }
     }
