@@ -119,7 +119,7 @@ ReturnStatus Node::searchRoot() {
         //we cannot use makeZobrist() because of en passant legality validation
         pos.makeMove(move.from(), move.to());
         s = -s;
-        d = Ply{d > 0 ? d-1 : 0};
+        d = d > 0 ? d-1 : 0;
     }
 }
 
@@ -185,9 +185,10 @@ ReturnStatus Node::negamax(Node* child) const {
     }
 
     // set window for the next move search
-    child->alpha = -alpha - 1;
     assert (child->beta == -alpha);
+    child->alpha = child->beta-1;
     child->isPv = false;
+    child->draft = draft > 0 ? draft-1 : 0;
     return ReturnStatus::Continue;
 }
 
@@ -241,7 +242,12 @@ ReturnStatus Node::search() {
         return ReturnStatus::Continue;
     }
 
-    if (draft == 0 && !inCheck()) {
+    // check extension
+    if (inCheck()) {
+        draft = draft + 1;
+    }
+
+    if (draft == 0) {
         return quiescence();
     }
 
