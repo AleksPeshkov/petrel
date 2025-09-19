@@ -130,8 +130,8 @@ public:
         return true;
     }
 
-    constexpr index_t popcount() const {
-        index_t sum = 0;
+    constexpr int popcount() const {
+        int sum = 0;
         FOR_EACH(Rank, rank) {
             sum += ::popcount(matrix[rank]);
         }

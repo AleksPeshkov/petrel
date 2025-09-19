@@ -81,7 +81,7 @@ public:
         to(Rook, rookTo); to(King, kingTo);
     }
 
-    constexpr index_t count(PieceType ty) const {
+    constexpr int count(PieceType ty) const {
         switch (ty) {
             case Queen:
                 return v.s.queens;
@@ -100,12 +100,12 @@ public:
     }
 
     // 10, 5, 3, 3, 0
-    constexpr index_t piecesMat() const {
+    constexpr int piecesMat() const {
         return v.s.piecesMat;
     }
 
     // 12, 6, 4, 4, 1
-    constexpr index_t material() const {
+    constexpr int material() const {
         return v.s.totalMat;
     }
 

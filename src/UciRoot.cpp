@@ -19,7 +19,7 @@ class FenToBoard {
     typedef std::set<Square, SquareImportance> Squares;
 
     Color::arrayOf< PieceType::arrayOf<Squares> > pieces;
-    Color::arrayOf<index_t> pieceCount = {{0, 0}};
+    Color::arrayOf<int> pieceCount = {{0, 0}};
 
     bool drop(Color, PieceType, Square);
 
@@ -129,7 +129,7 @@ public:
 
     friend ostream& operator << (ostream& out, const BoardToFen& board) {
         FOR_EACH(Rank, rank) {
-            index_t emptySqCount = 0;
+            int emptySqCount = 0;
 
             FOR_EACH(File, file) {
                 Square sq(file,rank);
@@ -226,11 +226,13 @@ ostream& UciRoot::fen(ostream& out) const {
 }
 
 istream& UciRoot::readMove(istream& in, Square& from, Square& to) const {
-    if (!read(in, from) || !read(in, to)) { return in; }
+    auto before = in.tellg();
+    in >> from >> to;
+    if (!in) { return io::fail_pos(in, before); }
 
     if (colorToMove_.is(Black)) { from.flip(); to.flip(); }
 
-    if (!MY.has(from)) { return io::fail(in); }
+    if (!MY.has(from)) { return io::fail_pos(in, before); }
     Pi pi = MY.pieceAt(from);
 
     //convert special moves (castling, promotion, ep) to the internal move format
@@ -254,19 +256,19 @@ istream& UciRoot::readMove(istream& in, Square& from, Square& to) const {
 
     if (pi.is(TheKing)) {
         if (MY.has(to)) { //Chess960 castling encoding
-            if (!MY.isCastling(to)) { return io::fail(in); }
+            if (!MY.isCastling(to)) { return io::fail_pos(in, before); }
 
             std::swap(from, to);
             return in;
         }
         if (from.is(E1) && to.is(G1)) {
-            if (!MY.has(H1) || !MY.isCastling(H1)) { return io::fail(in); }
+            if (!MY.has(H1) || !MY.isCastling(H1)) { return io::fail_pos(in, before); }
 
             from = H1; to = E1;
             return in;
         }
         if (from.is(E1) && to.is(C1)) {
-            if (!MY.has(A1) || !MY.isCastling(A1)) { return io::fail(in); }
+            if (!MY.has(A1) || !MY.isCastling(A1)) { return io::fail_pos(in, before); }
 
             from = A1; to = E1;
             return in;
@@ -280,15 +282,15 @@ istream& UciRoot::readMove(istream& in, Square& from, Square& to) const {
 void UciRoot::limitMoves(istream& in) {
     PiBbMatrix movesMatrix;
     movesMatrix.clear();
-    index_t n = 0;
+    int n = 0;
 
     while (in >> std::ws && !in.eof()) {
-        auto beforeMove = in.tellg();
+        auto before = in.tellg();
 
         Square from; Square to;
 
         if (!readMove(in, from, to) || !isLegalMove(from, to)) {
-            io::fail_pos(in, beforeMove);
+            io::fail_pos(in, before);
             return;
         }
 
@@ -312,12 +314,12 @@ void UciRoot::playMoves(istream& in) {
     repetitions.push(colorToMove_, zobrist());
 
     while (in >> std::ws && !in.eof()) {
-        auto beforeMove = in.tellg();
+        auto before = in.tellg();
 
         Square from; Square to;
 
         if (!readMove(in, from, to) || !isLegalMove(from, to)) {
-            io::fail_pos(in, beforeMove);
+            io::fail_pos(in, before);
             return;
         }
 
@@ -408,7 +410,7 @@ istream& UciRoot::readEnPassant(istream& in) {
     Square ep;
 
     auto beforeSquare = in.tellg();
-    if (read(in, ep)) {
+    if (in >> ep) {
         if (!ep.on(colorToMove_.is(White) ? Rank6 : Rank3) || !setEnPassant( File{ep} )) {
             return io::fail_pos(in, beforeSquare);
         }

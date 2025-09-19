@@ -8,34 +8,56 @@ enum direction_t { FileDir, RankDir, DiagonalDir, AntidiagDir };
 typedef Index<4, direction_t> Direction;
 
 enum file_t { FileA, FileB, FileC, FileD, FileE, FileF, FileG, FileH, };
-typedef Index<8, file_t> File;
 
-template <> inline
-constexpr io::char_type File::to_char() const { return static_cast<io::char_type>('a' + v); }
+class File : public Index<8, file_t> {
+public:
+    using Index::Index;
 
-template <> inline
-bool File::from_char(io::char_type c) {
-    File file{ static_cast<File::_t>(c - 'a') };
-    if (!file.isOk()) { return false; }
-    v = file;
-    return true;
-}
+    constexpr io::char_type to_char() const { return static_cast<io::char_type>('a' + v); }
+    friend ostream& operator << (ostream& out, File file) { return out << file.to_char(); }
+
+    bool from_char(io::char_type c) {
+        File file{ static_cast<File::_t>(c - 'a') };
+        if (!file.isOk()) { return false; }
+        v = file;
+        return true;
+    }
+
+    friend istream& operator >> (istream& in, File& file) {
+        io::char_type c;
+        if (in.get(c)) {
+            if (!file.from_char(c)) { io::fail_char(in); }
+        }
+        return in;
+    }
+
+};
 
 enum rank_t { Rank8, Rank7, Rank6, Rank5, Rank4, Rank3, Rank2, Rank1, };
-typedef Index<8, rank_t> Rank;
+class Rank : public Index<8, rank_t> {
+public:
+    using Index::Index;
+    constexpr Rank::_t forward() const { return static_cast<Rank::_t>(v + Rank2 - Rank1); }
 
-constexpr Rank::_t rankForward(Rank rank) { return static_cast<Rank::_t>(rank + Rank2 - Rank1); }
+    constexpr io::char_type to_char() const { return static_cast<io::char_type>('8' - v); }
+    friend ostream& operator << (ostream& out, Rank rank) { return out << rank.to_char(); }
 
-template <> inline
-constexpr io::char_type Rank::to_char() const { return static_cast<io::char_type>('8' - v); }
+    bool from_char(io::char_type c) {
+        Rank rank{ static_cast<Rank::_t>('8' - c) };
+        if (!rank.isOk()) { return false; }
+        v = rank;
+        return true;
+    }
 
-template <> inline
-bool Rank::from_char(io::char_type c) {
-    Rank rank{ static_cast<Rank::_t>('8' - c) };
-    if (!rank.isOk()) { return false; }
-    v = rank;
-    return true;
-}
+    friend istream& operator >> (istream& in, Rank& rank) {
+        io::char_type c;
+        if (in.get(c)) {
+            if (!rank.from_char(c)) { io::fail_char(in); }
+        }
+        return in;
+    }
+
+};
 
 enum square_t {
     A8, B8, C8, D8, E8, F8, G8, H8,
@@ -58,7 +80,7 @@ protected:
     using Index::v;
 
 public:
-    constexpr Square (File file, Rank rank) : Index{static_cast<_t>(file + (rank << RankShift))} {}
+    constexpr Square (File::_t file, Rank::_t rank) : Index{static_cast<_t>(file + (rank << RankShift))} {}
 
     constexpr explicit operator File() const { return static_cast<File::_t>(v & static_cast<_t>(File::Mask)); }
     constexpr explicit operator Rank() const { return static_cast<Rank::_t>(static_cast<unsigned>(v) >> RankShift); }
@@ -82,13 +104,15 @@ public:
 
     constexpr Bb operator() (signed fileOffset, signed rankOffset) const;
 
-    friend ostream& operator << (ostream& out, Square sq) { return out << File(sq) << Rank(sq); }
+    friend ostream& operator << (ostream& out, Square sq) { return out << File{sq} << Rank{sq}; }
 
-    friend istream& read(istream& in, Square& sq) {
-        File file; Rank rank;
-
+    friend istream& operator >> (istream& in, Square& sq) {
         auto before = in.tellg();
-        if (!read(in, file) || !read(in, rank)) { return io::fail_pos(in, before); }
+
+        File file; Rank rank;
+        in >> file >> rank;
+
+        if (!in) { return io::fail_pos(in, before); }
 
         sq = Square{file, rank};
         return in;
