@@ -25,7 +25,6 @@ template <> io::czstring PieceType::The_string{"qrbnpk"};
 template <> io::czstring PromoType::The_string{"qrbn"};
 template <> io::czstring Color::The_string{"wb"};
 template <> io::czstring CastlingSide::The_string{"kq"};
-template <> io::czstring Pi::The_string{"KQRrBbNn12345678"};
 
 // global pointer to Uci instance to implement io::log()
 const Uci* The_uci = nullptr;

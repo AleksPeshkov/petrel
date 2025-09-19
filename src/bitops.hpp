@@ -26,7 +26,7 @@ constexpr T clearFirst(T n) { return n & static_cast<T>(n-1); }
 template <typename T>
 constexpr bool isSingleton(T n) { return (n != 0) && (::clearFirst(n) == 0); }
 
-constexpr inline std::uint64_t rotateleft(std::uint64_t b, index_t n) {
+constexpr inline std::uint64_t rotateleft(std::uint64_t b, int n) {
     if  (n == 0) { return b; }
     return b << n | b >> (64 - n);
 }
@@ -36,27 +36,27 @@ constexpr inline std::uint64_t byteswap(std::uint64_t b) {
 }
 
 // the least significant bit in a non-zero bitset
-constexpr inline index_t lsb(u32_t b) {
+constexpr inline int lsb(std::uint32_t b) {
     assert (b != 0);
-    return static_cast<index_t>(__builtin_ctz(b));
+    return __builtin_ctz(b);
 }
 
 // the most significant bit in a non-zero bitset
-constexpr inline index_t msb(std::uint32_t b) {
+constexpr inline int msb(std::uint32_t b) {
     assert (b != 0);
-    return static_cast<index_t>(31 ^ __builtin_clz(b));
+    return 31 ^ __builtin_clz(b);
 }
 
 // the least significant bit in a non-zero bitset
-constexpr inline index_t lsb(std::uint64_t b) {
+constexpr inline int lsb(std::uint64_t b) {
     assert (b != 0);
-    return static_cast<index_t>(__builtin_ctzll(b));
+    return __builtin_ctzll(b);
 }
 
 // the most significant bit in a non-zero bitset
-constexpr inline index_t msb(std::uint64_t b) {
+constexpr inline int msb(std::uint64_t b) {
     assert (b != 0);
-    return static_cast<index_t>(63 ^ __builtin_clzll(b));
+    return 63 ^ __builtin_clzll(b);
 }
 
 template <typename T>
@@ -65,12 +65,12 @@ constexpr T round(T n) {
     return ::singleton<decltype(n)>(::msb(n));
 }
 
-constexpr inline index_t popcount(std::uint32_t b) {
-    return static_cast<index_t>(__builtin_popcount(b));
+constexpr inline int popcount(std::uint32_t b) {
+    return __builtin_popcount(b);
 }
 
-constexpr inline index_t popcount(std::uint64_t b) {
-    return static_cast<index_t>(__builtin_popcountll(b));
+constexpr inline int popcount(std::uint64_t b) {
+    return __builtin_popcountll(b);
 }
 
 #endif
