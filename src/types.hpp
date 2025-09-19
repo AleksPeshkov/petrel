@@ -15,8 +15,6 @@ typedef std::uint32_t u32_t;
 typedef std::int64_t i64_t;
 typedef std::uint64_t u64_t;
 
-typedef unsigned index_t; //small numbers [0..N) with a known upper bound
-
 #if defined _WIN32
 #   define ULL(number) number##ull
 #else

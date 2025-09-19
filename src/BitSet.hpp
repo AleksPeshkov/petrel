@@ -7,7 +7,7 @@
 #define SELF static_cast<Self&>(*this)
 #define CONST_SELF static_cast<const Self&>(*this)
 
-template <class Self, typename _index_type, class Value = index_t>
+template <class Self, typename _index_type, class Value = unsigned>
 class BitSet : public BitArray<Self, Value> {
 public:
     typedef BitArray<Self, Value> Base;

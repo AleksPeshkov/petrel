@@ -21,7 +21,7 @@ public:
         return PieceSet{x}.index();
     }
 
-    index_t popcount() const {
+    int popcount() const {
         return ::popcount(v);
     }
 
@@ -99,7 +99,7 @@ public:
 
     explicit operator PieceSet() const {
         assertOk();
-        return PieceSet{::mask(v)};
+        return PieceSet{static_cast<PieceSet::_t>(::mask(v))};
     }
 
     bool has(Pi pi) const { return PieceSet{*this}.has(pi); }
@@ -114,7 +114,7 @@ public:
     // least valuable pieces in the last (highest) set bit
     Pi leastValuable() const { return PieceSet{*this}.last(); }
 
-    index_t popcount() const { return PieceSet{*this}.popcount(); }
+    int popcount() const { return PieceSet{*this}.popcount(); }
 
     PieceSet begin() const { return PieceSet{*this}; }
     PieceSet end() const { return PieceSet{ PiMask{zero()} }; }
