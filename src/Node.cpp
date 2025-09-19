@@ -186,9 +186,10 @@ ReturnStatus Node::negamax(Node* child) const {
     }
 
     // set window for the next move search
-    child->alpha = -alpha - 1;
     assert (child->beta == -alpha);
+    child->alpha = child->beta-1;
     child->isPv = false;
+    child->draft = Ply{draft > 0 ? draft-1 : 0};
     return ReturnStatus::Continue;
 }
 
@@ -271,7 +272,12 @@ ReturnStatus Node::search() {
             return ReturnStatus::Continue;
         }
 
-        if (draft == 0 && !inCheck()) {
+        // check extension
+        if (inCheck()) {
+            draft = Ply{draft + 1};
+        }
+
+        if (draft == 0) {
             return quiescence();
         }
     }
