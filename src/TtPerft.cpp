@@ -57,7 +57,7 @@ public:
     }
 
     Ply getDepth() const {
-        return key & 0xf;
+        return {static_cast<Ply::_t>(key & 0xf)};
     }
 
 };

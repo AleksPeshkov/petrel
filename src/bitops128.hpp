@@ -33,12 +33,12 @@ inline constexpr vector_type shufflevector(vector_type vector, vector_type mask)
 #endif
 }
 
-inline index_t popcount(vu64x2_t v) {
+inline int popcount(vu64x2_t v) {
     return popcount(v[0]) + popcount(v[1]);
 }
 
-inline u32_t mask(vu8x16_t v) {
-    return static_cast<u32_t>(__builtin_ia32_pmovmskb128(v));
+inline int mask(vu8x16_t v) {
+    return __builtin_ia32_pmovmskb128(v);
 }
 
 template <typename vector_type>

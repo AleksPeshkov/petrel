@@ -27,7 +27,7 @@ class Repetitions {
         };
 
         RepIndex::arrayOf<RepEntry> reps;
-        index_t count = 0; // number of entries
+        int count = 0; // number of entries
         RepIndex last = RepIndex::Last; // last added entry index
 
     public:
@@ -58,7 +58,7 @@ class Repetitions {
 
             if (count != RepIndex::Size) {
                 // just reverse order
-                for (auto i = 0u; i < count/2; ++i) {
+                for (int i = 0; i < count/2; ++i) {
                     std::swap(reps[i], reps[last - i]);
                 }
                 return;
@@ -70,7 +70,7 @@ class Repetitions {
             auto current = last < RepIndex::Last ? last+1 : 0;
 
             // copy z elements to the beginning
-            for (auto i = 0u; i < count; ++i) {
+            for (int i = 0; i < count; ++i) {
                 temp[i] = reps[current].z;
                 current = current < RepIndex::Last ? current+1 : 0;
             }
@@ -78,7 +78,7 @@ class Repetitions {
             RepetitionMask mask{};
 
             // push again in reverse order
-            for (auto i = 0u; i < count; ++i) {
+            for (int i = 0; i < count; ++i) {
                 auto z = temp[i];
                 mask = {mask, z};
                 reps[count - i - 1].z = z;

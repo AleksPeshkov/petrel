@@ -9,7 +9,7 @@ class Uci;
 
 class UciRoot : public NodeRoot {
     ChessVariant chessVariant_ = Orthodox; //format of castling moves output
-    index_t fullMoveNumber = 1; // number of full moves from the beginning of the game
+    int fullMoveNumber = 1; // number of full moves from the beginning of the game
 
     istream& readBoard(istream&);
     istream& readCastling(istream&);
