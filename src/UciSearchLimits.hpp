@@ -18,10 +18,10 @@ public:
     Side::arrayOf<TimeInterval> inc = {{ 0ms, 0ms }};
 
     node_count_t nodes = NodeCountMax;
-    Ply depth = MaxPly;
+    Ply depth = {MaxPly};
 
-    index_t movestogo = 0;
-    index_t mate = 0;
+    int movestogo = 0;
+    int mate = 0;
 
     bool ponder = false;
     bool infinite = false;
@@ -37,7 +37,7 @@ public:
         time = {{ 0ms, 0ms }};
         inc = {{ 0ms, 0ms }};
         nodes = NodeCountMax;
-        depth = MaxPly;
+        depth = {MaxPly};
         movestogo = 0;
         mate = 0;
         ponder = false;
