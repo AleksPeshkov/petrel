@@ -21,8 +21,10 @@ TAG_DEBUG = $(BUILD_DIR)/.debug
 # === Set Flags Based on Tags ===
 ifeq ($(wildcard $(TAG_TEST)), $(TAG_TEST))
 	BUILD_FLAGS = -Og -ggdb -DDEBUG
+#	BUILD_FLAGS = -Og -ggdb -DDEBUG -fsanitize=address,undefined
 else ifeq ($(wildcard $(TAG_DEBUG)), $(TAG_DEBUG))
 	BUILD_FLAGS = -O0 -ggdb -DDEBUG
+#	BUILD_FLAGS = -O0 -ggdb -DDEBUG -fsanitize=address,undefined
 endif
 
 CXXFLAGS = $(BUILD_FLAGS) -std=c++20 -mssse3 -march=native -mtune=native -fno-exceptions -fno-rtti
@@ -44,7 +46,7 @@ endif
 
 WARNINGS = -Wall -Wpedantic -Wextra
 WARNINGS += -Wno-ignored-attributes
-WARNINGS += -Wuninitialized -Wcast-qual -Wshadow -Wmissing-declarations -Wstrict-aliasing=1 -Wstrict-overflow=5 -Wsign-promo
+WARNINGS += -Wuninitialized -Wcast-qual -Wshadow -Wmissing-declarations -Wstrict-aliasing=1 -Wsign-promo
 WARNINGS += -Wpacked -Wdisabled-optimization -Wredundant-decls -Winvalid-constexpr -Wextra-semi -Wsuggest-override
 #WARNINGS += -Winline
 
