@@ -44,7 +44,7 @@ endif
 
 WARNINGS = -Wall -Wpedantic -Wextra
 WARNINGS += -Wno-ignored-attributes
-WARNINGS += -Wuninitialized -Wcast-qual -Wshadow -Wmissing-declarations -Wstrict-aliasing=1 -Wstrict-overflow=5 -Wsign-promo
+WARNINGS += -Wuninitialized -Wcast-qual -Wshadow -Wmissing-declarations -Wstrict-aliasing=1 -Wsign-promo
 WARNINGS += -Wpacked -Wdisabled-optimization -Wredundant-decls -Winvalid-constexpr -Wextra-semi -Wsuggest-override
 #WARNINGS += -Winline
 
