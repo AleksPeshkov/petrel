@@ -12,7 +12,7 @@ ReturnStatus NodePerft::visitRoot() {
     NodePerft node{this};
     const auto child = &node;
 
-    index_t moveCount = 0;
+    int moveCount = 0;
     for (Pi pi : MY.pieces()) {
         Square from = MY.squareOf(pi);
 
@@ -65,12 +65,12 @@ ReturnStatus NodePerft::visitMove(Square from, Square to) {
             RETURN_IF_STOP (root.countNode());
             makeMoveNoZobrist(parent, from, to);
 
-            perft = static_cast<TtPerft&>(root.tt).get(zobrist(), draft - 2);
+            perft = static_cast<TtPerft&>(root.tt).get(zobrist(), {draft - 2});
 
             if (perft == NodeCountNone) {
                 perft = 0;
                 RETURN_IF_STOP(visit());
-                static_cast<TtPerft&>(root.tt).set(zobrist(), draft - 2, perft);
+                static_cast<TtPerft&>(root.tt).set(zobrist(), {draft - 2}, perft);
             }
         }
     }
