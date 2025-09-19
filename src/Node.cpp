@@ -176,10 +176,11 @@ ReturnStatus Node::negamax(Node* child) {
     }
 
     // set window for the next move search
-    child->alpha = -alpha - 1;
+    child->alpha = -alpha-1;
     assert (child->beta == -alpha);
     child->isPv = false;
     child->score = NoScore;
+    child->draft = std::max(0, draft-1);
     return ReturnStatus::Continue;
 }
 
@@ -222,6 +223,11 @@ ReturnStatus Node::search() {
 
     if (draft == 0 && !inCheck()) {
         return quiescence();
+    }
+
+    // check extension
+    if (inCheck()) {
+        draft = draft + 1;
     }
 
     ++root.tt.reads;
