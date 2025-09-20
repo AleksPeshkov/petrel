@@ -16,14 +16,14 @@ TtSlot::TtSlot (Z z, Move move, Score score, Bound b, Ply d) : s{
 
 TtSlot::TtSlot (Node* n, Bound b) : TtSlot{
     n->zobrist(),
-    n->childMove,
+    n->currentMove,
     n->score.toTt(n->ply),
     b,
     n->draft
 } {}
 
-Node::Node (NodeRoot& r) :
-    PositionMoves{r}, parent{nullptr}, grandParent{nullptr}, root{r}, ply{0} {}
+Node::Node (const PositionMoves& p, Uci& r) :
+    PositionMoves{p}, parent{nullptr}, grandParent{nullptr}, root{r} {}
 
 Node::Node (Node* n) :
     PositionMoves{}, parent{n}, grandParent{n->parent}, root{n->root},
@@ -35,13 +35,12 @@ Node::Node (Node* n) :
 
 ReturnStatus Node::searchRoot() {
     root.newSearch();
-    root.nodeCounter = { root.limits.nodes };
 
     auto rootMovesClone = moves();
     repMask = root.repetitions.repMask(colorToMove());
     origin = root.tt.prefetch<TtSlot>(zobrist());
 
-    if (root.limits.iterationDeadlineReached()) {
+    if (root.limits.isIterationDeadline()) {
         // we have no time to search, return TT move immediately if found
         ++root.tt.reads;
         ttSlot = *origin;
@@ -62,7 +61,6 @@ ReturnStatus Node::searchRoot() {
                     const auto child = &node;
 
                     child->makeMove(ttMove);
-                    child->origin = root.tt.prefetch<TtSlot>(child->zobrist());
                     ++root.tt.reads;
                     child->ttSlot = *child->origin;
                     child->isHit = (child->ttSlot == child->zobrist());
@@ -91,31 +89,31 @@ ReturnStatus Node::searchRoot() {
         setMoves(rootMovesClone);
         alpha = MinusInfinity;
         beta = PlusInfinity;
-        auto status = searchMoves();
+        auto status = search();
 
         root.newIteration();
-        updateTtPv();
+        refreshTtPv();
 
-        if (status == ReturnStatus::Stop) { return ReturnStatus::Stop; }
+        RETURN_IF_STOP (status);
 
-        root.uci.info_iteration(draft);
+        root.info_iteration(draft);
 
-        if (root.limits.iterationDeadlineReached()) { return ReturnStatus::Stop; }
+        if (root.limits.isIterationDeadline()) { return ReturnStatus::Stop; }
     }
 
     return ReturnStatus::Continue;
 }
 
- // refresh PV in TT if it was overwritten
- void Node::updateTtPv() {
-    Position pos{root};
+ // refresh PV in TT before new search iteration if it was occasionally overwritten
+ void Node::refreshTtPv() {
+    Position pos{root.position_};
     Score s = root.pvScore;
     Ply d = draft;
 
     const Move* pv = root.pvMoves;
     for (Move move; (move = *pv++);) {
         auto o = root.tt.addr<TtSlot>(pos.zobrist());
-        *o = TtSlot{pos.zobrist(), move, s, Exact, d};
+        *o = TtSlot{pos.zobrist(), move, s, ExactScore, d};
         ++root.tt.writes;
 
         //we cannot use makeZobrist() because of en passant legality validation
@@ -129,27 +127,28 @@ void Node::makeMove(Move move) {
     Square from = move.from();
     Square to = move.to();
 
-    parent->childMove = move;
+    parent->currentMove = move;
     parent->clearMove(from, to);
     Position::makeMove(parent, from, to);
     origin = root.tt.prefetch<TtSlot>(zobrist());
+}
+
+ReturnStatus Node::searchMove(Move move) {
+    RETURN_IF_STOP (root.limits.countNode());
+    makeMove(move);
 
     if (rule50() < 2) { repMask = RepetitionMask{}; }
     else if (grandParent) { repMask = RepetitionMask{grandParent->repMask, grandParent->zobrist()}; }
     else { repMask = root.repetitions.repMask(colorToMove()); }
 
     root.pvMoves.set(ply, UciMove{});
-}
-
-ReturnStatus Node::searchMove(Move move) {
-    RETURN_IF_STOP (root.countNode());
-    makeMove(move);
-
-    RETURN_IF_STOP (search());
     return parent->negamax(this);
 }
 
 ReturnStatus Node::negamax(Node* child) {
+    child->generateMoves();
+    RETURN_IF_STOP (child->search());
+
     assert (MinusInfinity <= alpha && alpha < beta && beta <= PlusInfinity);
 
     auto childScore = -child->score;
@@ -159,15 +158,16 @@ ReturnStatus Node::negamax(Node* child) {
 
         if (alpha < score) {
             if (beta <= score) {
-                return betaCutoff();
+                failHigh();
+                return ReturnStatus::BetaCutoff;
             }
 
             alpha = score;
-            RETURN_IF_STOP (updatePv());
+            updatePv();
         }
     }
 
-    if (ply == 0 && root.limits.rootMoveDeadlineReached()) {
+    if (ply == 0 && root.limits.isRootMoveDeadline()) {
         return ReturnStatus::Stop;
     }
 
@@ -177,31 +177,24 @@ ReturnStatus Node::negamax(Node* child) {
     return ReturnStatus::Continue;
 }
 
-ReturnStatus Node::betaCutoff() {
+void Node::failHigh() {
     updateKillerMove();
-    *origin = TtSlot{this, LowerBound};
+    *origin = TtSlot{this, FailHigh};
     ++root.tt.writes;
-    return ReturnStatus::BetaCutoff;
 }
 
-ReturnStatus Node::updatePv() {
-    root.pvMoves.set(ply, uciMove(childMove));
-    *origin = TtSlot{this, Exact};
+void Node::updatePv() {
+    root.pvMoves.set(ply, uciMove(currentMove));
+    *origin = TtSlot{this, ExactScore};
     ++root.tt.writes;
 
     if (ply == 0) {
         root.pvScore = score;
-        root.uci.info_pv(draft);
+        root.info_pv(draft);
     }
-    return ReturnStatus::Continue;
 }
 
 ReturnStatus Node::search() {
-    generateMoves();
-    return searchMoves();
-}
-
-ReturnStatus Node::searchMoves() {
     // mate-distance pruning
     if (ply >= 1) {
         alpha = std::max(alpha, Score::checkmated(ply));
@@ -243,8 +236,10 @@ ReturnStatus Node::searchMoves() {
         return ReturnStatus::Continue;
     }
 
+    // prepare empty child node to make moves into
     Node node{this};
     const auto child = &node;
+
     canBeKiller = false;
     score = NoScore;
 
@@ -252,25 +247,25 @@ ReturnStatus Node::searchMoves() {
         RETURN_CUTOFF (child->searchMove(ttSlot));
     }
 
-    PiMask victims = OP.pieces() - PiMask{TheKing};
-    RETURN_CUTOFF (goodCaptures(child, victims));
+    // cannot capture the king, so do not even try
+    RETURN_CUTOFF (goodCaptures(child, OP.pieces() - PiMask{TheKing}));
 
     canBeKiller = true;
 
     Pi lastPi = TheKing;
     Bb newMoves = {};
 
-    //TODO: checking moves
-
     if (parent) {
-        // killer move to be tried first
+        // first killer move
         RETURN_CUTOFF (child->searchIfLegal(parent->killer1));
 
-        // counter moves may refute the last opponent move
-        Move move = parent->childMove;
-        PieceType ty = parent->MY.typeAt(move.from());
-        RETURN_CUTOFF (child->searchIfLegal( root.counterMove(colorToMove(), ty, move.to()) ));
+        // countermove heuristic: refutation of the last opponent's move
+        Move opMove = parent->currentMove;
+        RETURN_CUTOFF (child->searchIfLegal( root.counterMove(
+            colorToMove(), parent->MY.typeAt(opMove.from()), opMove.to()
+        ) ));
 
+        // second killer move
         RETURN_CUTOFF (child->searchIfLegal(parent->killer2));
 
         // try quiet moves of the last moved piece (unless it was captured)
@@ -290,7 +285,7 @@ ReturnStatus Node::searchMoves() {
 
                 // try new safe moves of the last moved piece
                 for (Square to : newMoves % bbAttacked()) {
-                    RETURN_CUTOFF (child->searchMove(from, to));
+                    RETURN_CUTOFF (child->searchMove({from, to}));
                 }
 
                 // keep unsafe news moves for later
@@ -302,7 +297,7 @@ ReturnStatus Node::searchMoves() {
         for (Pi pi : MY.pieces() - lastPi) {
             Square from = MY.squareOf(pi);
             for (Square to : movesOf(pi) % parent->OP.attacksOf(pi) % bbAttacked()) {
-                RETURN_CUTOFF (child->searchMove(from, to));
+                RETURN_CUTOFF (child->searchMove({from, to}));
             }
         }
     }
@@ -311,7 +306,7 @@ ReturnStatus Node::searchMoves() {
     for (Pi pi : MY.pieces()) {
         Square from = MY.squareOf(pi);
         for (Square to : movesOf(pi) % bbAttacked()) {
-            RETURN_CUTOFF (child->searchMove(from, to));
+            RETURN_CUTOFF (child->searchMove({from, to}));
         }
     }
 
@@ -326,12 +321,12 @@ ReturnStatus Node::searchMoves() {
 
         // the rest moves of the last moved piece
         for (Square to : movesOf(pi)) {
-            RETURN_CUTOFF (child->searchMove(from, to));
+            RETURN_CUTOFF (child->searchMove({from, to}));
         }
     }
 
     // remaining (bad) captures and all underpromotions
-    RETURN_CUTOFF (badCaptures(child, victims));
+    RETURN_CUTOFF (badCaptures(child, OP.pieces() - PiMask{TheKing}));
 
     // all the rest (quiet) moves, LVA order
     auto pieces = MY.pieces();
@@ -340,7 +335,7 @@ ReturnStatus Node::searchMoves() {
         Square from = MY.squareOf(pi);
 
         for (Square to : movesOf(pi)) {
-            RETURN_CUTOFF (child->searchMove(from, to));
+            RETURN_CUTOFF (child->searchMove({from, to}));
         }
     }
 
@@ -351,7 +346,7 @@ ReturnStatus Node::quiescence() {
     assert (MinusInfinity <= alpha && alpha < beta && beta <= PlusInfinity);
     assert (!inCheck());
 
-    //stand pat
+    // stand pat
     score = evaluate();
     if (beta <= score) {
         return ReturnStatus::BetaCutoff;
@@ -364,24 +359,24 @@ ReturnStatus Node::quiescence() {
         alpha = score;
     }
 
+    // prepare empty child node to make moves into
+    //TODO: create lighter quiescence search node
     Node node{this};
     const auto child = &node;
-    canBeKiller = false;
 
-    PiMask victims = OP.pieces() - PiMask{TheKing};
-    RETURN_CUTOFF (goodCaptures(child, victims));
-
-    return ReturnStatus::Continue;
+    // king cannot be captured, so do not even try
+    return goodCaptures(child, OP.pieces() - PiMask{TheKing});
 }
 
 ReturnStatus Node::goodCaptures(Node* child, const PiMask& victims) {
+    canBeKiller = false;
     if (MY.promotables().any()) {
         // queen promotions with capture, always good
         for (Pi victim : OP.pieces() & OP.piecesOn(Rank1)) {
             Square to = ~OP.squareOf(victim);
             for (Pi attacker : canMoveTo(to) & MY.promotables()) {
                 Square from = MY.squareOf(attacker);
-                RETURN_CUTOFF (child->searchMove(from, to));
+                RETURN_CUTOFF (child->searchMove({from, to}));
             }
         }
 
@@ -406,7 +401,7 @@ ReturnStatus Node::goodCaptures(Node* child, const PiMask& victims) {
         if (OP.isEnPassant(victim)) {
             for (Pi attacker : attackers & MY.enPassantPawns()) {
                 Square from = MY.squareOf(attacker);
-                RETURN_CUTOFF (child->searchMove(from, to));
+                RETURN_CUTOFF (child->searchMove({from, to}));
             }
             attackers %= MY.enPassantPawns();
             if (attackers.none()) { continue; }
@@ -435,7 +430,7 @@ ReturnStatus Node::goodCaptures(Node* child, const PiMask& victims) {
             }
 
             Square from = MY.squareOf(attacker);
-            RETURN_CUTOFF (child->searchMove(from, to));
+            RETURN_CUTOFF (child->searchMove({from, to}));
             continue;
         }
 
@@ -455,7 +450,7 @@ ReturnStatus Node::goodCaptures(Node* child, const PiMask& victims) {
             Pi attacker = attackers.leastValuable(); attackers -= attacker;
 
             Square from = MY.squareOf(attacker);
-            RETURN_CUTOFF (child->searchMove(from, to));
+            RETURN_CUTOFF (child->searchMove({from, to}));
         }
     }
 
@@ -474,7 +469,7 @@ ReturnStatus Node::badCaptures(Node* child, const PiMask& victims) {
             Pi attacker = attackers.leastValuable(); attackers -= attacker;
 
             Square from = MY.squareOf(attacker);
-            RETURN_CUTOFF (child->searchMove(from, to));
+            RETURN_CUTOFF (child->searchMove({from, to}));
         }
     }
 
@@ -482,7 +477,7 @@ ReturnStatus Node::badCaptures(Node* child, const PiMask& victims) {
     for (Pi pawn : MY.promotables()) {
         Square from = MY.squareOf(pawn);
         for (Square to : movesOf(pawn)) {
-            RETURN_CUTOFF (child->searchMove(from, to));
+            RETURN_CUTOFF (child->searchMove({from, to}));
         }
     }
 
@@ -493,22 +488,23 @@ void Node::updateKillerMove() {
     if (!canBeKiller) { return; }
     if (!parent) { return; }
 
-    if (parent->killer1 != childMove) {
+    if (parent->killer1 != currentMove) {
         parent->killer2 = parent->killer1;
-        parent->killer1 = childMove;
+        parent->killer1 = currentMove;
     }
 
-    Move move = parent->childMove;
+    Move move = parent->currentMove;
     PieceType ty = parent->MY.typeAt(move.from());
-    root.counterMove.set(colorToMove(), ty, move.to(), childMove);
+    root.counterMove.set(colorToMove(), ty, move.to(), currentMove);
 }
 
-UciMove Node::uciMove(Square from, Square to) const {
-    return UciMove{from, to, isSpecial(from, to), colorToMove(), root.uci.chessVariant()};
+UciMove Node::uciMove(Move move) const {
+    Square from{move.from()}; Square to{move.to()};
+    return UciMove{from, to, isSpecial(from, to), colorToMove(), root.chessVariant()};
 }
 
 constexpr Color Node::colorToMove() const {
-    return root.colorToMove(ply);
+    return root.colorToMove() << ply;
 }
 
 // insufficient mate material
