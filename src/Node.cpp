@@ -131,6 +131,21 @@ void Node::makeMove(Square from, Square to) {
     root.pvMoves.clearPly(pvIndex);
 }
 
+ReturnStatus Node::searchNullMove(Ply R) {
+    RETURN_IF_STOP (root.limits.countNode());
+    parent->currentMove = {};
+    makeNullMove(parent);
+    eval = -parent->eval;
+
+    origin = root.tt.prefetch<TtSlot>(zobrist());
+    if (rule50() < 2) { repetitionHash = RepetitionHash{}; }
+    else if (grandParent) { repetitionHash = RepetitionHash{grandParent->repetitionHash, grandParent->zobrist()}; }
+    else { repetitionHash = root.repetitions.repetitionHash(colorToMove()); }
+
+    draft = parent->draft - R;
+    return parent->negamax(this);
+}
+
 ReturnStatus Node::searchMove(Move move) {
     RETURN_IF_STOP (root.limits.countNode());
 
@@ -139,6 +154,7 @@ ReturnStatus Node::searchMove(Move move) {
     parent->clearMove(from, to);
     parent->currentMove = move;
     makeMove(from, to);
+    eval = evaluate();
 
     if (rule50() < 2) { repetitionHash = RepetitionHash{}; }
     else if (grandParent) { repetitionHash = RepetitionHash{grandParent->repetitionHash, grandParent->zobrist()}; }
@@ -156,7 +172,13 @@ ReturnStatus Node::negamax(Node* child) const {
     auto childScore = -child->score;
 
     if (beta <= childScore) {
-        score = childScore;
+        // research with full draft on fail high (unless it was a null move)
+        if (child->draft < draft-1 && currentMove) {
+            child->draft = draft-1; // revert reduction
+            return negamax(child);
+        }
+        // fix possibly wrong mate score because null move is invalid move
+        score = !currentMove && childScore.isMate() ? beta : childScore;
         failHigh();
         return ReturnStatus::BetaCutoff;
     }
@@ -193,6 +215,11 @@ ReturnStatus Node::negamax(Node* child) const {
 }
 
 void Node::failHigh() const {
+    // currentMove is null (after NMP), write back previous TT move instead
+    if (!currentMove && isHit && Move{ttSlot}) {
+        currentMove = Move{ttSlot};
+    }
+
     bound = FailHigh;
     *origin = TtSlot{this};
     ++root.tt.writes;
@@ -311,13 +338,24 @@ ReturnStatus Node::search() {
 
     if (ply == MaxPly) {
         // no room to search deeper
-        score = evaluate();
+        score = eval;
         return ReturnStatus::Continue;
     }
 
     // prepare empty child node to make moves into
     Node node{this};
     const auto child = &node;
+
+    // Null Move Pruning
+    if (
+        !isPv && !inCheck()
+        && draft >= 2 // overhead higher then gain at very low depth
+        && eval >= beta
+        && MY.evaluation().piecesMat() > 0 // no null move if only pawns left (zugzwang)
+    ) {
+        canBeKiller = false;
+        RETURN_CUTOFF (child->searchNullMove(3 + draft/6));
+    }
 
     if (isHit && Move{ttSlot}) {
         canBeKiller = ttSlot.canBeKiller();
@@ -502,7 +540,7 @@ ReturnStatus Node::quiescence() {
     assert (!inCheck());
 
     // stand pat
-    score = evaluate();
+    score = eval;
     if (beta <= score) {
         return ReturnStatus::BetaCutoff;
     }
