@@ -58,6 +58,7 @@ protected:
     TtSlot* origin; // pointer to the slot in TT
     TtSlot  ttSlot;
     bool isHit = false; // this node found in TT
+    Score eval; // static evaluation of the current position
 
     Score alpha = MinusInfinity; // alpha-beta window lower margin
     Score beta = PlusInfinity; // alpha-beta window upper margin
