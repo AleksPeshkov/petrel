@@ -46,9 +46,17 @@ ReturnStatus Node::searchRoot() {
         ++root.tt.reads;
         ttSlot = *origin;
         isHit = (ttSlot == zobrist());
-        if (isHit) {
+        if (!isHit) {
+            io::log("#no time, no TT record found");
+        } else {
             Move ttMove = {ttSlot};
-            if (isLegalMove(ttMove)) {
+            if (!isLegalMove(ttMove)) {
+                if (Move{ttSlot}) {
+                    io::log("#no time, illegal TT move");
+                } else {
+                    io::log("#no time, TT null move found");
+                }
+            } else {
                 if (root.limits.canPonder) {
                     Node node{this};
                     const auto child = &node;
@@ -73,6 +81,7 @@ ReturnStatus Node::searchRoot() {
                 ++root.tt.hits;
                 root.pvScore = ttSlot.score(ply);
                 root.pvMoves.set(0, uciMove(ttMove));
+                io::log("#no time, return move from TT");
                 return ReturnStatus::Stop;
             }
         }
