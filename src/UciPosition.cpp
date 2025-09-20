@@ -1,5 +1,6 @@
 #include <set>
-#include "UciRoot.hpp"
+#include "Repetitions.hpp"
+#include "UciPosition.hpp"
 
 namespace {
 
@@ -225,19 +226,19 @@ public:
 
 } //end of anonymous namespace
 
-ostream& UciRoot::fen(ostream& out) const {
+ostream& UciPosition::fen(ostream& out) const {
     const auto& whiteSidePieces = positionSide(sideOf(White));
     const auto& blackSidePieces = positionSide(sideOf(Black));
 
     return out << BoardToFen(whiteSidePieces, blackSidePieces)
         << ' ' << colorToMove_
-        << ' ' << CastlingToFen{whiteSidePieces, blackSidePieces, chessVariant()}
+        << ' ' << CastlingToFen{whiteSidePieces, blackSidePieces, chessVariant_}
         << ' ' << EnPassantToFen{OP, colorToMove_}
         << ' ' << rule50()
         << ' ' << fullMoveNumber;
 }
 
-istream& UciRoot::readMove(istream& in, Square& from, Square& to) const {
+istream& UciPosition::readMove(istream& in, Square& from, Square& to) const {
     auto before = in.tellg();
     in >> from >> to;
     if (!in) { return io::fail_pos(in, before); }
@@ -291,7 +292,7 @@ istream& UciRoot::readMove(istream& in, Square& from, Square& to) const {
     return in;
 }
 
-void UciRoot::limitMoves(istream& in) {
+void UciPosition::limitMoves(istream& in) {
     PiBbMatrix movesMatrix;
     movesMatrix.clear();
     int n = 0;
@@ -323,7 +324,7 @@ void UciRoot::limitMoves(istream& in) {
     io::fail_rewind(in);
 }
 
-void UciRoot::playMoves(istream& in) {
+void UciPosition::playMoves(istream& in, Repetitions& repetitions) {
     repetitions.push(colorToMove_, zobrist());
 
     while (in >> std::ws && !in.eof()) {
@@ -349,7 +350,7 @@ void UciRoot::playMoves(istream& in) {
     repetitions.normalize(colorToMove_);
 }
 
-istream& UciRoot::readBoard(istream& in) {
+istream& UciPosition::readBoard(istream& in) {
     FenToBoard board;
     if (!read(in, board)) { return in; };
 
@@ -370,15 +371,15 @@ istream& UciRoot::readBoard(istream& in) {
     return in;
 }
 
-bool UciRoot::setCastling(Side My, File file) {
+bool UciPosition::setCastling(Side My, File file) {
     return MY.setValidCastling(file);
 }
 
-bool UciRoot::setCastling(Side My, CastlingSide castlingSide) {
+bool UciPosition::setCastling(Side My, CastlingSide castlingSide) {
     return MY.setValidCastling(castlingSide);
 }
 
-istream& UciRoot::readCastling(istream& in) {
+istream& UciPosition::readCastling(istream& in) {
     if (in.peek() == '-') { return in.ignore(); }
 
     for (io::char_type c; in.get(c) && !std::isblank(c); ) {
@@ -404,7 +405,7 @@ istream& UciRoot::readCastling(istream& in) {
     return in;
 }
 
-bool UciRoot::setEnPassant(File file) {
+bool UciPosition::setEnPassant(File file) {
     Square to{file, Rank4};
     if (!OP.has(to)) { return false; }
 
@@ -417,7 +418,7 @@ bool UciRoot::setEnPassant(File file) {
     return true;
 }
 
-istream& UciRoot::readEnPassant(istream& in) {
+istream& UciPosition::readEnPassant(istream& in) {
     if (in.peek() == '-') { return in.ignore(); }
 
     Square ep;
@@ -431,7 +432,7 @@ istream& UciRoot::readEnPassant(istream& in) {
     return in;
 }
 
-void UciRoot::readFen(istream& in) {
+void UciPosition::readFen(istream& in) {
     in >> std::ws;
     readBoard(in);
     in >> std::ws;
@@ -449,12 +450,10 @@ void UciRoot::readFen(istream& in) {
     }
 
     setZobrist();
-    repetitions.clear();
-    repetitions.push(colorToMove_, zobrist());
     generateMoves();
 }
 
-void UciRoot::setStartpos() {
+void UciPosition::setStartpos() {
     io::istringstream startpos{"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"};
     readFen(startpos);
 }
