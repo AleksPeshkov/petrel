@@ -7,7 +7,7 @@
 
 class Node;
 
-enum Bound { NoBound, LowerBound, UpperBound, Exact };
+enum Bound { NoBound, FailLow, FailHigh, ExactScore = FailLow | FailHigh };
 
 // 8 byte, always replace slot, so no age field, only one score, depth and bound flags
 class TtSlot {
@@ -31,7 +31,7 @@ class TtSlot {
 public:
     TtSlot () { static_assert (sizeof(TtSlot) == sizeof(u64_t)); }
     TtSlot (Z z, Move move, Score, Bound, Ply);
-    TtSlot (Node* node, Bound b);
+    TtSlot (const Node* node, Bound b);
     bool operator == (Z z) const { return (zobrist & HashMask) == (z & HashMask); }
     operator Move () const { return { static_cast<Square::_t>(s.from), static_cast<Square::_t>(s.to) }; }
     Score score(Ply ply) const { return Score{s.score}.fromTt(ply); }
@@ -39,46 +39,49 @@ public:
     Ply draft() const { return {static_cast<Ply::_t>(s.draft)}; }
 };
 
-class NodeRoot;
+class Uci;
 
 class Node : public PositionMoves {
 protected:
     friend class TtSlot;
 
-    Node* const parent;
-    Node* const grandParent;
+    const Uci& root; // common search thread data
+    const Node* const parent = nullptr; // previous (ply-1, opposite side to move) node or nullptr
+    const Node* const grandParent = nullptr; // previous side to move node (ply-2) or nullptr
 
-    NodeRoot& root;
+    RepetitionMask repMask; // mini-hash of all previous reversible positions zobrist keys
 
-    RepetitionMask repMask;
+    Ply ply = {0}; // distance from root (root is ply == 0)
+    Ply draft = {0}; // remaining depth to horizon
 
-    Ply ply; //distance from root
-    Ply draft = {0}; //remaining depth
-
-    TtSlot* origin;
+    TtSlot* origin; // pointer to the slot in TT
     TtSlot  ttSlot;
-    bool isHit = false;
+    bool isHit = false; // this node found in TT
 
-    Score score = NoScore;
-    Score alpha = MinusInfinity;
-    Score beta = PlusInfinity;
+    mutable Score alpha = MinusInfinity; // alpha-beta window lower margin
+    Score beta = PlusInfinity; // alpha-beta window upper margin
+    mutable Score score = NoScore; // best score found so far
 
-    Move childMove = {}; // last move made from this node
-    Move killer1 = {}; // first killer move to try at child-child nodes
-    Move killer2 = {}; // second killer move to try at child-child nodes
-    bool canBeKiller = false; // only moves at after killer stage will update killers
+    mutable Move currentMove = {}; // last move made from *this into *child
 
-    Node (Node* n);
+    /**
+     * Killer heuristic
+     */
+    mutable Move killer1 = {}; // primary killer, updated by previous siblings
+    mutable Move killer2 = {}; // secondary, backup when primary updated
+    bool canBeKiller = false; // good captures should not waste killer slots
 
-    [[nodiscard]] ReturnStatus searchMove(Move move);
-    [[nodiscard]] ReturnStatus searchMove(Square from, Square to) { return searchMove({from, to}); }
-    [[nodiscard]] ReturnStatus searchIfLegal(Move move) { return parent->isLegalMove(move) ? searchMove(move) : ReturnStatus::Continue; }
-    [[nodiscard]] ReturnStatus negamax(Node*);
-    [[nodiscard]] ReturnStatus betaCutoff();
-    [[nodiscard]] ReturnStatus updatePv();
+    Node (const Node* parent); // prepare empty child node
+
+    // propagate child last move search result score
+    [[nodiscard]] ReturnStatus negamax(Node* child) const;
+    void failHigh() const;
+    void updateKillerMove(Move) const;
+
+    void updatePv() const;
+    void refreshTtPv();
 
     [[nodiscard]] ReturnStatus search();
-    [[nodiscard]] ReturnStatus searchMoves();
     [[nodiscard]] ReturnStatus quiescence();
 
     // promotions to queen, winning or equal captures, also uncertain by current SEE captures
@@ -87,19 +90,22 @@ protected:
     // remaining (bad) captures and all underpromotions
     [[nodiscard]] ReturnStatus badCaptures(Node*, const PiMask&);
 
-    UciMove uciMove(Move move) const { return uciMove(move.from(), move.to()); }
-    UciMove uciMove(Square from, Square to) const;
+    [[nodiscard]] ReturnStatus searchIfLegal(Move move) {
+        return parent->isLegalMove(move) ? searchMove(move) : ReturnStatus::Continue;
+    }
 
+    [[nodiscard]] ReturnStatus searchMove(Move move);
     void makeMove(Move move);
-    void updateKillerMove();
-    void updateTtPv();
+
+    // convert internal move to be printable in UCI format
+    UciMove uciMove(Move move) const;
 
     constexpr Color colorToMove() const;
     bool isDrawMaterial() const;
     bool isRepetition() const;
 
 public:
-    Node (NodeRoot& r);
+    Node (const PositionMoves&, const Uci&);
     ReturnStatus searchRoot();
 };
 

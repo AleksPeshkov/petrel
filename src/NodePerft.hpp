@@ -3,11 +3,11 @@
 
 #include "PositionMoves.hpp"
 
-class NodeRoot;
+class Uci;
 
 class NodePerft : public PositionMoves {
     NodePerft* const parent;
-    NodeRoot& root;
+    Uci& root;
 
     node_count_t perft = 0;
     Ply draft;
@@ -17,7 +17,7 @@ class NodePerft : public PositionMoves {
     ReturnStatus visitMove(Square from, Square to);
 
 public:
-    NodePerft (NodeRoot&, Ply);
+    NodePerft (const PositionMoves&, Uci&, Ply);
     ReturnStatus visitRoot();
 };
 
