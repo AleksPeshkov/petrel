@@ -20,7 +20,6 @@ namespace {
 }
 
 Uci::Uci(ostream &o) :
-    root{*this},
     inputLine{std::string(1024, '\0')}, // preallocate 1024 bytes (~100 full moves)
     out{o},
     bestmove_(32, '\0')
@@ -92,19 +91,17 @@ void Uci::processInput(istream& in) {
 }
 
 void Uci::uciok() const {
-    bool isChess960 = root.chessVariant().is(Chess960);
-
     Output ob{this};
     ob << "id name " << io::app_version << '\n';
     ob << "id author Aleks Peshkov\n";
     ob << "option name Debug Log File type string default " << (logFileName.empty() ? "<empty>" : logFileName) << '\n';
     ob << "option name Hash type spin"
-       << " min "     << ::mebi(root.tt.minSize())
-       << " max "     << ::mebi(root.tt.maxSize())
-       << " default " << ::mebi(root.tt.size())
+       << " min "     << ::mebi(tt.minSize())
+       << " max "     << ::mebi(tt.maxSize())
+       << " default " << ::mebi(tt.size())
        << '\n';
-    ob << root.limits;
-    ob << "option name UCI_Chess960 type check default " << (isChess960 ? "true" : "false") << '\n';
+    limits.options(ob);
+    ob << "option name UCI_Chess960 type check default " << (chessVariant().is(Chess960) ? "true" : "false") << '\n';
     ob << "uciok";
 }
 
@@ -142,8 +139,8 @@ void Uci::setoption() {
     if (consume("Move Overhead")) {
         consume("value");
 
-        inputLine >> root.limits.moveOverhead;
-        if (root.limits.moveOverhead == 0ms) { root.limits.moveOverhead = 100us; }
+        inputLine >> limits.moveOverhead;
+        if (limits.moveOverhead == 0ms) { limits.moveOverhead = 100us; }
 
         if (!inputLine) { io::fail_rewind(inputLine); }
         return;
@@ -152,8 +149,8 @@ void Uci::setoption() {
     if (consume("Ponder")) {
         consume("value");
 
-        if (consume("true"))  { root.limits.canPonder = true; return; }
-        if (consume("false")) { root.limits.canPonder = false; return; }
+        if (consume("true"))  { limits.canPonder = true; return; }
+        if (consume("false")) { limits.canPonder = false; return; }
 
         io::fail_rewind(inputLine);
         return;
@@ -162,8 +159,8 @@ void Uci::setoption() {
     if (consume("UCI_Chess960")) {
         consume("value");
 
-        if (consume("true"))  { root.setChessVariant(Chess960); return; }
-        if (consume("false")) { root.setChessVariant(Orthodox); return; }
+        if (consume("true"))  { position_.setChessVariant(Chess960); return; }
+        if (consume("false")) { position_.setChessVariant(Orthodox); return; }
 
         io::fail_rewind(inputLine);
         return;
@@ -203,12 +200,12 @@ void Uci::setHash() {
         }
     }
 
-    root.setHash(quantity);
+    setHash(quantity);
 }
 
 void Uci::ucinewgame() {
-    root.newGame();
-    root.setStartpos();
+    newGame();
+    position_.setStartpos();
 }
 
 void Uci::position() {
@@ -218,19 +215,29 @@ void Uci::position() {
         return;
     }
 
-    if (consume("startpos")) { root.setStartpos(); }
-    if (consume("fen")) { root.readFen(inputLine); }
+    if (consume("startpos")) {
+        position_.setStartpos();
+        repetitions.clear();
+        repetitions.push(colorToMove(), position_.zobrist());
+    }
+
+    if (consume("fen")) {
+        position_.readFen(inputLine);
+        repetitions.clear();
+        repetitions.push(colorToMove(), position_.zobrist());
+    }
 
     consume("moves");
-    root.playMoves(inputLine);
+    position_.playMoves(inputLine, repetitions);
 }
 
 void Uci::go() {
-    root.limits.go(inputLine, root.sideOf(White));
-    if (consume("searchmoves")) { root.limitMoves(inputLine); }
+    limits.go(inputLine, position_.sideOf(White));
+    if (consume("searchmoves")) { position_.limitMoves(inputLine); }
 
     mainSearchThread.start([this] {
-        Node{root}.searchRoot();
+        newSearch();
+        Node{position_, *this}.searchRoot();
         bestmove();
     });
     std::this_thread::yield();
@@ -238,30 +245,30 @@ void Uci::go() {
 
 void Uci::bestmove() {
     io::ostringstream o;
-    o << "info"; nps(o) << root.pvScore << " pv" << root.pvMoves;
+    o << "info"; nps(o) << pvScore << " pv" << pvMoves;
     output(o.str());
 
     o.str("");
-    o << "bestmove " << root.pvMoves[0];
-    if (root.limits.canPonder && root.pvMoves[1]) {
-        o << " ponder " << root.pvMoves[1];
+    o << "bestmove " << pvMoves[0];
+    if (limits.canPonder && pvMoves[1]) {
+        o << " ponder " << pvMoves[1];
     }
 
     std::string sBestmove{o.str()};
     {
         std::lock_guard<decltype(bestmoveMutex)> lock{bestmoveMutex};
-        if (root.limits.shouldDelayBestmove()) {
+        if (limits.shouldDelayBestmove()) {
             bestmove_ = sBestmove;
             return;
         }
     }
 
     output(sBestmove);
-    root.limits.clear();
+    limits.clear();
 }
 
 void Uci::stop() {
-    root.limits.stop();
+    limits.stop();
     std::this_thread::yield();
 
     {
@@ -269,14 +276,14 @@ void Uci::stop() {
         if (!bestmove_.empty()) {
             output(bestmove_);
             bestmove_.clear();
-            root.limits.clear();
+            limits.clear();
             return;
         }
     }
 }
 
 void Uci::ponderhit() {
-    root.limits.ponderhit();
+    limits.ponderhit();
     std::this_thread::yield();
 
     {
@@ -284,7 +291,7 @@ void Uci::ponderhit() {
         if (!bestmove_.empty()) {
             output(bestmove_);
             bestmove_.clear();
-            root.limits.clear();
+            limits.clear();
             return;
         }
     }
@@ -295,9 +302,9 @@ void Uci::goPerft() {
     inputLine >> depth;
     depth = std::min<Ply>(depth, {18}); // current Tt implementation limit
 
-    root.limits.clear();
+    limits.clear();
     mainSearchThread.start([this, depth] {
-        NodePerft{root, depth}.visitRoot();
+        NodePerft{position_, *this, depth}.visitRoot();
         info_perft_bestmove();
     } );
 }
@@ -306,7 +313,7 @@ void Uci::info_perft_bestmove() {
     Output ob{this};
     info_nps(ob);
     ob << "bestmove 0000";
-    root.limits.clear();
+    limits.clear();
 }
 
 void Uci::readyok() const {
@@ -318,12 +325,12 @@ void Uci::readyok() const {
 
 ostream& Uci::nps(ostream& o) const {
     // avoid printing identical nps info in a row
-    if (lastInfoNodes == root.nodeCounter) { return o; }
-    lastInfoNodes = root.nodeCounter;
+    if (lastInfoNodes == limits.getNodes()) { return o; }
+    lastInfoNodes = limits.getNodes();
 
     o << " nodes " << lastInfoNodes;
 
-    auto elapsedTime = root.limits.elapsedSinceStart();
+    auto elapsedTime = limits.elapsedSinceStart();
     if (elapsedTime >= 1ms) {
         o << " time " << elapsedTime << " nps " << ::nps(lastInfoNodes, elapsedTime);
     }
@@ -332,14 +339,14 @@ ostream& Uci::nps(ostream& o) const {
 }
 
 ostream& Uci::info_nps(ostream& o) const {
-    if (lastInfoNodes == root.nodeCounter) { return o; }
+    if (lastInfoNodes == limits.getNodes()) { return o; }
 
-    if (root.tt.reads > 0) {
+    if (tt.reads > 0) {
         o << "info";
-        o << " hwrites " << root.tt.writes;
-        o << " hhits " << root.tt.hits;
-        o << " hreads " << root.tt.reads;
-        o << " hhitratio " << ::permil(root.tt.hits, root.tt.reads);
+        o << " hwrites " << tt.writes;
+        o << " hhits " << tt.hits;
+        o << " hreads " << tt.reads;
+        o << " hhitratio " << ::permil(tt.hits, tt.reads);
         o << '\n';
     }
 
@@ -348,7 +355,7 @@ ostream& Uci::info_nps(ostream& o) const {
 }
 
 ostream& Uci::info_fen(ostream& o) const {
-    o << "info fen " << root;
+    o << "info fen " << position_;
     return o;
 }
 
@@ -359,7 +366,7 @@ void Uci::info_iteration(Ply draft) const {
 
 void Uci::info_pv(Ply draft) const {
     Output ob{this};
-    ob << "info depth " << draft; nps(ob) << root.pvScore << " pv" << root.pvMoves;
+    ob << "info depth " << draft; nps(ob) << pvScore << " pv" << pvMoves;
 }
 
 void Uci::info_perft_depth(Ply draft, node_count_t perft) const {
