@@ -131,6 +131,7 @@ void Node::makeMove(Move move) {
     parent->clearMove(from, to);
     Position::makeMove(parent, from, to);
     origin = root.tt.prefetch<TtSlot>(zobrist());
+    eval = evaluate();
 }
 
 ReturnStatus Node::searchMove(Move move) {
@@ -259,7 +260,7 @@ ReturnStatus Node::search() {
 
     if (ply == MaxPly) {
         // no room to search deeper
-        score = evaluate();
+        score = eval;
         return ReturnStatus::Continue;
     }
 
@@ -335,7 +336,7 @@ ReturnStatus Node::quiescence() {
     assert (!inCheck());
 
     // stand pat
-    score = evaluate();
+    score = eval;
     if (beta <= score) {
         return ReturnStatus::BetaCutoff;
     }
