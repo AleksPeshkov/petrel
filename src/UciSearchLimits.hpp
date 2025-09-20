@@ -7,12 +7,20 @@
 #include "Thread.hpp"
 
 class UciSearchLimits {
-    std::atomic_bool stop_{false};
-    std::atomic_bool infinite{false};
-    std::atomic_bool ponder{false};
+    constexpr static int QuotaLimit = 200; // < 0.05ms
+
+    mutable node_count_t nodes = 0; // (0 <= nodes && nodes <= nodesLimit)
+    mutable node_count_t nodesLimit = NodeCountMax; // search limit
+
+    //number of remaining nodes before slow checking for search stop
+    mutable int nodesQuota = 0; // (0 <= nodesQuota && nodesQuota <= QuotaLimit)
+
+    mutable std::atomic_bool stop_{false};
+    mutable std::atomic_bool infinite{false};
+    mutable std::atomic_bool ponder{false};
 
     TimePoint searchStartTime;
-    TimePoint hardDeadline = TimePoint::max(); // tested every 200 nodes
+    TimePoint hardDeadline = TimePoint::max(); // tested every QuotaLimit nodes
     TimePoint rootMoveDeadline = TimePoint::max(); // tested before next root move search
     TimePoint iterationDeadline = TimePoint::max(); // tested when iteration ends
 
@@ -22,6 +30,14 @@ class UciSearchLimits {
 
     int movestogo = 0;
     int mate = 0;
+
+    constexpr void assertNodesOk() const {
+        assert (0 <= nodesQuota);
+        assert (nodesQuota < QuotaLimit);
+        //assert (0 <= nodes);
+        assert (nodes <= nodesLimit);
+        assert (static_cast<decltype(nodesLimit)>(nodesQuota) <= nodes);
+    }
 
     constexpr void setNoDeadline() {
         hardDeadline = TimePoint::max();
@@ -35,34 +51,64 @@ class UciSearchLimits {
     }
 
     void setSearchDeadline() {
-        setNoDeadline();
-
         if (infinite.load(std::memory_order_relaxed)) {
+            setNoDeadline();
             return;
         }
-
         if (movetime > 0ms) {
+            setNoDeadline();
             hardDeadline = searchStartTime + movetime - moveOverhead;
             return;
         }
-
         if (time[My] == 0ms) {
+            setNoDeadline();
             return;
         }
 
         // average remaining time per move
         auto myAverage = average(My) + (canPonder ? average(Op) / 3 : 0ms);
+        auto hardInterval = std::min(time[My], myAverage * 3 / 2);
+        auto baseTime = searchStartTime - moveOverhead;
 
-        auto hardInterval = std::min(time[My], myAverage * 3 / 2); // 150% average time
+        hardDeadline = baseTime + hardInterval; // 150% average time
+        rootMoveDeadline = baseTime + (hardInterval * 2 / 3); // 100% average time
+        iterationDeadline = baseTime + (hardInterval / 3); // 50% average time
+    }
 
-        hardDeadline = searchStartTime + hardInterval - moveOverhead;
-        rootMoveDeadline = searchStartTime + (hardInterval * 2 / 3) - moveOverhead; // 100% average time
-        iterationDeadline = searchStartTime + (hardInterval / 3) - moveOverhead; // 50% average time
+    ReturnStatus refreshQuota() const {
+        assertNodesOk();
+        nodes -= nodesQuota;
+
+        auto nodesRemaining = nodesLimit - nodes;
+        if (nodesRemaining >= QuotaLimit) {
+            nodesQuota = QuotaLimit;
+        }
+        else {
+            nodesQuota = static_cast<decltype(nodesQuota)>(nodesRemaining);
+            if (nodesQuota == 0) {
+                assertNodesOk();
+                return ReturnStatus::Stop;
+            }
+        }
+
+        if (isHardDeadline()) {
+            nodesLimit = nodes;
+            nodesQuota = 0;
+
+            assertNodesOk();
+            return ReturnStatus::Stop;
+        }
+
+        assert (0 < nodesQuota && nodesQuota <= QuotaLimit);
+        nodes += nodesQuota;
+        --nodesQuota; //count current node
+
+        assertNodesOk();
+        return ReturnStatus::Continue;
     }
 
 public:
     Ply depth = {MaxPly};
-    node_count_t nodes = NodeCountMax;
 
     bool canPonder{false};
 
@@ -70,12 +116,14 @@ public:
 
     // clear all limits except canPonder and moveOverhead
     void clear() {
+        nodes = 0;
+        nodesLimit = NodeCountMax;
+        nodesQuota = 0;
         searchStartTime = timeNow();
         setNoDeadline();
         movetime = 0ms;
         time = {{ 0ms, 0ms }};
         inc = {{ 0ms, 0ms }};
-        nodes = NodeCountMax;
         depth = {MaxPly};
         movestogo = 0;
         mate = 0;
@@ -89,7 +137,7 @@ public:
 
         while (in >> std::ws, !in.eof()) {
             if      (io::consume(in, "depth"))    { in >> depth; }
-            else if (io::consume(in, "nodes"))    { in >> nodes; }
+            else if (io::consume(in, "nodes"))    { in >> nodesLimit; }
             else if (io::consume(in, "movetime")) { in >> movetime; }
             else if (io::consume(in, "wtime"))    { in >> time[white]; }
             else if (io::consume(in, "btime"))    { in >> time[~white]; }
@@ -106,46 +154,93 @@ public:
         return in;
     }
 
-    void ponderhit() { ponder.store(false, std::memory_order_relaxed); }
+    ostream& options(ostream& out) const {
+        out << "option name Move Overhead type spin min 0 max 10000 default " << moveOverhead << '\n';
+        out << "option name Ponder type check default " << (canPonder ? "true" : "false") << '\n';
+        return out;
+    }
 
-    bool isStopped() const { return stop_.load(std::memory_order_acquire); }
+    void ponderhit() {
+        ponder.store(false, std::memory_order_relaxed);
+        isHardDeadline();
+    }
 
-    void stop() {
+    void stop() const {
         infinite.store(false, std::memory_order_relaxed);
         ponder.store(false, std::memory_order_relaxed);
         stop_.store(true, std::memory_order_release);
     }
 
+    bool isStopped() const {
+        return stop_.load(std::memory_order_acquire);
+    }
+
     // ponder || infinite
-    bool waitBestmove() { return ponder.load(std::memory_order_relaxed) || infinite.load(std::memory_order_relaxed); }
+    bool waitBestmove() {
+        return ponder.load(std::memory_order_relaxed) || infinite.load(std::memory_order_relaxed);
+    }
 
     // !ponder && hardDeadline
-    bool hardDeadlineReached() {
-        auto deadline = !ponder.load(std::memory_order_relaxed) && hardDeadline != TimePoint::max() && hardDeadline < ::timeNow();
+    bool isHardDeadline() const {
+        if (isStopped()) { return true; }
+
+        auto deadline =
+            !ponder.load(std::memory_order_relaxed)
+            && hardDeadline != TimePoint::max()
+            && hardDeadline < ::timeNow();
+
         if (deadline) { stop(); }
         return deadline;
     }
 
     // !ponder && iterationDeadline
-    bool iterationDeadlineReached() {
-        auto deadline = !ponder.load(std::memory_order_relaxed) && iterationDeadline != TimePoint::max() && iterationDeadline < ::timeNow();
+    bool isIterationDeadline() const {
+        if (isStopped()) { return true; }
+
+        auto deadline =
+            !ponder.load(std::memory_order_relaxed)
+            && iterationDeadline != TimePoint::max()
+            && iterationDeadline < ::timeNow();
+
         if (deadline) { stop(); }
         return deadline;
     }
 
     // !ponder && rootMoveDeadline
-    bool rootMoveDeadlineReached() {
-        auto deadline = !ponder.load(std::memory_order_relaxed) && rootMoveDeadline != TimePoint::max() && rootMoveDeadline < ::timeNow();
+    bool isRootMoveDeadline() const {
+        if (isStopped()) { return true; }
+
+        auto deadline =
+            !ponder.load(std::memory_order_relaxed)
+            && rootMoveDeadline != TimePoint::max()
+            && rootMoveDeadline < ::timeNow();
+
         if (deadline) { stop(); }
         return deadline;
     }
 
-    TimeInterval elapsedSinceStart() const { return ::elapsedSince(searchStartTime); }
+    TimeInterval elapsedSinceStart() const {
+        return ::elapsedSince(searchStartTime);
+    }
 
-    friend ostream& operator << (ostream& out, const UciSearchLimits& limits) {
-        out << "option name Move Overhead type spin min 0 max 10000 default " << limits.moveOverhead << '\n';
-        out << "option name Ponder type check default " << (limits.canPonder ? "true" : "false") << '\n';
-        return out;
+    /// exact number of visited nodes
+    constexpr node_count_t getNodes() const {
+        assertNodesOk();
+        return nodes - nodesQuota;
+    }
+
+    ReturnStatus countNode() const {
+        assertNodesOk();
+
+        if (nodesQuota == 0 || isStopped()) {
+            return refreshQuota();
+        }
+
+        assert (nodesQuota > 0);
+        --nodesQuota;
+
+        assertNodesOk();
+        return ReturnStatus::Continue;
     }
 };
 
