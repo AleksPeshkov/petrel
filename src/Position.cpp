@@ -9,6 +9,30 @@ void Position::makeMove(Square from, Square to) {
     //assert (zobrist() == generateZobrist()); // true, but slow to compute
 }
 
+void Position::makeNullMove(const Position* parent) {
+    assert (parent);
+    rule50_ = parent->rule50_;
+    zobrist_ = parent->zobrist_;
+
+    // copy from the parent position but swap sides
+    positionSide_[My] = parent->OP;
+    positionSide_[Op] = parent->MY;
+
+    occupied_[My] = parent->occupied_[Op];
+    occupied_[Op] = parent->occupied_[My];
+    rule50_.next();
+
+    //clear en passant status from the previous move
+    if (MY.hasEnPassant()) {
+        zobrist_.opEnPassant(MY.enPassantSquare());
+        OP.clearEnPassantKillers();
+        MY.clearEnPassantVictim();
+    }
+
+    zobrist_.flip();
+    //assert (zobrist() == generateZobrist()); // true, but slow to compute
+}
+
 void Position::makeMove(const Position* parent, Square from, Square to) {
     assert (parent);
     rule50_ = parent->rule50_;
