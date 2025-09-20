@@ -129,7 +129,7 @@ public:
     bool dropValid(PieceType, Square);
     static void finalSetup(PositionSide&, PositionSide&);
 
-// friend class UciRoot;
+// friend class UciPosition;
     bool setValidCastling(File);
     bool setValidCastling(CastlingSide);
 
