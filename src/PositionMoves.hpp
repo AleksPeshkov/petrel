@@ -6,10 +6,10 @@
 #include "Zobrist.hpp"
 
 class PositionMoves : public Position {
-    PiBbMatrix moves_; // generated strictly legal moves
+    mutable PiBbMatrix moves_; // generated strictly legal moves
 
     Bb bbAttacked_; // bitboard of squares attacked by any opponent (not side to move) piece (set during moves generation)
-    MovesNumber movesMade_; // number of moves already made in this node (set to 0 during moves generation)
+    mutable MovesNumber movesMade_; // number of moves already made in this node (set to 0 during moves generation)
     bool inCheck_; // king of current side to move is under attack (set during moves generation)
 
     //legal move generation helpers
@@ -25,7 +25,7 @@ class PositionMoves : public Position {
 
 protected:
     void setMoves(const PiBbMatrix& moves) { moves_ = moves; movesMade_ = 0; }
-    void clearMove(Square from, Square to) { moves_.clear(MY.pieceAt(from), to); ++movesMade_; }
+    void clearMove(Square from, Square to) const { moves_.clear(MY.pieceAt(from), to); ++movesMade_; }
 
     void makeMoveNoZobrist(PositionMoves* parent, Square from, Square to);
 
