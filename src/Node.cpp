@@ -124,6 +124,22 @@ ReturnStatus Node::searchRoot() {
     }
 }
 
+ReturnStatus Node::searchNullMove(Ply R) {
+    RETURN_IF_STOP (root.limits.countNode());
+    parent->currentMove = {};
+    makeNullMove(parent);
+    eval = -parent->eval;
+
+    origin = root.tt.prefetch<TtSlot>(zobrist());
+    if (rule50() < 2) { repMask = RepetitionMask{}; }
+    else if (grandParent) { repMask = RepetitionMask{grandParent->repMask, grandParent->zobrist()}; }
+    else { repMask = root.repetitions.repMask(colorToMove()); }
+    root.pvMoves.set(ply, UciMove{});
+
+    draft = std::max(0, parent->draft - R);
+    return parent->negamax(this);
+}
+
 void Node::makeMove(Move move) {
     Square from = move.from();
     Square to = move.to();
@@ -132,6 +148,7 @@ void Node::makeMove(Move move) {
     parent->clearMove(from, to);
     Position::makeMove(parent, from, to);
     origin = root.tt.prefetch<TtSlot>(zobrist());
+    eval = evaluate();
 }
 
 ReturnStatus Node::searchMove(Move move) {
@@ -286,7 +303,7 @@ ReturnStatus Node::search() {
 
     if (ply == MaxPly) {
         // no room to search deeper
-        score = evaluate();
+        score = eval;
         return ReturnStatus::Continue;
     }
 
@@ -296,6 +313,16 @@ ReturnStatus Node::search() {
 
     canBeKiller = false;
     score = NoScore;
+
+    // Null Move Pruning
+    if (
+        !isPv && !inCheck()
+        && draft >= 2 // overhead higher then gain at very low depth
+        && eval >= beta
+        && MY.evaluation().piecesMat() > 0 // no null move if only pawns left (zugzwang)
+    ) {
+        RETURN_CUTOFF (child->searchNullMove(3 + draft/6));
+    }
 
     if (isHit && Move{ttSlot}) {
         RETURN_CUTOFF (child->searchMove(ttSlot));
@@ -312,9 +339,11 @@ ReturnStatus Node::search() {
 
         // countermove heuristic: refutation of the last opponent's move
         Move opMove = parent->currentMove;
-        RETURN_CUTOFF (child->searchIfLegal( root.counterMove(
-            parent->colorToMove(), parent->MY.typeAt(opMove.from()), opMove.to()
-        ) ));
+        if (opMove) {
+            RETURN_CUTOFF (child->searchIfLegal( root.counterMove(
+                parent->colorToMove(), parent->MY.typeAt(opMove.from()), opMove.to()
+            ) ));
+        }
 
         // secondary killer move, backup of previous primary killer
         RETURN_CUTOFF (child->searchIfLegal(parent->killer2));
@@ -399,7 +428,7 @@ ReturnStatus Node::quiescence() {
     assert (!inCheck());
 
     // stand pat
-    score = evaluate();
+    score = eval;
     if (beta <= score) {
         return ReturnStatus::BetaCutoff;
     }
