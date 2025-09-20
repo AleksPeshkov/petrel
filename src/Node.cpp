@@ -114,6 +114,23 @@ ReturnStatus Node::searchRoot() {
     }
 }
 
+ReturnStatus Node::searchNullMove(Ply reduction) {
+    RETURN_IF_STOP (root.uci.limits.countNode());
+    parent->currentMove = {};
+    makeNullMove(parent);
+    eval = -parent->eval;
+
+    origin = root.tt.prefetch<TtSlot>(zobrist());
+    if (rule50() < 2) { repMask = RepetitionMask{}; }
+    else if (grandParent) { repMask = RepetitionMask{grandParent->repMask, grandParent->zobrist()}; }
+    else { repMask = root.repetitions.repMask(colorToMove()); }
+    root.pvMoves.set(ply, UciMove{});
+
+    draft = std::max(0, parent->draft - reduction - 1);
+    RETURN_CUTOFF (parent->negamax(this));
+    return ReturnStatus::Continue;
+}
+
 void Node::makeMove(Move move) {
     Square from = move.from();
     Square to = move.to();
@@ -267,6 +284,16 @@ ReturnStatus Node::search() {
 
     canBeKiller = false;
 
+    // Null Move Pruning
+    if (
+        !isPv && !inCheck()
+        && draft >= 2 // overhead higher then gain at very low depth
+        && eval >= beta
+        && MY.evaluation().piecesMat() > 0 // no null move if only pawns left (zugzwang)
+    ) {
+        RETURN_CUTOFF (child->searchNullMove(2 + draft/6));
+    }
+
     if (isHit && Move{ttSlot}) {
         RETURN_CUTOFF (child->searchMove(ttSlot));
     }
@@ -282,9 +309,11 @@ ReturnStatus Node::search() {
 
         // countermove heuristic: refutation of the last opponent's move
         Move opMove = parent->currentMove;
-        RETURN_CUTOFF (child->searchIfLegal( root.counterMove(
-            colorToMove(), parent->MY.typeAt(opMove.from()), opMove.to()
-        ) ));
+        if (opMove) {
+            RETURN_CUTOFF (child->searchIfLegal( root.counterMove(
+                colorToMove(), parent->MY.typeAt(opMove.from()), opMove.to()
+            ) ));
+        }
 
         // second killer move
         RETURN_CUTOFF (child->searchIfLegal(parent->killer2));
@@ -444,15 +473,18 @@ ReturnStatus Node::goodCaptures(Node* child, const PiMask& victims) {
 void Node::updateKillerMove() {
     if (!canBeKiller) { return; }
     if (!parent) { return; }
+    assert (currentMove);
 
     if (parent->killer1 != currentMove) {
         parent->killer2 = parent->killer1;
         parent->killer1 = currentMove;
     }
 
-    Move move = parent->currentMove;
-    PieceType ty = parent->MY.typeAt(move.from());
-    root.counterMove.set(colorToMove(), ty, move.to(), currentMove);
+    Move opMove = parent->currentMove;
+    if (opMove) {
+        PieceType ty = parent->MY.typeAt(opMove.from());
+        root.counterMove.set(colorToMove(), ty, opMove.to(), currentMove);
+    }
 }
 
 UciMove Node::uciMove(Move move) const {

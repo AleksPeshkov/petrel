@@ -97,6 +97,7 @@ protected:
     }
 
     [[nodiscard]] ReturnStatus searchMove(Move move);
+    [[nodiscard]] ReturnStatus searchNullMove(Ply);
     void makeMove(Move move);
 
     // convert internal move to be printable in UCI format
