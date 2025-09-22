@@ -309,31 +309,28 @@ ReturnStatus Node::search() {
     // going to search only non-captures, mask out remaining unsafe captures to avoid redundant safety checks
     //TRICK: ~ is not a negate bitwise operation but byteswap -- flip opponent's bitboard
     Bb badSquares = ~(OP.bbPawnAttacks() | OP.bbSide());
+    PiMask safePieces = {};
 
-    // safe (good) quiet non-pawn, non-king moves
-    // skip king moves because they ordered first, safe anyway and rarely best moves in chess
+    // quiet moves from unsafe to safe squares
     // skip pawns to avoid wasting time on safety check as pawns comes first in the final loop anyway
     // castling move is a rook move and picked early (safety check of castling rook is not very exact, but who cares?)
     //TODO: make king ordered last in default (MV first) piece order
-    for (Pi pi : MY.pieces() - MY.pawns() - PiMask{TheKing}) {
+    for (Pi pi : MY.pieces() - MY.pawns()) {
         Square from = MY.squareOf(pi);
-        PieceType ty = MY.typeOf(pi);
 
-        for (Square to : movesOf(pi) % badSquares) {
-            if (bbAttacked().has(to)) {
-                Pi defender = OP.attackersTo(~to).leastValuable();
-                if (OP.isLessValue(defender, ty)) {
-                    // skip move if square defended by less valued piece
-                    continue;
-                }
-                if ((MY.attackersTo(to) % PiMask{pi}).none()) {
-                    // skip move at defended square if nobody helps to attack it
-                    continue;
-                }
-            }
-            assert (!OP.bbSide().has(~to));
-            RETURN_CUTOFF (child->searchMove({from, to}));
+        if (!bbAttacked().has(from)) {
+            // not attacked piece, postpone search of its moves
+            // do not need more precise safety check here
+            safePieces += pi;
+            continue;
         }
+
+        RETURN_CUTOFF (goodNonCaptures(child, pi, movesOf(pi) % badSquares));
+    }
+
+    while (safePieces.any()) {
+        Pi pi = safePieces.leastValuable(); safePieces -= pi;
+        RETURN_CUTOFF (goodNonCaptures(child, pi, movesOf(pi) % badSquares));
     }
 
     // all remaining unsorted moves, starting with pawns, all king moves are last
@@ -352,6 +349,29 @@ ReturnStatus Node::search() {
         *origin = TtSlot(this, FailLow);
         ++root.tt.writes;
     }
+    return ReturnStatus::Continue;
+}
+
+ReturnStatus Node::goodNonCaptures(Node* child, Pi pi, Bb moves) {
+    Square from = MY.squareOf(pi);
+    PieceType ty = MY.typeOf(pi);
+
+    for (Square to : moves) {
+        if (bbAttacked().has(to)) {
+            Pi defender = OP.attackersTo(~to).leastValuable();
+            if (OP.isLessValue(defender, ty)) {
+                // skip move if square defended by less valued piece
+                continue;
+            }
+            if ((MY.attackersTo(to) % PiMask{pi}).none()) {
+                // skip move at defended square if nobody helps to attack it
+                continue;
+            }
+        }
+        assert (!OP.bbSide().has(~to));
+        RETURN_CUTOFF (child->searchMove({from, to}));
+    }
+
     return ReturnStatus::Continue;
 }
 
