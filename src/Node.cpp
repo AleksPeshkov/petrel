@@ -172,6 +172,11 @@ ReturnStatus Node::negamax(Node* child) const {
     auto childScore = -child->score;
 
     if (beta <= childScore) {
+        // research with full draft on fail high (unless it was a null move)
+        if (draft-1 > child->draft && currentMove) {
+            child->draft = draft-1;
+            return negamax(child);
+        }
         score = childScore;
         failHigh();
         return ReturnStatus::BetaCutoff;
@@ -269,9 +274,9 @@ ReturnStatus Node::search() {
         return ReturnStatus::Continue;
     }
 
-    // check extension
-    if (inCheck()) {
-        draft = draft + 1;
+    if (ply >= 1 && inCheck()) {
+        // undo possible reduction of checking move and extend 1 ply
+        draft = parent->draft;
     }
 
     if (draft == 0) {
@@ -404,6 +409,16 @@ ReturnStatus Node::search() {
 
         Square from = MY.squareOf(pi);
         for (Square to : movesOf(pi)) {
+            // Late Move Reductions
+            if (
+                !isPv
+                && draft >= 3
+                && !inCheck()
+                && !isCapture({from, to})
+                && !MY.typeOf(pi).is(Pawn)
+            ) {
+                child->draft = std::max(1, draft - 3);
+            }
             RETURN_CUTOFF (child->searchMove({from, to}));
         }
     }
@@ -434,6 +449,16 @@ ReturnStatus Node::goodNonCaptures(Node* child, Pi pi, Bb moves) {
             }
         }
         assert (!OP.bbSide().has(~to));
+        assert (!isCapture({from, to}));
+        // Late Move Reductions
+        if (
+            !isPv
+            && draft >= 3
+            && !inCheck()
+            && !MY.typeOf(pi).is(Pawn)
+        ) {
+            child->draft = draft - 2;
+        }
         RETURN_CUTOFF (child->searchMove({from, to}));
     }
 
