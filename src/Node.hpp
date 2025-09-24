@@ -68,8 +68,8 @@ protected:
     /**
      * Killer heuristic
      */
-    Move killer1 = {}; // first killer move to try at child-child nodes
-    Move killer2 = {}; // second killer move to try at child-child nodes
+    Move killer1 = {}; // primary killer, updated by previous siblings
+    Move killer2 = {}; // secondary, backup when primary updated
     bool canBeKiller = false; // good captures should not waste killer slots
 
     Node (Node* n); // prepare empty child node
@@ -79,7 +79,7 @@ protected:
     // propagate child last move search result score
     [[nodiscard]] ReturnStatus negamax(Node* child);
     void failHigh();
-    void updateKillerMove();
+    void updateKillerMove(Move);
 
     void updatePv();
     void refreshTtPv();

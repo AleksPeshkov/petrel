@@ -178,9 +178,22 @@ ReturnStatus Node::negamax(Node* child) {
 }
 
 void Node::failHigh() {
-    updateKillerMove();
+    if (parent && canBeKiller) { parent->updateKillerMove(currentMove); }
     *origin = TtSlot{this, FailHigh};
     ++root.tt.writes;
+}
+
+void Node::updateKillerMove(Move newKiller) {
+    assert (newKiller);
+
+    if (killer1 != newKiller) {
+        killer2 = killer1;
+        killer1 = newKiller;
+    }
+
+    if (currentMove) {
+        root.counterMove.set(colorToMove(),  MY.typeAt(currentMove.from()), currentMove.to(), newKiller);
+    }
 }
 
 void Node::updatePv() {
@@ -256,16 +269,16 @@ ReturnStatus Node::search() {
     Bb newMoves = {};
 
     if (parent) {
-        // first killer move
+        // primary killer move, updated by previous siblings
         RETURN_CUTOFF (child->searchIfLegal(parent->killer1));
 
         // countermove heuristic: refutation of the last opponent's move
         Move opMove = parent->currentMove;
         RETURN_CUTOFF (child->searchIfLegal( root.counterMove(
-            colorToMove(), parent->MY.typeAt(opMove.from()), opMove.to()
+            parent->colorToMove(), parent->MY.typeAt(opMove.from()), opMove.to()
         ) ));
 
-        // second killer move
+        // secondary killer move, backup of previous primary killer
         RETURN_CUTOFF (child->searchIfLegal(parent->killer2));
 
         // try quiet moves of the last moved piece (unless it was captured)
@@ -482,20 +495,6 @@ ReturnStatus Node::badCaptures(Node* child, const PiMask& victims) {
     }
 
     return ReturnStatus::Continue;
-}
-
-void Node::updateKillerMove() {
-    if (!canBeKiller) { return; }
-    if (!parent) { return; }
-
-    if (parent->killer1 != currentMove) {
-        parent->killer2 = parent->killer1;
-        parent->killer1 = currentMove;
-    }
-
-    Move move = parent->currentMove;
-    PieceType ty = parent->MY.typeAt(move.from());
-    root.counterMove.set(colorToMove(), ty, move.to(), currentMove);
 }
 
 UciMove Node::uciMove(Move move) const {
