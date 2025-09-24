@@ -57,6 +57,7 @@ public:
     PvMoves pvMoves;
     Score pvScore = NoScore;
     HistoryMoves counterMove;
+    Color::arrayOf<Move> killerMove;
 
 private:
     Thread mainSearchThread;
@@ -126,6 +127,8 @@ public:
     void newGame() {
         tt.newGame();
         counterMove.clear();
+        killerMove[White] = {};
+        killerMove[Black] = {};
         newSearch();
     }
 

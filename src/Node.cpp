@@ -231,6 +231,8 @@ void Node::updateKillerMove(Move newKiller) const {
         grandParent->killer3 = newKiller;
     }
 
+    root.killerMove[colorToMove()] = newKiller;
+
     if (currentMove) {
         root.counterMove.set(colorToMove(),  MY.typeAt(currentMove.from()), currentMove.to(), newKiller);
     }
@@ -351,6 +353,11 @@ ReturnStatus Node::search() {
         // repeated killer heuristic (can change while searching descendants of previous killer3)
         while (isLegalMove(parent->killer3)) {
             RETURN_CUTOFF (child->searchMove(parent->killer3));
+        }
+
+        // repeated global killer heuristic (can change while searching descendants of previous root.killerMove)
+        while (isLegalMove(root.killerMove[colorToMove()])) {
+            RETURN_CUTOFF (child->searchMove(root.killerMove[colorToMove()]));
         }
     }
 
