@@ -30,7 +30,8 @@ Node::Node (Node* n) :
     ply{n->ply + 1}, draft{n->draft > 0 ? n->draft-1 : 0},
     alpha{-n->beta}, beta{-n->alpha}, isPv(n->isPv),
     killer1{grandParent ? grandParent->killer1 : Move{}},
-    killer2{grandParent ? grandParent->killer2 : Move{}}
+    killer2{grandParent ? grandParent->killer2 : Move{}},
+    killer3{grandParent ? grandParent->killer3 : Move{}}
 {}
 
 ReturnStatus Node::searchRoot() {
@@ -219,8 +220,15 @@ void Node::updateKillerMove(Move newKiller) const {
     assert (newKiller);
 
     if (killer1 != newKiller) {
+        if (killer3 == newKiller) {
+            killer3 = killer2;
+        }
         killer2 = killer1;
         killer1 = newKiller;
+    }
+
+    if (grandParent && grandParent->killer1 != newKiller && grandParent->killer2 != newKiller) {
+        grandParent->killer3 = newKiller;
     }
 
     if (currentMove) {
@@ -339,6 +347,11 @@ ReturnStatus Node::search() {
 
         // secondary killer move, backup of previous primary killer
         RETURN_CUTOFF (child->searchIfLegal(parent->killer2));
+
+        // repeated killer heuristic (can change while searching descendants of previous killer3)
+        while (isLegalMove(parent->killer3)) {
+            RETURN_CUTOFF (child->searchMove(parent->killer3));
+        }
     }
 
     // going to search only non-captures, mask out remaining unsafe captures to avoid redundant safety checks

@@ -73,7 +73,8 @@ protected:
      */
     mutable Move killer1 = {}; // primary killer, updated by previous siblings
     mutable Move killer2 = {}; // secondary, backup when primary updated
-    bool canBeKiller = false; // good captures should not waste killer slots
+    mutable Move killer3 = {}; // 3rd killer, updated by descendants
+    bool canBeKiller = false;  // good captures should not waste killer slots
 
     Node (Node* n); // prepare empty child node
 
