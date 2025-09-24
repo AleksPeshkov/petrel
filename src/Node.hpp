@@ -71,9 +71,10 @@ protected:
     /**
      * Killer heuristic
      */
-    mutable Move killer1 = {}; // first killer move to try at child-child nodes
-    mutable Move killer2 = {}; // second killer move to try at child-child nodes
-    bool canBeKiller = false; // good captures should not waste killer slots
+    mutable Move killer1 = {}; // primary killer move to try at child-child nodes
+    mutable Move killer2 = {}; // secondary, backup when primary updated
+    mutable Move killer3 = {}; // 3rd killer, updated by descendants
+    bool canBeKiller = false;  // good captures should not waste killer slots
 
     Node (Node* n); // prepare empty child node
 
