@@ -14,7 +14,7 @@ TtSlot::TtSlot (Z z, Move move, Score score, Bound b, Ply d) : s{
     static_cast<unsigned>(z >> DataBits)
 } {}
 
-TtSlot::TtSlot (Node* n, Bound b) : TtSlot{
+TtSlot::TtSlot (const Node* n, Bound b) : TtSlot{
     n->zobrist(),
     n->currentMove,
     n->score.toTt(n->ply),
@@ -145,7 +145,7 @@ ReturnStatus Node::searchMove(Move move) {
     return parent->negamax(this);
 }
 
-ReturnStatus Node::negamax(Node* child) {
+ReturnStatus Node::negamax(Node* child) const {
     child->generateMoves();
     RETURN_IF_STOP (child->search());
 
@@ -177,13 +177,13 @@ ReturnStatus Node::negamax(Node* child) {
     return ReturnStatus::Continue;
 }
 
-void Node::failHigh() {
+void Node::failHigh() const {
     if (parent && canBeKiller) { parent->updateKillerMove(currentMove); }
     *origin = TtSlot{this, FailHigh};
     ++root.tt.writes;
 }
 
-void Node::updateKillerMove(Move newKiller) {
+void Node::updateKillerMove(Move newKiller) const {
     assert (newKiller);
 
     if (killer1 != newKiller) {
@@ -196,7 +196,7 @@ void Node::updateKillerMove(Move newKiller) {
     }
 }
 
-void Node::updatePv() {
+void Node::updatePv() const {
     root.pvMoves.set(ply, uciMove(currentMove));
     *origin = TtSlot{this, ExactScore};
     ++root.tt.writes;
