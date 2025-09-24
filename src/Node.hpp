@@ -31,7 +31,7 @@ class TtSlot {
 public:
     TtSlot () { static_assert (sizeof(TtSlot) == sizeof(u64_t)); }
     TtSlot (Z z, Move move, Score, Bound, Ply);
-    TtSlot (Node* node, Bound b);
+    TtSlot (const Node* node, Bound b);
     bool operator == (Z z) const { return (zobrist & HashMask) == (z & HashMask); }
     operator Move () const { return { static_cast<Square::_t>(s.from), static_cast<Square::_t>(s.to) }; }
     Score score(Ply ply) const { return Score{s.score}.fromTt(ply); }
@@ -45,8 +45,8 @@ class Node : public PositionMoves {
 protected:
     friend class TtSlot;
 
-    Node* const parent; // previous (ply-1, opposite side to move) node or nullptr
-    Node* const grandParent; // previous side to move node (ply-2) or nullptr
+    const Node* const parent; // previous (ply-1, opposite side to move) node or nullptr
+    const Node* const grandParent; // previous side to move node (ply-2) or nullptr
 
     Uci& root; // common search thread data
 
@@ -59,17 +59,17 @@ protected:
     TtSlot  ttSlot;
     bool isHit = false; // this node found in TT
 
-    Score alpha = MinusInfinity; // alpha-beta window lower margin
+    mutable Score alpha = MinusInfinity; // alpha-beta window lower margin
     Score beta = PlusInfinity; // alpha-beta window upper margin
-    Score score = NoScore; // best score found so far
+    mutable Score score = NoScore; // best score found so far
 
-    Move currentMove = {}; // last move made from *this into *child
+    mutable Move currentMove = {}; // last move made from *this into *child
 
     /**
      * Killer heuristic
      */
-    Move killer1 = {}; // first killer move to try at child-child nodes
-    Move killer2 = {}; // second killer move to try at child-child nodes
+    mutable Move killer1 = {}; // first killer move to try at child-child nodes
+    mutable Move killer2 = {}; // second killer move to try at child-child nodes
     bool canBeKiller = false; // good captures should not waste killer slots
 
     Node (Node* n); // prepare empty child node
@@ -77,11 +77,11 @@ protected:
     [[nodiscard]] ReturnStatus search();
 
     // propagate child last move search result score
-    [[nodiscard]] ReturnStatus negamax(Node* child);
-    void failHigh();
-    void updateKillerMove(Move);
+    [[nodiscard]] ReturnStatus negamax(Node* child) const;
+    void failHigh() const;
+    void updateKillerMove(Move) const;
 
-    void updatePv();
+    void updatePv() const;
     void refreshTtPv();
 
     [[nodiscard]] ReturnStatus quiescence();
