@@ -79,7 +79,7 @@ protected:
     // propagate child last move search result score
     [[nodiscard]] ReturnStatus negamax(Node* child);
     void failHigh();
-    void updateKillerMove();
+    void updateKillerMove(Move);
 
     void updatePv();
     void refreshTtPv();
