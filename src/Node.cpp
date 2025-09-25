@@ -151,7 +151,7 @@ void Node::makeMove(Move move) {
     eval = evaluate();
 }
 
-ReturnStatus Node::searchMove(Move move) {
+ReturnStatus Node::searchMove(Move move, Ply R) {
     RETURN_IF_STOP (root.limits.countNode());
     makeMove(move);
 
@@ -160,6 +160,7 @@ ReturnStatus Node::searchMove(Move move) {
     else { repMask = root.repetitions.repMask(colorToMove()); }
 
     root.pvMoves.set(ply, UciMove{});
+    draft = std::max(0, parent->draft - R);
     return parent->negamax(this);
 }
 
@@ -172,6 +173,11 @@ ReturnStatus Node::negamax(Node* child) const {
     auto childScore = -child->score;
 
     if (beta <= childScore) {
+        // research with full draft on fail high (unless it was a null move)
+        if (draft-1 > child->draft && currentMove) {
+            child->draft = draft-1;
+            return negamax(child);
+        }
         score = childScore;
         failHigh();
         return ReturnStatus::BetaCutoff;
@@ -206,7 +212,6 @@ ReturnStatus Node::negamax(Node* child) const {
     assert (child->beta == -alpha);
     child->alpha = child->beta-1;
     child->isPv = false;
-    child->draft = draft > 0 ? draft-1 : 0;
     return ReturnStatus::Continue;
 }
 
@@ -269,7 +274,8 @@ ReturnStatus Node::search() {
 
     // check extension
     if (ply >= 1 && inCheck()) {
-        draft = draft + 1;
+        // undo possible reduction of checking move and extend 1 ply
+        draft = parent->draft >= 1 ? parent->draft : Ply{1};
     }
 
     if (draft == 0) {
@@ -359,11 +365,14 @@ ReturnStatus Node::search() {
     Bb badSquares = ~(OP.bbPawnAttacks() | OP.bbSide());
     PiMask safePieces = {};
 
+    // Late Move Reductions
+    bool lmr = !isPv && !inCheck() && draft >= 2;
+
     // quiet moves from unsafe to safe squares
     // skip pawns to avoid wasting time on safety check as pawns comes first in the final loop anyway
     // castling move is a rook move and picked early (safety check of castling rook is not very exact, but who cares?)
     //TODO: make king ordered last in default (MV first) piece order
-    for (Pi pi : MY.pieces() - MY.pawns()) {
+    for (Pi pi : MY.pieces() - MY.pawns() - PiMask{TheKing}) {
         Square from = MY.squareOf(pi);
 
         if (!bbAttacked().has(from)) {
@@ -373,12 +382,12 @@ ReturnStatus Node::search() {
             continue;
         }
 
-        RETURN_CUTOFF (goodNonCaptures(child, pi, movesOf(pi) % badSquares));
+        RETURN_CUTOFF (goodNonCaptures(child, pi, movesOf(pi) % badSquares, lmr ? 2 : 1));
     }
 
     while (safePieces.any()) {
         Pi pi = safePieces.leastValuable(); safePieces -= pi;
-        RETURN_CUTOFF (goodNonCaptures(child, pi, movesOf(pi) % badSquares));
+        RETURN_CUTOFF (goodNonCaptures(child, pi, movesOf(pi) % badSquares, lmr ? 2 : 1));
     }
 
     // all remaining unsorted moves, starting with pawns, all king moves are last
@@ -386,8 +395,20 @@ ReturnStatus Node::search() {
         Pi pi = pieces.leastValuable(); pieces -= pi;
 
         Square from = MY.squareOf(pi);
+        // Late Move Reductions
+        Ply R = 1;
+        if (lmr) {
+            R = 3; // default reduction for moves to unsafe squares
+            if (MY.typeOf(pi).is(Pawn)) {
+                if (from.on(Rank7)) { R = 4; } // underpromotion
+                else if (from.on(Rank6)) { R = 0; } // passed pawn push extension
+                else if (from.on(Rank5)) { R = 1; } // advanced pawn push extension
+                else { R = 2; }
+            }
+            else if (pi == TheKing && MY.evaluation().piecesMat() <= 13) { R = 2; } // penalise king moves more in middle game
+        }
         for (Square to : movesOf(pi)) {
-            RETURN_CUTOFF (child->searchMove({from, to}));
+            RETURN_CUTOFF (child->searchMove({from, to}, R));
         }
     }
 
@@ -400,7 +421,7 @@ ReturnStatus Node::search() {
     return ReturnStatus::Continue;
 }
 
-ReturnStatus Node::goodNonCaptures(Node* child, Pi pi, Bb moves) {
+ReturnStatus Node::goodNonCaptures(Node* child, Pi pi, Bb moves, Ply R) {
     Square from = MY.squareOf(pi);
     PieceType ty = MY.typeOf(pi);
 
@@ -417,7 +438,8 @@ ReturnStatus Node::goodNonCaptures(Node* child, Pi pi, Bb moves) {
             }
         }
         assert (!OP.bbSide().has(~to));
-        RETURN_CUTOFF (child->searchMove({from, to}));
+        assert (!isCapture({from, to}));
+        RETURN_CUTOFF (child->searchMove({from, to}, R));
     }
 
     return ReturnStatus::Continue;
