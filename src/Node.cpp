@@ -287,7 +287,7 @@ ReturnStatus Node::search() {
         RETURN_CUTOFF (child->searchMove(ttSlot));
     }
 
-    // cannot capture the king, so do not even try
+    // impossible to capture the king, do not even try to save time
     RETURN_CUTOFF (goodCaptures(child, OP.pieces() - PiMask{TheKing}));
 
     canBeKiller = true;
@@ -406,11 +406,11 @@ ReturnStatus Node::quiescence() {
     }
 
     // prepare empty child node to make moves into
-    //TODO: create lighter quiescence search node
+    //TODO: create lighter quiescence node without zobrist hashing and repetition detection
     Node node{this};
     const auto child = &node;
 
-    // king cannot be captured, so do not even try
+    // impossible to capture the king, do not even try to save time
     return goodCaptures(child, OP.pieces() - PiMask{TheKing});
 }
 
@@ -442,54 +442,19 @@ ReturnStatus Node::goodCaptures(Node* child, const PiMask& victims) {
         PiMask attackers = canMoveTo(to) % MY.promotables();
         if (attackers.none()) { continue; }
 
-        // seems too rare to bother, but enpassant attacker does not attack victim pawn square
-        // that makes following test of attacker singularity broken
-        if (OP.isEnPassant(victim)) {
-            for (Pi attacker : attackers & MY.enPassantPawns()) {
-                Square from = MY.squareOf(attacker);
-                RETURN_CUTOFF (child->searchMove({from, to}));
-            }
-            attackers %= MY.enPassantPawns();
-            if (attackers.none()) { continue; }
-        }
-
-        PieceType victimType = OP.typeOf(victim);
-
         // simple SEE function, checks only two cases:
-        // 1) prune as bad capture if solo attacker tries to capture defended lower valued victim
-        // 2) prune as bad capture if lower valued victim defended by a pawn
-        // the rest of uncertain captures considered good enough to seek in QS
-
-        // complete attackers set, including already searched captures (see note about enpassant capture)
-        PiMask allAttackers = MY.attackersTo(to);
-        if (allAttackers.isSingleton()) {
-            Pi attacker = allAttackers.index();
-
-            if (bbAttacked().has(to)) {
-                // singleton attacker and victim defended
-                //TODO: check X-Ray attacks
-                if (!MY.isLessOrEqualValue(attacker, victimType)) {
-                    // skip bad capture of defended victim
-                    //TODO: check if bad capture makes discovered check
-                    continue;
-                }
-            }
-
-            Square from = MY.squareOf(attacker);
-            RETURN_CUTOFF (child->searchMove({from, to}));
-            continue;
-        }
-
-        if (OP.bbPawnAttacks().has(~to)) {
-            // victim is protected by at least one pawn
-            // try only winning or equal captures
-            //TODO: check if defending pawn is pinned
-            //TODO: check if bad capture(s) makes discovered check
-            attackers &= MY.lessOrEqualValue(victimType);
-        }
-
-        //TODO: use count of attackers and defenders for a bit exact SEE
+        // 1) victim defended by at least one pawn
+        // 2) attackers does not outnumber defenders (not precise, but effective condition)
+        // then prune captures by more valuable attackers
+        // the rest uncertain captures considered good enough to seek in QS
+        //TODO: check for X-Ray attackers and defenders
+        //TODO: check if bad capture makes discovered check
+        //TODO: check if defending pawn is pinned and cannot recapture
         //TODO: try killer heuristics for uncertain and bad captures
+        //TODO: try more complex and precise SEE
+        if (OP.bbPawnAttacks().has(~to) || MY.attackersTo(to).popcount() <= OP.attackersTo(~to).popcount()) {
+            attackers &= MY.lessOrEqualValue(OP.typeOf(victim));
+        }
 
         while (attackers.any()) {
             // LVA (least valuable attacker) order
