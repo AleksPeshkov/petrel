@@ -363,7 +363,7 @@ ReturnStatus Node::goodNonCaptures(Node* child, Pi pi, Bb moves) {
                 // skip move if square defended by less valued piece
                 continue;
             }
-            if ((MY.attackersTo(to) % PiMask{pi}).none()) {
+            if (!MY.bbPawnAttacks().has(to) && (MY.attackersTo(to).popcount()) <= OP.attackersTo(~to).popcount()) {
                 // skip move at defended square if nobody helps to attack it
                 continue;
             }
