@@ -42,8 +42,6 @@ template <Side::_t My, Position::UpdateZobrist Z>
 void Position::makeMove(Square from, Square to) {
     constexpr Side Op{~My};
 
-    movedPieceFrom_ = from;
-    movedPieceTo_ = to; // will be corrected later in case of castling, underpromotion and en passant capture
     rule50_.next(); // will be reset later if the move is a capture or pawn move
 
     //Assumes that the given move is valid and legal
@@ -62,7 +60,6 @@ void Position::makeMove(Square from, Square to) {
         //en passant capture encoded as the pawn captures the pawn
         if (MY.isPawn(pi) && from.on(Rank5) && to.on(Rank5)) {
             Square ep{File{to}, Rank6};
-            movedPieceTo_ = ep;
             rule50_.clear();
 
             if constexpr (Z) {
@@ -88,8 +85,6 @@ void Position::makeMove(Square from, Square to) {
         if (from.on(Rank7)) {
             PromoType promo{::promoTypeFrom(Rank{to})};
             to = {File{to}, Rank8};
-            movedPieceFrom_ = to; // promoted pieces has no previous square
-            movedPieceTo_ = to;
 
             if constexpr (Z) {
                 zobrist_.promote(from, promo, to);
@@ -169,7 +164,6 @@ void Position::makeMove(Square from, Square to) {
         Square kingFrom = to;
         Square kingTo = CastlingRules::castlingKingTo(kingFrom, rookFrom);
         Square rookTo = CastlingRules::castlingRookTo(kingFrom, rookFrom);
-        movedPieceTo_ = rookTo;
 
         if constexpr (Z) {
             for (Pi rook : MY.castlingRooks()) { zobrist_.castling(MY.squareOf(rook)); }
@@ -273,10 +267,6 @@ bool Position::afterDrop() {
     PositionSide::finalSetup(MY, OP);
     updateSliderAttacks<Op>(OP.pieces(), MY.pieces());
     rule50_.clear();
-
-    // initalize last move piece squares to something sensible
-    movedPieceFrom_ = OP.kingSquare();
-    movedPieceTo_ = OP.kingSquare();
 
     //opponent should not be in check
     return MY.checkers().none();
