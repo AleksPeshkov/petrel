@@ -347,13 +347,34 @@ ReturnStatus Node::search() {
     //TRICK: ~ is not a negate bitwise operation but byteswap -- flip opponent's bitboard
     Bb badSquares = ~(OP.bbPawnAttacks() | OP.bbSide());
 
-    // safe (good) quiet non-pawn, non-king moves
-    // skip king moves because they ordered first, safe anyway and rarely best moves in chess
-    // skip pawns to avoid wasting time on safety check as pawns comes first in the final loop anyway
-    // castling move is a rook move and picked early (safety check of castling rook is not very exact, but who cares?)
-    //TODO: make king ordered last in default (MV first) piece order
+    // quiet non-pawn, non-king moves from unsafe to safe squares
+    // skip king moves because they are safe anyway (unless in check)
+    // castling move is a rook move, king moves rarely good in middlegame,
+    // skip pawns to avoid wasting time on safety check as pawns
     for (Pi pi : MY.figures()) {
         Square from = MY.squareOf(pi);
+
+        if (!bbAttacked().has(from)) {
+            // piece on safe square
+            continue;
+        }
+
+        assert (OP.attackersTo(~from).any());
+
+        // attacked by more valuable attacker
+        if ((OP.attackersTo(~from) & OP.lessOrEqualValue(MY.typeOf(pi))).none()) {
+            if (MY.bbPawnAttacks().has(from)) {
+                // square defended by a pawn
+                continue;
+            }
+
+            if (MY.attackersTo(from).popcount() >= OP.attackersTo(~from).popcount()) {
+                // enough total defenders, possibly false positive
+                continue;
+            }
+            //TODO: try protecting moves of other pieces
+        }
+
         PiMask opLessValue = OP.lessValue(MY.typeOf(pi));
 
         for (Square to : movesOf(pi) % badSquares) {
