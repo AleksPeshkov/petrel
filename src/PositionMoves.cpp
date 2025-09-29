@@ -197,16 +197,14 @@ void PositionMoves::makeMoveNoZobrist(PositionMoves* parent, Square from, Square
     generateMoves();
 }
 
-// any capture or promotion (and underpromotion) move without capture
-bool PositionMoves::isCapture(Move move) const {
-    // null move is not capture
-    if (!move) { return false; }
-
-    //TRICK: can trigger false positive in case of underpromotion move
-    if (OP.bbSide().has(~move.to())) { return true; }
+bool PositionMoves::isNonCapture(Move move) const {
+    assert (move);
 
     // any promotion move, with or without capture (including underpromotion)
-    if (MY.isPromotable(MY.pieceAt(move.from()))) { return true; }
+    if (MY.isPromotable(MY.pieceAt(move.from()))) { return false; }
 
-    return false;
+    //TRICK: can trigger false positive in case of underpromotion move
+    if (OP.bbSide().has(~move.to())) { return false; }
+
+    return true;
 }
