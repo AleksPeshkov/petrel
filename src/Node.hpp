@@ -12,7 +12,7 @@ enum Bound { NoBound, FailLow, FailHigh, ExactScore = FailLow | FailHigh };
 
 // 8 byte, always replace slot, so no age field, only one score, depth and bound flags
 class TtSlot {
-    enum { DataBits =  34 }; // total size of all data fields
+    enum { DataBits =  35 }; // total size of all data fields
     static constexpr u64_t HashMask = ~static_cast<u64_t>(0) ^ (::singleton<u64_t>(DataBits+1) - 1);
 
     struct PACKED DataSmall {
@@ -21,6 +21,7 @@ class TtSlot {
         signed   score :14;
         unsigned bound :2;
         unsigned draft :6;
+        unsigned killer:1; // canBeKiller
         unsigned      z:64 - DataBits;
     };
 
@@ -31,13 +32,14 @@ class TtSlot {
 
 public:
     TtSlot () { static_assert (sizeof(TtSlot) == sizeof(u64_t)); }
-    TtSlot (Z z, Move move, Score, Bound, Ply);
+    TtSlot (Z z, Move move, Score, Bound, Ply, bool);
     TtSlot (const Node* node);
     bool operator == (Z z) const { return (zobrist & HashMask) == (z & HashMask); }
     operator Move () const { return Move{ static_cast<Square::_t>(s.from), static_cast<Square::_t>(s.to) }; }
     Score score(Ply ply) const { return Score{s.score}.fromTt(ply); }
     operator Bound () const { return static_cast<Bound>(s.bound); }
     Ply draft() const { return s.draft; }
+    bool canBeKiller() const { return s.killer; }
 };
 
 class Uci;
