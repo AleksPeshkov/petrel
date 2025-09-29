@@ -91,9 +91,6 @@ protected:
     // promotions to queen, winning or equal captures, also uncertain by current SEE captures
     [[nodiscard]] ReturnStatus goodCaptures(Node*, const PiMask&);
 
-    // remaining (bad) captures and all underpromotions
-    [[nodiscard]] ReturnStatus badCaptures(Node*, const PiMask&);
-
     [[nodiscard]] ReturnStatus searchIfLegal(Move move) {
         return parent->isLegalMove(move) ? searchMove(move) : ReturnStatus::Continue;
     }
