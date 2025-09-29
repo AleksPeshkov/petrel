@@ -60,6 +60,9 @@ public:
     // mask of all pieces of the given side
     PiMask pieces() const { assert (squares.pieces() == types.pieces()); return squares.pieces(); }
     PiMask sliders() const { return types.sliders(); }
+    PiMask figures() const { return types.figures(); }
+    PiMask notPawns() const { return types.notPawns(); }
+    PiMask notKing() const { return types.notKing(); }
 
     Pi pieceAt(Square sq) const { assert (has(sq)); Pi pi = squares.pieceAt(sq); assertOk(pi); return pi; }
     PiMask piecesOn(Rank rank) const { return squares.piecesOn(rank); }
@@ -73,10 +76,11 @@ public:
     PiMask pawns() const { return types.piecesOfType(Pawn); }
     bool isPawn(Pi pi) const { assertOk(pi); return types.isPawn(pi); }
 
+    // pieces of less valuable types than given piece type
     PiMask lessValue(PieceType ty) const { return types.lessValue(ty); }
+
+    // pieces of less or equal value than given piece type
     PiMask lessOrEqualValue(PieceType ty) const { return types.lessOrEqualValue(ty); }
-    bool isLessValue(Pi attacker, PieceType victim) const { return types.isLessValue(attacker, victim); }
-    bool isLessOrEqualValue(Pi attacker, PieceType victim) const { return types.isLessOrEqualValue(attacker, victim); }
 
     PiMask castlingRooks() const { return traits.castlingRooks(); }
     bool isCastling(Pi pi) const { assertOk(pi); return traits.isCastling(pi); }
