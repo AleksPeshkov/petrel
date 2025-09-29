@@ -93,6 +93,7 @@ protected:
 
     // promotions to queen, winning or equal captures, also uncertain by current SEE captures
     [[nodiscard]] ReturnStatus goodCaptures(Node*, const PiMask&);
+    [[nodiscard]] ReturnStatus goodNonCaptures(Node*, Pi, Bb);
 
     [[nodiscard]] ReturnStatus searchIfLegal(Move move) {
         return parent->isLegalMove(move) ? searchMove(move) : ReturnStatus::Continue;
