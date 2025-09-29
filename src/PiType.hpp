@@ -12,6 +12,9 @@ enum class Type : u8_t {
     Pawn   = ::singleton<u8_t>(piece_type_t::Pawn),
     King   = ::singleton<u8_t>(piece_type_t::King),
     Slider = Queen | Rook | Bishop,
+    Figure = Queen | Rook | Bishop | Knight,
+    NotPawn = Queen | Rook | Bishop | Knight | King,
+    NotKing = Queen | Rook | Bishop | Knight | Pawn,
     Leaper = Pawn | Knight | King,
     PNBRQ  = Pawn | Knight | Bishop | Rook | Queen,
     PNBR   = Pawn | Knight | Bishop | Rook,
@@ -82,14 +85,15 @@ public:
     PiMask piecesOfType(PieceType::_t ty) const { assert (!PieceType{ty}.is(King)); return any(element(ty)); }
     PiMask sliders() const { return any(Type::Slider); }
     PiMask leapers() const { return any(Type::Leaper); }
+    PiMask figures() const { return any(Type::Figure); }
+    PiMask notPawns() const { return any(Type::NotPawn); }
+    PiMask notKing() const { return any(Type::NotKing); }
 
-    // mask of less valuable piece types
+    // less valuable pieces than given piece type
     PiMask lessValue(PieceType ty) const {return any(LessValue[ty]); }
-    bool isLessValue(Pi attacker, PieceType victim) const { return has(attacker, LessValue[victim]); }
 
-    // mask of equal or less valuable types
+    // less or equal value pieces than given piece type
     PiMask lessOrEqualValue(PieceType ty) const { return any(LessOrEqualValue[ty]); }
-    bool isLessOrEqualValue(Pi attacker, PieceType victim) const { return has(attacker, LessOrEqualValue[victim]); }
 };
 
 #endif
