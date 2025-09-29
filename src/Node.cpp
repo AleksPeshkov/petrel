@@ -5,22 +5,23 @@
     if (returnStatus == ReturnStatus::Stop) { return ReturnStatus::Stop; } \
     if (returnStatus == ReturnStatus::BetaCutoff) { return ReturnStatus::BetaCutoff; }} ((void)0)
 
-TtSlot::TtSlot (Z z, Move move, Score score, Bound bound, Ply draft) : s{
+TtSlot::TtSlot (Z z, Move move, Score score, Bound bound, Ply draft, bool canBeKiller) : s{
     move.from(),
     move.to(),
     score,
     bound,
     static_cast<unsigned>(draft),
+    canBeKiller,
     static_cast<unsigned>(z >> DataBits)
 } {}
-
 
 TtSlot::TtSlot (const Node* n) : TtSlot{
     n->zobrist(),
     n->currentMove,
     n->score.toTt(n->ply),
     n->bound,
-    n->draft
+    n->draft,
+    n->canBeKiller
 } {}
 
 Node::Node (const PositionMoves& p, const Uci& r) : PositionMoves{p}, root{r} {}
@@ -113,7 +114,7 @@ ReturnStatus Node::searchRoot() {
     const Move* pv = root.pvMoves;
     for (Move move; (move = *pv++);) {
         auto o = root.tt.addr<TtSlot>(pos.zobrist());
-        *o = TtSlot{pos.zobrist(), move, s, ExactScore, d};
+        *o = TtSlot{pos.zobrist(), move, s, ExactScore, d, false};
         ++root.tt.writes;
 
         //we cannot use makeZobrist() because of en passant legality validation
@@ -194,16 +195,17 @@ ReturnStatus Node::negamax(Node* child) const {
 }
 
 void Node::failHigh() const {
-    if (parent && canBeKiller) { parent->updateKillerMove(currentMove); }
-
     bound = FailHigh;
     *origin = TtSlot{this};
     ++root.tt.writes;
+
+    if (parent && canBeKiller) {
+        assert (currentMove);
+        parent->updateKillerMove(currentMove);
+    }
 }
 
 void Node::updateKillerMove(Move newKiller) const {
-    assert (newKiller);
-
     if (killer1 != newKiller) {
         killer2 = killer1;
         killer1 = newKiller;
@@ -220,6 +222,11 @@ void Node::updatePv(Node* child) const {
     bound = ExactScore;
     *origin = TtSlot{this};
     ++root.tt.writes;
+
+    if (parent && canBeKiller) {
+        assert (currentMove);
+        parent->updateKillerMove(currentMove);
+    }
 
     if (ply == 0) {
         root.pvScore = score;
@@ -274,6 +281,7 @@ ReturnStatus Node::search() {
                 Bound ttBound = ttSlot;
                 Score ttScore = ttSlot.score(ply);
 
+                //TODO: refresh TT record if age is old
                 if ((ttBound & FailHigh) && beta <= ttScore) {
                     score = ttScore;
                     currentMove = Move{ttSlot};
@@ -298,18 +306,17 @@ ReturnStatus Node::search() {
     Node node{this};
     const auto child = &node;
 
-    canBeKiller = false;
-
     if (isHit && Move{ttSlot}) {
+        canBeKiller = ttSlot.canBeKiller();
         RETURN_CUTOFF (child->searchMove(ttSlot));
     }
 
-    // cannot capture the king, so do not even try
+    // impossible to capture the king, do not even try to save time
+    canBeKiller = false;
     RETURN_CUTOFF (goodCaptures(child, OP.notKing()));
+    canBeKiller = !inCheck();
 
-    canBeKiller = true;
-
-    if (parent) {
+    if (parent && !inCheck()) {
         // primary killer move, updated by previous siblings
         RETURN_CUTOFF (child->searchIfLegal(parent->killer1));
 
@@ -364,7 +371,6 @@ ReturnStatus Node::search() {
 
     if (bound == FailLow) {
         // fail low, no good move found, write back previous TT move if any
-        //TODO: store the first searched move to avoid small move generation overhead
         currentMove = isHit ? Move{ttSlot} : Move{};
         *origin = TtSlot(this);
         ++root.tt.writes;
@@ -400,8 +406,7 @@ ReturnStatus Node::quiescence() {
     return goodCaptures(child, OP.notKing());
 }
 
-ReturnStatus Node::goodCaptures(Node* child, PiMask victims) {
-    canBeKiller = false;
+ReturnStatus Node::goodCaptures(Node* child,PiMask victims) {
     if (MY.promotables().any()) {
         // queen promotions with capture, always good
         for (Pi victim : OP.pieces() & OP.piecesOn(Rank1)) {
