@@ -191,14 +191,21 @@ ReturnStatus Node::negamax(Node* child) const {
 }
 
 void Node::failHigh() const {
-    if (parent && canBeKiller) { parent->updateKillerMove(currentMove); }
     *origin = TtSlot{this, FailHigh};
     ++root.tt.writes;
+
+    if (parent && canBeKiller) {
+        if (movesMade() == 1 && isHit && Move{ttSlot} && !isNonCapture(currentMove)) {
+            // do not pollute killers with captures from TT move
+            //TODO: test and skip only good captures as killers
+            return;
+        }
+        assert (currentMove);
+        parent->updateKillerMove(currentMove);
+    }
 }
 
 void Node::updateKillerMove(Move newKiller) const {
-    assert (newKiller);
-
     if (killer1 != newKiller) {
         killer2 = killer1;
         killer1 = newKiller;
@@ -283,16 +290,15 @@ ReturnStatus Node::search() {
     Node node{this};
     const auto child = &node;
 
-    canBeKiller = false;
-
     if (isHit && Move{ttSlot}) {
+        canBeKiller = !inCheck();
         RETURN_CUTOFF (child->searchMove(ttSlot));
     }
 
-    // cannot capture the king, so do not even try
+    // impossible to capture the king, do not even try to save time
+    canBeKiller = false;
     RETURN_CUTOFF (goodCaptures(child, OP.notKing()));
-
-    canBeKiller = true;
+    canBeKiller = !inCheck();
 
     if (parent) {
         // primary killer move, updated by previous siblings
@@ -384,7 +390,6 @@ ReturnStatus Node::quiescence() {
 }
 
 ReturnStatus Node::goodCaptures(Node* child, const PiMask& victims) {
-    canBeKiller = false;
     if (MY.promotables().any()) {
         // queen promotions with capture, always good
         for (Pi victim : OP.pieces() & OP.piecesOn(Rank1)) {

@@ -48,7 +48,7 @@ public:
         return MY.has(from) && moves_.has(MY.pieceAt(from), to);
     }
 
-    bool isCapture(Move move) const;
+    bool isNonCapture(Move move) const;
 
     // bitboard of squares attacked by any opponent (not side to move) piece (set during moves generation)
     constexpr const Bb& bbAttacked() const { return bbAttacked_; }
