@@ -385,6 +385,7 @@ ReturnStatus Node::search() {
 
     while (safePieces.any()) {
         Pi pi = safePieces.leastValuable(); safePieces -= pi;
+
         RETURN_CUTOFF (goodNonCaptures(child, pi, movesOf(pi) % badSquares));
     }
 
@@ -398,8 +399,26 @@ ReturnStatus Node::search() {
         }
     }
 
-    // all remaining unsorted moves, starting with pawns, all king moves are last
-    for (PiMask pieces = MY.notPawns(); pieces.any(); ) {
+    // losing captures
+    for (PiMask pieces = figures; pieces.any(); ) {
+        Pi pi = pieces.leastValuable(); pieces -= pi;
+
+        Square from = MY.squareOf(pi);
+        for (Square to : movesOf(pi) & ~OP.bbSide()) {
+            RETURN_CUTOFF (child->searchMove({from, to}));
+        }
+    }
+
+    // king quiet moves (always safe)
+    {
+        Square from = MY.kingSquare();
+        for (Square to : movesOf(Pi{TheKing})) {
+            RETURN_CUTOFF (child->searchMove({from, to}));
+        }
+    }
+
+    // all remaining unsorted moves
+    for (PiMask pieces = figures; pieces.any(); ) {
         Pi pi = pieces.leastValuable(); pieces -= pi;
 
         Square from = MY.squareOf(pi);
