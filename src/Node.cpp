@@ -305,12 +305,9 @@ ReturnStatus Node::search() {
     }
 
     // cannot capture the king, so do not even try
-    RETURN_CUTOFF (goodCaptures(child, OP.pieces() - PiMask{Pi{TheKing}}));
+    RETURN_CUTOFF (goodCaptures(child, OP.notKing()));
 
     canBeKiller = true;
-
-    Pi lastPi{TheKing};
-    Bb newMoves = {};
 
     if (parent) {
         // primary killer move, updated by previous siblings
@@ -324,73 +321,42 @@ ReturnStatus Node::search() {
 
         // secondary killer move, backup of previous primary killer
         RETURN_CUTOFF (child->searchIfLegal(parent->killer2));
-
-        // try quiet moves of the last moved piece (unless it was captured)
-        {
-            Square from = parent->movedPieceTo();
-            if (MY.bbSide().has(from)) {
-                // last moved piece
-                lastPi = MY.pieceAt(from);
-
-                // new moves of the last moved piece
-                newMoves = movesOf(lastPi);
-
-                if (from != parent->movedPieceFrom()) {
-                    // unless it was a pawn promotion move
-                    newMoves %= parent->OP.attacksOf(lastPi);
-                }
-
-                // try new safe moves of the last moved piece
-                for (Square to : newMoves % bbAttacked()) {
-                    RETURN_CUTOFF (child->searchMove({from, to}));
-                }
-
-                // keep unsafe news moves for later
-                newMoves &= bbAttacked();
-            }
-        }
-
-        // new safe quiet moves, except for the last moved piece (or king)
-        for (Pi pi : MY.pieces() - lastPi) {
-            Square from = MY.squareOf(pi);
-            for (Square to : movesOf(pi) % parent->OP.attacksOf(pi) % bbAttacked()) {
-                RETURN_CUTOFF (child->searchMove({from, to}));
-            }
-        }
     }
 
-    // all the rest safe quiet moves
-    for (Pi pi : MY.pieces()) {
+    // going to search only non-captures, mask out remaining unsafe captures to avoid redundant safety checks
+    //TRICK: ~ is not a negate bitwise operation but byteswap -- flip opponent's bitboard
+    Bb badSquares = ~(OP.bbPawnAttacks() | OP.bbSide());
+
+    // safe (good) quiet non-pawn, non-king moves
+    // skip king moves because they ordered first, safe anyway and rarely best moves in chess
+    // skip pawns to avoid wasting time on safety check as pawns comes first in the final loop anyway
+    // castling move is a rook move and picked early (safety check of castling rook is not very exact, but who cares?)
+    //TODO: make king ordered last in default (MV first) piece order
+    for (Pi pi : MY.figures()) {
         Square from = MY.squareOf(pi);
-        for (Square to : movesOf(pi) % bbAttacked()) {
+        PiMask opLessValue = OP.lessValue(MY.typeOf(pi));
+
+        for (Square to : movesOf(pi) % badSquares) {
+            if (bbAttacked().has(to)) {
+                if ((OP.attackersTo(~to) & opLessValue).any()) {
+                    // skip move if square defended by less valued piece
+                    continue;
+                }
+                if ((MY.attackersTo(to) % PiMask{pi}).none()) {
+                    // skip move to defended square if nobody else attacks it
+                    continue;
+                }
+            }
+            assert (!OP.bbSide().has(~to));
             RETURN_CUTOFF (child->searchMove({from, to}));
         }
     }
 
-    if (newMoves.any()) {
-        Square from = parent->movedPieceTo();
-        Pi pi = MY.pieceAt(from);
-
-        // unsafe new moves of the last moved piece
-        for (Square to : newMoves) {
-            RETURN_CUTOFF (child->searchIfLegal({from, to}));
-        }
-
-        // the rest moves of the last moved piece
-        for (Square to : movesOf(pi)) {
-            RETURN_CUTOFF (child->searchMove({from, to}));
-        }
-    }
-
-    // remaining (bad) captures and all underpromotions
-    RETURN_CUTOFF (badCaptures(child, OP.pieces() - PiMask{Pi{TheKing}}));
-
-    // all the rest (quiet) moves, LVA order
-    auto pieces = MY.pieces();
-    while (pieces.any()) {
+    // all remaining unsorted moves, starting with pawns, all king moves are last
+    for (PiMask pieces = MY.pieces(); pieces.any(); ) {
         Pi pi = pieces.leastValuable(); pieces -= pi;
-        Square from = MY.squareOf(pi);
 
+        Square from = MY.squareOf(pi);
         for (Square to : movesOf(pi)) {
             RETURN_CUTOFF (child->searchMove({from, to}));
         }
@@ -426,22 +392,22 @@ ReturnStatus Node::quiescence() {
     }
 
     // prepare empty child node to make moves into
-    //TODO: create lighter quiescence search node
+    //TODO: create lighter quiescence node without zobrist hashing and repetition detection
     Node node{this};
     const auto child = &node;
 
-    // king cannot be captured, so do not even try
-    return goodCaptures(child, OP.pieces() - PiMask{Pi{TheKing}});
+    // impossible to capture the king, do not even try to save time
+    return goodCaptures(child, OP.notKing());
 }
 
-ReturnStatus Node::goodCaptures(Node* child, const PiMask& victims) {
+ReturnStatus Node::goodCaptures(Node* child, PiMask victims) {
     canBeKiller = false;
     if (MY.promotables().any()) {
         // queen promotions with capture, always good
         for (Pi victim : OP.pieces() & OP.piecesOn(Rank1)) {
             Square to = ~OP.squareOf(victim);
-            for (Pi attacker : canMoveTo(to) & MY.promotables()) {
-                Square from = MY.squareOf(attacker);
+            for (Pi pi : canMoveTo(to) & MY.promotables()) {
+                Square from = MY.squareOf(pi);
                 RETURN_CUTOFF (child->searchMove({from, to}));
             }
         }
@@ -462,87 +428,25 @@ ReturnStatus Node::goodCaptures(Node* child, const PiMask& victims) {
         PiMask attackers = canMoveTo(to) % MY.promotables();
         if (attackers.none()) { continue; }
 
-        // seems too rare to bother, but enpassant attacker does not attack victim pawn square
-        // that makes following test of attacker singularity broken
-        if (OP.isEnPassant(victim)) {
-            for (Pi attacker : attackers & MY.enPassantPawns()) {
-                Square from = MY.squareOf(attacker);
-                RETURN_CUTOFF (child->searchMove({from, to}));
-            }
-            attackers %= MY.enPassantPawns();
-            if (attackers.none()) { continue; }
-        }
-
-        PieceType victimType = OP.typeOf(victim);
-
         // simple SEE function, checks only two cases:
-        // 1) prune as bad capture if solo attacker tries to capture defended lower valued victim
-        // 2) prune as bad capture if lower valued victim defended by a pawn
-        // the rest of uncertain captures considered good enough to seek in QS
-
-        // complete attackers set, including already searched captures (see note about enpassant capture)
-        PiMask allAttackers = MY.attackersTo(to);
-        if (allAttackers.isSingleton()) {
-            Pi attacker = allAttackers.index();
-
-            if (bbAttacked().has(to)) {
-                // singleton attacker and victim defended
-                //TODO: check X-Ray attacks
-                if (!MY.isLessOrEqualValue(attacker, victimType)) {
-                    // skip bad capture of defended victim
-                    //TODO: check if bad capture makes discovered check
-                    continue;
-                }
-            }
-
-            Square from = MY.squareOf(attacker);
-            RETURN_CUTOFF (child->searchMove({from, to}));
-            continue;
-        }
-
-        if (OP.bbPawnAttacks().has(~to)) {
-            // victim is protected by at least one pawn
-            // try only winning or equal captures
-            //TODO: check if defending pawn is pinned
-            //TODO: check if bad capture(s) makes discovered check
-            attackers &= MY.lessOrEqualValue(victimType);
-        }
-
-        //TODO: use count of attackers and defenders for a bit exact SEE
+        // 1) victim defended by at least one pawn
+        // 2) attackers does not outnumber defenders (not precise, but effective condition)
+        // then prune captures by more valuable attackers
+        // the rest uncertain captures considered good enough to seek in QS
+        //TODO: check for X-Ray attackers and defenders
+        //TODO: check if bad capture makes discovered check
+        //TODO: check if defending pawn is pinned and cannot recapture
         //TODO: try killer heuristics for uncertain and bad captures
+        //TODO: try more complex and precise SEE
+        if (OP.bbPawnAttacks().has(~to) || OP.attackersTo(~to).popcount() >= MY.attackersTo(to).popcount()) {
+            attackers &= MY.lessOrEqualValue(OP.typeOf(victim));
+        }
 
         while (attackers.any()) {
             // LVA (least valuable attacker) order
-            Pi attacker = attackers.leastValuable(); attackers -= attacker;
+            Pi pi = attackers.leastValuable(); attackers -= pi;
 
-            Square from = MY.squareOf(attacker);
-            RETURN_CUTOFF (child->searchMove({from, to}));
-        }
-    }
-
-    return ReturnStatus::Continue;
-}
-
-ReturnStatus Node::badCaptures(Node* child, const PiMask& victims) {
-    // MVV (most valuable victim)
-    for (Pi victim : victims) {
-        Square to = ~OP.squareOf(victim);
-
-        // exclude underpromotions because of illegal phantom captures
-        PiMask attackers = canMoveTo(to) % MY.promotables();
-        while (attackers.any()) {
-            // LVA (least valuable attacker)
-            Pi attacker = attackers.leastValuable(); attackers -= attacker;
-
-            Square from = MY.squareOf(attacker);
-            RETURN_CUTOFF (child->searchMove({from, to}));
-        }
-    }
-
-    // unsorted (under)promotions with or without capture
-    for (Pi pawn : MY.promotables()) {
-        Square from = MY.squareOf(pawn);
-        for (Square to : movesOf(pawn)) {
+            Square from = MY.squareOf(pi);
             RETURN_CUTOFF (child->searchMove({from, to}));
         }
     }
