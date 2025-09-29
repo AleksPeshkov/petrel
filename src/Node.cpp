@@ -347,12 +347,13 @@ ReturnStatus Node::search() {
     //TRICK: ~ is not a negate bitwise operation but byteswap -- flip opponent's bitboard
     Bb badSquares = ~(OP.bbPawnAttacks() | OP.bbSide());
     PiMask safePieces = {};
+    PiMask figures = MY.figures();
 
     // quiet non-pawn, non-king moves from unsafe to safe squares
     // skip king moves because they are safe anyway (unless in check)
     // castling move is a rook move, king moves rarely good in middlegame,
     // skip pawns to avoid wasting time on safety check as pawns
-    for (Pi pi : MY.figures()) {
+    for (Pi pi : figures) {
         Square from = MY.squareOf(pi);
 
         if (!bbAttacked().has(from)) {
@@ -387,8 +388,18 @@ ReturnStatus Node::search() {
         RETURN_CUTOFF (goodNonCaptures(child, pi, movesOf(pi) % badSquares));
     }
 
+    // iterate pawns from Rank7 to Rank2
+    // underpromotion with or without capture and pawn pushes
+    for (Square from : MY.bbPawns()) {
+        Pi pi = MY.pieceAt(from);
+
+        for (Square to : movesOf(pi)) {
+            RETURN_CUTOFF (child->searchMove({from, to}));
+        }
+    }
+
     // all remaining unsorted moves, starting with pawns, all king moves are last
-    for (PiMask pieces = MY.pieces(); pieces.any(); ) {
+    for (PiMask pieces = MY.notPawns(); pieces.any(); ) {
         Pi pi = pieces.leastValuable(); pieces -= pi;
 
         Square from = MY.squareOf(pi);
