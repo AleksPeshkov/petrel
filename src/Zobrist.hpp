@@ -6,7 +6,7 @@
 #include "typedefs.hpp"
 
 class Z;
-using ZArg = const Z&;
+using ZArg = Z;
 
 class Z {
 public:
@@ -41,15 +41,15 @@ class Zobrist : public Z {
 
     //hand picked set of de Bruijn numbers
     enum : _t {
-        ZQueen  = U64(0x0218a392cd5d3dbf),
-        ZRook   = U64(0x024530decb9f8ead),
-        ZBishop = U64(0x02b91efc4b53a1b3),
-        ZKnight = U64(0x02dc61d5ecfc9a51),
-        ZPawn   = U64(0x031faf09dcda2ca9),
-        ZKing   = U64(0x0352138afdd1e65b),
+        ZQueen  = U64(0x0218'a392'cd5d'3dbf),
+        ZRook   = U64(0x0245'30de'cb9f'8ead),
+        ZBishop = U64(0x02b9'1efc'4b53'a1b3),
+        ZKnight = U64(0x02dc'61d5'ecfc'9a51),
+        ZPawn   = U64(0x031f'af09'dcda'2ca9),
+        ZKing   = U64(0x0352'138a'fdd1'e65b),
         ZCastling = ZRook ^ ZPawn,
         ZEnPassant = ::rotateleft(ZPawn, 32), // A4 => A8
-        // ZExtra  = U64(0x03ac4dfb48546797), // reserved
+        // ZExtra  = U64(0x03ac'4dfb'4854'6797), // reserved
     };
 
     enum { Castling = 6, EnPassant = 7 };
@@ -59,12 +59,12 @@ class Zobrist : public Z {
         ZQueen, ZRook, ZBishop, ZKnight, ZPawn, ZKing, ZCastling, ZEnPassant
     }};
 
-    constexpr static _t r(const _t& z, Square::_t sq) { return ::rotateleft(z, sq); }
+    constexpr static _t r(_t z, Square::_t sq) { return ::rotateleft(z, sq); }
     constexpr static _t z(Index::_t ty, Square::_t sq) { return r(zKey[ty], sq); }
     constexpr static _t flip(_t z) { return ::byteswap(z); }
 
-    constexpr void my(Index ty, Square sq) { v ^= z(ty, sq); }
-    constexpr void op(Index ty, Square sq) { v ^= flip(z(ty, sq)); }
+    constexpr void my(Index::_t ty, Square sq) { v ^= z(ty, sq); }
+    constexpr void op(Index::_t ty, Square sq) { v ^= flip(z(ty, sq)); }
 
 public:
     using Z::Z;
