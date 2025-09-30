@@ -6,7 +6,7 @@
 #include "typedefs.hpp"
 
 class Z;
-using ZArg = const Z&;
+using ZArg = Z;
 
 class Z {
 public:
@@ -63,8 +63,8 @@ class Zobrist : public Z {
     constexpr static _t z(Index::_t ty, Square::_t sq) { return r(zKey[ty], sq); }
     constexpr static _t flip(_t z) { return ::byteswap(z); }
 
-    constexpr void my(Index ty, Square sq) { v ^= z(ty, sq); }
-    constexpr void op(Index ty, Square sq) { v ^= flip(z(ty, sq)); }
+    constexpr void my(Index::_t ty, Square sq) { v ^= z(ty, sq); }
+    constexpr void op(Index::_t ty, Square sq) { v ^= flip(z(ty, sq)); }
 
 public:
     using Z::Z;

@@ -26,9 +26,7 @@ protected:
     _t v;
 
 public:
-    constexpr BitArray () : v{} {}
-    constexpr explicit BitArray (const _t& b) : v{b} {}
-    constexpr Self& operator = (Arg b) { v = b.v; return SELF; }
+    constexpr explicit BitArray (const _t& b = _t{}) : v{b} {}
     constexpr operator const _t& () const { return v; }
 
     constexpr friend bool operator == (Arg a, Arg b) { return Ops::equals(a.v, b.v); }
