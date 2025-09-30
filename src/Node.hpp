@@ -50,7 +50,7 @@ protected:
     const Node* const parent = nullptr; // previous (ply-1, opposite side to move) node or nullptr
     const Node* const grandParent = nullptr; // previous side to move node (ply-2) or nullptr
 
-    RepetitionMask repMask; // mini-hash of all previous reversible positions zobrist keys
+    RepetitionHash repetitionHash; // mini-hash of all previous reversible positions zobrist keys
 
     Ply ply{0}; // distance from root (root is ply == 0)
     Ply draft{0}; // remaining depth to horizon
