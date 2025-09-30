@@ -4,6 +4,7 @@
 #include "typedefs.hpp"
 #include "Zobrist.hpp"
 
+// https://www.talkchess.com/forum/viewtopic.php?p=554664#p554664
 class RepetitionMask {
     using _t = u64_t;
     _t v{0};
@@ -90,10 +91,14 @@ class Repetitions {
         }
 
         bool has(ZArg z) const {
+            int repetitions = 0;
             RepIndex i{0};
             while (true) {
                 if (z == reps[i].z) {
-                    return true;
+                    ++repetitions;
+                    if (repetitions == 2) {
+                        return true;
+                    }
                 }
                 if (!reps[i].mask.has(z)) {
                     return false;
