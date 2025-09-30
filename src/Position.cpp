@@ -86,7 +86,7 @@ void Position::makeMove(Square from, Square to) {
         rule50_.clear();
 
         if (from.on(Rank7)) {
-            PromoType promo = ::promoTypeFrom(Rank{to});
+            PromoType promo{::promoTypeFrom(Rank{to})};
             to = {File{to}, Rank8};
             movedPieceFrom_ = to; // promoted pieces has no previous square
             movedPieceTo_ = to;
@@ -341,7 +341,7 @@ Zobrist Position::createZobrist(Square from, Square to) const {
 
     if (ty.is(Pawn)) {
         if (from.on(Rank7)) {
-            PieceType promo = ::pieceTypeFrom(Rank{to});
+            PieceType promo{::pieceTypeFrom(Rank{to})};
             to = {File{to}, Rank8};
 
             mz.promote(from, promo, to);
