@@ -31,7 +31,7 @@ void PositionMoves::generateLegalKingMoves() {
 
     //TRICK: our attacks do not hide under attacked king shadow
     Bb kingMoves = ::attacksFrom(King, MY.kingSquare()) % (MY.bbSide() | bbAttacked());
-    moves_.set(TheKing, kingMoves);
+    moves_.set(Pi{TheKing}, kingMoves);
 }
 
 template <Side::_t My>
@@ -53,7 +53,7 @@ void PositionMoves::generatePawnMoves() {
     for (Pi pi : MY.pawns()) {
         Square from{ MY.squareOf(pi) };
 
-        Rank rankTo = Rank{from}.forward();
+        Rank rankTo{ Rank{from}.forward() };
         BitRank fileTo{ File{from} };
 
         //push to free square

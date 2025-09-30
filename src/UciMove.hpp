@@ -13,7 +13,7 @@
 class UciMove : public Move {
 public:
     constexpr UciMove () : Move{} { static_assert (sizeof(UciMove) == sizeof(int16_t));}
-    constexpr UciMove (Square f, Square t, bool s, Color c, ChessVariant v = Orthodox) : Move(f, t, s, c, v) {}
+    constexpr UciMove (Square f, Square t, bool s, Color c, ChessVariant v = ChessVariant{Orthodox}) : Move(f, t, s, c, v) {}
 
     friend ostream& operator << (ostream&, const UciMove&);
     friend ostream& operator << (ostream&, const UciMove[]);

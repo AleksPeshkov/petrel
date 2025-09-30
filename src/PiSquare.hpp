@@ -49,28 +49,28 @@ public:
 
     constexpr void castle(Square kingTo, Pi theRook, Square rookTo) {
         assert (TheKing != theRook);
-        assert (squareOf(TheKing).on(Rank1));
+        assert (squareOf(Pi{TheKing}).on(Rank1));
         assert (squareOf(theRook).on(Rank1));
         assert (kingTo.is(G1) || kingTo.is(C1));
         assert (rookTo.is(F1) || rookTo.is(D1));
 
-        assertOk(TheKing);
+        assertOk(Pi{TheKing});
         assertOk(theRook);
-        set(TheKing, kingTo);
+        set(Pi{TheKing}, kingTo);
         set(theRook, rookTo);
-        assertOk(TheKing);
+        assertOk(Pi{TheKing});
         assertOk(theRook);
     }
 
     constexpr bool isEmpty(Pi pi) const { return square[pi] == Sq::Empty; }
-    constexpr Square squareOf(Pi pi) const { assertOk(pi); return static_cast<Square::_t>(square[pi]); }
+    constexpr Square squareOf(Pi pi) const { assertOk(pi); return Square{static_cast<Square::_t>(square[pi])}; }
 
-    bool has(Square sq) const { return piecesAt(sq).any(); }
-    Pi pieceAt(Square sq) const { assert (has(sq)); return piecesAt(sq).index(); }
+    bool has(Square::_t sq) const { return piecesAt(sq).any(); }
+    Pi pieceAt(Square::_t sq) const { assert (has(sq)); return piecesAt(sq).index(); }
 
     PiMask pieces() const { return PiMask{vu8x16 != ::all(static_cast<u8_t>(Sq::Empty))}; }
-    PiMask piecesAt(Square sq) const { return PiMask{vu8x16, vector(sq)}; }
-    PiMask piecesOn(Rank rank) const { return PiMask{
+    PiMask piecesAt(Square::_t sq) const { return PiMask{vu8x16, vector(sq)}; }
+    PiMask piecesOn(Rank::_t rank) const { return PiMask{
         vu8x16 & vector(static_cast<element_type>(0xff ^ File::Mask)),
         vector(Square{static_cast<file_t>(0), rank})
     }; }

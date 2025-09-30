@@ -24,18 +24,18 @@ class PositionSide {
     Evaluation evaluation_; // PST incremental evaluation
     Square opKing; // square of the opponent's king (from current side point of view)
 
-    void move(Pi, PieceType, Square, Square);
+    void move(Pi, PieceType::_t, Square, Square);
     void updateMovedKing(Square);
     void setLeaperAttacks();
-    void setLeaperAttack(Pi, PieceType, Square);
-    void setPinner(Pi, PieceType, Square);
+    void setLeaperAttack(Pi, PieceType::_t, Square);
+    void setPinner(Pi, PieceType::_t, Square);
 
     #ifdef NDEBUG
         void assertOk(Pi) const {}
-        void assertOk(Pi, PieceType, Square) const {}
+        void assertOk(Pi, PieceType::_t, Square) const {}
     #else
         void assertOk(Pi) const;
-        void assertOk(Pi, PieceType, Square) const;
+        void assertOk(Pi, PieceType::_t, Square) const;
     #endif
 
 public:
@@ -53,18 +53,18 @@ public:
     // static evaluation data of the given side pieces
     constexpr const Evaluation& evaluation() const { return evaluation_; }
 
-    bool has(Square sq) const { assert (bbSide_.has(sq) == squares.has(sq)); return bbSide_.has(sq); }
+    bool has(Square::_t sq) const { assert (bbSide_.has(sq) == squares.has(sq)); return bbSide_.has(sq); }
     Square squareOf(Pi pi) const { assertOk(pi); return squares.squareOf(pi); }
-    Square kingSquare() const { return squareOf(TheKing); }
+    Square kingSquare() const { return squareOf(Pi{TheKing}); }
 
     // mask of all pieces of the given side
     PiMask pieces() const { assert (squares.pieces() == types.pieces()); return squares.pieces(); }
     PiMask sliders() const { return types.sliders(); }
 
-    Pi pieceAt(Square sq) const { assert (has(sq)); Pi pi = squares.pieceAt(sq); assertOk(pi); return pi; }
-    PiMask piecesOn(Rank rank) const { return squares.piecesOn(rank); }
+    Pi pieceAt(Square::_t sq) const { assert (has(sq)); Pi pi = squares.pieceAt(sq); assertOk(pi); return pi; }
+    PiMask piecesOn(Rank::_t rank) const { return squares.piecesOn(rank); }
 
-    PiMask piecesOfType(PieceType ty) const { return types.piecesOfType(ty); }
+    PiMask piecesOfType(PieceType::_t ty) const { return types.piecesOfType(ty); }
     PieceType typeOf(Pi pi) const { assertOk(pi); return types.typeOf(pi); }
     PieceType typeAt(Square sq) const { return typeOf(pieceAt(sq)); }
     Score score(PieceType ty, Square sq) const { return evaluation().score(ty, sq); }
@@ -80,7 +80,7 @@ public:
 
     PiMask castlingRooks() const { return traits.castlingRooks(); }
     bool isCastling(Pi pi) const { assertOk(pi); return traits.isCastling(pi); }
-    bool isCastling(Square sq) const { return isCastling(pieceAt(sq)); }
+    bool isCastling(Square::_t sq) const { return isCastling(pieceAt(sq)); }
 
     PiMask enPassantPawns() const { return traits.enPassantPawns(); }
     bool isEnPassant(Pi pi) const { return traits.isEnPassant(pi); }

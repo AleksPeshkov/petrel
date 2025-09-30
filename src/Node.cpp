@@ -67,7 +67,7 @@ ReturnStatus Node::searchRoot() {
                             child->generateMoves();
                             if (child->isLegalMove(ttMove2)) {
                                 ++root.tt.hits;
-                                root.pvMoves.set(1, child->uciMove(ttMove2));
+                                root.pvMoves.set(Ply{1}, child->uciMove(ttMove2));
                             }
                         }
                     }
@@ -75,14 +75,14 @@ ReturnStatus Node::searchRoot() {
 
                 ++root.tt.hits;
                 root.pvScore = ttSlot.score(ply);
-                root.pvMoves.set(0, uciMove(ttMove));
+                root.pvMoves.set(Ply{0}, uciMove(ttMove));
                 io::log("#no time, return move from TT");
                 return ReturnStatus::Stop;
             }
         }
     }
 
-    for (draft = {1}; draft <= root.limits.depth; ++draft) {
+    for (draft = Ply{1}; draft <= root.limits.depth; ++draft) {
         setMoves(rootMovesClone);
         alpha = MinusInfinity;
         beta = PlusInfinity;
@@ -116,7 +116,7 @@ ReturnStatus Node::searchRoot() {
         //we cannot use makeZobrist() because of en passant legality validation
         pos.makeMove(move.from(), move.to());
         s = -s;
-        d = Ply{d > 0 ? d-1 : 0};
+        d = Ply{ d > 0 ? d-1 : 0 };
     }
 }
 
@@ -261,11 +261,11 @@ ReturnStatus Node::search() {
     }
 
     // cannot capture the king, so do not even try
-    RETURN_CUTOFF (goodCaptures(child, OP.pieces() - PiMask{TheKing}));
+    RETURN_CUTOFF (goodCaptures(child, OP.pieces() - PiMask{Pi{TheKing}}));
 
     canBeKiller = true;
 
-    Pi lastPi = TheKing;
+    Pi lastPi{TheKing};
     Bb newMoves = {};
 
     if (parent) {
@@ -339,7 +339,7 @@ ReturnStatus Node::search() {
     }
 
     // remaining (bad) captures and all underpromotions
-    RETURN_CUTOFF (badCaptures(child, OP.pieces() - PiMask{TheKing}));
+    RETURN_CUTOFF (badCaptures(child, OP.pieces() - PiMask{Pi{TheKing}}));
 
     // all the rest (quiet) moves, LVA order
     auto pieces = MY.pieces();
@@ -378,7 +378,7 @@ ReturnStatus Node::quiescence() {
     const auto child = &node;
 
     // king cannot be captured, so do not even try
-    return goodCaptures(child, OP.pieces() - PiMask{TheKing});
+    return goodCaptures(child, OP.pieces() - PiMask{Pi{TheKing}});
 }
 
 ReturnStatus Node::goodCaptures(Node* child, const PiMask& victims) {
@@ -503,7 +503,7 @@ UciMove Node::uciMove(Move move) const {
 }
 
 constexpr Color Node::colorToMove() const {
-    return root.colorToMove() << ply;
+    return Color{root.colorToMove() << ply};
 }
 
 // insufficient mate material

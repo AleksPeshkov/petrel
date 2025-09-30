@@ -34,7 +34,7 @@ istream& read(istream& in, FenToBoard& board) {
 
     for (io::char_type c; in.get(c); ) {
         if (std::isalpha(c) && rank.isOk() && file.isOk()) {
-            Color color = std::isupper(c) ? White : Black;
+            Color color{std::isupper(c) ? White : Black};
             c = static_cast<io::char_type>(std::tolower(c));
 
             PieceType ty;
@@ -54,14 +54,14 @@ istream& read(istream& in, FenToBoard& board) {
             }
 
             //avoid out of range initialization check
-            file = static_cast<File::_t>(f-1);
+            file = File{static_cast<File::_t>(f-1)};
             ++file;
             continue;
         }
 
         if (c == '/' && rank.isOk()) {
             ++rank;
-            file = FileA;
+            file = File{FileA};
             continue;
         }
 
@@ -113,7 +113,7 @@ bool FenToBoard::dropPieces(Position& position, Color colorToMove_) {
     Position pos;
 
     FOR_EACH(Color, color) {
-        Side side = colorToMove_.is(color) ? My : Op;
+        Side side{colorToMove_.is(color) ? My : Op};
 
         FOR_EACH(PieceType, ty) {
             while (!pieces[color][ty].empty()) {
@@ -173,7 +173,7 @@ public:
 class CastlingToFen {
     std::set<io::char_type> castlingSet;
 
-    void insert(const PositionSide& positionSide, Color color, ChessVariant chessVariant) {
+    void insert(const PositionSide& positionSide, Color::_t color, ChessVariant chessVariant) {
         for (Pi pi : positionSide.castlingRooks()) {
             io::char_type castlingSymbol;
 
@@ -188,7 +188,7 @@ class CastlingToFen {
                     break;
             }
 
-            if (color.is(White)) { castlingSymbol = static_cast<io::char_type>(std::toupper(castlingSymbol)); }
+            if (color == White) { castlingSymbol = static_cast<io::char_type>(std::toupper(castlingSymbol)); }
             castlingSet.insert(castlingSymbol);
         }
     }
@@ -277,13 +277,13 @@ istream& UciPosition::readMove(istream& in, Square& from, Square& to) const {
         if (from.is(E1) && to.is(G1)) {
             if (!MY.has(H1) || !MY.isCastling(H1)) { return io::fail_pos(in, before); }
 
-            from = H1; to = E1;
+            from = Square{H1}; to = Square{E1};
             return in;
         }
         if (from.is(E1) && to.is(C1)) {
             if (!MY.has(A1) || !MY.isCastling(A1)) { return io::fail_pos(in, before); }
 
-            from = A1; to = E1;
+            from = Square{A1}; to = Square{E1};
             return in;
         }
         //else is normal king move
@@ -384,7 +384,7 @@ istream& UciPosition::readCastling(istream& in) {
 
     for (io::char_type c; in.get(c) && !std::isblank(c); ) {
         if (std::isalpha(c)) {
-            Color color = std::isupper(c) ? White : Black;
+            Color color{std::isupper(c) ? White : Black};
             Side side = sideOf(color);
 
             c = static_cast<io::char_type>(std::tolower(c));
