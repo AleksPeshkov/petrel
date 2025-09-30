@@ -33,10 +33,10 @@ public:
     TtSlot (Z z, Move move, Score, Bound, Ply);
     TtSlot (const Node* node, Bound b);
     bool operator == (Z z) const { return (zobrist & HashMask) == (z & HashMask); }
-    operator Move () const { return { static_cast<Square::_t>(s.from), static_cast<Square::_t>(s.to) }; }
+    operator Move () const { return Move{ static_cast<Square::_t>(s.from), static_cast<Square::_t>(s.to) }; }
     Score score(Ply ply) const { return Score{s.score}.fromTt(ply); }
     operator Bound () const { return static_cast<Bound>(s.bound); }
-    Ply draft() const { return {static_cast<Ply::_t>(s.draft)}; }
+    Ply draft() const { return s.draft; }
 };
 
 class Uci;
@@ -51,8 +51,8 @@ protected:
 
     RepetitionMask repMask; // mini-hash of all previous reversible positions zobrist keys
 
-    Ply ply = {0}; // distance from root (root is ply == 0)
-    Ply draft = {0}; // remaining depth to horizon
+    Ply ply{0}; // distance from root (root is ply == 0)
+    Ply draft{0}; // remaining depth to horizon
 
     TtSlot* origin; // pointer to the slot in TT
     TtSlot  ttSlot;

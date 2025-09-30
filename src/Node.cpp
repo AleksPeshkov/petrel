@@ -82,7 +82,7 @@ ReturnStatus Node::searchRoot() {
         }
     }
 
-    for (draft = {1}; draft <= root.limits.depth; ++draft) {
+    for (draft = 1; draft <= root.limits.depth; ++draft) {
         setMoves(rootMovesClone);
         alpha = MinusInfinity;
         beta = PlusInfinity;
@@ -116,7 +116,7 @@ ReturnStatus Node::searchRoot() {
         //we cannot use makeZobrist() because of en passant legality validation
         pos.makeMove(move.from(), move.to());
         s = -s;
-        d = Ply{d > 0 ? d-1 : 0};
+        d = d-1;
     }
 }
 
@@ -261,11 +261,11 @@ ReturnStatus Node::search() {
     }
 
     // cannot capture the king, so do not even try
-    RETURN_CUTOFF (goodCaptures(child, OP.pieces() - PiMask{TheKing}));
+    RETURN_CUTOFF (goodCaptures(child, OP.pieces() - PiMask{Pi{TheKing}}));
 
     canBeKiller = true;
 
-    Pi lastPi = TheKing;
+    Pi lastPi{TheKing};
     Bb newMoves = {};
 
     if (parent) {
@@ -339,7 +339,7 @@ ReturnStatus Node::search() {
     }
 
     // remaining (bad) captures and all underpromotions
-    RETURN_CUTOFF (badCaptures(child, OP.pieces() - PiMask{TheKing}));
+    RETURN_CUTOFF (badCaptures(child, OP.pieces() - PiMask{Pi{TheKing}}));
 
     // all the rest (quiet) moves, LVA order
     auto pieces = MY.pieces();
@@ -378,14 +378,14 @@ ReturnStatus Node::quiescence() {
     const auto child = &node;
 
     // king cannot be captured, so do not even try
-    return goodCaptures(child, OP.pieces() - PiMask{TheKing});
+    return goodCaptures(child, OP.pieces() - PiMask{Pi{TheKing}});
 }
 
 ReturnStatus Node::goodCaptures(Node* child, const PiMask& victims) {
     canBeKiller = false;
     if (MY.promotables().any()) {
         // queen promotions with capture, always good
-        for (Pi victim : OP.pieces() & OP.piecesOn(Rank1)) {
+        for (Pi victim : OP.pieces() & OP.piecesOn(Rank{Rank1})) {
             Square to = ~OP.squareOf(victim);
             for (Pi attacker : canMoveTo(to) & MY.promotables()) {
                 Square from = MY.squareOf(attacker);
@@ -498,12 +498,13 @@ ReturnStatus Node::badCaptures(Node* child, const PiMask& victims) {
 }
 
 UciMove Node::uciMove(Move move) const {
-    Square from{move.from()}; Square to{move.to()};
+    Square from = move.from();
+    Square to = move.to();
     return UciMove{from, to, isSpecial(from, to), colorToMove(), root.chessVariant()};
 }
 
 constexpr Color Node::colorToMove() const {
-    return root.colorToMove() << ply;
+    return Color{root.colorToMove() << ply};
 }
 
 // insufficient mate material

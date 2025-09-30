@@ -66,8 +66,8 @@ void Position::makeMove(Square from, Square to) {
             rule50_.clear();
 
             if constexpr (Z) {
-                zobrist_.move(Pawn, from, ep);
-                zobrist_.op(Pawn, ~to);
+                zobrist_.move(PieceType{Pawn}, from, ep);
+                zobrist_.op(PieceType{Pawn}, ~to);
             }
             MY.movePawn(pi, from, ep);
             OP.capture(~to); //also clears en passant victim
@@ -86,7 +86,7 @@ void Position::makeMove(Square from, Square to) {
         rule50_.clear();
 
         if (from.on(Rank7)) {
-            PromoType promo = ::promoTypeFrom(Rank{to});
+            PromoType promo{::promoTypeFrom(Rank{to})};
             to = {File{to}, Rank8};
             movedPieceFrom_ = to; // promoted pieces has no previous square
             movedPieceTo_ = to;
@@ -112,7 +112,7 @@ void Position::makeMove(Square from, Square to) {
         }
 
         if constexpr (Z) {
-            zobrist_.move(Pawn, from, to);
+            zobrist_.move(PieceType{Pawn}, from, to);
         }
         MY.movePawn(pi, from, to);
 
@@ -142,7 +142,7 @@ void Position::makeMove(Square from, Square to) {
     if (MY.kingSquare().is(from)) {
         if constexpr (Z) {
             for (Pi rook : MY.castlingRooks()) { zobrist_.castling(MY.squareOf(rook)); }
-            zobrist_.move(King, from, to);
+            zobrist_.move(PieceType{King}, from, to);
         }
         MY.moveKing(from, to);
         OP.setOpKing(~to);
@@ -181,7 +181,7 @@ void Position::makeMove(Square from, Square to) {
         //TRICK: castling should not affect opponent's sliders, otherwise it is check or pin
         //TRICK: castling rook should attack 'kingFrom' square
         //TRICK: only first rank sliders can be affected
-        updateSliderAttacks<My>(MY.affectedBy(rookFrom, kingFrom) & MY.piecesOn(Rank1));
+        updateSliderAttacks<My>(MY.affectedBy(rookFrom, kingFrom) & MY.piecesOn(Rank{Rank1}));
         return; //end of castling move
     }
 
@@ -248,7 +248,7 @@ void Position::setLegalEnPassant(Pi victim, Square to) {
     Square ep{File{to}, Rank3};
 
     // check if there are any pawns to capture ep victim
-    Bb killers = ~OP.bbPawns() & ::attacksFrom(Pawn, ep);
+    Bb killers = ~OP.bbPawns() & ::attacksFrom(PieceType{Pawn}, ep);
     if (killers.none()) { return; }
 
     // discovered check
@@ -333,16 +333,16 @@ Zobrist Position::createZobrist(Square from, Square to) const {
 
         //en passant capture
         if (ty.is(Pawn) && from.on(Rank5) && to.on(Rank5)) {
-            mz.move(Pawn, from, {File{to}, Rank6});
-            oz(Pawn, ~to);
+            mz.move(PieceType{Pawn}, from, Square{File{to}, Rank6});
+            oz(PieceType{Pawn}, ~to);
             goto zobrist;
         }
     }
 
     if (ty.is(Pawn)) {
         if (from.on(Rank7)) {
-            PieceType promo = ::pieceTypeFrom(Rank{to});
-            to = {File{to}, Rank8};
+            PromoType promo{::pieceTypeFrom(Rank{to})};
+            to = Square{File{to}, Rank8};
 
             mz.promote(from, promo, to);
             goto capture;
@@ -354,7 +354,7 @@ Zobrist Position::createZobrist(Square from, Square to) const {
             File file{from};
             Square ep{file, Rank3};
 
-            Bb killers = ~OP.bbPawns() & ::attacksFrom(Pawn, ep);
+            Bb killers = ~OP.bbPawns() & ::attacksFrom(PieceType{Pawn}, ep);
             if (killers.any() && !MY.isPinned(OCCUPIED - Bb{from} + Bb{ep})) {
                 for (Square killer : killers) {
                     assert (killer.on(Rank4));
