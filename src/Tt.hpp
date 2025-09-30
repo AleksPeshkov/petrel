@@ -59,21 +59,21 @@ public:
     const HashAge& getAge() const { return hashAge; }
     void nextAge() { hashAge.nextAge(); }
 
-    constexpr void* addr(ZArg z, size_t align) const {
+    constexpr void* addr(Z z, size_t align) const {
         return static_cast<void*>(static_cast<char*>(memory) + (z & mask(align)));
     }
 
-    template <typename T> constexpr T* addr(ZArg z) const {
+    template <typename T> constexpr T* addr(Z z) const {
         return static_cast<T*>( addr(z, sizeof(T)) );
     }
 
-    void* prefetch(ZArg z, size_t align) const {
+    void* prefetch(Z z, size_t align) const {
         auto ptr = addr(z, align);
         __builtin_prefetch(ptr);
         return ptr;
     }
 
-    template <typename T> T* prefetch(ZArg z) const {
+    template <typename T> T* prefetch(Z z) const {
         return static_cast<T*>( prefetch(z, sizeof(T)) );
     }
 

@@ -13,7 +13,7 @@ enum score_enum {
 
     // negative mate range of scores (loss)
 
-    MinEval = MinusMate + static_cast<i16_t>(MaxPly), // minimal (negative) non mate score bound for a position
+    MinEval = MinusMate + static_cast<i16_t>(MaxPly+1), // minimal (negative) non mate score bound for a position
 
     // negative evaluation range of scores
 
@@ -73,8 +73,8 @@ struct Score {
 
     constexpr Score fromTt(Ply ply) const {
         assertOk();
-        if (v < MinEval) { assertMate(); Score r = *this + ply; r.assertMate(); return r; }
-        if (MaxEval < v) { assertMate(); Score r = *this - ply; r.assertMate(); return r; }
+        if (*this < MinEval - ply) { assertMate(); Score r = *this + ply; r.assertMate(); return r; }
+        if (MaxEval + ply < *this) { assertMate(); Score r = *this - ply; r.assertMate(); return r; }
         return *this;
     }
 
@@ -163,7 +163,7 @@ public:
 
     void drop(PieceType ty, Square t) { to(ty, t); }
     void capture(PieceType ty, Square f) { assert (ty != King); from(ty, f); }
-    void move(PieceType ty, Square f, Square t) { assert (f != t); from(ty, f); to(ty, t); }
+    void move(PieceType::_t ty, Square f, Square t) { assert (f != t); from(ty, f); to(ty, t); }
 
     void promote(Square f, Square t, PromoType ty) {
         assert (f.on(Rank7) && t.on(Rank8));
@@ -179,7 +179,7 @@ public:
         to(Rook, rookTo); to(King, kingTo);
     }
 
-    constexpr int count(PieceType ty) const {
+    constexpr int count(PieceType::_t ty) const {
         switch (ty) {
             case Queen:
                 return v.s.queens;
