@@ -32,7 +32,8 @@ Node::Node (const Node* p) :
     alpha{-p->beta}, beta{-p->alpha}, isPv(p->isPv),
     pvIndex{p->pvIndex+1},
     killer1{grandParent ? grandParent->killer1 : Move{}},
-    killer2{grandParent ? grandParent->killer2 : Move{}}
+    killer2{grandParent ? grandParent->killer2 : Move{}},
+    killer3{grandParent ? grandParent->killer3 : Move{}}
 {}
 
 ReturnStatus Node::searchRoot() {
@@ -204,8 +205,24 @@ void Node::failHigh() const {
 
 void Node::updateKillerMove(Move newKiller) const {
     if (killer1 != newKiller) {
-        killer2 = killer1;
-        killer1 = newKiller;
+        if (killer2 != newKiller) {
+            if (killer3 != newKiller) {
+                // fresh killer move
+                killer2 = newKiller;
+            } else {
+                // promote killer3 to killer2
+                killer3 = killer2;
+                killer2 = newKiller;
+            }
+        } else {
+            // promote killer2 to kiiler1
+            killer2 = killer1;
+            killer1 = newKiller;
+        }
+    }
+
+    if (grandParent && grandParent->killer1 != newKiller && grandParent->killer2 != newKiller) {
+        grandParent->killer3 = newKiller;
     }
 
     if (currentMove) {
@@ -317,6 +334,11 @@ ReturnStatus Node::search() {
 
         // secondary killer move, backup of previous primary killer
         RETURN_CUTOFF (child->searchIfLegal(parent->killer2));
+
+        // repeated killer heuristic (can change while searching descendants of previous killer3)
+        while (isLegalMove(parent->killer3)) {
+            RETURN_CUTOFF (child->searchMove(parent->killer3));
+        }
     }
 
     // going to search only non-captures, mask out remaining unsafe captures to avoid redundant safety checks
