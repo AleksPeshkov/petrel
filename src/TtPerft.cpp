@@ -12,7 +12,7 @@ private:
 
 public:
     constexpr HashBucket() : v{{{0,0}, {0,0}, {0,0}, {0,0}}} {}
-    constexpr const _t& operator[] (Index i) const { return v[i]; }
+    constexpr const _t& operator[] (Index::_t i) const { return v[i]; }
 
     constexpr HashBucket& operator = (const HashBucket& a) {
         v[0] = a[0];
@@ -22,7 +22,7 @@ public:
         return *this;
     }
 
-    constexpr void set(Index i, _t m) {
+    constexpr void set(Index::_t i, _t m) {
         v[i] = m;
     }
 
@@ -57,7 +57,7 @@ public:
     }
 
     constexpr Ply getDepth() const {
-        return {static_cast<Ply::_t>(key & 0xf)};
+        return key & 0xf;
     }
 
 };
@@ -91,7 +91,7 @@ public:
     }
 
     constexpr Ply getDepth() const {
-        return Ply{static_cast<Ply::_t>((nodes & DepthMask) >> DepthShift)};
+        return (nodes & DepthMask) >> DepthShift;
     }
 
     constexpr node_count_t getNodes() const {
@@ -117,7 +117,7 @@ union BucketUnion {
     HashBucket m;
 };
 
-node_count_t TtPerft::get(ZArg z, Ply d) {
+node_count_t TtPerft::get(Z z, Ply d) {
     ++reads;
 
     auto origin = addr<BucketUnion>(z);
@@ -163,7 +163,7 @@ node_count_t TtPerft::get(ZArg z, Ply d) {
     return NodeCountNone;
 }
 
-void TtPerft::set(ZArg z, Ply d, node_count_t n) {
+void TtPerft::set(Z z, Ply d, node_count_t n) {
     ++writes;
 
     auto origin = addr<BucketUnion>(z);

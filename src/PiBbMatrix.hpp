@@ -34,7 +34,7 @@ public:
         }
     }
 
-    constexpr void set(Pi pi, Rank rank, BitRank br) {
+    constexpr void set(Pi pi, Rank::_t rank, BitRank br) {
         //_mm_blendv_epi8
         matrix[rank] = (matrix[rank] % PiMask{pi}) + (PiRank{br} & PiMask{pi});
     }
@@ -45,7 +45,7 @@ public:
         }
     }
 
-    constexpr void add(Pi pi, Rank rank, File file) {
+    constexpr void add(Pi pi, Rank::_t rank, File file) {
         matrix[rank] += PiRank{file} & PiMask{pi};
     }
 
@@ -57,11 +57,11 @@ public:
         return (matrix[Rank{sq}] & PiRank{File{sq}} & PiMask{pi}).any();
     }
 
-    constexpr const PiRank& operator[] (Rank rank) const {
+    constexpr const PiRank& operator[] (Rank::_t rank) const {
         return matrix[rank];
     }
 
-    constexpr PiRank& operator[] (Rank rank) {
+    constexpr PiRank& operator[] (Rank::_t rank) {
         return matrix[rank];
     }
 

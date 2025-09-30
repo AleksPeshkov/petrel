@@ -9,7 +9,7 @@
 /**
  * a bit for each chessboard square of a rank
  */
-class BitRank : public BitSet<BitRank, File::_t, u8_t> {
+class BitRank : public BitSet<BitRank, File, u8_t> {
 public:
     using BitSet::BitSet;
 };
@@ -17,7 +17,7 @@ public:
 /**
  * BitBoard type: a bit for each chessboard square
  */
-class Bb : public BitSet<Bb, Square::_t, u64_t> {
+class Bb : public BitSet<Bb, Square, u64_t> {
     //declared to catch type cast bugs
     Bb (int) = delete;
 
@@ -25,17 +25,15 @@ public:
     constexpr Bb () : BitSet() {}
     constexpr explicit Bb (_t bb) : BitSet{bb} {}
 
-    constexpr explicit Bb (Square sq) : BitSet(sq) {}
-    constexpr explicit Bb (Square::_t sq) : BitSet(sq) {}
-
-    constexpr explicit Bb (File::_t f) : Bb{U64(0x0101010101010101) << f} {}
+    constexpr explicit Bb (Square::_t sq) : BitSet(Square{sq}) {}
+    constexpr explicit Bb (File::_t f) : Bb{U64(0x0101'0101'0101'0101) << f} {}
     constexpr explicit Bb (Rank::_t r) : Bb{U64(0xff) << 8*r} {}
 
     constexpr Bb operator ~ () const { return Bb{::byteswap(v)}; }
 
     void move(Square from, Square to) { assert (from != to); *this -= Bb{from}; *this += Bb{to}; }
 
-    constexpr BitRank operator[] (Rank r) const { return BitRank{small_cast<BitRank::_t>(v >> 8*r)}; }
+    constexpr BitRank operator[] (Rank::_t r) const { return BitRank{small_cast<BitRank::_t>(v >> 8*r)}; }
 
     constexpr Bb pawnAttacks() const { return (*this % Bb{FileA} >> 9u) | (*this % Bb{FileH} >> 7u); }
 
@@ -176,13 +174,13 @@ public:
 
                 switch (CastlingRules::castlingSide(king, rook)) {
                     case QueenSide:
-                        castlingRules[kingFile][rookFile].unimpeded  = (exBetween(king, C1) | exBetween(rook, D1)) % (Bb{king} + Bb{rook});
-                        castlingRules[kingFile][rookFile].unattacked = exBetween(king, C1) | Bb{king};
+                        castlingRules[kingFile][rookFile].unimpeded  = (exBetween(king, Square{C1}) | exBetween(rook, Square{D1})) % (Bb{king} + Bb{rook});
+                        castlingRules[kingFile][rookFile].unattacked = exBetween(king, Square{C1}) | Bb{king};
                         break;
 
                     case KingSide:
-                        castlingRules[kingFile][rookFile].unimpeded  = (exBetween(king, G1) | exBetween(rook, F1)) % (Bb{king} + Bb{rook});
-                        castlingRules[kingFile][rookFile].unattacked = exBetween(king, G1) | Bb{king};
+                        castlingRules[kingFile][rookFile].unimpeded  = (exBetween(king, Square{G1}) | exBetween(rook, Square{F1})) % (Bb{king} + Bb{rook});
+                        castlingRules[kingFile][rookFile].unattacked = exBetween(king, Square{G1}) | Bb{king};
                         break;
                 }
             }
@@ -197,15 +195,15 @@ public:
     }
 
     static constexpr CastlingSide castlingSide(Square king, Square rook) {
-        return (rook < king) ? QueenSide : KingSide;
+        return CastlingSide{rook < king ? QueenSide : KingSide};
     }
 
     static constexpr Square castlingKingTo(Square king, Square rook) {
-        return castlingSide(king, rook).is(QueenSide) ? C1 : G1;
+        return castlingSide(king, rook).is(QueenSide) ? Square{C1} : Square{G1};
     }
 
     static constexpr Square castlingRookTo(Square king, Square rook) {
-        return castlingSide(king, rook).is(QueenSide) ? D1 : F1;
+        return castlingSide(king, rook).is(QueenSide) ? Square{D1} : Square{F1};
     }
 
 };
