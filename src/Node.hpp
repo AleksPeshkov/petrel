@@ -73,9 +73,10 @@ protected:
     /**
      * Killer heuristic
      */
-    mutable Move killer1 = {}; // primary killer, updated by previous siblings
-    mutable Move killer2 = {}; // secondary, backup when primary updated
-    bool canBeKiller = false; // good captures should not waste killer slots
+    mutable Move killer1 = {}; // permanent killer, killer2 should trigger twice to become killer1
+    mutable Move killer2 = {}; // the most fresh killer, always replaced by sibling's fail high
+    mutable Move killer3 = {}; // dynamic killer candidate, write back by descendants
+    bool canBeKiller = false;  // good captures should not waste killer slots
 
     Node (const Node* parent); // prepare empty child node
 
