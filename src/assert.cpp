@@ -4,6 +4,7 @@
 
 #ifndef NDEBUG
 
+#ifndef TEST_ASSERT
 void assert_fail(const char *assertion, const char *file, unsigned int line, const char* func) {
     std::ostringstream oss;
     oss << "Assertion failed: " << func << ": " << assertion << " (" << file << ":" << line << ")";
@@ -21,5 +22,6 @@ void assert_fail(const char *assertion, const char *file, unsigned int line, con
     __builtin_unreachable();
 #endif
 }
+#endif // TEST_ASSERT
 
 #endif
