@@ -29,7 +29,7 @@ public:
 extern const BitReverse bitReverse;
 
 //TRICK: Square operator~ is different
-constexpr Square reverse(Square sq) { return { ~File{sq}, ~Rank{sq} }; }
+constexpr Square reverse(Square sq) { return Square{ ~File{sq}, ~Rank{sq} }; }
 
 struct HyperbolaSq : Square::arrayOf<vu64x2_t> {
     HyperbolaSq () {
@@ -69,7 +69,7 @@ public:
         const auto& sq = hyperbolaSq[from];
 
         // branchless computation
-        Direction dir = (ty == Bishop) ? DiagonalDir : FileDir;
+        Direction dir{ ty == Bishop ? DiagonalDir : FileDir };
 
         const auto& d0 = hyperbolaDir[from][dir];
         const auto& d1 = hyperbolaDir[from][static_cast<direction_t>(dir+1)];

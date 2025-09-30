@@ -6,7 +6,10 @@
 #include "Square.hpp"
 
 // search tree distance in halfmoves
-using Ply = Index<64>;
+class Ply : public Index<64> {
+public:
+    constexpr Ply(int i = 0) : Index<64>(i > 0 ? i : 0) { assertOk(); }
+};
 constexpr Ply::_t MaxPly = Ply::Last; // Ply is limited to [0 .. MaxPly]
 
 using MovesNumber = int; // number of (legal) moves in the position
@@ -65,7 +68,7 @@ enum castling_side_t { KingSide, QueenSide };
 using CastlingSide = IndexChar<2, castling_side_t>;
 template <> io::czstring CastlingSide::The_string;
 
-enum piece_index_t { TheKing }; // king index is always 0
+enum piece_index_t { TheKing, Last = 15 }; // king index is always 0
 using Pi = Index<16, piece_index_t>; //piece index 0..15
 
 enum piece_type_t {
@@ -135,16 +138,16 @@ public:
     // null move
     constexpr Move () = default;
 
-    constexpr Move (Square f, Square t) : from_{f}, to_{t} { static_assert (sizeof(Move) == sizeof(int16_t)); }
+    constexpr Move (Square::_t f, Square::_t t) : from_{f}, to_{t} { static_assert (sizeof(Move) == sizeof(int16_t)); }
 
     // check if move is not null
     constexpr operator bool() const { return !(from_ == 0 && to_ == 0); }
 
     // source square the piece moved from
-    constexpr Square from() const { return from_; }
+    constexpr Square from() const { return Square{from_}; }
 
     // destination square the piece moved to
-    constexpr Square to() const { return to_; }
+    constexpr Square to() const { return Square{to_}; }
 
     friend constexpr bool operator == (Move a, Move b) { return a.from_ == b.from_ && a.to_ == b.to_; }
 };
