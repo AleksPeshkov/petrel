@@ -24,28 +24,30 @@ class Repetitions {
             RepetitionMask mask;
         };
 
+        constexpr static RepIndex Last{RepIndex::Last};
+
         RepIndex::arrayOf<RepEntry> reps;
         int count = 0; // number of entries
-        RepIndex last = RepIndex::Last; // last added entry index
+        RepIndex last{RepIndex::Last}; // last added entry index
 
     public:
         constexpr RepRootSide () { reps[last].mask = {}; }
 
         constexpr void clear() {
             count = 0;
-            last = RepIndex::Last;
+            last = Last;
             reps[last].mask = {};
         }
 
         constexpr void dropLast() {
             if (count == 0) { assert (false); return; }
             count = count-1;
-            last  = last > 0 ? RepIndex{last-1} : RepIndex::Last;
+            last  = last > 0 ? RepIndex{last-1} : Last;
         }
 
         void push(ZArg z) {
             RepetitionMask mask{reps[last].mask, reps[last].z};
-            last  = last < RepIndex::Last ? last+1 : 0;
+            last  = RepIndex{last < Last ? last+1 : 0};
             count = count < RepIndex::Size ? count+1 : count;
             reps[last].z = z;
             reps[last].mask = (count == 1) ? RepetitionMask{} :  mask;
@@ -70,7 +72,7 @@ class Repetitions {
             // copy z elements to the beginning
             for (int i = 0; i < count; ++i) {
                 temp[i] = reps[current].z;
-                current = current < RepIndex::Last ? current+1 : 0;
+                current = current < Last ? current+1 : 0;
             }
 
             RepetitionMask mask{};
@@ -84,11 +86,11 @@ class Repetitions {
             }
 
             count = 0;
-            last = RepIndex::Last;
+            last = Last;
         }
 
         bool has(ZArg z) const {
-            RepIndex i = 0;
+            RepIndex i{0};
             while (true) {
                 if (z == reps[i].z) {
                     return true;
