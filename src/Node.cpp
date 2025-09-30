@@ -32,7 +32,8 @@ Node::Node (const Node* p) :
     alpha{-p->beta}, beta{-p->alpha}, isPv(p->isPv),
     pvIndex{p->pvIndex+1},
     killer1{grandParent ? grandParent->killer1 : Move{}},
-    killer2{grandParent ? grandParent->killer2 : Move{}}
+    killer2{grandParent ? grandParent->killer2 : Move{}},
+    killer3{Move{}}
 {}
 
 ReturnStatus Node::searchRoot() {
@@ -207,8 +208,26 @@ void Node::failHigh() const {
 
 void Node::updateKillerMove(Move newKiller) const {
     if (killer1 != newKiller) {
-        killer2 = killer1;
-        killer1 = newKiller;
+        if (killer2 != newKiller) {
+            if (killer3 != newKiller) {
+                // fresh killer move
+                killer2 = killer1;
+                killer1 = newKiller;
+            } else {
+                // promote killer3 to killer1
+                killer3 = killer2;
+                killer2 = killer1;
+                killer1 = newKiller;
+            }
+        } else {
+            // promote killer2 to killer1
+            killer2 = killer1;
+            killer1 = newKiller;
+        }
+    }
+
+    if (grandParent && grandParent->killer1 != newKiller && grandParent->killer2 != newKiller) {
+        grandParent->killer3 = newKiller;
     }
 
     if (currentMove) {
@@ -359,6 +378,11 @@ ReturnStatus Node::search() {
                     grandParent->colorToMove(), grandParent->MY.typeAt(myMove.from()), myMove.to()
                 ) ));
             }
+        }
+
+        // repeated killer heuristic (can change while searching descendants of previous killer3)
+        while (isLegalMove(parent->killer3)) {
+            RETURN_CUTOFF (child->searchMove(parent->killer3));
         }
     }
 
