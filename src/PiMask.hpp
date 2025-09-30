@@ -10,8 +10,8 @@
 /**
  * class used for enumeration of piece vectors
  */
-class PieceSet : public BitSet<PieceSet, Pi::_t> {
-    using Base = BitSet<PieceSet, Pi::_t>;
+class PieceSet : public BitSet<PieceSet, Pi> {
+    using Base = BitSet<PieceSet, Pi>;
 public:
     using Base::Base;
 
@@ -164,8 +164,8 @@ public:
         return PiMask{::shufflevector(static_cast<vu8x16_t>(pieces), v)};
     }
 
-    Pi operator[] (Pi pi) const {
-        return static_cast<Pi::_t>(::u8(v, pi));
+    constexpr Pi operator[] (Pi pi) const {
+        return Pi{static_cast<Pi::_t>(::u8(v, pi))};
     }
 
     PiOrder& forward(Pi pi) {
