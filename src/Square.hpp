@@ -37,7 +37,7 @@ enum rank_t { Rank8, Rank7, Rank6, Rank5, Rank4, Rank3, Rank2, Rank1, };
 class Rank : public Index<8, rank_t> {
 public:
     using Index::Index;
-    constexpr Rank::_t forward() const { return static_cast<Rank::_t>(v + Rank2 - Rank1); }
+    constexpr Rank forward() const { return Rank{static_cast<Rank::_t>(v + Rank2 - Rank1)}; }
 
     constexpr io::char_type to_char() const { return static_cast<io::char_type>('8' - v); }
     friend ostream& operator << (ostream& out, Rank rank) { return out << rank.to_char(); }
@@ -59,7 +59,7 @@ public:
 
 };
 
-enum square_t {
+enum square_t : u8_t {
     A8, B8, C8, D8, E8, F8, G8, H8,
     A7, B7, C7, D7, E7, F7, G7, H7,
     A6, B6, C6, D6, E6, F6, G6, H6,
@@ -82,18 +82,18 @@ protected:
 public:
     constexpr Square (File::_t file, Rank::_t rank) : Index{static_cast<_t>(file + (rank << RankShift))} {}
 
-    constexpr explicit operator File() const { return static_cast<File::_t>(v & static_cast<_t>(File::Mask)); }
-    constexpr explicit operator Rank() const { return static_cast<Rank::_t>(static_cast<unsigned>(v) >> RankShift); }
+    constexpr explicit operator File() const { return File{static_cast<File::_t>(v & static_cast<_t>(File::Mask))}; }
+    constexpr explicit operator Rank() const { return Rank{static_cast<Rank::_t>(static_cast<unsigned>(v) >> RankShift)}; }
 
     /// flip side of the board
     Square& flip() { v = static_cast<_t>(static_cast<unsigned>(v) ^ RankMask); return *this; }
-    constexpr Square operator ~ () const { return static_cast<_t>(v ^ static_cast<_t>(RankMask)); }
+    constexpr Square operator ~ () const { return Square{static_cast<_t>(v ^ static_cast<_t>(RankMask))}; }
 
     /// move pawn forward
-    constexpr Square rankForward() const { return static_cast<_t>(v + A8 - A7); }
+    constexpr Square rankForward() const { return Square{static_cast<_t>(v + A8 - A7)}; }
 
-    constexpr bool on(Rank rank) const { return Rank{*this} == rank; }
-    constexpr bool on(File file) const { return File{*this} == file; }
+    constexpr bool on(Rank::_t rank) const { return Rank{*this} == rank; }
+    constexpr bool on(File::_t file) const { return File{*this} == file; }
 
     // defined in Bb.hpp
     constexpr Bb rank() const;

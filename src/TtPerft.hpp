@@ -5,8 +5,8 @@
 
 class TtPerft : public Tt {
 public:
-    node_count_t get(ZArg, Ply);
-    void set(ZArg, Ply, node_count_t);
+    node_count_t get(Z, Ply);
+    void set(Z, Ply, node_count_t);
 };
 
 #endif
