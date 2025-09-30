@@ -6,34 +6,44 @@
 #include "bitops.hpp"
 #include "io.hpp"
 
-#define FOR_EACH(Index, i) for (Index i{static_cast<Index::_t>(0)}; i.isOk(); ++i)
+#define FOR_EACH(Index, i) for (Index i; i < Index::Size; ++i)
 
-template <int _Size, typename _element_type = int, int _Mask = _Size-1>
+template <int _Size, typename _element_type = int, typename _storage_type = int>
 class Index {
+    using element_type = _element_type;
+    using storage_t = _storage_type;
 public:
-    using _t = _element_type;
-    enum { Size = _Size, Last = Size-1, Mask = _Mask };
+    using _t = element_type;
+    constexpr static storage_t Size = _Size;
+    constexpr static storage_t Mask =  static_cast<storage_t>(Size-1);
+    constexpr static element_type Last = static_cast<element_type>(_Size-1);
+
     template <typename T> using arrayOf = std::array<T, Size>;
 
 protected:
-    _t v;
+    storage_t v;
 
 public:
-    constexpr Index () : v{static_cast<_t>(_Size)} { static_assert (Size > 1); }
-    constexpr Index (_t i) : v{i} { assertOk(); }
-
-    constexpr operator const _t& () const { return v; }
+    explicit constexpr Index (element_type i = static_cast<element_type>(0)) : v{i} { assertOk(); }
+    constexpr operator element_type () const { assertOk(); return static_cast<element_type>(v); }
 
     constexpr void assertOk() const { assert (isOk()); }
     constexpr bool isOk() const { return static_cast<unsigned>(v) < static_cast<unsigned>(Size); }
 
-    constexpr bool is(_t i) const { return v == i; }
+    constexpr bool is(element_type i) const { return v == i; }
 
-    constexpr Index& operator ++ () { assertOk(); v = static_cast<_t>(v+1); return *this; }
-    constexpr Index& operator -- () { assertOk(); v = static_cast<_t>(v-1); return *this; }
+    constexpr Index& operator ++ () { assertOk(); ++v; return *this; }
+    constexpr Index& operator -- () { assertOk(); --v; return *this; }
+    constexpr Index operator ++ (int) { assertOk(); auto result = Index{v}; ++v; return result; }
+    constexpr Index operator -- (int) { assertOk(); auto result = Index{v}; --v; return result; }
 
-    constexpr Index& flip() { assertOk(); v = static_cast<_t>(v ^ static_cast<_t>(Mask)); return *this; }
-    constexpr Index operator ~ () const { return Index{v}.flip(); }
+    constexpr Index& flip() { assertOk(); v = v ^ Mask; return *this; }
+    constexpr Index operator ~ () const { return Index{static_cast<Index::_t>(v)}.flip(); }
+
+    friend bool operator < (Index a, Index b) { b.assertOk(); return a.v < b.v; }
+    friend bool operator <= (Index a, Index b) { b.assertOk(); return a.v <= b.v; }
+    friend bool operator < (Index a, storage_t b) { return a.v < b; }
+    friend bool operator <= (Index a, storage_t b) { return a.v <= b; }
 
     friend ostream& operator << (ostream& out, Index& index) { return out << static_cast<int>(index.v); }
 
@@ -42,14 +52,14 @@ public:
         auto before = in.tellg();
         in >> n;
         if (n < 0 || Last < n) { return io::fail_pos(in, before); }
-        index.v = static_cast<Index::_t>(n);
+        index.v = n;
         return in;
     }
 };
 
-template <int _Size, typename _element_type = int, int _Mask = _Size-1>
-class IndexChar : public Index<_Size, _element_type, _Mask> {
-    using Base = Index<_Size, _element_type, _Mask>;
+template <int _Size, typename _element_type = int, typename _storage_type = int>
+class IndexChar : public Index<_Size, _element_type, _storage_type> {
+    using Base = Index<_Size, _element_type, _storage_type>;
     using Base::v;
 
     static io::czstring The_string;
@@ -58,7 +68,6 @@ public:
     using typename Base::_t;
     using Base::Base;
     using Base::assertOk;
-    constexpr operator const _t& () const { return v; }
 
     constexpr io::char_type to_char() const { return The_string[v]; }
     friend ostream& operator << (ostream& out, IndexChar index) { return out << index.to_char(); }
@@ -72,7 +81,7 @@ public:
         return true;
     }
 
-    friend istream& read(istream& in, IndexChar& index) {
+    friend istream& operator >> (istream& in, IndexChar& index) {
         io::char_type c;
         if (in.get(c)) {
             if (!index.from_char(c)) { io::fail_char(in); }

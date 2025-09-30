@@ -24,12 +24,6 @@ class PositionSide {
     Evaluation evaluation_; // PST incremental evaluation
     Square opKing; // square of the opponent's king (from current side point of view)
 
-    void move(Pi, PieceType, Square, Square);
-    void updateMovedKing(Square);
-    void setLeaperAttacks();
-    void setLeaperAttack(Pi, PieceType, Square);
-    void setPinner(Pi, PieceType, Square);
-
     #ifdef NDEBUG
         void assertOk(Pi) const {}
         void assertOk(Pi, PieceType, Square) const {}
@@ -37,6 +31,12 @@ class PositionSide {
         void assertOk(Pi) const;
         void assertOk(Pi, PieceType, Square) const;
     #endif
+
+    void move(Pi, PieceType, Square, Square);
+    void updateMovedKing(Square);
+    void setLeaperAttacks();
+    void setLeaperAttack(Pi, PieceType, Square);
+    void setPinner(Pi, SliderType, Square);
 
 public:
     constexpr const PiBbMatrix& attacks() const { return attacks_; }
@@ -55,7 +55,7 @@ public:
 
     bool has(Square sq) const { assert (bbSide_.has(sq) == squares.has(sq)); return bbSide_.has(sq); }
     Square squareOf(Pi pi) const { assertOk(pi); return squares.squareOf(pi); }
-    Square kingSquare() const { return squareOf(TheKing); }
+    Square kingSquare() const { return squareOf(Pi{TheKing}); }
 
     // mask of all pieces of the given side
     PiMask pieces() const { assert (squares.pieces() == types.pieces()); return squares.pieces(); }

@@ -21,8 +21,10 @@ TAG_DEBUG = $(BUILD_DIR)/.debug
 # === Set Flags Based on Tags ===
 ifeq ($(wildcard $(TAG_TEST)), $(TAG_TEST))
 	BUILD_FLAGS = -Og -ggdb -DDEBUG -DENABLE_ASSERT_LOGGING
+	BUILD_FLAGS += -fsanitize=address,undefined
 else ifeq ($(wildcard $(TAG_DEBUG)), $(TAG_DEBUG))
 	BUILD_FLAGS = -O0 -ggdb -DDEBUG -DENABLE_ASSERT_LOGGING
+	BUILD_FLAGS += -fsanitize=address,undefined
 endif
 
 CXXFLAGS = $(BUILD_FLAGS) -std=c++20 -mssse3 -march=native -mtune=native -fno-exceptions -fno-rtti
@@ -45,16 +47,16 @@ endif
 WARNINGS = -Wall -Wpedantic -Wextra
 WARNINGS += -Wno-ignored-attributes
 WARNINGS += -Wuninitialized -Wcast-qual -Wshadow -Wmissing-declarations -Wstrict-aliasing=1 -Wstrict-overflow=5 -Wsign-promo
-WARNINGS += -Wpacked -Wdisabled-optimization -Wredundant-decls -Winvalid-constexpr -Wextra-semi -Wsuggest-override
+WARNINGS += -Wpacked -Wdisabled-optimization -Wredundant-decls -Wextra-semi -Wsuggest-override
 #WARNINGS += -Winline
 
 ifeq ($(CXX), g++)
 	CXXFLAGS += -flax-vector-conversions
-	WARNINGS += -Wno-class-memaccess -Wno-packed-bitfield-compat
+	WARNINGS += -Wno-class-memaccess -Wno-invalid-constexpr
 	WARNINGS += -Wuseless-cast -Wcast-align=strict -Wsuggest-final-types -Wsuggest-final-methods
 	WARNINGS += -Wnormalized -Wunsafe-loop-optimizations -Wvector-operation-performance
 else ifeq ($(CXX), clang)
-	WARNINGS += -Wcast-align -Wconditional-uninitialized -Wmissing-prototypes -Wconversion
+	WARNINGS += -Wcast-align -Wconditional-uninitialized -Wmissing-prototypes -Wconversion -Winvalid-constexpr
 endif
 
 CXXFLAGS += $(WARNINGS)

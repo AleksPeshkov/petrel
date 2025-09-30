@@ -64,12 +64,12 @@ ReturnStatus NodePerft::visitMove(Square from, Square to) {
             RETURN_IF_STOP (root.limits.countNode());
             makeMoveNoZobrist(parent, from, to);
 
-            perft = static_cast<TtPerft&>(root.tt).get(zobrist(), {draft - 2});
+            perft = static_cast<TtPerft&>(root.tt).get(zobrist(), draft-2);
 
             if (perft == NodeCountNone) {
                 perft = 0;
                 RETURN_IF_STOP(visit());
-                static_cast<TtPerft&>(root.tt).set(zobrist(), {draft - 2}, perft);
+                static_cast<TtPerft&>(root.tt).set(zobrist(), draft-2, perft);
             }
         }
     }
