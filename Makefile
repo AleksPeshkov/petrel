@@ -8,8 +8,9 @@ CXX = clang++
 RM = rm -rf
 MKDIR = mkdir -p
 SRC_DIR ?= src
-TEST_DIR ?= test
+TEST_DIR ?= tests/integration
 EXPECT ?= $(TEST_DIR)/expect.sh
+UNIT_TEST_DIR = tests/unit
 
 # === Default Flags (Release) ===
 BUILD_FLAGS = -Ofast -flto -finline-functions -DNDEBUG
@@ -82,19 +83,19 @@ default: _clear_console $(BUILD_DIR) $(TARGET)
 
 release: $(BUILD_DIR)
 	if [ -f $(TAG_TEST) ] || [ -f $(TAG_DEBUG) ]; then $(RM) $(BUILD_DIR); fi
-	$(MKDIR) $(BUILD_DIR)
+	@$(MKDIR) $(BUILD_DIR)
 	$(MAKE_TARGET)
 
 test: $(BUILD_DIR)
 	if [ ! -f $(TAG_TEST) ]; then $(RM) $(BUILD_DIR); fi
-	$(MKDIR) $(BUILD_DIR)
-	touch $(TAG_TEST)
+	@$(MKDIR) $(BUILD_DIR)
+	@touch $(TAG_TEST)
 	$(MAKE_TARGET)
 
 debug: $(BUILD_DIR)
 	if [ ! -f $(TAG_DEBUG) ]; then $(RM) $(BUILD_DIR); fi
-	$(MKDIR) $(BUILD_DIR)
-	touch $(TAG_DEBUG)
+	@$(MKDIR) $(BUILD_DIR)
+	@touch $(TAG_DEBUG)
 	$(MAKE_TARGET)
 
 clean:
@@ -107,6 +108,9 @@ run: default
 check: test _clear_console
 	$(EXPECT) $(TARGET) $(TEST_DIR)/test.rc
 
+unit:
+	@cd $(UNIT_TEST_DIR) && $(MAKE) -s run > /dev/null || true
+
 _clear_console:
 	clear
 
@@ -116,13 +120,13 @@ $(TARGET): $(PRECOMP) $(OBJECTS)
 	$(CXX) -o $@ $(LDFLAGS) $(OBJECTS)
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp $(PRECOMP)
-	$(CXX) -c -o $@ $< -MMD -include $(HEADER_SRC) -Winvalid-pch $(CXXFLAGS)
+	$(CXX) -c -o $@ $< -MMD -MP -include $(HEADER_SRC) -Winvalid-pch $(CXXFLAGS)
 
 $(PRECOMP): $(HEADER_SRC) | $(BUILD_DIR)
 	$(CXX) -o $@ $< -MD $(CXXFLAGS)
 
 $(BUILD_DIR): Makefile
-	$(RM) $@
-	$(MKDIR) $@
+	@$(RM) $@
+	@$(MKDIR) $@
 
 -include $(DEPS)
