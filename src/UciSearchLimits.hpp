@@ -45,7 +45,7 @@ class UciSearchLimits {
         rootMoveDeadline = TimePoint::max();
     }
 
-    constexpr TimeInterval average(Side my) const {
+    constexpr TimeInterval average(Side::_t my) const {
         auto moves = (movestogo > 0) ? movestogo : 30;
         return (time[my] - inc[my]) / moves + inc[my];
     }
@@ -108,7 +108,7 @@ class UciSearchLimits {
     }
 
 public:
-    Ply depth = {MaxPly};
+    Ply depth{MaxPly};
 
     bool canPonder{false};
 
@@ -124,7 +124,7 @@ public:
         movetime = 0ms;
         time = {{ 0ms, 0ms }};
         inc = {{ 0ms, 0ms }};
-        depth = {MaxPly};
+        depth = MaxPly;
         movestogo = 0;
         mate = 0;
         stop_.store(false, std::memory_order_relaxed);

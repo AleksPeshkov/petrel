@@ -9,8 +9,8 @@ class Uci;
 
 class UciPosition : public PositionMoves {
     int fullMoveNumber = 1; // number of full moves from the beginning of the game
-    Color colorToMove_ = White; //root position side to move color
-    ChessVariant chessVariant_ = Orthodox; // castling moves and fen output format, engine accepts any castling input
+    Color colorToMove_{White}; //root position side to move color
+    ChessVariant chessVariant_{Orthodox}; // castling moves and fen output format, engine accepts any castling input
 
     istream& readBoard(istream&);
     istream& readCastling(istream&);
@@ -29,7 +29,7 @@ public:
     void playMoves(istream&, Repetitions&);
     void limitMoves(istream&);
 
-    constexpr Side sideOf(Color color) const { return colorToMove_.is(color) ? My : Op; }
+    constexpr Side sideOf(Color::_t color) const { return Side{colorToMove_.is(color) ? My : Op}; }
     constexpr Color colorToMove() const { return colorToMove_; }
     constexpr ChessVariant chessVariant() const { return chessVariant_; }
     constexpr void setChessVariant(ChessVariant v) { chessVariant_ = v; }

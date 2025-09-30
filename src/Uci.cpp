@@ -159,8 +159,8 @@ void Uci::setoption() {
     if (consume("UCI_Chess960")) {
         consume("value");
 
-        if (consume("true"))  { position_.setChessVariant(Chess960); return; }
-        if (consume("false")) { position_.setChessVariant(Orthodox); return; }
+        if (consume("true"))  { position_.setChessVariant(ChessVariant{Chess960}); return; }
+        if (consume("false")) { position_.setChessVariant(ChessVariant{Orthodox}); return; }
 
         io::fail_rewind(inputLine);
         return;
@@ -300,7 +300,7 @@ void Uci::ponderhit() {
 void Uci::goPerft() {
     Ply depth;
     inputLine >> depth;
-    depth = std::min<Ply>(depth, {18}); // current Tt implementation limit
+    depth = std::min<Ply>(depth, 18); // current Tt implementation limit
 
     limits.clear();
     mainSearchThread.start([this, depth] {

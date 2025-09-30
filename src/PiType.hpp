@@ -49,7 +49,7 @@ class PiType {
     constexpr vu8x16_t vector(PieceType::_t ty) const { return vector(element(ty)); }
 
     constexpr bool has(Pi pi, element_type e) const { assertOk(pi); return (static_cast<u8_t>(type[pi]) & static_cast<u8_t>(e)) != 0; }
-    constexpr bool is(Pi pi, PieceType ty) const { assertOk(pi);  return has(pi, element(ty)); }
+    constexpr bool is(Pi pi, PieceType::_t ty) const { assertOk(pi);  return has(pi, element(ty)); }
     PiMask any(element_type e) const { return PiMask::any(vu8x16 & vector(e)); }
 
 public:
@@ -68,7 +68,7 @@ public:
         constexpr void assertOk(Pi pi) const { assert (isOk(pi)); }
     #endif
 
-    constexpr void drop(Pi pi, PieceType ty) { assert (isEmpty(pi)); assert (pi != TheKing || ty == King); type[pi] = element(ty); }
+    constexpr void drop(Pi pi, PieceType::_t ty) { assert (isEmpty(pi)); assert (pi != TheKing || ty == King); type[pi] = element(ty); }
     constexpr void clear(Pi pi) { assertOk(pi); assert (pi != TheKing); assert (!is(pi, King)); type[pi] = Type::Empty; }
     constexpr void promote(Pi pi, PromoType::_t ty) { assert (isPawn(pi)); type[pi] = element(ty); }
 
@@ -76,10 +76,10 @@ public:
     constexpr bool isPawn(Pi pi) const { return is(pi, Pawn); }
     constexpr bool isRook(Pi pi) const { return is(pi, Rook); }
     constexpr bool isSlider(Pi pi) const { assertOk(pi); return has(pi, Type::Slider); }
-    PieceType typeOf(Pi pi) const { assertOk(pi); return static_cast<PieceType::_t>( ::lsb(static_cast<unsigned>(type[pi])) ); }
+    PieceType typeOf(Pi pi) const { assertOk(pi); return PieceType{static_cast<PieceType::_t>( ::lsb(static_cast<unsigned>(type[pi])) )}; }
 
     PiMask pieces() const { return PiMask::any(vu8x16); }
-    PiMask piecesOfType(PieceType ty) const { assert (!ty.is(King)); return any(element(ty)); }
+    PiMask piecesOfType(PieceType::_t ty) const { assert (!PieceType{ty}.is(King)); return any(element(ty)); }
     PiMask sliders() const { return any(Type::Slider); }
     PiMask leapers() const { return any(Type::Leaper); }
 

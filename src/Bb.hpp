@@ -9,7 +9,7 @@
 /**
  * a bit for each chessboard square of a rank
  */
-class BitRank : public BitSet<BitRank, File::_t, u8_t> {
+class BitRank : public BitSet<BitRank, File, u8_t> {
 public:
     using BitSet::BitSet;
 };
@@ -17,7 +17,7 @@ public:
 /**
  * BitBoard type: a bit for each chessboard square
  */
-class Bb : public BitSet<Bb, Square::_t, u64_t> {
+class Bb : public BitSet<Bb, Square, u64_t> {
     //declared to catch type cast bugs
     Bb (int) = delete;
 
@@ -25,8 +25,7 @@ public:
     constexpr Bb () : BitSet() {}
     constexpr explicit Bb (_t bb) : BitSet{bb} {}
 
-    constexpr explicit Bb (Square sq) : BitSet(sq) {}
-    constexpr explicit Bb (Square::_t sq) : BitSet(sq) {}
+    constexpr explicit Bb (Square::_t sq) : BitSet(Square{sq}) {}
 
     constexpr explicit Bb (File::_t f) : Bb{U64(0x0101010101010101) << f} {}
     constexpr explicit Bb (Rank::_t r) : Bb{U64(0xff) << 8*r} {}
@@ -36,9 +35,9 @@ public:
 
     constexpr Bb operator ~ () const { return Bb{::byteswap(v)}; }
 
-    void move(Square from, Square to) { assert (from != to); *this -= Bb{from}; *this += Bb{to}; }
+    void move(Square::_t from, Square::_t to) { assert (from != to); *this -= Bb{from}; *this += Bb{to}; }
 
-    constexpr BitRank operator[] (Rank r) const { return BitRank{small_cast<BitRank::_t>(v >> 8*r)}; }
+    constexpr BitRank operator[] (Rank::_t r) const { return BitRank{small_cast<BitRank::_t>(v >> 8*r)}; }
 
     constexpr Bb pawnAttacks() const { return (*this % Bb{FileA} >> 9u) | (*this % Bb{FileH} >> 7u); }
 
@@ -114,7 +113,7 @@ public:
         }
     }
 
-    constexpr const Bb& operator() (Square from, Square to) const { return inBetween[from][to]; }
+    constexpr const Bb& operator() (Square::_t from, Square::_t to) const { return inBetween[from][to]; }
 
 };
 
@@ -143,7 +142,7 @@ public:
         }
     }
 
-    constexpr const Bb& operator() (PieceType ty, Square sq) const { return attack[ty][sq]; }
+    constexpr const Bb& operator() (PieceType::_t ty, Square sq) const { return attack[ty][sq]; }
 };
 
 extern const AttacksFrom attacksFrom;
@@ -156,7 +155,7 @@ class CastlingRules {
 
     File::arrayOf< File::arrayOf<Rules> > castlingRules;
 
-    static constexpr Bb exBetween(Square king, Square rook) { return ::inBetween(king, rook) + Bb{rook}; }
+    static constexpr Bb exBetween(Square king, Square::_t rook) { return ::inBetween(king, rook) + Bb{rook}; }
 
 public:
     constexpr CastlingRules () {
@@ -193,16 +192,16 @@ public:
         return (occupied & castlingRules[File{king}][File{rook}].unimpeded).none() && (attacked & castlingRules[File{king}][File{rook}].unattacked).none();
     }
 
-    static constexpr CastlingSide castlingSide(Square king, Square rook) {
-        return (rook < king) ? QueenSide : KingSide;
+    static constexpr CastlingSide castlingSide(Square::_t king, Square::_t rook) {
+        return CastlingSide{rook < king ? QueenSide : KingSide};
     }
 
-    static constexpr Square castlingKingTo(Square king, Square rook) {
-        return castlingSide(king, rook).is(QueenSide) ? C1 : G1;
+    static constexpr Square castlingKingTo(Square::_t king, Square::_t rook) {
+        return Square{castlingSide(king, rook).is(QueenSide) ? C1 : G1};
     }
 
-    static constexpr Square castlingRookTo(Square king, Square rook) {
-        return castlingSide(king, rook).is(QueenSide) ? D1 : F1;
+    static constexpr Square castlingRookTo(Square::_t king, Square::_t rook) {
+        return Square{castlingSide(king, rook).is(QueenSide) ? D1 : F1};
     }
 
 };
