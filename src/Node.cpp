@@ -36,7 +36,7 @@ Node::Node (const Node* p) :
 
 ReturnStatus Node::searchRoot() {
     auto rootMovesClone = moves();
-    repMask = root.repetitions.repMask(colorToMove());
+    repetitionHash = root.repetitions.repetitionHash(colorToMove());
     origin = root.tt.prefetch<TtSlot>(zobrist());
 
     if (root.limits.isIterationDeadline()) {
@@ -138,9 +138,9 @@ ReturnStatus Node::searchMove(Move move) {
     parent->currentMove = move;
     makeMove(from, to);
 
-    if (rule50() < 2) { repMask = RepetitionMask{}; }
-    else if (grandParent) { repMask = RepetitionMask{grandParent->repMask, grandParent->zobrist()}; }
-    else { repMask = root.repetitions.repMask(colorToMove()); }
+    if (rule50() < 2) { repetitionHash = RepetitionHash{}; }
+    else if (grandParent) { repetitionHash = RepetitionHash{grandParent->repetitionHash, grandParent->zobrist()}; }
+    else { repetitionHash = root.repetitions.repetitionHash(colorToMove()); }
 
     return parent->negamax(this);
 }
@@ -600,7 +600,7 @@ bool Node::isRepetition() const {
             if (next->zobrist() == z) {
                 return true;
             }
-            if (!next->repMask.has(z)) {
+            if (!next->repetitionHash.has(z)) {
                 return false;
             }
         }
