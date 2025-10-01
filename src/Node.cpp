@@ -361,8 +361,11 @@ ReturnStatus Node::search() {
     PiMask safePieces = {};
     PiMask figures = MY.figures();
 
-    // Late Move Reductions
+    // Late Move Reductions: !isPv && !inCheck() && draft >= 2
     bool lmr = !isPv && !inCheck() && draft >= 2;
+
+    // Late Move Pruning: !isPv && !inCheck() && draft <= 2
+    bool lmp = !isPv && !inCheck() && draft <= 2;
 
     // quiet non-pawn, non-king moves from unsafe to safe squares
     // skip king moves because they are safe anyway (unless in check)
@@ -432,24 +435,28 @@ ReturnStatus Node::search() {
         }
     }
 
-    // king quiet moves (always safe)
+    // king quiet moves, castling is rook move
     {
         // reduce king moves more in middle game
         Ply R{(MY.evaluation().piecesMat() > 16) ? 3 : 2};
 
-        Square from = MY.kingSquare();
-        for (Square to : movesOf(Pi{TheKing})) {
-            RETURN_CUTOFF (child->searchMove({from, to}, lmr ? R : Ply{1}));
+        if (!lmp || R == 2 || movesMade() == 0) { // late move pruning
+            Square from = MY.kingSquare();
+            for (Square to : movesOf(Pi{TheKing})) {
+                RETURN_CUTOFF (child->searchMove({from, to}, lmr ? R : Ply{1}));
+            }
         }
     }
 
-    // all remaining unsorted moves
-    for (PiMask pieces = figures; pieces.any(); ) {
-        Pi pi = pieces.leastValuable(); pieces -= pi;
+    if (!lmp || movesMade() == 0) { // late move pruning
+        // unsafe (losing) non-captures
+        for (PiMask pieces = figures; pieces.any(); ) {
+            Pi pi = pieces.leastValuable(); pieces -= pi;
 
-        Square from = MY.squareOf(pi);
-        for (Square to : movesOf(pi)) {
-            RETURN_CUTOFF (child->searchMove({from, to}, Ply{lmr ? 4 : 1}));
+            Square from = MY.squareOf(pi);
+            for (Square to : movesOf(pi)) {
+                RETURN_CUTOFF (child->searchMove({from, to}, Ply{lmr ? 4 : 1}));
+            }
         }
     }
 
