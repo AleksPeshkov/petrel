@@ -22,25 +22,30 @@ public:
 
 // triangular array
 class CACHE_ALIGN PvMoves {
-    Ply::arrayOf< Ply::arrayOf<UciMove> > pv;
+    static constexpr auto triangularArraySize = (Ply::Last+1) * (Ply::Last+2) / 2;
+public:
+    using Index = ::Index<triangularArraySize>;
+    Index::arrayOf<UciMove> pv;
 
 public:
     PvMoves () { clear(); }
 
     void clear() { std::memset(&pv, 0, sizeof(pv)); }
 
-    void set(Ply ply, UciMove move) {
-        pv[ply][0] = move;
-        auto target = &pv[ply][1];
-        auto source = &pv[ply+1][0];
-        while ((*target++ = *source++));
-        pv[ply+1][0] = {};
+    void clearPly(Index i) { pv[i] = UciMove{}; }
+
+    Index set(Index parent, UciMove move, Index child) {
+        pv[parent++] = move;
+        assert (parent <= child);
+        while ((pv[parent++] = pv[child++]));
+        pv[parent] = UciMove{};
+        return parent; // new child index
     }
 
-    operator const UciMove* () const { return &pv[0][0]; }
+    operator const UciMove* () const { return &pv[0]; }
 
     friend ostream& operator << (ostream& out, const PvMoves& pvMoves) {
-        return out << &pvMoves.pv[0][0];
+        return out << static_cast<const UciMove*>(pvMoves);
     }
 };
 
