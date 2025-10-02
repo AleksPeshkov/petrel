@@ -8,13 +8,11 @@
 #define assert(expr) \
     do { \
         if (!(expr)) { \
-            assert_fail(#expr, __FILE__, __LINE__); \
+            assert_fail(#expr, __FILE__, __LINE__, __PRETTY_FUNCTION__); \
         } \
     } while (false)
 
-void assert_fail(const char *assertion, const char *file, unsigned int line);
-void setup_signal_handler();
+void assert_fail(const char *assertion, const char *file, unsigned int line, const char *function);
 
-#endif
-
-#endif
+#endif // NDEBUG
+#endif // ASSERT_HPP

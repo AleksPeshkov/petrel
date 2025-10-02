@@ -43,10 +43,6 @@ void io::log(const std::string& message) {
 }
 
 int main(int argc, const char* argv[]) {
-#ifndef NDEBUG
-    setup_signal_handler();
-#endif
-
     if (argc > 1) {
         std::string option = argv[1];
 
