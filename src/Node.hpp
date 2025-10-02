@@ -4,6 +4,7 @@
 #include "PositionMoves.hpp"
 #include "Repetitions.hpp"
 #include "UciMove.hpp"
+#include "Uci.hpp"
 
 class Node;
 
@@ -63,6 +64,7 @@ protected:
     mutable Score score = NoScore; // best score found so far
 
     mutable Move currentMove = {}; // last move made from *this into *child
+    PvMoves::Index pvIndex{0}; // start of subPV for the current ply
 
     /**
      * Killer heuristic
@@ -78,7 +80,7 @@ protected:
     void failHigh() const;
     void updateKillerMove(Move) const;
 
-    void updatePv() const;
+    void updatePv(Node* child) const;
     void refreshTtPv();
 
     [[nodiscard]] ReturnStatus search();
@@ -95,7 +97,7 @@ protected:
     }
 
     [[nodiscard]] ReturnStatus searchMove(Move move);
-    void makeMove(Move move);
+    void makeMove(Square from, Square to);
 
     // convert internal move to be printable in UCI format
     UciMove uciMove(Move move) const;
