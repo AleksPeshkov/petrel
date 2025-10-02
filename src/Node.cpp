@@ -24,10 +24,11 @@ TtSlot::TtSlot (const Node* n, Bound b) : TtSlot{
 
 Node::Node (const PositionMoves& p, const Uci& r) : PositionMoves{p}, root{r} {}
 
-Node::Node (const Node* n) :
-    PositionMoves{}, root{n->root}, parent{n}, grandParent{n->parent},
-    ply{n->ply + 1}, draft{n->draft > 0 ? n->draft-1 : 0},
-    alpha{-n->beta}, beta{-n->alpha},
+Node::Node (const Node* p) :
+    PositionMoves{}, root{p->root}, parent{p}, grandParent{p->parent},
+    ply{p->ply + 1}, draft{p->draft > 0 ? p->draft-1 : 0},
+    alpha{-p->beta}, beta{-p->alpha},
+    pvIndex{p->pvIndex+1},
     killer1{grandParent ? grandParent->killer1 : Move{}},
     killer2{grandParent ? grandParent->killer2 : Move{}}
 {}
@@ -57,7 +58,7 @@ ReturnStatus Node::searchRoot() {
                     Node node{this};
                     const auto child = &node;
 
-                    child->makeMove(ttMove);
+                    child->makeMove(ttMove.from(), ttMove.to());
                     ++root.tt.reads;
                     child->ttSlot = *child->origin;
                     child->isHit = (child->ttSlot == child->zobrist());
@@ -67,7 +68,8 @@ ReturnStatus Node::searchRoot() {
                             child->generateMoves();
                             if (child->isLegalMove(ttMove2)) {
                                 ++root.tt.hits;
-                                root.pvMoves.set(1, child->uciMove(ttMove2));
+                                root.pvMoves.clearPly(PvMoves::Index{child->pvIndex+1});
+                                root.pvMoves.set(child->pvIndex, child->uciMove(ttMove2), PvMoves::Index{child->pvIndex+1});
                             }
                         }
                     }
@@ -75,7 +77,7 @@ ReturnStatus Node::searchRoot() {
 
                 ++root.tt.hits;
                 root.pvScore = ttSlot.score(ply);
-                root.pvMoves.set(0, uciMove(ttMove));
+                root.pvMoves.set(pvIndex, uciMove(ttMove), PvMoves::Index{pvIndex+1});
                 io::log("#no time, return move from TT");
                 return ReturnStatus::Stop;
             }
@@ -120,25 +122,25 @@ ReturnStatus Node::searchRoot() {
     }
 }
 
-void Node::makeMove(Move move) {
-    Square from = move.from();
-    Square to = move.to();
-
-    parent->currentMove = move;
-    parent->clearMove(from, to);
+void Node::makeMove(Square from, Square to) {
     Position::makeMove(parent, from, to);
     origin = root.tt.prefetch<TtSlot>(zobrist());
+    root.pvMoves.clearPly(pvIndex);
 }
 
 ReturnStatus Node::searchMove(Move move) {
     RETURN_IF_STOP (root.limits.countNode());
-    makeMove(move);
+
+    Square from = move.from();
+    Square to = move.to();
+    parent->clearMove(from, to);
+    parent->currentMove = move;
+    makeMove(from, to);
 
     if (rule50() < 2) { repMask = RepetitionMask{}; }
     else if (grandParent) { repMask = RepetitionMask{grandParent->repMask, grandParent->zobrist()}; }
     else { repMask = root.repetitions.repMask(colorToMove()); }
 
-    root.pvMoves.set(ply, UciMove{});
     return parent->negamax(this);
 }
 
@@ -160,7 +162,7 @@ ReturnStatus Node::negamax(Node* child) const {
             }
 
             alpha = score;
-            updatePv();
+            updatePv(child);
         }
     }
 
@@ -193,8 +195,8 @@ void Node::updateKillerMove(Move newKiller) const {
     }
 }
 
-void Node::updatePv() const {
-    root.pvMoves.set(ply, uciMove(currentMove));
+void Node::updatePv(Node* child) const {
+    child->pvIndex = root.pvMoves.set(pvIndex, uciMove(currentMove), child->pvIndex);
     *origin = TtSlot{this, ExactScore};
     ++root.tt.writes;
 
