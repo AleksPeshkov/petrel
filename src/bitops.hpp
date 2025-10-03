@@ -1,10 +1,10 @@
 #ifndef BIT_OPS_HPP
 #define BIT_OPS_HPP
 
+#include <algorithm>
 #include <bit>
-#include <climits>
 #include <cstdint>
-#include <type_traits>
+#include <cstring>
 #include "assert.hpp"
 
 using std::size_t;
