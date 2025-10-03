@@ -1,7 +1,6 @@
 #ifndef EVALUATION_HPP
 #define EVALUATION_HPP
 
-#include <algorithm>
 #include "io.hpp"
 #include "typedefs.hpp"
 
