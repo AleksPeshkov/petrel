@@ -1,10 +1,8 @@
 #ifndef UCI_HPP
 #define UCI_HPP
 
-#include <atomic>
 #include <fstream>
 #include <mutex>
-#include <string>
 #include "io.hpp"
 #include "Repetitions.hpp"
 #include "Thread.hpp"
