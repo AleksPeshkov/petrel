@@ -1,7 +1,6 @@
 #ifndef UCI_SEARCH_LIMITS_HPP
 #define UCI_SEARCH_LIMITS_HPP
 
-#include <atomic>
 #include "typedefs.hpp"
 #include "chrono.hpp"
 #include "Thread.hpp"
