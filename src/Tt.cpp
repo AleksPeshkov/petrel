@@ -1,5 +1,3 @@
-#include <algorithm>
-#include <cstring>
 #include "Tt.hpp"
 #include "bitops.hpp"
 #include "memory.hpp"
