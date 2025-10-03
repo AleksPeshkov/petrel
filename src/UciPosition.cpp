@@ -12,8 +12,10 @@ class FenToBoard {
                 return Rank{sq1} < Rank{sq2}; //Rank8 < Rank1
             }
             else {
+                // FileD > FileE > FileC > FileF > FileB > FileG > FileA > FileH
+                // order gains a few Elo
                 constexpr Rank::arrayOf<int> order{6, 4, 2, 0, 1, 3, 5, 7};
-                return order[File{sq1}] < order[File{sq2}]; //FileD < FileE < FileC < FileF < FileB < FileG < FileA < FileH
+                return order[File{sq1}] < order[File{sq2}];
             }
         }
     };
