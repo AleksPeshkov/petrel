@@ -2,7 +2,6 @@
 #define INDEX_HPP
 
 #include <array>
-#include <cstring>
 #include "bitops.hpp"
 #include "io.hpp"
 
