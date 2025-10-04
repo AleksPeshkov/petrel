@@ -5,21 +5,23 @@
     if (returnStatus == ReturnStatus::Stop) { return ReturnStatus::Stop; } \
     if (returnStatus == ReturnStatus::BetaCutoff) { return ReturnStatus::BetaCutoff; }} ((void)0)
 
-TtSlot::TtSlot (Z z, Move move, Score score, Bound b, Ply d) : s{
+TtSlot::TtSlot (Z z, Move move, Score score, Bound bound, Ply draft, bool canBeKiller) : s{
     move.from(),
     move.to(),
     score,
-    b,
-    static_cast<unsigned>(d),
+    bound,
+    static_cast<unsigned>(draft),
+    canBeKiller,
     static_cast<unsigned>(z >> DataBits)
 } {}
 
-TtSlot::TtSlot (const Node* n, Bound b) : TtSlot{
+TtSlot::TtSlot (const Node* n) : TtSlot{
     n->zobrist(),
     n->currentMove,
     n->score.toTt(n->ply),
-    b,
-    n->draft
+    n->bound,
+    n->draft,
+    n->canBeKiller
 } {}
 
 Node::Node (const PositionMoves& p, const Uci& r) : PositionMoves{p}, root{r} {}
@@ -112,7 +114,7 @@ ReturnStatus Node::searchRoot() {
     const Move* pv = root.pvMoves;
     for (Move move; (move = *pv++);) {
         auto o = root.tt.addr<TtSlot>(pos.zobrist());
-        *o = TtSlot{pos.zobrist(), move, s, ExactScore, d};
+        *o = TtSlot{pos.zobrist(), move, s, ExactScore, d, false};
         ++root.tt.writes;
 
         //we cannot use makeZobrist() because of en passant legality validation
@@ -171,7 +173,6 @@ ReturnStatus Node::negamax(Node* child) const {
         }
 
         score = childScore;
-        alphaImproved = true;
         alpha = childScore;
         child->beta = -alpha;
         updatePv(child);
@@ -191,15 +192,11 @@ ReturnStatus Node::negamax(Node* child) const {
 }
 
 void Node::failHigh() const {
-    *origin = TtSlot{this, FailHigh};
+    bound = FailHigh;
+    *origin = TtSlot{this};
     ++root.tt.writes;
 
     if (parent && canBeKiller) {
-        if (movesMade() == 1 && isHit && Move{ttSlot} && !isNonCapture(currentMove)) {
-            // do not pollute killers with captures from TT move
-            //TODO: test and skip only good captures as killers
-            return;
-        }
         assert (currentMove);
         parent->updateKillerMove(currentMove);
     }
@@ -218,8 +215,15 @@ void Node::updateKillerMove(Move newKiller) const {
 
 void Node::updatePv(Node* child) const {
     child->pvIndex = root.pvMoves.set(pvIndex, uciMove(currentMove), child->pvIndex);
-    *origin = TtSlot{this, ExactScore};
+
+    bound = ExactScore;
+    *origin = TtSlot{this};
     ++root.tt.writes;
+
+    if (parent && canBeKiller) {
+        assert (currentMove);
+        parent->updateKillerMove(currentMove);
+    }
 
     if (ply == 0) {
         root.pvScore = score;
@@ -266,13 +270,14 @@ ReturnStatus Node::search() {
             ++root.tt.hits;
 
             if (ttSlot.draft() >= draft && !isPv) {
-                Bound bound = ttSlot;
+                Bound ttBound = ttSlot;
                 Score ttScore = ttSlot.score(ply);
 
-                if ((bound & FailHigh) && beta <= ttScore) {
+                //TODO: refresh TT record if age is old
+                if ((ttBound & FailHigh) && beta <= ttScore) {
                     score = ttScore;
                     return ReturnStatus::BetaCutoff;
-                } else if ((bound & FailLow) && ttScore <= alpha) {
+                } else if ((ttBound & FailLow) && ttScore <= alpha) {
                     score = ttScore;
                     return ReturnStatus::Continue;
                 }
@@ -291,7 +296,7 @@ ReturnStatus Node::search() {
     const auto child = &node;
 
     if (isHit && Move{ttSlot}) {
-        canBeKiller = !inCheck();
+        canBeKiller = ttSlot.canBeKiller();
         RETURN_CUTOFF (child->searchMove(ttSlot));
     }
 
@@ -353,11 +358,10 @@ ReturnStatus Node::search() {
         }
     }
 
-    if (!alphaImproved) {
+    if (bound == FailLow) {
         // fail low, no good move found, write back previous TT move if any
-        //TODO: store the first searched move to avoid small move generation overhead
         currentMove = isHit ? Move{ttSlot} : Move{};
-        *origin = TtSlot(this, FailLow);
+        *origin = TtSlot(this);
         ++root.tt.writes;
     }
     return ReturnStatus::Continue;
