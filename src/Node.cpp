@@ -328,9 +328,14 @@ ReturnStatus Node::search() {
 
         // countermove heuristic: refutation of the last opponent's move
         Move opMove = parent->currentMove;
-        RETURN_CUTOFF (child->searchIfLegal( root.counterMove(
-            parent->colorToMove(), parent->MY.typeAt(opMove.from()), opMove.to()
-        ) ));
+        if (opMove) {
+            RETURN_CUTOFF (child->searchIfLegal( root.counterMove.get1(
+                parent->colorToMove(), parent->MY.typeAt(opMove.from()), opMove.to()
+            ) ));
+            RETURN_CUTOFF (child->searchIfLegal( root.counterMove.get2(
+                parent->colorToMove(), parent->MY.typeAt(opMove.from()), opMove.to()
+            ) ));
+        }
 
         // repeated killer heuristic (can change while searching descendants of previous killer3)
         while (isLegalMove(parent->killer3)) {
