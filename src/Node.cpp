@@ -5,20 +5,21 @@
     if (returnStatus == ReturnStatus::Stop) { return ReturnStatus::Stop; } \
     if (returnStatus == ReturnStatus::BetaCutoff) { return ReturnStatus::BetaCutoff; }} ((void)0)
 
-TtSlot::TtSlot (Z z, Move move, Score score, Bound b, Ply d) : s{
+TtSlot::TtSlot (Z z, Move move, Score score, Bound bound, Ply draft) : s{
     move.from(),
     move.to(),
     score,
-    b,
-    static_cast<unsigned>(d),
+    bound,
+    static_cast<unsigned>(draft),
     static_cast<unsigned>(z >> DataBits)
 } {}
 
-TtSlot::TtSlot (const Node* n, Bound b) : TtSlot{
+
+TtSlot::TtSlot (const Node* n) : TtSlot{
     n->zobrist(),
     n->currentMove,
     n->score.toTt(n->ply),
-    b,
+    n->bound,
     n->draft
 } {}
 
@@ -178,7 +179,9 @@ ReturnStatus Node::negamax(Node* child) const {
 
 void Node::failHigh() const {
     if (parent && canBeKiller) { parent->updateKillerMove(currentMove); }
-    *origin = TtSlot{this, FailHigh};
+
+    bound = FailHigh;
+    *origin = TtSlot{this};
     ++root.tt.writes;
 }
 
@@ -197,7 +200,9 @@ void Node::updateKillerMove(Move newKiller) const {
 
 void Node::updatePv(Node* child) const {
     child->pvIndex = root.pvMoves.set(pvIndex, uciMove(currentMove), child->pvIndex);
-    *origin = TtSlot{this, ExactScore};
+
+    bound = ExactScore;
+    *origin = TtSlot{this};
     ++root.tt.writes;
 
     if (ply == 0) {
@@ -210,6 +215,7 @@ ReturnStatus Node::search() {
     assert (MinusInfinity <= alpha && alpha < beta && beta <= PlusInfinity);
     score = NoScore;
     currentMove = {};
+    bound = FailLow;
 
     if (moves().none()) {
         // checkmate or stalemate
@@ -247,6 +253,21 @@ ReturnStatus Node::search() {
             isHit = false;
         } else {
             ++root.tt.hits;
+
+            if (ttSlot.draft() >= draft) {
+                Bound ttBound = ttSlot;
+                Score ttScore = ttSlot.score(ply);
+
+                if ((ttBound & FailHigh) && beta <= ttScore) {
+                    score = ttScore;
+                    currentMove = Move{ttSlot};
+                    return ReturnStatus::BetaCutoff;
+                } else if ((ttBound & FailLow) && ttScore <= alpha) {
+                    score = ttScore;
+                    currentMove = Move{ttSlot};
+                    return ReturnStatus::Continue;
+                }
+            }
         }
     }
 
@@ -359,6 +380,13 @@ ReturnStatus Node::search() {
         }
     }
 
+    if (bound == FailLow) {
+        // fail low, no good move found, write back previous TT move if any
+        //TODO: store the first searched move to avoid small move generation overhead
+        currentMove = isHit ? Move{ttSlot} : Move{};
+        *origin = TtSlot(this);
+        ++root.tt.writes;
+    }
     return ReturnStatus::Continue;
 }
 
