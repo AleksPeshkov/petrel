@@ -32,7 +32,7 @@ class TtSlot {
 public:
     TtSlot () { static_assert (sizeof(TtSlot) == sizeof(u64_t)); }
     TtSlot (Z z, Move move, Score, Bound, Ply);
-    TtSlot (const Node* node, Bound b);
+    TtSlot (const Node* node);
     bool operator == (Z z) const { return (zobrist & HashMask) == (z & HashMask); }
     operator Move () const { return Move{ static_cast<Square::_t>(s.from), static_cast<Square::_t>(s.to) }; }
     Score score(Ply ply) const { return Score{s.score}.fromTt(ply); }
@@ -62,6 +62,7 @@ protected:
     mutable Score alpha = MinusInfinity; // alpha-beta window lower margin
     Score beta = PlusInfinity; // alpha-beta window upper margin
     mutable Score score = NoScore; // best score found so far
+    mutable Bound bound = FailLow; // FailLow is default unless have found Exact or FailHigh move later
 
     mutable Move currentMove = {}; // last move made from *this into *child
     PvMoves::Index pvIndex{0}; // start of subPV for the current ply
