@@ -69,6 +69,7 @@ public:
     mutable PvMoves pvMoves;
     mutable Score pvScore = NoScore;
     mutable HistoryMoves counterMove;
+    mutable HistoryMoves followMove;
 
 private:
     Thread mainSearchThread;
@@ -138,6 +139,7 @@ public:
     void newGame() {
         tt.newGame();
         counterMove.clear();
+        followMove.clear();
         newSearch();
     }
 
