@@ -312,12 +312,20 @@ ReturnStatus Node::search() {
 
         // countermove heuristic: refutation of the last opponent's move
         Move opMove = parent->currentMove;
-        RETURN_CUTOFF (child->searchIfLegal( root.counterMove(
-            parent->colorToMove(), parent->MY.typeAt(opMove.from()), opMove.to()
-        ) ));
+        if (opMove) {
+            RETURN_CUTOFF (child->searchIfLegal( root.counterMove.get1(
+                parent->colorToMove(), parent->MY.typeAt(opMove.from()), opMove.to()
+            ) ));
+        }
 
         // secondary killer move, backup of previous primary killer
         RETURN_CUTOFF (child->searchIfLegal(parent->killer2));
+
+        if (opMove) {
+            RETURN_CUTOFF (child->searchIfLegal( root.counterMove.get2(
+                parent->colorToMove(), parent->MY.typeAt(opMove.from()), opMove.to()
+            ) ));
+        }
     }
 
     // going to search only non-captures, mask out remaining unsafe captures to avoid redundant safety checks
