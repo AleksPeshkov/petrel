@@ -211,6 +211,10 @@ void Node::updateKillerMove(Move newKiller) const {
     if (currentMove) {
         root.counterMove.set(colorToMove(),  MY.typeAt(currentMove.from()), currentMove.to(), newKiller);
     }
+
+    if (parent && parent->currentMove) {
+        root.followMove.set(parent->colorToMove(),  parent->MY.typeAt(parent->currentMove.from()), parent->currentMove.to(), newKiller);
+    }
 }
 
 void Node::updatePv(Node* child) const {
@@ -318,6 +322,16 @@ ReturnStatus Node::search() {
             ) ));
         }
 
+        if (grandParent) {
+            // follow move heuristic: continue last made move
+            Move myMove = grandParent->currentMove;
+            if (myMove) {
+                RETURN_CUTOFF (child->searchIfLegal( root.followMove.get1(
+                    grandParent->colorToMove(), grandParent->MY.typeAt(myMove.from()), myMove.to()
+                ) ));
+            }
+        }
+
         // secondary killer move, backup of previous primary killer
         RETURN_CUTOFF (child->searchIfLegal(parent->killer2));
 
@@ -325,6 +339,16 @@ ReturnStatus Node::search() {
             RETURN_CUTOFF (child->searchIfLegal( root.counterMove.get2(
                 parent->colorToMove(), parent->MY.typeAt(opMove.from()), opMove.to()
             ) ));
+        }
+
+        if (grandParent) {
+            // follow move heuristic: continue last made move
+            Move myMove = grandParent->currentMove;
+            if (myMove) {
+                RETURN_CUTOFF (child->searchIfLegal( root.followMove.get2(
+                    grandParent->colorToMove(), grandParent->MY.typeAt(myMove.from()), myMove.to()
+                ) ));
+            }
         }
     }
 
