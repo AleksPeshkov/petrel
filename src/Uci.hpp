@@ -12,12 +12,19 @@
 #include "UciSearchLimits.hpp"
 
 class HistoryMoves {
-    using _t = Side::arrayOf< PieceType::arrayOf<Square::arrayOf<Move>> >;
+    using Index = ::Index<2>;
+    using _t = Side::arrayOf< PieceType::arrayOf<Square::arrayOf< Index::arrayOf<Move> >> >;
     _t v;
 public:
     void clear() { std::memset(&v, 0, sizeof(v)); }
-    const Move& operator() (Color c, PieceType ty, Square sq) const { return v[c][ty][sq]; }
-    void set(Color c, PieceType ty, Square sq, const Move& move) { v[c][ty][sq] = move; }
+    const Move& get1 (Color c, PieceType ty, Square sq) const { return v[c][ty][sq][0]; }
+    const Move& get2 (Color c, PieceType ty, Square sq) const { return v[c][ty][sq][1]; }
+    void set(Color c, PieceType ty, Square sq, Move move) {
+        if (v[c][ty][sq][0] != move) {
+            v[c][ty][sq][1] = v[c][ty][sq][0];
+            v[c][ty][sq][0] = move;
+        }
+    }
 };
 
 // triangular array
