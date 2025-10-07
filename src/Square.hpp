@@ -118,6 +118,12 @@ public:
         return in;
     }
 
+    static constexpr auto range() {
+        return std::views::iota(0, Size) | std::views::transform([](int i) {
+            return Square{static_cast<Square::_t>(i)};
+        });
+    }
+
 };
 
 #endif

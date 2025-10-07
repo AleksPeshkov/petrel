@@ -2,11 +2,12 @@
 #define INDEX_HPP
 
 #include <array>
+#include <concepts>
 #include <cstring>
+#include <type_traits>
+#include <ranges>
 #include "bitops.hpp"
 #include "io.hpp"
-
-#define FOR_EACH(Index, i) for (Index i; i < Index::Size; ++i)
 
 template <int _Size, typename _element_type = int, typename _storage_type = int>
 class Index {
@@ -28,7 +29,7 @@ public:
     constexpr operator element_type () const { assertOk(); return static_cast<element_type>(v); }
 
     constexpr void assertOk() const { assert (isOk()); }
-    constexpr bool isOk() const { return static_cast<unsigned>(v) < static_cast<unsigned>(Size); }
+    [[nodiscard]] constexpr bool isOk() const { return static_cast<unsigned>(v) < static_cast<unsigned>(Size); }
 
     constexpr bool is(element_type i) const { return v == i; }
 
@@ -54,6 +55,12 @@ public:
         if (n < 0 || Last < n) { return io::fail_pos(in, before); }
         index.v = n;
         return in;
+    }
+
+    static constexpr auto range() {
+        return std::views::iota(0, Size) | std::views::transform([](int i) {
+            return Index{static_cast<element_type>(i)};
+        });
     }
 };
 
@@ -87,6 +94,12 @@ public:
             if (!index.from_char(c)) { io::fail_char(in); }
         }
         return in;
+    }
+
+    static constexpr auto range() {
+        return std::views::iota(0, _Size) | std::views::transform([](int i) {
+            return IndexChar{static_cast<_element_type>(i)};
+        });
     }
 
 };

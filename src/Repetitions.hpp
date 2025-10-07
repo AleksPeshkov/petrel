@@ -117,7 +117,7 @@ public:
     }
 
     void clear() {
-        FOR_EACH(Color, color) {
+        for (auto color : Color::range()) {
             v[color].clear();
         }
     }
@@ -125,7 +125,7 @@ public:
     void normalize(Color c) {
         // the very last position is root and should be removed from history
         v[c].dropLast();
-        FOR_EACH(Color, color) {
+        for (auto color : Color::range()) {
             v[color].normalize();
         }
     }

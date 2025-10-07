@@ -105,7 +105,7 @@ bool FenToBoard::drop(Color color, PieceType ty, Square sq) {
 
 bool FenToBoard::dropPieces(Position& position, Color colorToMove_) {
     //each side should have one king
-    FOR_EACH(Color, color) {
+    for (auto color : Color::range()) {
         if (pieces[color][King].empty()) {
             io::log("#invalid fen: king is missing");
             return false;
@@ -114,10 +114,10 @@ bool FenToBoard::dropPieces(Position& position, Color colorToMove_) {
 
     Position pos;
 
-    FOR_EACH(Color, color) {
+    for (auto color : Color::range()) {
         Side side{colorToMove_.is(color) ? My : Op};
 
-        FOR_EACH(PieceType, ty) {
+        for (auto ty : PieceType::range()) {
             while (!pieces[color][ty].empty()) {
                 auto piece = pieces[color][ty].begin();
 
@@ -143,10 +143,10 @@ public:
         {}
 
     friend ostream& operator << (ostream& out, const BoardToFen& board) {
-        FOR_EACH(Rank, rank) {
+        for (auto rank : Rank::range()) {
             int emptySqCount = 0;
 
-            FOR_EACH(File, file) {
+            for (auto file : File::range()) {
                 Square sq{file, rank};
 
                 if (board.whitePieces.has(sq)) {
