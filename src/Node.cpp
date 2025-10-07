@@ -441,6 +441,9 @@ ReturnStatus Node::search() {
     // Weak Move Reduction condition: !inCheck()
     bool canR = !inCheck();
 
+    // Weak Move Pruning: !inCheck() && !isPv && draft <= 2
+    bool canP = !inCheck() && !isPv && draft <= 2;
+
     // quiet non-pawn, non-king moves from unsafe to safe squares
     // skip king moves because they are safe anyway (unless in check)
     // castling move is a rook move, king moves rarely good in middlegame,
@@ -501,15 +504,17 @@ ReturnStatus Node::search() {
         }
     }
 
-    // king quiet moves (always safe)
+    // king quiet moves (always safe), castling is rook move
     {
         // reduce king moves more in middle game
         R = (MY.evaluation().piecesMat() > 16) ? 3 : 2;
-        R = canR ? R : Ply{1};
 
-        Square from = MY.kingSquare();
-        for (Square to : movesOf(Pi{TheKing})) {
-            RETURN_CUTOFF (child->searchMove({from, to}, R));
+        if (!canP || R == 2 || movesMade() == 0) { // weak move pruning
+            R = canR ? R : Ply{1};
+            Square from = MY.kingSquare();
+            for (Square to : movesOf(Pi{TheKing})) {
+                RETURN_CUTOFF (child->searchMove({from, to}, R));
+            }
         }
     }
 
@@ -525,13 +530,15 @@ ReturnStatus Node::search() {
     }
 
     // unsafe (losing) non-captures
-    R = canR ? 4 : 1;
-    for (PiMask pieces = figures; pieces.any(); ) {
-        Pi pi = pieces.leastValuable(); pieces -= pi;
+    if (!canP || movesMade() == 0) { // weak move pruning
+        R = canR ? 4 : 1;
+        for (PiMask pieces = figures; pieces.any(); ) {
+            Pi pi = pieces.leastValuable(); pieces -= pi;
 
-        Square from = MY.squareOf(pi);
-        for (Square to : movesOf(pi)) {
-            RETURN_CUTOFF (child->searchMove({from, to}, R));
+            Square from = MY.squareOf(pi);
+            for (Square to : movesOf(pi)) {
+                RETURN_CUTOFF (child->searchMove({from, to}, R));
+            }
         }
     }
 
