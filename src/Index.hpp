@@ -2,19 +2,20 @@
 #define INDEX_HPP
 
 #include <array>
+#include <concepts>
 #include <cstring>
+#include <type_traits>
+#include <ranges>
 #include "bitops.hpp"
 #include "io.hpp"
 
-#define FOR_EACH(Index, i) for (Index i; i < Index::Size; ++i)
-
-template <int _Size, typename _element_type = int, typename _storage_type = int>
+template <int _Size, typename _element_type = int, typename _storage_type = _element_type>
 class Index {
     using element_type = _element_type;
     using storage_t = _storage_type;
 public:
     using _t = element_type;
-    constexpr static storage_t Size = _Size;
+    constexpr static int Size = _Size;
     constexpr static storage_t Mask =  static_cast<storage_t>(Size-1);
     constexpr static element_type Last = static_cast<element_type>(_Size-1);
 
@@ -28,22 +29,20 @@ public:
     constexpr operator element_type () const { assertOk(); return static_cast<element_type>(v); }
 
     constexpr void assertOk() const { assert (isOk()); }
-    constexpr bool isOk() const { return static_cast<unsigned>(v) < static_cast<unsigned>(Size); }
+    [[nodiscard]] constexpr bool isOk() const { return static_cast<unsigned>(v) < static_cast<unsigned>(Size); }
 
     constexpr bool is(element_type i) const { return v == i; }
 
-    constexpr Index& operator ++ () { assertOk(); ++v; return *this; }
-    constexpr Index& operator -- () { assertOk(); --v; return *this; }
+    constexpr Index& operator ++ () { assertOk(); v = static_cast<element_type>(v+1); return *this; }
+    constexpr Index& operator -- () { assertOk(); v = static_cast<element_type>(v-1); return *this; }
     constexpr Index operator ++ (int) { assertOk(); auto result = Index{v}; ++v; return result; }
     constexpr Index operator -- (int) { assertOk(); auto result = Index{v}; --v; return result; }
 
-    constexpr Index& flip() { assertOk(); v = v ^ Mask; return *this; }
+    constexpr Index& flip() { assertOk(); v = static_cast<storage_t>(v ^ Mask); return *this; }
     constexpr Index operator ~ () const { return Index{static_cast<Index::_t>(v)}.flip(); }
 
     friend bool operator < (Index a, Index b) { b.assertOk(); return a.v < b.v; }
     friend bool operator <= (Index a, Index b) { b.assertOk(); return a.v <= b.v; }
-    friend bool operator < (Index a, storage_t b) { return a.v < b; }
-    friend bool operator <= (Index a, storage_t b) { return a.v <= b; }
 
     friend ostream& operator << (ostream& out, Index& index) { return out << static_cast<int>(index.v); }
 
@@ -52,12 +51,18 @@ public:
         auto before = in.tellg();
         in >> n;
         if (n < 0 || Last < n) { return io::fail_pos(in, before); }
-        index.v = n;
+        index = Index{static_cast<element_type>(n)};
         return in;
+    }
+
+    static constexpr auto range() {
+        return std::views::iota(0, Size) | std::views::transform([](int i) {
+            return Index{static_cast<element_type>(i)};
+        });
     }
 };
 
-template <int _Size, typename _element_type = int, typename _storage_type = int>
+template <int _Size, typename _element_type = int, typename _storage_type = _element_type>
 class IndexChar : public Index<_Size, _element_type, _storage_type> {
     using Base = Index<_Size, _element_type, _storage_type>;
     using Base::v;
@@ -87,6 +92,12 @@ public:
             if (!index.from_char(c)) { io::fail_char(in); }
         }
         return in;
+    }
+
+    static constexpr auto range() {
+        return std::views::iota(0, _Size) | std::views::transform([](int i) {
+            return IndexChar{static_cast<_element_type>(i)};
+        });
     }
 
 };

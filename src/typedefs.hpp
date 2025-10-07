@@ -6,9 +6,11 @@
 #include "Square.hpp"
 
 // search tree distance in halfmoves
-class Ply : public Index<64> {
+class Ply : public Index<64, u8_t> {
 public:
-    constexpr Ply(int i = 0) : Index<64>(i > 0 ? i : 0) { assertOk(); }
+    constexpr Ply(int i = 0) : Index{static_cast<_t>(i > 0 ? i : 0)} { assertOk(); }
+    friend bool operator < (Index a, int i) { return a < i; }
+    friend bool operator <= (Index a, int i) { return a <= i; }
 };
 constexpr Ply::_t MaxPly = Ply::Last; // Ply is limited to [0 .. MaxPly]
 
