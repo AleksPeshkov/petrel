@@ -12,14 +12,14 @@ public:
     constexpr PiBbMatrix () = default;
 
     constexpr friend void swap(PiBbMatrix& a, PiBbMatrix& b) {
-        FOR_EACH(Rank, rank) {
+        for (auto rank : Rank::range()) {
             using std::swap;
             swap(a.matrix[rank], b.matrix[rank]);
         }
     }
 
     constexpr void clear() {
-        FOR_EACH(Rank, rank) {
+        for (auto rank : Rank::range()) {
             matrix[rank].clear();
         }
     }
@@ -29,7 +29,7 @@ public:
     }
 
     constexpr void clear(Pi pi) {
-        FOR_EACH(Rank, rank) {
+        for (auto rank : Rank::range()) {
             matrix[rank] %= PiMask{pi};
         }
     }
@@ -40,7 +40,7 @@ public:
     }
 
     constexpr void set(Pi pi, Bb bb) {
-        FOR_EACH(Rank, rank) {
+        for (auto rank : Rank::range()) {
             set(pi, rank, bb[rank]);
         }
     }
@@ -76,7 +76,7 @@ public:
             Bb::_t bb;
             Rank::arrayOf<BitRank::_t> br;
         };
-        FOR_EACH(Rank, rank) {
+        for (auto rank : Rank::range()) {
             br[rank] = matrix[rank][pi];
         }
         return Bb{bb};
@@ -88,7 +88,7 @@ public:
             Bb::_t bb;
             Rank::arrayOf<BitRank::_t> br;
         };
-        FOR_EACH(Rank, rank) {
+        for (auto rank : Rank::range()) {
             br[rank] = matrix[rank].gather();
         }
         return Bb{bb};
@@ -96,35 +96,35 @@ public:
 
     void filter(Pi pi, Bb bb) {
         PiMask exceptPi{ PiMask::all() ^ PiMask{pi} };
-        FOR_EACH(Rank, rank) {
+        for (auto rank : Rank::range()) {
             matrix[rank] &= PiRank{bb[rank]} | exceptPi;
         }
     }
 
     constexpr friend PiBbMatrix operator % (const PiBbMatrix& from, Bb bb) {
         PiBbMatrix result;
-        FOR_EACH(Rank, rank) {
+        for (auto rank : Rank::range()) {
             result.matrix[rank] = from.matrix[rank] % PiRank{bb[rank]};
         }
         return result;
     }
 
     constexpr void operator &= (Bb bb) {
-        FOR_EACH(Rank, rank) {
+        for (auto rank : Rank::range()) {
             matrix[rank] &= PiRank{bb[rank]};
         }
     }
 
     constexpr friend PiBbMatrix operator & (const PiBbMatrix& from, Bb bb) {
         PiBbMatrix result;
-        FOR_EACH(Rank, rank) {
+        for (auto rank : Rank::range()) {
             result.matrix[rank] = from.matrix[rank] & PiRank{bb[rank]};
         }
         return result;
     }
 
     constexpr bool none() const {
-        FOR_EACH(Rank, rank) {
+        for (auto rank : Rank::range()) {
             if (matrix[rank].any()) { return false; }
         }
         return true;
@@ -132,7 +132,7 @@ public:
 
     constexpr int popcount() const {
         int sum = 0;
-        FOR_EACH(Rank, rank) {
+        for (auto rank : Rank::range()) {
             sum += ::popcount(matrix[rank]);
         }
         return sum;
