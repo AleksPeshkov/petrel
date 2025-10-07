@@ -44,8 +44,8 @@ public:
     constexpr friend Bb operator >> (Bb bb, unsigned offset) { return Bb{static_cast<_t>(bb) >> offset}; }
 
     friend ostream& operator << (ostream& out, Bb bb) {
-        FOR_EACH(Rank, rank) {
-            FOR_EACH(File, file) {
+        for (auto rank : Rank::range()) {
+            for (auto file : File::range()) {
                 if (bb.has(Square{file, rank})) {
                     out << file;
                 }
@@ -86,7 +86,7 @@ constexpr Bb Square::operator() (signed df, signed dr) const {
         return {}; //out of chess board
     }
 
-    return Bb{ static_cast<square_t>((sq0x88 + (sq0x88 & 7)) >> 1) };
+    return Bb{ static_cast<Square::_t>((sq0x88 + (sq0x88 & 7)) >> 1) };
 }
 
 // line (file, rank, diagonal) in between two squares (excluding both ends) or 0 (32k)
@@ -95,14 +95,14 @@ class InBetween {
 
 public:
     constexpr InBetween () {
-        FOR_EACH(Square, from) {
-            FOR_EACH(Square, to) {
+        for (auto from : Square::range()) {
+            for (auto to : Square::range()) {
                 Bb belowFrom{ ::singleton<Bb::_t>(from) - 1 };
                 Bb belowTo{ ::singleton<Bb::_t>(to) - 1 };
                 Bb areaInBetween = (belowFrom ^ belowTo) % Bb{to};
 
                 Bb result = Bb{};
-                FOR_EACH(Direction, dir) {
+                for (auto dir : Direction::range()) {
                     Bb line = from.line(dir); // line bitboard for this direction
                     if (line.has(to)) {       // Check if 'to' is on this line
                         result = areaInBetween & line;
@@ -127,7 +127,7 @@ class AttacksFrom {
     PieceType::arrayOf< Square::arrayOf<Bb> > attack;
 public:
     constexpr AttacksFrom () {
-        FOR_EACH (Square, sq) {
+        for (auto sq: Square::range()) {
             attack[Rook][sq]   = sq.file() + sq.rank();
             attack[Bishop][sq] = sq.diagonal() + sq.antidiag();
             attack[Queen][sq]  = attack[Rook][sq] + attack[Bishop][sq];
@@ -161,8 +161,8 @@ class CastlingRules {
 
 public:
     constexpr CastlingRules () {
-        FOR_EACH(File, kingFile) {
-            FOR_EACH(File, rookFile) {
+        for (auto kingFile : File::range()) {
+            for (auto rookFile : File::range()) {
                 Square king{kingFile, Rank1};
                 Square rook{rookFile, Rank1};
 
