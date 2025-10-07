@@ -26,7 +26,7 @@ public:
     }
 
     friend ostream& operator << (ostream& out, PieceSet s) {
-        FOR_EACH(Pi, pi) {
+        for (auto pi : Pi::range()) {
             if (s.has(pi)) { out << pi; } else { out << '.'; }
         }
         return out;
