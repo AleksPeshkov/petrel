@@ -140,8 +140,8 @@ PieceSquareTable::PieceSquareTable () {
         },
     };
 
-    FOR_EACH (PieceType, ty) {
-        FOR_EACH (Square, sq) {
+    for (auto ty : PieceType::range()) {
+        for (auto sq : Square::range()) {
             pst[ty][sq] = {{
                 static_cast<u16_t>(openingMat[ty] + openingPst[ty][sq]),
                 static_cast<u16_t>(endgameMat[ty] + endgamePst[ty][sq]),

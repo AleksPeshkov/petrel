@@ -33,7 +33,7 @@ constexpr Square reverse(Square sq) { return Square{ ~File{sq}, ~Rank{sq} }; }
 
 struct HyperbolaSq : Square::arrayOf<vu64x2_t> {
     HyperbolaSq () {
-        FOR_EACH(Square, sq) {
+        for (auto sq :  Square::range()) {
             (*this)[sq] = vu64x2_t{ Bb{sq}, Bb{::reverse(sq)} };
         }
     }
@@ -42,9 +42,9 @@ extern const HyperbolaSq hyperbolaSq;
 
 struct alignas(64) HyperbolaDir : Square::arrayOf<Direction::arrayOf<vu64x2_t>> {
     HyperbolaDir () {
-        FOR_EACH(Square, sq) {
+        for (auto sq :  Square::range()) {
             Square rsq = reverse(sq);
-            FOR_EACH(Direction, dir) {
+            for (auto dir : Direction::range()) {
                 (*this)[sq][dir] = vu64x2_t{sq.line(dir), rsq.line(dir)};
             }
         }
