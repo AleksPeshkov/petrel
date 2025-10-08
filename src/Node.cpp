@@ -308,7 +308,12 @@ ReturnStatus Node::search() {
             return ReturnStatus::Continue;
         }
 
-        if (draft == 0 && !inCheck()) {
+        // check extension
+        if (inCheck()) {
+            // undo possible reduction of checking move and extend 1 ply
+            draft = draft+1;
+        } else if (draft <= 0) {
+            assert (draft == 0);
             return quiescence();
         }
     }
