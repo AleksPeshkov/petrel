@@ -319,7 +319,11 @@ ReturnStatus Node::search() {
             return ReturnStatus::Continue;
         }
 
-        if (draft == 0 && !inCheck()) {
+        if (inCheck()) {
+            // check extension
+            draft = draft+1;
+        } else if (draft <= 0) {
+            assert (draft == 0);
             return quiescence();
         }
     }
