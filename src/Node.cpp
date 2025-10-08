@@ -146,7 +146,7 @@ ReturnStatus Node::searchNullMove(Ply R) {
     return parent->negamax(this);
 }
 
-ReturnStatus Node::searchMove(Move move) {
+ReturnStatus Node::searchMove(Move move, Ply R) {
     RETURN_IF_STOP (root.limits.countNode());
 
     Square from = move.from();
@@ -160,6 +160,7 @@ ReturnStatus Node::searchMove(Move move) {
     else if (grandParent) { repetitionHash = RepetitionHash{grandParent->repetitionHash, grandParent->zobrist()}; }
     else { repetitionHash = root.repetitions.repetitionHash(colorToMove()); }
 
+    draft = parent->draft - R;
     return parent->negamax(this);
 }
 
@@ -193,6 +194,8 @@ ReturnStatus Node::negamax(Node* child) const {
             assert (child->beta == -alpha);
             child->isPv = true;
             assert (child->alpha < child->beta-1);
+            assert (currentMove);
+            child->draft = draft-1; // revert possible reductions
             return negamax(child);
         }
 
@@ -422,10 +425,14 @@ ReturnStatus Node::search() {
     PiMask safePieces = {};
     PiMask figures = MY.figures();
 
+    // Late Move Reductions condition
+    bool lmr = !inCheck();
+
     // quiet non-pawn, non-king moves from unsafe to safe squares
     // skip king moves because they are safe anyway (unless in check)
     // castling move is a rook move, king moves rarely good in middlegame,
     // skip pawns to avoid wasting time on safety check as pawns
+    Ply R = lmr ? 2 : 1;
     for (Pi pi : figures) {
         Square from = MY.squareOf(pi);
 
@@ -453,13 +460,14 @@ ReturnStatus Node::search() {
             //TODO: try protecting moves of other pieces
         }
 
-        RETURN_CUTOFF (goodNonCaptures(child, pi, movesOf(pi) % badSquares));
+        RETURN_CUTOFF (goodNonCaptures(child, pi, movesOf(pi) % badSquares, R));
     }
 
+    R = lmr ? 3 : 1;
     while (safePieces.any()) {
         Pi pi = safePieces.leastValuable(); safePieces -= pi;
 
-        RETURN_CUTOFF (goodNonCaptures(child, pi, movesOf(pi) % badSquares));
+        RETURN_CUTOFF (goodNonCaptures(child, pi, movesOf(pi) % badSquares, R));
     }
 
     // iterate pawns from Rank7 to Rank2
@@ -467,36 +475,50 @@ ReturnStatus Node::search() {
     for (Square from : MY.bbPawns()) {
         Pi pi = MY.pieceAt(from);
 
+        R = 1;
+        if (lmr) {
+            if (from.on(Rank7)) { R = 4; } // underpromotion
+            else if (from.on(Rank6)) { R = 0; } // passed pawn push extension
+            else if (from.on(Rank5)) { R = 1; } // advanced pawn push extension
+            else { R = 2; } // default reduction for pawn moves
+        }
+
         for (Square to : movesOf(pi)) {
-            RETURN_CUTOFF (child->searchMove({from, to}));
+            RETURN_CUTOFF (child->searchMove({from, to}, R));
         }
     }
 
     // king quiet moves (always safe)
     {
+        // reduce king moves more in middle game
+        R = (MY.evaluation().piecesMat() > 16) ? 3 : 2;
+        R = lmr ? R : Ply{1};
+
         Square from = MY.kingSquare();
         for (Square to : movesOf(Pi{TheKing})) {
-            RETURN_CUTOFF (child->searchMove({from, to}));
+            RETURN_CUTOFF (child->searchMove({from, to}, R));
         }
     }
 
     // unsafe (losing) captures
+    R = lmr ? 2 : 1;
     for (PiMask pieces = figures; pieces.any(); ) {
         Pi pi = pieces.leastValuable(); pieces -= pi;
 
         Square from = MY.squareOf(pi);
         for (Square to : movesOf(pi) & ~OP.bbSide()) {
-            RETURN_CUTOFF (child->searchMove({from, to}));
+            RETURN_CUTOFF (child->searchMove({from, to}, R));
         }
     }
 
     // unsafe (losing) non-captures
+    R = lmr ? 4 : 1;
     for (PiMask pieces = figures; pieces.any(); ) {
         Pi pi = pieces.leastValuable(); pieces -= pi;
 
         Square from = MY.squareOf(pi);
         for (Square to : movesOf(pi)) {
-            RETURN_CUTOFF (child->searchMove({from, to}));
+            RETURN_CUTOFF (child->searchMove({from, to}, R));
         }
     }
 
@@ -509,7 +531,7 @@ ReturnStatus Node::search() {
     return ReturnStatus::Continue;
 }
 
-ReturnStatus Node::goodNonCaptures(Node* child, Pi pi, Bb moves) {
+ReturnStatus Node::goodNonCaptures(Node* child, Pi pi, Bb moves, Ply R) {
     Square from = MY.squareOf(pi);
     PieceType ty = MY.typeOf(pi);
     assert (!ty.is(Pawn));
@@ -531,7 +553,7 @@ ReturnStatus Node::goodNonCaptures(Node* child, Pi pi, Bb moves) {
             }
         }
 
-        RETURN_CUTOFF (child->searchMove({from, to}));
+        RETURN_CUTOFF (child->searchMove({from, to}, R));
     }
 
     return ReturnStatus::Continue;
