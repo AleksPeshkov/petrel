@@ -30,6 +30,8 @@ class RepetitionsSide {
     int count = 0; // number of entries
     RepIndex last{RepIndex::Last}; // last added entry index
 
+    static constexpr int prev(int i) { return i > 0 ? i-1 : Last; }
+
 public:
     constexpr RepetitionsSide () { reps[last].hash = {}; }
 
@@ -52,51 +54,64 @@ public:
         count = count-1;
     }
 
-    constexpr void normalize() {
-        if (count <= 1) { return; }
+    void normalize() {
+        Index<25>::arrayOf<Z> duplicates;
+        int duplicateCount = 0;
 
-        if (count != RepIndex::Size) {
-            // just reverse order
-            for (int i = 0; i < count/2; ++i) {
-                std::swap(reps[i], reps[last - i]);
+        // find duplicates
+        for (int c = 0, i = last; c < count; ++c, i = prev(i)) {
+            auto z = reps[i].z;
+
+            for (int d = 0; d < duplicateCount; ++d) {
+                // already found
+                if (duplicates[d] == z) { goto NEXT; };
             }
-            return;
-        }
 
-        // rare buffer overflow case
+            // not found
+            {
+                // i and i-1 cannot be repetitions
+                int j = prev(i); j = prev(j);
+                for (int cc = c+2; cc < count; ++cc) {
+                    if (z == reps[j].z) {
+                        // found
+                        duplicates[duplicateCount++] = z;
+                        break;
+                    }
 
-        RepIndex::arrayOf<Z> temp;
-        auto current = last < RepIndex::Last ? last+1 : 0;
+                    if (!reps[j].hash.has(z)) {
+                        // not found
+                        break;
+                    }
 
-        // copy z elements to the beginning
-        for (int i = 0; i < count; ++i) {
-            temp[i] = reps[current].z;
-            current = current < Last ? current+1 : 0;
+                    j = prev(j);
+                }
+            }
+
+        NEXT:
+            continue;
         }
 
         RepetitionHash hash{};
 
-        // push again in reverse order
-        for (int i = 0; i < count; ++i) {
-            auto z = temp[i];
+        // push back in reversed order, creating correct hash
+        for (int d = duplicateCount-1; d >= 0; --d) {
+            auto z = duplicates[d];
+            reps[d].z = z;
+            reps[d].hash = hash;
             hash = {hash, z};
-            reps[count - i - 1].z = z;
-            reps[count - i - 1].hash = hash;
         }
 
-        count = 0;
-        last = Last;
+        count = duplicateCount;
+        last = Last; // new push() should be from the very beginning
     }
 
     constexpr bool has(Z z) const {
-        int repetitions = 0;
+        if (count == 0) { return false; }
+
         RepIndex i{0};
         while (true) {
             if (z == reps[i].z) {
-                ++repetitions;
-                if (repetitions == 2) {
-                    return true;
-                }
+                return true;
             }
             if (!reps[i].hash.has(z)) {
                 return false;
