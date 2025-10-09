@@ -25,7 +25,7 @@ void test_no_repetition() {
 
     reps.normalize();
 
-    //assert (reps.size() == 0 && "Invalid count of repetitions");
+    assert (reps.size() == 0 && "Invalid count of repetitions");
     assert (!reps.has(Z{1}) && "Invalid repetition detected");
     assert (!reps.has(Z{2}) && "Invalid repetition detected");
 }
@@ -43,7 +43,7 @@ void test_basic_repetition() {
 
     reps.normalize();
 
-    //assert (reps.size() == 1 && "Invalid count of repetitions");
+    assert (reps.size() == 1 && "Invalid count of repetitions");
     assert (reps.has(Z{1}) && "Valid repetition not detected");
     assert (!reps.has(Z{2}) && "Invalid repetition detected");
     assert (!reps.has(Z{3}) && "Invalid repetition detected");
@@ -62,7 +62,7 @@ void test_multiple_repetitions() {
 
     reps.normalize();
 
-    //assert (reps.size() == 3 && "Invalid count of repetitions");
+    assert (reps.size() == 3 && "Invalid count of repetitions");
     assert (reps.has(Z{1}) && "Valid repetition not detected");
     assert (reps.has(Z{65}) && "Valid repetition not detected");
     assert (reps.has(Z{3}) && "Valid repetition not detected");
@@ -85,6 +85,7 @@ void test_edge_cases() {
         reps.push(Z{static_cast<Z::_t>(i % 2 ? 1 : 65)}); // Alternate between two ZArgs
     }
     reps.normalize();
+    assert (reps.size() == 2 && "Invalid count of repetitions");
     assert (reps.has(Z{1}) && "Valid repetition not detected");
     assert (!reps.has(Z{2}) && "Invalid repetition detected");
     assert (reps.has(Z{65}) && "Valid repetition not detected");
@@ -95,6 +96,7 @@ void test_edge_cases() {
         reps.push(Z{static_cast<Z::_t>(i % 40)});
     }
     reps.normalize();
+    assert (reps.size() == 10 && "Invalid count of repetitions");
     assert (!reps.has(Z{1}) && "Valid repetition not detected");
     assert (reps.has(Z{11}) && "Valid repetition not detected");
     assert (!reps.has(Z{21}) && "Invalid repetition detected");
