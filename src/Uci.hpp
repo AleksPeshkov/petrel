@@ -151,6 +151,8 @@ public:
         tt.newIteration();
     }
 
+    void refreshTtPv(Ply depth) const;
+
     void setHash(size_t bytes) { tt.setSize(bytes); }
     void info_pv(Ply) const;
     void info_iteration(Ply) const;
