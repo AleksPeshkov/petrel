@@ -49,7 +49,7 @@ public:
     }
 };
 
-enum color_t { White, Black };
+enum color_t : u8_t { White, Black };
 using Color = IndexChar<2, color_t>;
 template <> io::czstring Color::The_string;
 
@@ -63,7 +63,7 @@ enum side_to_move_t {
 using Side = Index<2, side_to_move_t>;
 constexpr Side::_t operator ~ (Side::_t my) { return static_cast<Side::_t>(my ^ static_cast<Side::_t>(Side::Mask)); }
 
-enum chess_variant_t { Orthodox, Chess960 };
+enum chess_variant_t : u8_t { Orthodox, Chess960 };
 using ChessVariant = Index<2, chess_variant_t>;
 
 enum castling_side_t { KingSide, QueenSide };
@@ -99,10 +99,11 @@ constexpr PromoType::_t promoTypeFrom(Rank::_t r) { assert (r < 4); return stati
 // encoding piece type from move destination square rank
 constexpr PieceType::_t pieceTypeFrom(Rank::_t r) { assert (r < 4); return static_cast<PieceType::_t>(r); }
 
+// continue or stop search
 enum class ReturnStatus {
     Continue,   // continue search normally
-    Stop,       // immediately stop current
-    BetaCutoff, // inform about beta cuttoff to prune current node
+    Stop,       // stop current search (timeout or other termination reason)
+    BetaCutoff, // prune current node search
 };
 
 #define RETURN_IF_STOP(visitor) { if (visitor == ReturnStatus::Stop) { return ReturnStatus::Stop; } } ((void)0)
@@ -115,26 +116,10 @@ enum class ReturnStatus {
  * En passant capture encoded as the pawn moves over captured pawn square.
  * Null move is encoded as 0 {A8A8}
  **/
-class PACKED Move {
-public:
-    enum move_type_t {
-        Normal, // normal move or capture
-        Special // castling, promotion or en passant capture
-    };
-    using MoveType = Index<2, move_type_t>;
-
+class Move {
 protected:
-    Square::_t from_:6 = static_cast<Square::_t>(0);
-    Square::_t to_:6 = static_cast<Square::_t>(0);
-
-    // used by UciMove declared here to pack all bit fields
-    Color::_t color:1 = White;
-    ChessVariant::_t variant:1 = Orthodox;
-    MoveType::_t type:1 = Normal;
-
-    // UciMove constructor
-    constexpr Move(Square f, Square t, bool s, Color c, ChessVariant v)
-        : from_{f}, to_{t}, color{c}, variant{v}, type{s ? Special : Normal} {}
+    Square::_t from_ = static_cast<Square::_t>(0);
+    Square::_t to_ = static_cast<Square::_t>(0);
 
 public:
     // null move
