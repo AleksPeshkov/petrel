@@ -12,14 +12,17 @@ public:
 };
 
 namespace {
+    static constexpr size_t mebibyte = 1024 * 1024;
+
     template <typename T>
-    static T mebi(T bytes) { return bytes / (1024 * 1024); }
+    static T mebi(T bytes) { return bytes / mebibyte; }
 
     template <typename T>
     static constexpr T permil(T n, T m) { return (n * 1000) / m; }
 }
 
 Uci::Uci(ostream &o) :
+    tt(16 * mebibyte),
     inputLine{std::string(1024, '\0')}, // preallocate 1024 bytes (~100 full moves)
     out{o},
     bestmove_(32, '\0')
