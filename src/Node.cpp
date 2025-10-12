@@ -112,7 +112,7 @@ ReturnStatus Node::searchRoot() {
     Score s = root.pvScore;
     Ply d = draft;
 
-    const Move* pv = root.pvMoves;
+    const UciMove* pv = root.pvMoves;
     for (Move move; (move = *pv++);) {
         auto o = root.tt.addr<TtSlot>(pos.zobrist());
         *o = TtSlot{pos.zobrist(), move, s, ExactScore, d, false};
