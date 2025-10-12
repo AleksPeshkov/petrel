@@ -295,7 +295,7 @@ bool PositionSide::dropValid(PieceType ty, Square to) {
     }
     bbSide_ += Bb{to};
 
-    Pi pi = ty.is(King) ? Pi{TheKing} : PieceSet((pieces() | Pi{TheKing})).vacantMostValuable();
+    Pi pi = ty.is(King) ? Pi{TheKing} : PieceSet{pieces() | PiMask{Pi{TheKing}}}.vacantMostValuable();
 
     evaluation_.drop(ty, to);
     types.drop(pi, ty);
