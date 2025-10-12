@@ -4,7 +4,7 @@
 #include "Zobrist.hpp"
 
 size_t Tt::maxSize() {
-    return ::round(::getAvailableMemory());
+    return ::bit_floor(::getAvailableMemory());
 }
 
 void Tt::free() {
@@ -21,7 +21,7 @@ void Tt::zeroFill() {
 
 void Tt::allocate(size_t _bytes) {
     const auto min = minSize();
-    auto bytes = ::round(std::max(_bytes, min));
+    auto bytes = ::bit_floor(std::max(_bytes, min));
 
     if (bytes != size_) {
         free();
