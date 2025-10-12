@@ -138,7 +138,6 @@ public:
         tt.newGame();
         counterMove.clear();
         followMove.clear();
-        newSearch();
     }
 
     void newSearch() {
@@ -151,7 +150,8 @@ public:
         tt.newIteration();
     }
 
-    void setHash(size_t bytes) { tt.setSize(bytes); }
+    void refreshTtPv(Ply depth) const;
+
     void info_pv(Ply) const;
     void info_iteration(Ply) const;
 

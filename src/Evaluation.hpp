@@ -5,7 +5,7 @@
 #include "typedefs.hpp"
 
 // position evaluation score, fits in 14 bits
-enum score_enum {
+enum score_enum : i16_t {
     NoScore = -8192, //TRICK: assume two's complement
     MinusInfinity = NoScore + 1, // negative bound, no position should eval to it
     MinusMate = MinusInfinity + 1, // mated in 0, only even negative values for mated positions
@@ -30,6 +30,7 @@ enum score_enum {
 
 // position evaluation score, fits in 14 bits
 struct Score {
+    static constexpr int Mask = 0x3fff;
     using _t = score_enum;
     _t v;
 
@@ -63,18 +64,35 @@ struct Score {
         return *this;
     }
 
-    constexpr Score toTt(Ply ply) const {
-        assertOk();
-        if (v < MinEval) { assertMate(); Score r = *this - ply; r.assertMate(); return r; }
-        if (MaxEval < v) { assertMate(); Score r = *this + ply; r.assertMate(); return r; }
-        return *this;
+    constexpr unsigned toTt(Ply ply) const {
+        Score score{v};
+
+        if (score < MinEval) {
+            score.assertMate(); score = score - ply; score.assertMate();
+        }
+        else if (MaxEval < score) {
+            score.assertMate(); score = score + ply; score.assertMate();
+        }
+
+        // convert signed to unsigned
+        return static_cast<unsigned>(score.v - NoScore);
     }
 
-    constexpr Score fromTt(Ply ply) const {
-        assertOk();
-        if (*this < MinEval - ply) { assertMate(); Score r = *this + ply; r.assertMate(); return r; }
-        if (MaxEval + ply < *this) { assertMate(); Score r = *this - ply; r.assertMate(); return r; }
-        return *this;
+    static constexpr Score fromTt(unsigned n, Ply ply) {
+        // convert unsigned to signed
+        Score score{static_cast<int>(n) + NoScore};
+
+        if (score < MinEval) {
+            score.assertMate(); score = score + ply; score.assertMate();
+        }
+        else if (MaxEval < score) {
+            score.assertMate(); score = score - ply; score.assertMate();
+        }
+        else {
+            score.assertEval();
+        }
+
+        return score;
     }
 
     friend ostream& operator << (ostream& out, const Score& score) {
@@ -120,8 +138,8 @@ public:
         } s;
         u64_t v;
 
-        constexpr const element_type& operator += (const element_type& o) { v += o.v; return *this; }
-        constexpr const element_type& operator -= (const element_type& o) { v -= o.v; return *this; }
+        constexpr auto& operator += (const element_type& o) { v += o.v; return *this; }
+        constexpr auto& operator -= (const element_type& o) { v -= o.v; return *this; }
 
         constexpr Score score(int material) const {
             auto stage = std::min(material, PieceMatMax);
