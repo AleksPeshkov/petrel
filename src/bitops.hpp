@@ -89,16 +89,16 @@ constexpr int msb(u64_t b) {
 }
 
 template <typename T>
-constexpr T round(T n) {
+constexpr T bit_floor(T n) {
     assert (n > 0);
     return std::bit_floor(n);
 }
 
-constexpr inline int popcount(u32_t b) {
+constexpr int popcount(u32_t b) {
     return std::popcount(b);
 }
 
-constexpr inline int popcount(u64_t b) {
+constexpr int popcount(u64_t b) {
     return std::popcount(b);
 }
 
