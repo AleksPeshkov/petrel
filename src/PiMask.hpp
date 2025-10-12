@@ -10,29 +10,55 @@
 /**
  * class used for enumeration of piece vectors
  */
+
+#ifndef NEON_VECTOR
+
 class PieceSet : public BitSet<PieceSet, Pi> {
     using Base = BitSet<PieceSet, Pi>;
 public:
     using Base::Base;
 
     constexpr Pi vacantMostValuable() const {
-        _t x = v;
-        x = ~x & (x+1); //TRICK: isolate the lowest unset bit
-        return PieceSet{x}.index();
-    }
-
-    constexpr int popcount() const {
-        return ::popcount(v);
-    }
-
-    friend ostream& operator << (ostream& out, PieceSet s) {
-        for (auto pi : Pi::range()) {
-            if (s.has(pi)) { out << pi; } else { out << '.'; }
+        for (Pi pi : Pi::range()) {
+            if (!has(pi)) {
+                return pi;
+            }
         }
-        return out;
+        assert (false);
+        return Pi{TheKing};
+    }
+};
+
+#else
+
+class PieceSet : public BitSet<PieceSet, Pi, u64_t> {
+    using Base = BitSet<PieceSet, Pi, u64_t>;
+public:
+    explicit constexpr PieceSet (_t n = 0) : Base{n & U64(0x8888'8888'8888'8888)} {}
+    explicit constexpr PieceSet (Index i) : Base{::singleton<u64_t>(i*4 + 3)} {}
+
+    // get the first (lowest) bit set
+    constexpr Index first() const {
+        return Index{static_cast<Index::_t>(::lsb(v) >> 2)};
     }
 
+    // get the last (highest) bit set
+    constexpr Index last() const {
+        return  Index{static_cast<Index::_t>(::msb(v) >> 2)};
+    }
+
+    constexpr Pi vacantMostValuable() const {
+        for (auto pi : Pi::range()) {
+            if (!has(pi)) {
+                return pi;
+            }
+        }
+        assert (false);
+        return Pi{TheKing};
+    }
 };
+
+#endif // NEON_VECTOR
 
 class PiSingle {
     using _t = vu8x16_t;
@@ -97,7 +123,11 @@ public:
 
     explicit operator PieceSet() const {
         assertOk();
-        return PieceSet{static_cast<PieceSet::_t>(::mask(v))};
+        #ifndef NEON_VECTOR
+            return PieceSet{static_cast<PieceSet::_t>(::mask(v))};
+        #else
+            return PieceSet{::mask4(v)};
+        #endif
     }
 
     bool has(Pi pi) const { return PieceSet{*this}.has(pi); }
@@ -115,7 +145,7 @@ public:
     int popcount() const { return PieceSet{*this}.popcount(); }
 
     PieceSet begin() const { return PieceSet{*this}; }
-    PieceSet end() const { return PieceSet{ PiMask{zero()} }; }
+    PieceSet end() const { return PieceSet{}; }
 
     friend ostream& operator << (ostream& out, PiMask a) {
         return out << PieceSet(a);
@@ -186,16 +216,14 @@ class PiOrdered {
     constexpr explicit operator const PieceSet& () const { return mask; }
 
 public:
-    PiOrdered (PiMask pieces, PiOrder o)
-        : order{o}, mask{order(pieces)}
-    {}
+    constexpr PiOrdered (PiMask pieces, PiOrder o) : order{o}, mask{order(pieces)} {}
 
     constexpr friend bool operator == (const PiOrdered& a, const PieceSet& b) { return a.mask == b; }
 
     constexpr Pi operator * () const { return order[*mask]; }
     constexpr PiOrdered& operator ++ () { ++mask; return *this; }
-    PiOrdered begin() const { return *this; }
-    constexpr PieceSet end() const { return {}; }
+    constexpr auto begin() const { return *this; }
+    constexpr auto end() const { return PieceSet{}; }
 };
 
 #endif
