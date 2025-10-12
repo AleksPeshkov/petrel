@@ -27,17 +27,24 @@ using u64_t = std::uint64_t;
 #   define U64(number) number##ul
 #endif
 
-#define CACHE_ALIGN __attribute__((__aligned__(64)))
+#define CACHE_ALIGN alignas(64)
 #define PACKED __attribute__((packed))
 
 template <typename T>
-constexpr T universe() {
-    return static_cast<T>(~static_cast<T>(0));
-}
+constexpr typename std::enable_if<std::is_integral<T>::value, T>::type
+universe() { return static_cast<T>(~static_cast<T>(0)); }
+
+#include <type_traits>
+template <typename T, typename N>
+constexpr typename std::enable_if
+    <std::is_integral<T>::value && (std::is_integral<N>::value || std::is_enum<N>::value), T>::type
+small_cast(N n) { return static_cast<T>(n & universe<T>()); }
 
 template <typename T, typename N>
-constexpr T small_cast(N n) {
-    return static_cast<T>(n & static_cast<N>(universe<T>()));
+T narrow_cast(N n) {
+    auto r = small_cast<T>(n);
+    assert (static_cast<N>(r) == n);
+    return r;
 }
 
 template <typename T, typename N>
@@ -88,17 +95,18 @@ constexpr int msb(u64_t b) {
     return 63 ^ std::countl_zero(b);
 }
 
+ // the largest power-of-two not greater than `n`.
 template <typename T>
-constexpr T round(T n) {
+constexpr T bit_floor(T n) {
     assert (n > 0);
     return std::bit_floor(n);
 }
 
-constexpr inline int popcount(u32_t b) {
+constexpr int popcount(u32_t b) {
     return std::popcount(b);
 }
 
-constexpr inline int popcount(u64_t b) {
+constexpr int popcount(u64_t b) {
     return std::popcount(b);
 }
 
