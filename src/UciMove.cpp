@@ -1,7 +1,7 @@
 #include "UciMove.hpp"
 
 // convert move to UCI format
-ostream& operator << (ostream& out, const UciMove& move) {
+ostream& operator << (ostream& out, UciMove move) {
     if (!move) { return out << "0000"; }
 
     auto isWhite{ move.color == White };
@@ -10,7 +10,7 @@ ostream& operator << (ostream& out, const UciMove& move) {
     Square from = isWhite ? from_ : ~from_;
     Square to = isWhite ? to_ : ~to_;
 
-    if (move.type == Move::Normal) { return out << from << to; }
+    if (move.type == UciMove::Normal) { return out << from << to; }
 
     //pawn promotion
     if (from_.on(Rank7)) {
