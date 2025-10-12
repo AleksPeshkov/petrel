@@ -5,20 +5,11 @@
     if (returnStatus == ReturnStatus::Stop) { return ReturnStatus::Stop; } \
     if (returnStatus == ReturnStatus::BetaCutoff) { return ReturnStatus::BetaCutoff; }} ((void)0)
 
-TtSlot::TtSlot (Z z, Move move, Score score, Bound bound, Ply draft, bool canBeKiller) : s{
-    move.from(),
-    move.to(),
-    score,
-    bound,
-    static_cast<unsigned>(draft),
-    canBeKiller,
-    static_cast<unsigned>(z >> DataBits)
-} {}
-
 TtSlot::TtSlot (const Node* n) : TtSlot{
     n->zobrist(),
     n->currentMove,
-    n->score.toTt(n->ply),
+    n->score,
+    n->ply,
     n->bound,
     n->draft,
     n->canBeKiller
@@ -39,19 +30,19 @@ Node::Node (const Node* p) :
 ReturnStatus Node::searchRoot() {
     auto rootMovesClone = moves();
     repetitionHash = root.repetitions.repetitionHash(colorToMove());
-    origin = root.tt.prefetch<TtSlot>(zobrist());
+    tt = root.tt.prefetch<TtSlot>(zobrist());
 
     if (root.limits.isIterationDeadline()) {
         // we have no time to search, return TT move immediately if found
         ++root.tt.reads;
-        ttSlot = *origin;
+        ttSlot = *tt;
         isHit = (ttSlot == zobrist());
         if (!isHit) {
             io::log("#no time, no TT record found");
         } else {
-            Move ttMove = {ttSlot};
+            Move ttMove = ttSlot.move();
             if (!isLegalMove(ttMove)) {
-                if (Move{ttSlot}) {
+                if (ttMove) {
                     io::log("#no time, illegal TT move");
                 } else {
                     io::log("#no time, TT null move found");
@@ -63,10 +54,10 @@ ReturnStatus Node::searchRoot() {
 
                     child->makeMove(ttMove.from(), ttMove.to());
                     ++root.tt.reads;
-                    child->ttSlot = *child->origin;
+                    child->ttSlot = *child->tt;
                     child->isHit = (child->ttSlot == child->zobrist());
                     if (child->isHit) {
-                        Move ttMove2 = {child->ttSlot};
+                        Move ttMove2 = child->ttSlot.move();
                         if (ttMove2) {
                             child->generateMoves();
                             if (child->isLegalMove(ttMove2)) {
@@ -94,7 +85,7 @@ ReturnStatus Node::searchRoot() {
         auto returnStatus = search();
 
         root.newIteration();
-        refreshTtPv();
+        root.refreshTtPv(draft);
 
         RETURN_IF_STOP (returnStatus);
 
@@ -106,32 +97,13 @@ ReturnStatus Node::searchRoot() {
     return ReturnStatus::Continue;
 }
 
- // refresh PV in TT before new search iteration if it was occasionally overwritten
- void Node::refreshTtPv() {
-    Position pos{root.position_};
-    Score s = root.pvScore;
-    Ply d = draft;
-
-    const UciMove* pv = root.pvMoves;
-    for (Move move; (move = *pv++);) {
-        auto o = root.tt.addr<TtSlot>(pos.zobrist());
-        *o = TtSlot{pos.zobrist(), move, s, ExactScore, d, false};
-        ++root.tt.writes;
-
-        //we cannot use makeZobrist() because of en passant legality validation
-        pos.makeMove(move.from(), move.to());
-        s = -s;
-        d = d-1;
-    }
-}
-
 ReturnStatus Node::searchNullMove(Ply R) {
     RETURN_IF_STOP (root.limits.countNode());
 
     parent->currentMove = {};
     makeNullMove(parent);
 
-    origin = root.tt.prefetch<TtSlot>(zobrist());
+    tt = root.tt.prefetch<TtSlot>(zobrist());
     repetitionHash = RepetitionHash{};
 
     return parent->negamax(this, R);
@@ -139,7 +111,7 @@ ReturnStatus Node::searchNullMove(Ply R) {
 
 void Node::makeMove(Square from, Square to) {
     Position::makeMove(parent, from, to);
-    origin = root.tt.prefetch<TtSlot>(zobrist());
+    tt = root.tt.prefetch<TtSlot>(zobrist());
     root.pvMoves.clearPly(pvIndex);
 }
 
@@ -224,12 +196,12 @@ ReturnStatus Node::negamax(Node* child, Ply R) const {
 
 void Node::failHigh() const {
     // currentMove is null (after NMP), write back previous TT move instead
-    if (!currentMove && isHit && Move{ttSlot}) {
-        currentMove = Move{ttSlot};
+    if (!currentMove && isHit && ttSlot.move()) {
+        currentMove = ttSlot.move();
     }
 
     bound = FailHigh;
-    *origin = TtSlot{this};
+    *tt = TtSlot{this};
     ++root.tt.writes;
 
     if (parent && canBeKiller) {
@@ -275,7 +247,7 @@ void Node::updatePv(Node* child) const {
     child->pvIndex = root.pvMoves.set(pvIndex, uciMove(currentMove), child->pvIndex);
 
     bound = ExactScore;
-    *origin = TtSlot{this};
+    *tt = TtSlot{this};
     ++root.tt.writes;
 
     if (parent && canBeKiller) {
@@ -328,27 +300,27 @@ ReturnStatus Node::search() {
     }
 
     ++root.tt.reads;
-    ttSlot = *origin;
+    ttSlot = *tt;
     isHit = (ttSlot == zobrist());
     if (isHit) {
-        if (Move{ttSlot} && !isLegalMove(Move{ttSlot})) {
+        if (ttSlot.move() && !isLegalMove(ttSlot.move())) {
             io::log("#illegal TT move");
             isHit = false;
         } else {
             ++root.tt.hits;
 
             if (ttSlot.draft() >= draft && !isPv) {
-                Bound ttBound = ttSlot;
+                Bound ttBound = ttSlot.bound();
                 Score ttScore = ttSlot.score(ply);
 
                 //TODO: refresh TT record if age is old
                 if ((ttBound & FailHigh) && beta <= ttScore) {
                     score = ttScore;
-                    currentMove = Move{ttSlot};
+                    currentMove = ttSlot.move();
                     return ReturnStatus::BetaCutoff;
                 } else if ((ttBound & FailLow) && ttScore <= alpha) {
                     score = ttScore;
-                    currentMove = Move{ttSlot};
+                    currentMove = ttSlot.move();
                     return ReturnStatus::Continue;
                 }
             }
@@ -380,9 +352,9 @@ ReturnStatus Node::search() {
         RETURN_CUTOFF (child->searchNullMove(3 + draft/6));
     }
 
-    if (isHit && Move{ttSlot}) {
+    if (isHit && ttSlot.move()) {
         canBeKiller = ttSlot.canBeKiller();
-        RETURN_CUTOFF (child->searchMove(ttSlot));
+        RETURN_CUTOFF (child->searchMove(ttSlot.move()));
     }
 
     canBeKiller = false;
@@ -548,8 +520,8 @@ ReturnStatus Node::search() {
 
     if (bound == FailLow) {
         // fail low, no good move found, write back previous TT move if any
-        currentMove = isHit ? Move{ttSlot} : Move{};
-        *origin = TtSlot(this);
+        currentMove = isHit ? ttSlot.move() : Move{};
+        *tt = TtSlot(this);
         ++root.tt.writes;
     }
     return ReturnStatus::Continue;
