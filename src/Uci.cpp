@@ -12,14 +12,17 @@ public:
 };
 
 namespace {
+    static constexpr size_t mebibyte = 1024 * 1024;
+
     template <typename T>
-    static T mebi(T bytes) { return bytes / (1024 * 1024); }
+    static T mebi(T bytes) { return bytes / mebibyte; }
 
     template <typename T>
     static constexpr T permil(T n, T m) { return (n * 1000) / m; }
 }
 
 Uci::Uci(ostream &o) :
+    tt(16 * mebibyte),
     inputLine{std::string(1024, '\0')}, // preallocate 1024 bytes (~100 full moves)
     out{o},
     bestmove_(32, '\0')
@@ -200,7 +203,8 @@ void Uci::setHash() {
         }
     }
 
-    setHash(quantity);
+    tt.setSize(quantity);
+    newGame();
 }
 
 void Uci::ucinewgame() {
@@ -307,6 +311,26 @@ void Uci::goPerft() {
         NodePerft{position_, *this, depth}.visitRoot();
         info_perft_bestmove();
     } );
+}
+
+void Uci::refreshTtPv(Ply depth) const {
+    Position pos{position_};
+    Score pos_score = pvScore;
+    Ply d = depth;
+    Ply pos_ply = 0;
+
+    const UciMove* pv = pvMoves;
+    for (UciMove move; (move = *pv++);) {
+        auto o = tt.addr<TtSlot>(pos.zobrist());
+        *o = TtSlot{pos.zobrist(), move, pos_score, pos_ply, ExactScore, d, false};
+        ++tt.writes;
+
+        //we cannot use makeZobrist() because of en passant legality validation
+        pos.makeMove(move.from(), move.to());
+        pos_score = -pos_score;
+        d = d-1;
+        pos_ply = pos_ply+1;
+    }
 }
 
 void Uci::info_perft_bestmove() {
