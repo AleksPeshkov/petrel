@@ -535,15 +535,15 @@ ReturnStatus Node::goodNonCaptures(Node* child, Pi pi, Bb moves, Ply R) {
     Square from = MY.squareOf(pi);
     PieceType ty = MY.typeOf(pi);
     assert (!ty.is(Pawn));
-    PiMask opLessValue = OP.lessValue(ty);
+    PiMask opLessOrEqualValue = OP.lessOrEqualValue(ty);
 
     for (Square to : moves) {
         assert (!OP.bbPawnAttacks().has(~to));
         assert (isNonCapture({from, to}));
 
         if (bbAttacked().has(to)) {
-            if ((OP.attackersTo(~to) & opLessValue).any()) {
-                // skip move if square defended by less valued piece
+            if ((OP.attackersTo(~to) & opLessOrEqualValue).any()) {
+                // skip move if square defended by less or equal valued piece
                 continue;
             }
 
