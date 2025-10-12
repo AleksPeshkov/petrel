@@ -547,8 +547,8 @@ ReturnStatus Node::goodNonCaptures(Node* child, Pi pi, Bb moves, Ply R) {
                 continue;
             }
 
-            if ((MY.attackersTo(to) % PiMask{pi}).none()) {
-                // skip move to defended square if nobody else attacks it
+            if (OP.attackersTo(~to).popcount() >= MY.attackersTo(to).popcount()) {
+                // unsafe move if defenders number not less then attackers (including moving piece itself)
                 continue;
             }
         }
