@@ -27,7 +27,7 @@ using u64_t = std::uint64_t;
 #   define U64(number) number##ul
 #endif
 
-#define CACHE_ALIGN __attribute__((__aligned__(64)))
+#define CACHE_ALIGN alignas(64)
 #define PACKED __attribute__((packed))
 
 template <typename T>
@@ -88,17 +88,18 @@ constexpr int msb(u64_t b) {
     return 63 ^ std::countl_zero(b);
 }
 
+ // the largest power-of-two not greater than `n`.
 template <typename T>
-constexpr T round(T n) {
+constexpr T bit_floor(T n) {
     assert (n > 0);
     return std::bit_floor(n);
 }
 
-constexpr inline int popcount(u32_t b) {
+constexpr int popcount(u32_t b) {
     return std::popcount(b);
 }
 
-constexpr inline int popcount(u64_t b) {
+constexpr int popcount(u64_t b) {
     return std::popcount(b);
 }
 
