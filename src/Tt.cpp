@@ -20,14 +20,14 @@ void Tt::zeroFill() {
 }
 
 void Tt::allocate(size_t _bytes) {
-    const auto min = minSize();
-    auto bytes = ::bit_floor(std::max(_bytes, min));
+    const auto minBytes = minSize();
+    auto bytes = ::bit_floor(std::max(_bytes, minBytes));
 
     if (bytes != size_) {
         free();
 
-        for (; bytes >= min; bytes >>= 1) {
-            auto ptr = ::allocateAligned(bytes, min);
+        for (; bytes >= minBytes; bytes >>= 1) {
+            auto ptr = ::allocateAligned(bytes, minBytes);
 
             if (ptr) {
                 memory = ptr;

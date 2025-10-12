@@ -8,38 +8,61 @@
 
 class Node;
 
-enum Bound { NoBound, FailLow, FailHigh, ExactScore = FailLow | FailHigh };
+enum Bound : u8_t { NoBound, FailLow, FailHigh, ExactScore = FailLow | FailHigh };
 
 // 8 byte, always replace slot, so no age field, only one score, depth and bound flags
 class TtSlot {
-    enum { DataBits =  35 }; // total size of all data fields
-    static constexpr u64_t HashMask = ~static_cast<u64_t>(0) ^ (::singleton<u64_t>(DataBits+1) - 1);
-
-    struct PACKED DataSmall {
-        unsigned  from :6;
-        unsigned    to :6;
-        signed   score :14;
-        unsigned bound :2;
-        unsigned draft :6;
-        unsigned killer:1; // canBeKiller
-        unsigned      z:64 - DataBits;
+    using _t = u64_t;
+    enum {
+        ScoreMask = Score::Mask,
+        BoundMask = 3,
+        SquareMask = Square::Mask,
+        DraftMask = Ply::Mask,
+        KillerMask = 1,
     };
-
-    union {
-        Z::_t zobrist;
-        DataSmall s;
+    enum {
+        ScoreShift = 0,
+        BoundShift = ScoreShift + 14,
+        FromShift = BoundShift + 2,
+        ToShift = FromShift + 6,
+        DraftShift = ToShift + 6,
+        KillerShift = DraftShift + 6,
+        TotalShift = KillerShift + 1, // total size of all data fields
     };
+    static constexpr u64_t HashMask = U64(0xffff'ffff'ffff'ffff) << TotalShift;
+
+    _t v;
 
 public:
     TtSlot () { static_assert (sizeof(TtSlot) == sizeof(u64_t)); }
-    TtSlot (Z z, Move move, Score, Bound, Ply, bool);
+
+    TtSlot (Z z, Move move, Score score, Bound bound, Ply draft, bool canBeKiller) : v{
+        (z & HashMask)
+        | (static_cast<_t>(static_cast<unsigned>(score) - NoScore) << ScoreShift) // convert to unsigned
+        | (static_cast<_t>(bound) << BoundShift)
+        | (static_cast<_t>(move.from()) << FromShift)
+        | (static_cast<_t>(move.to()) << ToShift)
+        | (static_cast<_t>(draft) << DraftShift)
+        | (static_cast<_t>(canBeKiller) << KillerShift)
+    } {}
+
     TtSlot (const Node* node);
-    bool operator == (Z z) const { return (zobrist & HashMask) == (z & HashMask); }
-    operator Move () const { return Move{ static_cast<Square::_t>(s.from), static_cast<Square::_t>(s.to) }; }
-    Score score(Ply ply) const { return Score{s.score}.fromTt(ply); }
-    operator Bound () const { return static_cast<Bound>(s.bound); }
-    Ply draft() const { return s.draft; }
-    bool canBeKiller() const { return s.killer; }
+    bool operator == (Z z) const { return (v & HashMask) == (z & HashMask); }
+
+    Move move() const { return Move{
+        static_cast<Square::_t>(v >> FromShift & SquareMask),
+        static_cast<Square::_t>(v >> ToShift & SquareMask)
+    };}
+
+    Bound bound() const { return static_cast<Bound>(v >> BoundShift & BoundMask); }
+    Ply draft() const { return Ply{static_cast<Ply::_t>(v >> DraftShift & DraftMask)}; }
+    bool canBeKiller() const { return v >> KillerShift & KillerMask; }
+
+    Score score(Ply ply) const {
+        // convert unsigned to signed
+        int score = (v >> ScoreShift & ScoreMask) + NoScore;
+        return Score{static_cast<Score::_t>(score)}.fromTt(ply);
+    }
 };
 
 class Uci;
@@ -57,7 +80,7 @@ protected:
     Ply ply{0}; // distance from root (root is ply == 0)
     Ply draft{0}; // remaining depth to horizon
 
-    TtSlot* origin; // pointer to the slot in TT
+    TtSlot* tt; // pointer to the slot in TT
     TtSlot  ttSlot;
     bool isHit = false; // this node found in TT
     Score eval; // static evaluation of the current position
