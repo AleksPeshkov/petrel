@@ -5,16 +5,6 @@
     if (returnStatus == ReturnStatus::Stop) { return ReturnStatus::Stop; } \
     if (returnStatus == ReturnStatus::BetaCutoff) { return ReturnStatus::BetaCutoff; }} ((void)0)
 
-TtSlot::TtSlot (Z z, Move move, Score score, Bound bound, Ply draft, bool canBeKiller) : s{
-    move.from(),
-    move.to(),
-    score,
-    bound,
-    static_cast<unsigned>(draft),
-    canBeKiller,
-    static_cast<unsigned>(z >> DataBits)
-} {}
-
 TtSlot::TtSlot (const Node* n) : TtSlot{
     n->zobrist(),
     n->currentMove,

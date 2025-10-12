@@ -5,7 +5,7 @@
 #include "typedefs.hpp"
 
 // position evaluation score, fits in 14 bits
-enum score_enum {
+enum score_enum : i16_t {
     NoScore = -8192, //TRICK: assume two's complement
     MinusInfinity = NoScore + 1, // negative bound, no position should eval to it
     MinusMate = MinusInfinity + 1, // mated in 0, only even negative values for mated positions
@@ -30,6 +30,7 @@ enum score_enum {
 
 // position evaluation score, fits in 14 bits
 struct Score {
+    static constexpr int Mask = 0x3fff;
     using _t = score_enum;
     _t v;
 
