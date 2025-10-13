@@ -13,7 +13,7 @@ EXPECT ?= $(TEST_DIR)/expect.sh
 UNIT_TEST_DIR = tests/unit
 
 # === Default Flags (Release) ===
-BUILD_FLAGS = -O3 -flto -finline-functions -DNDEBUG
+BUILD_FLAGS = -static -O3 -flto -finline-functions -DNDEBUG
 
 ifeq ($(CXX), g++)
 	BUILD_FLAGS += -flto=auto
