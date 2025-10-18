@@ -60,6 +60,10 @@ public:
             return Index{static_cast<element_type>(i)};
         });
     }
+
+    static constexpr auto reverse_range() {
+        return range() | std::views::reverse;
+    }
 };
 
 template <int _Size, typename _element_type = int, typename _storage_type = _element_type>

@@ -16,6 +16,7 @@ enum class Type : u8_t {
     NotPawn = Queen | Rook | Bishop | Knight | King,
     NotKing = Queen | Rook | Bishop | Knight | Pawn,
     Leaper = Pawn | Knight | King,
+    PNBRQK = Pawn | Knight | Bishop | Rook | Queen | King,
     PNBRQ  = Pawn | Knight | Bishop | Rook | Queen,
     PNBR   = Pawn | Knight | Bishop | Rook,
     PNB    = Pawn | Knight | Bishop,
@@ -30,7 +31,7 @@ class PiType {
         Type::PNB,   // Bishop
         Type::PNB,   // Knight
         Type::Pawn,  // Pawn
-        Type::Empty, // King
+        Type::PNBRQK,// King
     };
 
     static constexpr PieceType::arrayOf<element_type> LessValue = {
@@ -39,7 +40,7 @@ class PiType {
         Type::Pawn,  // Bishop
         Type::Pawn,  // Knight
         Type::Empty, // Pawn
-        Type::Empty, // King
+        Type::PNBRQ, // King
     };
 
     union {

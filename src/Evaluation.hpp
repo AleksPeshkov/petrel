@@ -214,4 +214,29 @@ public:
 
 };
 
+class DeltaPrunning {
+    NonKingType::arrayOf< Score > score = {
+        Score{1200}, // Queen
+        Score{600},  // Rook
+        Score{400},  // Bishop
+        Score{400},  // Knight
+        Score{150}   // Pawn
+    };
+
+public:
+    // Returns the least valuable piece type whose value is greater than delta
+    constexpr PieceType operator() (Score delta) const {
+        // iterate through piece types starting from Pawn to Queen
+        // find the least valued piece type whose value is greater than delta
+        for (auto ty : NonKingType::reverse_range()) {
+            if (score[ty] > delta) {
+                return PieceType{ty};
+            }
+        }
+        return PieceType{King};
+    }
+};
+
+extern const DeltaPrunning deltaPrunning;
+
 #endif

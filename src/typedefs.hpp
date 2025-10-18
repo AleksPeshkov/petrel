@@ -83,6 +83,7 @@ enum piece_type_t {
 };
 using SliderType = Index<3, piece_type_t>; // Queen, Rook, Bishop
 using PromoType = IndexChar<4, piece_type_t>; // Queen, Rook, Bishop, Knight
+using NonKingType = IndexChar<5, piece_type_t>; // Queen, Rook, Bishop, Knight, Pawn
 using PieceType = IndexChar<6, piece_type_t>; // Queen, Rook, Bishop, Knight, Pawn, King
 template <> io::czstring PromoType::The_string;
 template <> io::czstring PieceType::The_string;

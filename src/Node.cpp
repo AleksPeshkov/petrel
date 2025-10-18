@@ -576,13 +576,17 @@ ReturnStatus Node::quiescence() {
         alpha = score;
     }
 
-    // prepare empty child node to make moves into
+    // prepare a new node for children search moves
     //TODO: create lighter quiescence node without zobrist hashing and repetition detection
     Node node{this};
     const auto child = &node;
 
-    // impossible to capture the king, do not even try to save time
-    return goodCaptures(child, OP.notKing());
+    // Delta prunning
+    // only captures of equal or more valuable victim types than lowestVictimType will be considered
+    PieceType lowestVictimType = ::deltaPrunning(alpha - score);
+    PiMask victims = OP.notKing() % OP.lessValue(lowestVictimType);
+
+    return goodCaptures(child, victims);
 }
 
 ReturnStatus Node::goodCaptures(Node* child, const PiMask& victims) {
