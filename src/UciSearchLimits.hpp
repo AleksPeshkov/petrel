@@ -45,8 +45,14 @@ class UciSearchLimits {
     }
 
     constexpr TimeInterval average(Side::_t my) const {
-        auto moves = (movestogo > 0) ? movestogo : 30;
-        return (time[my] - inc[my]) / moves + inc[my];
+        assert (movestogo >= 0);
+
+        if (!movestogo && inc[my] == 0ms) {
+            return time[my] / 25; // sudden death
+        }
+
+        auto moves = movestogo ? std::min(movestogo, 20) : 20;
+        return inc[my] + (time[my]-inc[my])/moves;
     }
 
     void setSearchDeadline() {
@@ -65,13 +71,13 @@ class UciSearchLimits {
         }
 
         // average remaining time per move
-        auto myAverage = average(My) + (canPonder ? average(Op) / 3 : 0ms);
-        auto hardInterval = std::min(time[My], myAverage * 3 / 2);
+        auto myAverage = average(My) + (canPonder ? average(Op) / 2 : 0ms);
+        auto hardInterval = std::min(time[My], myAverage * 2);
         auto baseTime = searchStartTime - moveOverhead;
 
-        hardDeadline = baseTime + hardInterval; // 150% average time
-        rootMoveDeadline = baseTime + (hardInterval * 2 / 3); // 100% average time
-        iterationDeadline = baseTime + (hardInterval / 3); // 50% average time
+        hardDeadline = baseTime + hardInterval; // 200% average time
+        rootMoveDeadline = baseTime + (hardInterval / 2); // 100% average time
+        iterationDeadline = baseTime + (hardInterval / 4); // 50% average time
     }
 
     ReturnStatus refreshQuota() const {
