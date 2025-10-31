@@ -31,7 +31,7 @@ ReturnStatus Node::searchRoot() {
     repetitionHash = root.repetitions.repetitionHash(colorToMove());
     tt = root.tt.prefetch<TtSlot>(zobrist());
 
-    if (root.limits.isIterationDeadline()) {
+    if (root.limits.reached<IterationDeadline>()) {
         // we have no time to search, return TT move immediately if found
         ++root.tt.reads;
         ttSlot = *tt;
@@ -90,7 +90,7 @@ ReturnStatus Node::searchRoot() {
 
         root.info_iteration(depth);
 
-        if (root.limits.isIterationDeadline()) { return ReturnStatus::Stop; }
+        if (root.limits.reached<IterationDeadline>()) { return ReturnStatus::Stop; }
     }
 
     return ReturnStatus::Continue;
@@ -202,7 +202,7 @@ ReturnStatus Node::negamax(Node* child, Ply R) const {
         updatePv(child);
     }
 
-    if (ply == 0 && root.limits.isRootMoveDeadline()) {
+    if (ply == 0 && root.limits.reached<RootMoveDeadline>()) {
         return ReturnStatus::Stop;
     }
 
