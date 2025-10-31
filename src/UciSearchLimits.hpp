@@ -5,6 +5,8 @@
 #include "Index.hpp"
 #include "chrono.hpp"
 
+enum deadline_t { HardDeadline, RootMoveDeadline, IterationDeadline };
+
 class UciSearchLimits {
     constexpr static int QuotaLimit = 200; // < 0.05ms
 
@@ -19,9 +21,12 @@ class UciSearchLimits {
     mutable std::atomic_bool ponder{false};
 
     TimePoint searchStartTime;
-    TimePoint hardDeadline = TimePoint::max(); // tested every QuotaLimit nodes
-    TimePoint rootMoveDeadline = TimePoint::max(); // tested before next root move search
-    TimePoint iterationDeadline = TimePoint::max(); // tested when iteration ends
+
+    TimePoint deadline[3] = {
+        TimePoint::max(), // HardDeadline      : tested every QuotaLimit nodes
+        TimePoint::max(), // RootMoveDeadline  : tested after every root move search ends
+        TimePoint::max()  // IterationDeadline : tested when iteration ends
+    };
 
     Side::arrayOf<TimeInterval> time = {{ 0ms, 0ms }};
     Side::arrayOf<TimeInterval> inc = {{ 0ms, 0ms }};
@@ -39,14 +44,20 @@ class UciSearchLimits {
     }
 
     constexpr void setNoDeadline() {
-        hardDeadline = TimePoint::max();
-        iterationDeadline = TimePoint::max();
-        rootMoveDeadline = TimePoint::max();
+        deadline[HardDeadline]      = TimePoint::max();
+        deadline[RootMoveDeadline]  = TimePoint::max();
+        deadline[IterationDeadline] = TimePoint::max();
     }
 
-    constexpr TimeInterval average(Side::_t my) const {
-        auto moves = (movestogo > 0) ? movestogo : 30;
-        return (time[my] - inc[my]) / moves + inc[my];
+    constexpr TimeInterval average(Side::_t si) const {
+        assert (movestogo >= 0);
+
+        if (!movestogo && inc[si] == 0ms) {
+            return time[si] / 25; // sudden death
+        }
+
+        auto moves = movestogo ? std::min(movestogo, 20) : 20;
+        return inc[si] + (time[si]-inc[si])/moves;
     }
 
     void setSearchDeadline() {
@@ -56,7 +67,7 @@ class UciSearchLimits {
         }
         if (movetime > 0ms) {
             setNoDeadline();
-            hardDeadline = searchStartTime + movetime - moveOverhead;
+            deadline[HardDeadline] = searchStartTime + movetime - moveOverhead;
             return;
         }
         if (time[My] == 0ms) {
@@ -65,13 +76,13 @@ class UciSearchLimits {
         }
 
         // average remaining time per move
-        auto myAverage = average(My) + (canPonder ? average(Op) / 3 : 0ms);
-        auto hardInterval = std::min(time[My], myAverage * 3 / 2);
+        auto myAverage = average(My) + (canPonder ? average(Op) / 2 : 0ms);
+        auto hardInterval = std::min(time[My], myAverage * 2);
         auto baseTime = searchStartTime - moveOverhead;
 
-        hardDeadline = baseTime + hardInterval; // 150% average time
-        rootMoveDeadline = baseTime + (hardInterval * 2 / 3); // 100% average time
-        iterationDeadline = baseTime + (hardInterval / 3); // 50% average time
+        deadline[HardDeadline]      = baseTime + hardInterval;   // 200% average time
+        deadline[RootMoveDeadline]  = baseTime + hardInterval/2; // 100% average time
+        deadline[IterationDeadline] = baseTime + hardInterval/4; // 50% average time
     }
 
     ReturnStatus refreshQuota() const {
@@ -90,7 +101,7 @@ class UciSearchLimits {
             }
         }
 
-        if (isHardDeadline()) {
+        if (reached<HardDeadline>()) {
             nodesLimit = nodes;
             nodesQuota = 0;
 
@@ -161,7 +172,7 @@ public:
 
     void ponderhit() {
         ponder.store(false, std::memory_order_relaxed);
-        isHardDeadline();
+        reached<HardDeadline>();
     }
 
     void stop() const {
@@ -179,43 +190,17 @@ public:
         return ponder.load(std::memory_order_relaxed) || infinite.load(std::memory_order_relaxed);
     }
 
-    // !ponder && hardDeadline
-    bool isHardDeadline() const {
+    template <deadline_t DeadlineKind>
+    bool reached() const {
         if (isStopped()) { return true; }
 
-        auto deadline =
+        bool isDeadline =
             !ponder.load(std::memory_order_relaxed)
-            && hardDeadline != TimePoint::max()
-            && hardDeadline < ::timeNow();
+            && deadline[DeadlineKind] != TimePoint::max()
+            && deadline[DeadlineKind] < ::timeNow();
 
-        if (deadline) { stop(); }
-        return deadline;
-    }
-
-    // !ponder && iterationDeadline
-    bool isIterationDeadline() const {
-        if (isStopped()) { return true; }
-
-        auto deadline =
-            !ponder.load(std::memory_order_relaxed)
-            && iterationDeadline != TimePoint::max()
-            && iterationDeadline < ::timeNow();
-
-        if (deadline) { stop(); }
-        return deadline;
-    }
-
-    // !ponder && rootMoveDeadline
-    bool isRootMoveDeadline() const {
-        if (isStopped()) { return true; }
-
-        auto deadline =
-            !ponder.load(std::memory_order_relaxed)
-            && rootMoveDeadline != TimePoint::max()
-            && rootMoveDeadline < ::timeNow();
-
-        if (deadline) { stop(); }
-        return deadline;
+        if (isDeadline) { stop(); }
+        return isDeadline;
     }
 
     TimeInterval elapsedSinceStart() const {
