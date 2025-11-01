@@ -378,6 +378,11 @@ ReturnStatus Node::search() {
             ) ));
         }
 
+        // repeated killer heuristic (can change while searching descendants of previous killer3)
+        while (isLegalMove(parent->killer3)) {
+            RETURN_CUTOFF (child->searchMove(parent->killer3));
+        }
+
         if (grandParent) {
             // follow move heuristic: continue last made move
             Move myMove = grandParent->currentMove;
@@ -388,13 +393,28 @@ ReturnStatus Node::search() {
             }
         }
 
+        // repeated killer heuristic (can change while searching descendants of previous killer3)
+        while (isLegalMove(parent->killer3)) {
+            RETURN_CUTOFF (child->searchMove(parent->killer3));
+        }
+
         // secondary killer move, backup of previous primary killer
         RETURN_CUTOFF (child->searchIfLegal(parent->killer2));
+
+        // repeated killer heuristic (can change while searching descendants of previous killer3)
+        while (isLegalMove(parent->killer3)) {
+            RETURN_CUTOFF (child->searchMove(parent->killer3));
+        }
 
         if (opMove) {
             RETURN_CUTOFF (child->searchIfLegal( root.counterMove.get2(
                 parent->colorToMove(), parent->MY.typeAt(opMove.from()), opMove.to()
             ) ));
+        }
+
+        // repeated killer heuristic (can change while searching descendants of previous killer3)
+        while (isLegalMove(parent->killer3)) {
+            RETURN_CUTOFF (child->searchMove(parent->killer3));
         }
 
         if (grandParent) {
