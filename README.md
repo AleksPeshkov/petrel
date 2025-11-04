@@ -1,61 +1,55 @@
-Developer's Notes About Source Code Internals
-=============================================
+# Petrel is UCI Chess Engine
 
-*The text below assumes that the reader knows chess programming terminology.*
+Petrel is a conventional alpha-beta search engine, but its implementation details set it apart from others.
+Version 2.1 is rated 2600 Elo on the [CCRL Blitz](https://computerchess.org.uk/ccrl/404/cgi/engine_details.cgi?print=Details&each_game=1&eng=Petrel%202.1%2064-bit#Petrel_2_1_64-bit) and the [40/15](https://computerchess.org.uk/ccrl/4040/cgi/engine_details.cgi?print=Details&each_game=0&eng=Petrel%202.1%2064-bit#Petrel_2_1_64-bit) lists.
 
-The source code may be interesting for chess programmers due to several novel chess data structures.
+## Features
 
-The engine uses neither mailbox nor bitboard board representations. The fundamental
-data structure is a 16-byte vector: a vector of bytes for each chess piece on one side of the chessboard.
+Petrel is relatively fast searcher:
 
-The engine incrementally updates the attack table using a unique data structure—
-a matrix of pieces and bitboards. Each bitboard rank is stored separately in one of 8 piece vectors.
-This allows a very fast implementation of the `attackTo()` function and relatively fast updates of the attack table state.
-The engine uses the so-called Reversed BitBoard (aka Hyperbola Quintessence) method for generating attacks of sliding pieces (bishops, rooks, queens).
+* [**Unique position representation**](https://www.chessprogramming.org/Piece-Sets) – Neither bitboards nor mailbox based on 128-bit SIMD vectors
+* **[Color-independent position](https://www.chessprogramming.org/Color_Flipping#Monochrome) and Zobrist hashing scheme** – Allows seemless position transpositions white into black and back
+* [**Hyperbola Quintessence**](https://www.chessprogramming.org/Hyperbola_Quintessence) – For fast sliding piece attack generation
+* [**Incrementally updated attack tables**](https://www.chessprogramming.org/Attack_and_Defend_Maps)
+* **Bulk legal move generation** – Derived directly from attack tables
+* **Transposition table** – Basic "always replace" scheme
+* Quiescence search without transposition look up
+* Unorthodox search code framework without move lists
 
-Fully legal moves matrix is generated in bulk from the attack matrix.
+## Search
 
-During the chess tree search, the engine does not distinguish between white and black playing sides.
-The `PositionSide` class represents a chess side without color specificity.
-Internally, squares are relative to each side's base rank, so all pawns push from RANK_2 and promote at RANK_8, both kings start at E1 square, etc.
+Small number of heuristics, yet effective:
 
-Zobrist hashing uses only a few keys per piece type, which rotate to generate a key for each square.
-Changing the position's move side to move (null move) is a byte-reversed operation. This Zobrist implementation allows
-hash transpositions into different color.
+* Alpha-beta search with **Principal Variation Search (PVS)**
+* **Quiescence search** with **SEE-based pruning** of losing captures
+* **Null Move Pruning** – Modest reduction: `R = 2 + d/6`
+* **SEE-based Move Reduction** – Reduced more for unsafe moves, down to depth 0
+* **SEE-based Move Pruning** – Unsafe quiet moves pruned in the last 2 plies
+* **Check extension** – +1 ply (reduction adjustments preserved)
 
-Conventions Used in the Source Code
------------------------------------
+## Move Ordering
 
-Overloaded operators:
+Relatively sophisticated scheme:
 
-- operator `~` is used to flip squares, bitboards, zobrist hashes, and other data structures to convert data from the opposite side point of view.
-   The flip operation reverses the byte order inside bitboards and zobrist hashes, switches ranks within squares.
-- operators `+` and `-` for bitsets with assertions ensuring disjoint sets;
-- operator `%` is used as a shortcut for "AND NOT" bitset operations;
+1. All queen promotions
+2. Good captures sorted by **MVV/LVA**
+3. **Killer Move Heuristic** – 2 moves per ply
+4. [**Counter Move Heuristic**](https://www.chessprogramming.org/Countermove_Heuristic) – 2 moves per slot
+5. **Follow-up Move Heuristic**  – 2 moves per slot (Crafty-style)
+6. **Unique Recursive Killer Move** – Child killer immediately propogates to parent node
+7. Quiet moves from **SEE-unsafe** to **safe** squares
+8. Quiet moves from **safe** to **safe** squares
+9. Pawn quiet moves (including all underpromotions)
+10. King quiet moves
+11. All bad captures – Low valued pieces first
+12. All unsafe quiet moves – Low valued pieces first
 
-Abbreviations in the code:
+## Evaluation
 
-* `Side side`: `{My, Op}` – side to move and opposite side.
-* `Color color`: `{White, Black}` – rarely used, but required for correct output of internal moves in standard chess notation.
-* `PieceType ty`: `{Queen = 0, Rook = 1, Bishop = 2, Knight = 3, Pawn = 4, King = 5}` – type of possible chess piece.
-* `Pi pi`: Piece Index – one of 16 piece slots in a byte vector; `{TheKing = 0}` is the slot dedicated to the king.
-* `PiMask`: intermediate data – piece vector of byte masks (0 or 0xFF) for selected pieces.
-    Pieces are sorted so that more valuable pieces occupy lower indexes.
-* `PiSquare`: stores locations of active pieces or the `0xFF` NoSquare tag.
-* `PiType`: each piece type is represented as a separate bit, enabling quick grouping by criteria.
-* `PiTrait`: castling and en passant statuses, plus temporary information like currently checking pieces.
-* `Bb bb`: BitBoard – a well-known 64-bit bitset representing squares on the chessboard.
-* `PiBbMatrix`: matrix of Pi × Bb (128 bytes), used for storing and updating piece attack information and generating moves from attacks.
+* Simple [**PeSTO** evaluation](https://www.chessprogramming.org/PeSTO%27s_Evaluation_Function) (planned upgrade to **NNUE** in future)
 
-Universal Chess Interface (UCI) Extensions
-------------------------------------------
-Engine accepts command option `--file` (`-f`) to pass UCI initial commands from a file.
+---
 
-* `position`: parameters `fen` or `startpos` are optional; default is reusing previous position command.
-   So, `position moves e2e4` is sufficient to make the first move.
-* `position` without any options displays the current position static evaluation and FEN.
-* `setoption` can be abbreviated to short forms like `set hash 1g`.
-  `setoption Hash` accepts sizes in bytes `b`, kibibytes `k`, mebibytes `m`, UCI default), gibibytes `g`.
-* `perft N` performs PERFT to depth `N` using bulk counting and the transposition hash table.
+*Aleks Peshkov, 2006 – 2025*
 
-(c) 2025, Aleks Peshkov
+Many thanks to Jim Ablett for [Windows, Linux and Android PGO builds](https://jim-ablett.kesug.com/).
