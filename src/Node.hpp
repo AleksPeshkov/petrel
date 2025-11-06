@@ -94,12 +94,9 @@ protected:
     mutable Move currentMove = {}; // last move made from *this into *child
     PvMoves::Index pvIndex{0}; // start of subPV for the current ply
 
-    /**
-     * Killer heuristic
-     */
-    mutable Move killer1 = {}; // the most fresh killer, always replaced by sibling's fail high
-    mutable Move killer2 = {}; // previous killer1
-    mutable Move killer3 = {}; // dynamic killer candidate, write back by descendants
+    // Killer heuristic
+    using KillerIndex = ::Index<3>;
+    mutable KillerIndex::arrayOf<Move> killer;
     bool canBeKiller = false;  // good captures should not waste killer slots
 
     Node (const Node* parent); // prepare empty child node

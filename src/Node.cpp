@@ -19,11 +19,12 @@ Node::Node (const Node* p) :
     PositionMoves{}, root{p->root}, parent{p}, grandParent{p->parent},
     ply{p->ply + 1}, depth{p->depth > 0 ? p->depth-1 : 0},
     alpha{-p->beta}, beta{-p->alpha}, isPv(p->isPv),
-    pvIndex{p->pvIndex+1},
-    killer1{grandParent ? grandParent->killer1 : Move{}},
-    killer2{grandParent ? grandParent->killer2 : Move{}},
-    killer3{grandParent ? grandParent->killer3 : Move{}}
-{}
+    pvIndex{p->pvIndex+1}
+{
+    killer[0] = grandParent ? grandParent->killer[0] : Move{};
+    killer[1] = grandParent ? grandParent->killer[1] : Move{};
+    killer[2] = Move{};
+}
 
 ReturnStatus Node::negamax(Node* child, Ply R) const {
     child->depth = depth - R; //TRICK: Ply >= 0
@@ -195,20 +196,20 @@ ReturnStatus Node::search() {
 
     if (parent && !inCheck()) {
         // primary killer move, updated by previous siblings
-        RETURN_CUTOFF (child->searchIfLegal(parent->killer1));
+        RETURN_CUTOFF (child->searchIfLegal(parent->killer[0]));
 
         RETURN_CUTOFF (counterMove(child));
         RETURN_CUTOFF (followMove(child));
 
         // secondary killer move, backup of previous primary killer
-        RETURN_CUTOFF (child->searchIfLegal(parent->killer2));
+        RETURN_CUTOFF (child->searchIfLegal(parent->killer[1]));
 
         RETURN_CUTOFF (counterMove(child));
         RETURN_CUTOFF (followMove(child));
 
-        // repeated killer heuristic (can change while searching descendants of previous killer3)
-        while (isLegalMove(parent->killer3)) {
-            RETURN_CUTOFF (child->searchMove(parent->killer3));
+        // repeated killer heuristic (can change while searching descendants of previous killer[2])
+        while (isLegalMove(parent->killer[2])) {
+            RETURN_CUTOFF (child->searchMove(parent->killer[2]));
         }
     }
 
@@ -546,36 +547,36 @@ void Node::updatePv() const {
     }
 }
 
-void Node::updateKillerMove(Move newKiller) const {
-    if (killer1 != newKiller) {
-        if (killer2 != newKiller) {
-            if (killer3 != newKiller) {
+void Node::updateKillerMove(Move historyMove) const {
+    if (killer[0] != historyMove) {
+        if (killer[1] != historyMove) {
+            if (killer[2] != historyMove) {
                 // fresh killer move
-                killer2 = killer1;
-                killer1 = newKiller;
+                killer[1] = killer[0];
+                killer[0] = historyMove;
             } else {
-                // promote killer3 to killer1
-                killer3 = killer2;
-                killer2 = killer1;
-                killer1 = newKiller;
+                // promote killer[2] to killer[0]
+                killer[2] = killer[1];
+                killer[1] = killer[0];
+                killer[0] = historyMove;
             }
         } else {
-            // promote killer2 to killer1
-            killer2 = killer1;
-            killer1 = newKiller;
+            // promote killer[1] to killer[0]
+            killer[1] = killer[0];
+            killer[0] = historyMove;
         }
     }
 
-    if (grandParent && grandParent->killer1 != newKiller && grandParent->killer2 != newKiller) {
-        grandParent->killer3 = newKiller;
+    if (grandParent && grandParent->killer[0] != historyMove && grandParent->killer[1] != historyMove) {
+        grandParent->killer[2] = historyMove;
     }
 
     if (currentMove) {
-        root.counterMove.set(colorToMove(),  MY.typeAt(currentMove.from()), currentMove.to(), newKiller);
+        root.counterMove.set(colorToMove(),  MY.typeAt(currentMove.from()), currentMove.to(), historyMove);
     }
 
     if (parent && parent->currentMove) {
-        root.followMove.set(parent->colorToMove(),  parent->MY.typeAt(parent->currentMove.from()), parent->currentMove.to(), newKiller);
+        root.followMove.set(parent->colorToMove(),  parent->MY.typeAt(parent->currentMove.from()), parent->currentMove.to(), historyMove);
     }
 }
 
