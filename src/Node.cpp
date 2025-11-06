@@ -21,9 +21,9 @@ Node::Node (const Node* p) :
     alpha{-p->beta}, beta{-p->alpha}, isPv(p->isPv),
     pvIndex{p->pvIndex+1},
     killer1{grandParent ? grandParent->killer1 : Move{}},
-    killer2{grandParent ? grandParent->killer2 : Move{}},
-    killer3{grandParent ? grandParent->killer3 : Move{}}
-{}
+    killer2{grandParent ? grandParent->killer2 : Move{}}
+{
+}
 
 ReturnStatus Node::negamax(Node* child, Ply R) const {
     child->depth = depth - R; //TRICK: Ply >= 0
