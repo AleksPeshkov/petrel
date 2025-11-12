@@ -2,6 +2,24 @@
 #include "Node.hpp"
 #include "NodePerft.hpp"
 
+namespace { // anonymous namespace
+
+void trimTrailingWhitespace(std::string& str) {
+    // Define the set of whitespace characters to remove (space, newline, carriage return, tab, etc.)
+    const std::string whitespace = " \n\r\t\f\v";
+
+    // Find the position of the last non-whitespace character
+    size_t last_non_space = str.find_last_not_of(whitespace);
+
+    // If a non-whitespace character is found, erase everything after it
+    if (std::string::npos != last_non_space) {
+        str.erase(last_non_space + 1);
+    } else {
+        // If the string contains only whitespace (or is empty), clear the string
+        str.clear();
+    }
+}
+
 class Output : public io::ostringstream {
     const Uci& uci;
 public:
@@ -9,15 +27,15 @@ public:
     ~Output () { uci.output(str()); }
 };
 
-namespace {
-    static constexpr size_t mebibyte = 1024 * 1024;
+static constexpr size_t mebibyte = 1024 * 1024;
 
-    template <typename T>
-    static T mebi(T bytes) { return bytes / mebibyte; }
+template <typename T>
+static T mebi(T bytes) { return bytes / mebibyte; }
 
-    template <typename T>
-    static constexpr T permil(T n, T m) { return (n * 1000) / m; }
-}
+template <typename T>
+static constexpr T permil(T n, T m) { return (n * 1000) / m; }
+
+} // anonymous namespace
 
 Uci::Uci(ostream &o) :
     tt(16 * mebibyte),
@@ -34,9 +52,8 @@ void Uci::output(const std::string& message) const {
         std::lock_guard<decltype(outMutex)> lock{outMutex};
         out << message << std::endl;
     }
-#ifndef NDEBUG
-    log(message);
-#endif
+
+    if (isDebugOn) { log(message); }
 }
 
 void Uci::log(const std::string& message) const {
@@ -59,10 +76,7 @@ void Uci::log(const std::string& message) const {
 void Uci::processInput(istream& in) {
     std::string currentLine(1024, '\0'); // preallocate 1024 bytes (~100 full moves)
     while (std::getline(in, currentLine)) {
-
-#ifndef NDEBUG
-        log('>' + currentLine);
-#endif
+        if (isDebugOn) { log('>' + currentLine); }
 
         inputLine.clear(); //clear error state from the previous line
         inputLine.str(currentLine);
@@ -77,6 +91,7 @@ void Uci::processInput(istream& in) {
         else if (consume("set"))       { setoption(); }
         else if (consume("ucinewgame")){ ucinewgame(); }
         else if (consume("uci"))       { uciok(); }
+        else if (consume("debug"))     { debug(); }
         else if (consume("perft"))     { goPerft(); }
         else if (consume("quit"))      { stop(); break; }
         else if (consume("exit"))      { stop(); break; }
@@ -85,8 +100,8 @@ void Uci::processInput(istream& in) {
             std::string unparsedInput;
             inputLine.clear();
             std::getline(inputLine, unparsedInput);
-
-            log(currentLine + "\n#unparsed input->" + unparsedInput);
+            if (isDebugOn) { log('>' + currentLine); }
+            log("#Unparsed input->" + unparsedInput);
         }
     }
 }
@@ -114,20 +129,34 @@ void Uci::setoption() {
         consume("value");
 
         inputLine >> std::ws;
-        std::string newLogFileName;
-        std::getline(inputLine, newLogFileName);
+        std::string newFileName;
+        std::getline(inputLine, newFileName);
+        ::trimTrailingWhitespace(newFileName);
 
-        if (newLogFileName == "<empty>") {
+        if (newFileName.empty() || newFileName == "<empty>") {
+            if (logFile.is_open()) {
+                log("#Debug Log File set <empty>");
+                logFile.close();
+            }
             logFileName.clear();
-            logFile.close();
             return;
         }
 
-        if (newLogFileName != logFileName) {
-            logFile.close();
-            logFileName = std::move(newLogFileName);
-            logFile.open(logFileName, std::ios::app);
+        if (newFileName != logFileName) {
+            if (logFile.is_open()) {
+                log("#Debug Log File set \"" + newFileName + "\"");
+                logFile.close();
+                logFileName.clear();
+            }
+
+            logFile.open(newFileName, std::ios::app);
+            if (!logFile.is_open()) {
+                log("#Failed to open log file: " + newFileName);
+                return;
+            }
+            logFileName = std::move(newFileName);
         }
+
         return;
     }
 
@@ -166,6 +195,20 @@ void Uci::setoption() {
         io::fail_rewind(inputLine);
         return;
     }
+}
+
+void Uci::debug() {
+    if (!hasMoreInput()) {
+        Output ob{this};
+        ob << "info string debug is " << (isDebugOn ? "on" : "off");
+        return;
+    }
+
+    if (consume("on"))  { isDebugOn = true; log("#debug on"); return; }
+    if (consume("off")) { isDebugOn = false; log("#debug off"); return; }
+
+    io::fail_rewind(inputLine);
+    return;
 }
 
 void Uci::setHash() {
@@ -362,7 +405,9 @@ void Uci::info_perft_bestmove() {
 
 void Uci::readyok() const {
     Output ob{this};
+#ifndef NDEBUG
     info_fen(ob) << '\n';
+#endif
     info_nps(ob);
     ob << "readyok";
 }
