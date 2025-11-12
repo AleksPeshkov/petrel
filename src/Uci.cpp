@@ -119,16 +119,23 @@ void Uci::setoption() {
         std::getline(inputLine, newLogFileName);
 
         if (newLogFileName == "<empty>") {
-            logFileName.clear();
             logFile.close();
+            logFileName.clear();
             return;
         }
 
         if (newLogFileName != logFileName) {
             logFile.close();
-            logFileName = std::move(newLogFileName);
-            logFile.open(logFileName, std::ios::app);
+            logFileName.clear();
+
+            logFile.open(newLogFileName, std::ios::app);
+            if (logFile.is_open()) {
+                logFileName = std::move(newLogFileName);
+                return;
+            }
         }
+
+        io::fail_rewind(inputLine);
         return;
     }
 
