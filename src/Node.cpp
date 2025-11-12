@@ -137,7 +137,6 @@ ReturnStatus Node::search() {
     isHit = (ttSlot == zobrist());
     if (isHit) {
         if (ttSlot.move() && !isLegalMove(ttSlot.move())) {
-            io::log("#illegal TT move");
             isHit = false;
         } else {
             ++root.tt.hits;
