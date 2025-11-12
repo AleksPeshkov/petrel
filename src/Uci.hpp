@@ -88,7 +88,7 @@ private:
     // avoid printing identical 'info nps' lines in a row
     mutable node_count_t lastInfoNodes = 0;
 
-    std::string logFileName;
+    std::string logFileName; // no log by default
     mutable std::ofstream logFile;
     mutable std::mutex logMutex;
 
