@@ -30,6 +30,8 @@ void io::log(const std::string& message) {
 void assert_fail(const char *assertion, const char *file, unsigned int line, const char* func) {
     std::ostringstream oss;
     oss << "Assertion failed: " << func << ": " << assertion << " (" << file << ":" << line << ")";
+    oss << "\nCurrent position: " << The_uci.position_;
+
     std::string message = oss.str();
     io::log("#" + message);
     std::cerr << message << std::endl;

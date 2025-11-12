@@ -17,6 +17,7 @@ enum deadline_t { HardDeadline, RootMoveDeadline, IterationDeadline };
 
 class UciSearchLimits {
     friend class Uci; // for bench()
+    friend void assert_fail(const char*, const char*, unsigned, const char*);
 
     constexpr static int QuotaLimit = 1000;
 
@@ -289,9 +290,10 @@ private:
     // avoid printing identical 'info nps' lines in a row
     mutable node_count_t lastInfoNodes = 0;
 
-    std::string logFileName;
+    std::string logFileName; // no log by default
     mutable std::ofstream logFile;
     mutable std::mutex logMutex;
+    bool isDebugOn = false;
 
     // try to consume the given token from the inputLine
     bool consume(io::czstring token) { return io::consume(inputLine, token); }
@@ -313,6 +315,7 @@ private:
     void ponderhit();
     void bestmove();
 
+    void debug();
     void goPerft();
     void info_perft_bestmove();
 
