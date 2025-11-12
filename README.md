@@ -1,7 +1,10 @@
 # Petrel is UCI Chess Engine
 
 Petrel is a conventional alpha-beta search engine, but its implementation details set it apart from others.
-Version 2.1 is rated 2600 Elo on the [CCRL Blitz](https://computerchess.org.uk/ccrl/404/cgi/engine_details.cgi?print=Details&each_game=1&eng=Petrel%202.1%2064-bit#Petrel_2_1_64-bit) and the [40/15](https://computerchess.org.uk/ccrl/4040/cgi/engine_details.cgi?print=Details&each_game=0&eng=Petrel%202.1%2064-bit#Petrel_2_1_64-bit) lists.
+
+Petrel 2.2 is rated 2775 Elo on the [Ultimate Bullet Classical](https://https://e4e6.com/) list.
+
+Petrel 2.1 is rated around 2600 Elo on the [CCRL Blitz](https://computerchess.org.uk/ccrl/404/cgi/engine_details.cgi?print=Details&each_game=1&eng=Petrel%202.1%2064-bit#Petrel_2_1_64-bit) and the [40/15](https://computerchess.org.uk/ccrl/4040/cgi/engine_details.cgi?print=Details&each_game=0&eng=Petrel%202.1%2064-bit#Petrel_2_1_64-bit) lists.
 
 ## Features
 
@@ -22,6 +25,9 @@ option name Move Overhead type spin min 0 max 10000 default 0
 option name Ponder type check default false
 option name UCI_Chess960 type check default false
 ```
+
+Only parsing errors and a sparse search warnings will be written into `Debug Log File` unless `debug on` is set
+then when all engine input and output will be logged.
 
 ## Evaluation
 
