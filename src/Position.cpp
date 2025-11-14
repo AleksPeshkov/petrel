@@ -7,6 +7,12 @@ void Position::clear() {
     }
 }
 
+Score Position::evaluate() const {
+    auto acc2 = reinterpret_cast<const Nnue::IndexL2::arrayOf<vi16x16_t>&>(accumulator_);
+    auto sum = nnue.evaluate(acc2);
+    return Score::clamp(sum);
+}
+
 void Position::copyParent(const Position* parent) {
     // copy from the parent position but swap sides
     assert (parent);

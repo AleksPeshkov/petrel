@@ -1,9 +1,22 @@
 #ifndef NNUE_HPP
 #define NNUE_HPP
 
+#include <immintrin.h>
 #include "typedefs.hpp"
 
 using vi16x16_t = i16_t __attribute__((vector_size(32)));
+using vi32x8_t  = i32_t __attribute__((vector_size(32)));
+
+constexpr vi16x16_t all16x16(i16_t i) { return vi16x16_t{ i,i,i,i, i,i,i,i, i,i,i,i, i,i,i,i }; }
+constexpr vi32x8_t all32x8(i32_t i) { return vi32x8_t{ i,i,i,i, i,i,i,i}; }
+
+constexpr vi16x16_t max(vi16x16_t a, vi16x16_t b) {
+    return ((a >= b) & a) | ((a < b) & b);
+}
+
+constexpr vi16x16_t min(vi16x16_t a, vi16x16_t b) {
+    return ((a >= b) & b) | ((a < b) & a);
+}
 
 // Made compatible with net files made for
 // Publius chess engine by Pawel Koziol
@@ -15,6 +28,9 @@ using vi16x16_t = i16_t __attribute__((vector_size(32)));
 
 struct alignas(64) Nnue {
     static constexpr int HIDDEN_SIZE = 32;
+    static constexpr i32_t SCALE = 400;
+    static constexpr i16_t QA = 255;
+    static constexpr i32_t QB = 64;
 
     using IndexL0 = Index<768>;
     using IndexL1 = Index<HIDDEN_SIZE/16>;
@@ -24,6 +40,31 @@ struct alignas(64) Nnue {
     IndexL1::arrayOf<vi16x16_t> hiddenBiases;
     IndexL2::arrayOf<vi16x16_t> outputWeights;
     i16_t outputBias;
+
+    // SCReLU activation function
+    constexpr i32_t evaluate(const IndexL2::arrayOf<vi16x16_t>& hidden) {
+        auto output = all32x8(0);
+        for (auto i : IndexL2::range()) {
+            // ReLU
+            vi16x16_t v0 = max(hidden[i], all16x16(0));
+
+            // CReLU
+            v0 = min(v0, all16x16(QA));
+
+            //SCReLU
+            vi16x16_t v1 = v0 * outputWeights[i];
+            vi32x8_t v2 = _mm256_madd_epi16(v0, v1);
+
+            output += v2;
+        }
+
+        i32_t scalar =
+            output[0] + output[1] + output[2] + output[3] +
+            output[4] + output[5] + output[6] + output[7];
+
+        return (scalar / QA + outputBias) * SCALE / (QA * QB);
+    }
+
 };
 
 extern Nnue nnue;
