@@ -42,6 +42,14 @@ struct Score {
 
     constexpr Score () : v{NoScore} {} // not isOk()
     constexpr Score (_t e) : v{e} {}
+
+    template <typename N>
+    constexpr static Score clamp(N e) {
+        return Score{static_cast<Score::_t>(
+            std::clamp<N>(e, MinEval, MaxEval)
+        )};
+    }
+
     constexpr explicit Score (int e) : v{static_cast<_t>(e)} { assertOk(); }
     constexpr operator const _t& () const { return v; }
 
