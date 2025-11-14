@@ -88,6 +88,8 @@ private:
     // avoid printing identical 'info nps' lines in a row
     mutable node_count_t lastInfoNodes = 0;
 
+    std::string evalFileName{"publius_net32_4.bin"}; // default value
+
     std::string logFileName; // no log by default
     mutable std::ofstream logFile;
     mutable std::mutex logMutex;
@@ -102,7 +104,6 @@ private:
 
     void uciok() const;
     void setoption();
-    void setHash();
     void ucinewgame();
     void position();
 
@@ -118,6 +119,9 @@ private:
     ostream& nps(ostream&) const;
     ostream& info_nps(ostream&) const;
     ostream& info_fen(ostream&) const;
+
+    void setHash();
+    void loadEvalFile(const std::string&);
 
 public:
     Uci (ostream&);
