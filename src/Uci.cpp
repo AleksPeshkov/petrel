@@ -362,23 +362,15 @@ ostream& Uci::nps(ostream& o) const {
 }
 
 ostream& Uci::info_nps(ostream& o) const {
+    if (limits.getNodes() == 0) { lastInfoNodes = 0; return o; }
     if (lastInfoNodes == limits.getNodes()) { return o; }
-
-    if (tt.reads > 0) {
-        o << "info";
-        o << " hwrites " << tt.writes;
-        o << " hhits " << tt.hits;
-        o << " hreads " << tt.reads;
-        o << " hhitratio " << ::permil(tt.hits, tt.reads);
-        o << '\n';
-    }
 
     o << "info"; nps(o) << '\n';
     return o;
 }
 
 ostream& Uci::info_fen(ostream& o) const {
-    o << "info fen " << position_;
+    o << "info" << position_.evaluate() << " fen " << position_;
     return o;
 }
 
