@@ -222,6 +222,7 @@ void Uci::loadEvalFile(const std::string& fileName) {
     }
     file.close();
 
+    nnue.reshape_after_load();
     evalFileName = std::move(fileName);
     return;
 }

@@ -61,7 +61,7 @@ enum side_to_move_t {
     Op  // opposite to side to move
 };
 using Side = Index<2, side_to_move_t>;
-constexpr Side::_t operator ~ (Side::_t my) { return static_cast<Side::_t>(my ^ static_cast<Side::_t>(Side::Mask)); }
+constexpr Side::_t operator ~ (Side::_t si) { return static_cast<Side::_t>(si ^ static_cast<Side::_t>(Side::Mask)); }
 
 enum chess_variant_t : u8_t { Orthodox, Chess960 };
 using ChessVariant = Index<2, chess_variant_t>;
@@ -83,6 +83,7 @@ enum piece_type_t {
 };
 using SliderType = Index<3, piece_type_t>; // Queen, Rook, Bishop
 using PromoType = IndexChar<4, piece_type_t>; // Queen, Rook, Bishop, Knight
+using NonKingType = Index<5, piece_type_t>; // Queen, Rook, Bishop, Knight, Pawn
 using PieceType = IndexChar<6, piece_type_t>; // Queen, Rook, Bishop, Knight, Pawn, King
 template <> io::czstring PromoType::The_string;
 template <> io::czstring PieceType::The_string;
