@@ -54,7 +54,7 @@ using Color = IndexChar<2, color_t>;
 template <> io::czstring Color::The_string;
 
 // color to move of the given ply
-constexpr Color::_t operator << (Color c, Ply ply) { return static_cast<Color::_t>((ply ^ static_cast<unsigned>(c)) & Color::Mask); }
+constexpr Color::_t distance(Color c, Ply ply) { return static_cast<Color::_t>((ply ^ static_cast<unsigned>(c)) & Color::Mask); }
 
 enum side_to_move_t {
     My, // side to move
