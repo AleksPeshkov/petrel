@@ -644,9 +644,7 @@ UciMove Node::uciMove(Move move) const {
     return UciMove{from, to, isSpecial(from, to), colorToMove(), root.chessVariant()};
 }
 
-constexpr Color Node::colorToMove() const {
-    return Color{root.colorToMove() << ply};
-}
+constexpr Color Node::colorToMove() const { return root.colorToMove(ply); }
 
 // insufficient mate material
 bool Node::isDrawMaterial() const {
