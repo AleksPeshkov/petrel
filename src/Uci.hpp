@@ -132,7 +132,7 @@ public:
     void log(const std::string&) const;
 
     constexpr ChessVariant chessVariant() const { return position_.chessVariant(); }
-    constexpr Color colorToMove() const { return position_.colorToMove(); }
+    constexpr Color colorToMove(Ply ply = Ply{0}) const { return position_.colorToMove(ply); }
 
     void newGame() {
         tt.newGame();
