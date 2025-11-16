@@ -511,7 +511,7 @@ ReturnStatus Node::search() {
 
     // unsafe (losing) non-captures
     if (!lmp || movesMade() == 0) { // late move pruning
-        R = lmr ? 4 : 1;
+        R = lmr ? 4 + draft/6 : 1;
         for (PiMask pieces = figures; pieces.any(); ) {
             Pi pi = pieces.leastValuable(); pieces -= pi;
 
