@@ -129,7 +129,9 @@ protected:
     // convert internal move to be printable in UCI format
     UciMove uciMove(Move move) const;
 
+    // current node's side to move color
     constexpr Color colorToMove() const;
+
     bool isDrawMaterial() const;
     bool isRepetition() const;
 
