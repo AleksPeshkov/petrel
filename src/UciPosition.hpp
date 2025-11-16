@@ -30,7 +30,7 @@ public:
     void limitMoves(istream&);
 
     constexpr Side sideOf(Color::_t color) const { return Side{colorToMove_.is(color) ? My : Op}; }
-    constexpr Color colorToMove() const { return colorToMove_; }
+    constexpr Color colorToMove(Ply ply) const { return Color{ ::distance(colorToMove_, ply) }; }
     constexpr ChessVariant chessVariant() const { return chessVariant_; }
     constexpr void setChessVariant(ChessVariant v) { chessVariant_ = v; }
 
