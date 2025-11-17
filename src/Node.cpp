@@ -197,42 +197,14 @@ ReturnStatus Node::search() {
         // primary killer move, updated by previous siblings
         RETURN_CUTOFF (child->searchIfLegal(parent->killer1));
 
-        // countermove heuristic: refutation of the last opponent's move
-        Move opMove = parent->currentMove;
-        if (opMove) {
-            RETURN_CUTOFF (child->searchIfLegal( root.counterMove.get1(
-                parent->colorToMove(), parent->MY.typeAt(opMove.from()), opMove.to()
-            ) ));
-        }
-
-        if (grandParent) {
-            // follow move heuristic: continue last made move
-            Move myMove = grandParent->currentMove;
-            if (myMove) {
-                RETURN_CUTOFF (child->searchIfLegal( root.followMove.get1(
-                    grandParent->colorToMove(), grandParent->MY.typeAt(myMove.from()), myMove.to()
-                ) ));
-            }
-        }
+        RETURN_CUTOFF (counterMove(child));
+        RETURN_CUTOFF (followMove(child));
 
         // secondary killer move, backup of previous primary killer
         RETURN_CUTOFF (child->searchIfLegal(parent->killer2));
 
-        if (opMove) {
-            RETURN_CUTOFF (child->searchIfLegal( root.counterMove.get2(
-                parent->colorToMove(), parent->MY.typeAt(opMove.from()), opMove.to()
-            ) ));
-        }
-
-        if (grandParent) {
-            // follow move heuristic: continue last made move
-            Move myMove = grandParent->currentMove;
-            if (myMove) {
-                RETURN_CUTOFF (child->searchIfLegal( root.followMove.get2(
-                    grandParent->colorToMove(), grandParent->MY.typeAt(myMove.from()), myMove.to()
-                ) ));
-            }
-        }
+        RETURN_CUTOFF (counterMove(child));
+        RETURN_CUTOFF (followMove(child));
 
         // repeated killer heuristic (can change while searching descendants of previous killer3)
         while (isLegalMove(parent->killer3)) {
@@ -467,6 +439,42 @@ ReturnStatus Node::goodCaptures(Node* child,PiMask victims) {
         }
     }
 
+    return ReturnStatus::Continue;
+}
+
+// countermove heuristic: refutation of the last opponent's move
+ReturnStatus Node::counterMove(Node* child) {
+    Move opMove = parent->currentMove;
+    if (opMove) {
+        for (int i = 0; i < decltype(root.counterMove)::Size; ++i) {
+            auto move = root.counterMove.get(i,
+                parent->colorToMove(), parent->MY.typeAt(opMove.from()), opMove.to()
+            );
+            if (isLegalMove(move)) {
+                RETURN_CUTOFF (child->searchMove(move));
+                break;
+            }
+        }
+    }
+    return ReturnStatus::Continue;
+}
+
+// Follow up move heuristic: continue the idea of our last made move
+ReturnStatus Node::followMove(Node* child) {
+    if (grandParent) {
+        Move myMove = grandParent->currentMove;
+        if (myMove) {
+            for (int i = 0; i < decltype(root.followMove)::Size; ++i) {
+                auto move = root.followMove.get(i,
+                    grandParent->colorToMove(), grandParent->MY.typeAt(myMove.from()), myMove.to()
+                );
+                if (isLegalMove(move)) {
+                    RETURN_CUTOFF (child->searchMove(move));
+                    break;
+                }
+            }
+        }
+    }
     return ReturnStatus::Continue;
 }
 

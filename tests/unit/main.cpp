@@ -1,5 +1,6 @@
 #define TEST_ASSERT
 #include "TestHyperbola.hpp"
+#include "TestHistoryMoves.hpp"
 #include "TestRepetitions.hpp"
 
 void assert_fail(const char *assertion, const char *file, unsigned int line, const char* func) {
@@ -14,6 +15,7 @@ void assert_fail(const char *assertion, const char *file, unsigned int line, con
 int main() {
     try {
         TestHyperbola::test();
+        TestHistoryMoves::test();
         TestRepetitions::test();
 
         std::cerr << "✅ All tests passed!\n";

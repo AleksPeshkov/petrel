@@ -119,6 +119,9 @@ protected:
     [[nodiscard]] ReturnStatus goodCaptures(Node*, PiMask);
     [[nodiscard]] ReturnStatus goodNonCaptures(Node*, Pi, Bb moves, Ply R);
 
+    [[nodiscard]] ReturnStatus counterMove(Node*);
+    [[nodiscard]] ReturnStatus followMove(Node*);
+
     [[nodiscard]] ReturnStatus searchIfLegal(Move move, Ply R = 1) {
         return parent->isLegalMove(move) ? searchMove(move, R) : ReturnStatus::Continue;
     }
