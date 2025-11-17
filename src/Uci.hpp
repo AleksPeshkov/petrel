@@ -11,19 +11,41 @@
 #include "UciMove.hpp"
 #include "UciSearchLimits.hpp"
 
-class HistoryMoves {
-    using Index = ::Index<2>;
-    using _t = Side::arrayOf< PieceType::arrayOf<Square::arrayOf< Index::arrayOf<Move> >> >;
+template<int _Size>
+class CACHE_ALIGN HistoryMoves {
+    constexpr static int N = _Size;
+    using Index = ::Index<N>;
+    using _t = Side::arrayOf< PieceType::arrayOf<Square::arrayOf< typename Index:: template arrayOf<Move> >> >;
     _t v;
+
 public:
-    void clear() { std::memset(&v, 0, sizeof(v)); }
-    const Move& get1 (Color c, PieceType ty, Square sq) const { return v[c][ty][sq][0]; }
-    const Move& get2 (Color c, PieceType ty, Square sq) const { return v[c][ty][sq][1]; }
-    void set(Color c, PieceType ty, Square sq, Move move) {
-        if (v[c][ty][sq][0] != move) {
-            v[c][ty][sq][1] = v[c][ty][sq][0];
-            v[c][ty][sq][0] = move;
+    static constexpr int Size = N;
+
+    void clear() {
+        std::memset(&v, 0, sizeof(v)); //TRICK: Move{} == int16_t{0}
+    }
+
+    constexpr const Move& get(int i, Color c, PieceType ty, Square sq) const {
+        return v[c][ty][sq][Index{i}];
+    }
+
+    constexpr void set(Color c, PieceType ty, Square sq, Move move) {
+        auto& slot = v[c][ty][sq];
+
+        int last = N-1;
+        for (int i = 0; i < last; ++i) {
+            if (slot[i] == move) {
+                // if the move found in the middle, shift only the top part
+                last = i;
+                break;
+            }
         }
+
+        // shift [0, last) elements one back
+        for (int i = last; i > 0; --i) {
+            slot[i] = slot[i-1];
+        }
+        slot[0] = move; // put most recently used move to the front
     }
 };
 
@@ -61,13 +83,15 @@ class Uci {
 public:
     UciPosition position_; // result of parsing 'position' command
     UciSearchLimits limits; // result of parsing 'go' command
-
-    mutable Tt tt;
     Repetitions repetitions;
+
+    mutable HistoryMoves<4> counterMove;
+    mutable HistoryMoves<4> followMove;
+
     mutable PvMoves pvMoves;
     mutable Score pvScore = NoScore;
-    mutable HistoryMoves counterMove;
-    mutable HistoryMoves followMove;
+
+    mutable Tt tt; // main transposition table
 
 private:
     Thread mainSearchThread;
