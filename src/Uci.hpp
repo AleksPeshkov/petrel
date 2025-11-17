@@ -11,19 +11,44 @@
 #include "UciMove.hpp"
 #include "UciSearchLimits.hpp"
 
+template<int _Size>
 class HistoryMoves {
-    using Index = ::Index<2>;
-    using _t = Side::arrayOf< PieceType::arrayOf<Square::arrayOf< Index::arrayOf<Move> >> >;
+    constexpr static int N = _Size;
+    using Index = ::Index<N>;
+    using _t = Side::arrayOf< PieceType::arrayOf<Square::arrayOf< typename Index:: template arrayOf<Move> >> >;
     _t v;
+
 public:
-    void clear() { std::memset(&v, 0, sizeof(v)); }
-    const Move& get1 (Color c, PieceType ty, Square sq) const { return v[c][ty][sq][0]; }
-    const Move& get2 (Color c, PieceType ty, Square sq) const { return v[c][ty][sq][1]; }
-    void set(Color c, PieceType ty, Square sq, Move move) {
-        if (v[c][ty][sq][0] != move) {
-            v[c][ty][sq][1] = v[c][ty][sq][0];
-            v[c][ty][sq][0] = move;
+    static constexpr int Size = N;
+
+    void clear() {
+        std::memset(&v, 0, sizeof(v)); //TRICK: Move{} == int16_t{0}
+    }
+
+    constexpr const Move& get(int i, Color c, PieceType ty, Square sq) const {
+        return v[c][ty][sq][Index{i}];
+    }
+
+    constexpr void set(Color c, PieceType ty, Square sq, Move move) {
+        auto& slot = v[c][ty][sq];
+
+        // if present inside, move it to front
+        for (int i = 0; i < N-1; ++i) {
+            if (slot[i] == move) {
+                // shift by one, put move at front
+                for (int j = i; j > 0; --j) {
+                    slot[j] = slot[j-1];
+                }
+                slot[0] = move;
+                return;
+            }
         }
+
+        // not found side: shift all down, insert at front
+        for (int i = N-1; i > 0; --i) {
+            slot[i] = slot[i-1];
+        }
+        slot[0] = move;;
     }
 };
 
@@ -66,8 +91,8 @@ public:
     Repetitions repetitions;
     mutable PvMoves pvMoves;
     mutable Score pvScore = NoScore;
-    mutable HistoryMoves counterMove;
-    mutable HistoryMoves followMove;
+    mutable HistoryMoves<4> counterMove;
+    mutable HistoryMoves<4> followMove;
 
 private:
     Thread mainSearchThread;
