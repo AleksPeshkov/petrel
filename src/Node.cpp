@@ -199,37 +199,62 @@ ReturnStatus Node::search() {
         // countermove heuristic: refutation of the last opponent's move
         Move opMove = parent->currentMove;
         if (opMove) {
-            RETURN_CUTOFF (child->searchIfLegal( root.counterMove.get1(
-                parent->colorToMove(), parent->MY.typeAt(opMove.from()), opMove.to()
-            ) ));
+            for (int i = 0; i < decltype(root.counterMove)::Size; ++i) {
+                auto move = root.counterMove.get(i,
+                    parent->colorToMove(), parent->MY.typeAt(opMove.from()), opMove.to()
+                );
+                if (isLegalMove(move)) {
+                    RETURN_CUTOFF (child->searchMove(move));
+                    break;
+                }
+            }
         }
 
+        // follow move heuristic: continue the idea of our last made move
         if (grandParent) {
-            // follow move heuristic: continue last made move
             Move myMove = grandParent->currentMove;
             if (myMove) {
-                RETURN_CUTOFF (child->searchIfLegal( root.followMove.get1(
-                    grandParent->colorToMove(), grandParent->MY.typeAt(myMove.from()), myMove.to()
-                ) ));
+                for (int i = 0; i < decltype(root.followMove)::Size; ++i) {
+                    auto move = root.followMove.get(i,
+                        grandParent->colorToMove(), grandParent->MY.typeAt(myMove.from()), myMove.to()
+                    );
+                    if (isLegalMove(move)) {
+                        RETURN_CUTOFF (child->searchMove(move));
+                        break;
+                    }
+                }
             }
         }
 
         // secondary killer move, backup of previous primary killer
         RETURN_CUTOFF (child->searchIfLegal(parent->killer2));
 
+        // countermove heuristic: refutation of the last opponent's move
         if (opMove) {
-            RETURN_CUTOFF (child->searchIfLegal( root.counterMove.get2(
-                parent->colorToMove(), parent->MY.typeAt(opMove.from()), opMove.to()
-            ) ));
+            for (int i = 0; i < decltype(root.counterMove)::Size; ++i) {
+                auto move = root.counterMove.get(i,
+                    parent->colorToMove(), parent->MY.typeAt(opMove.from()), opMove.to()
+                );
+                if (isLegalMove(move)) {
+                    RETURN_CUTOFF (child->searchMove(move));
+                    break;
+                }
+            }
         }
 
+        // follow move heuristic: continue the idea of our last made move
         if (grandParent) {
-            // follow move heuristic: continue last made move
             Move myMove = grandParent->currentMove;
             if (myMove) {
-                RETURN_CUTOFF (child->searchIfLegal( root.followMove.get2(
-                    grandParent->colorToMove(), grandParent->MY.typeAt(myMove.from()), myMove.to()
-                ) ));
+                for (int i = 0; i < decltype(root.followMove)::Size; ++i) {
+                    auto move = root.followMove.get(i,
+                        grandParent->colorToMove(), grandParent->MY.typeAt(myMove.from()), myMove.to()
+                    );
+                    if (isLegalMove(move)) {
+                        RETURN_CUTOFF (child->searchMove(move));
+                        break;
+                    }
+                }
             }
         }
 
