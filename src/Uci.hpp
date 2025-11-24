@@ -117,7 +117,7 @@ private:
     mutable std::ofstream logFile;
     mutable std::mutex logMutex;
 
-    std::string evalFileName{"petrel.bin"}; // default value
+    std::string evalFileName{"petrel128.bin"}; // default value
 
     // try to consume the given token from the inputLine
     bool consume(io::czstring token) { return io::consume(inputLine, token); }
