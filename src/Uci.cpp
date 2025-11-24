@@ -1,4 +1,5 @@
 #include "chrono.hpp"
+#include "nnue.hpp"
 #include "Uci.hpp"
 #include "UciSearchLimits.hpp"
 #include "Node.hpp"
@@ -24,8 +25,16 @@ Uci::Uci(ostream &o) :
     out{o},
     bestmove_(32, '\0')
 {
+    loadEvalFile(evalFileName);
+    if (!inputLine) { zeroEval(); }
+
     bestmove_.clear();
     ucinewgame();
+}
+
+void Uci::zeroEval() {
+    std::memset(&nnue, 0, sizeof(nnue));
+    evalFileName.clear();
 }
 
 void Uci::output(const std::string& message) const {
@@ -63,7 +72,7 @@ void Uci::processInput(istream& in) {
         log('>' + currentLine);
 #endif
 
-        inputLine.clear(); //clear error state from the previous line
+        inputLine.clear(); //clear previous errors
         inputLine.str(currentLine);
         inputLine >> std::ws;
 
@@ -94,6 +103,7 @@ void Uci::uciok() const {
     Output ob{this};
     ob << "id name " << io::app_version << '\n';
     ob << "id author Aleks Peshkov\n";
+    ob << "option name EvalFile type string default " << (evalFileName.empty() ? "<empty>" : evalFileName) << '\n';
     ob << "option name Debug Log File type string default " << (logFileName.empty() ? "<empty>" : logFileName) << '\n';
     ob << "option name Hash type spin"
        << " min "     << ::mebi(tt.minSize())
@@ -107,6 +117,22 @@ void Uci::uciok() const {
 
 void Uci::setoption() {
     consume("name");
+
+    if (consume("EvalFile")) {
+        consume("value");
+
+        inputLine >> std::ws;
+        std::string newEvalFileName;
+        std::getline(inputLine, newEvalFileName);
+
+        if (newEvalFileName == "<empty>") {
+            zeroEval();
+            return;
+        }
+
+        loadEvalFile(newEvalFileName);
+        return;
+    }
 
     if (consume("Debug Log File")) {
         consume("value");
@@ -142,7 +168,6 @@ void Uci::setoption() {
         return;
     }
 
-
     if (consume("Move Overhead")) {
         consume("value");
 
@@ -172,6 +197,39 @@ void Uci::setoption() {
         io::fail_rewind(inputLine);
         return;
     }
+}
+
+void Uci::loadEvalFile(const std::string& fileName) {
+    std::ifstream file(fileName, std::ios::binary);
+
+    if (!file.is_open()) {
+        log("Error opening EvalFile " + fileName);
+        io::fail_rewind(inputLine);
+        return;
+    }
+
+    file.seekg(0, std::ios::end);
+    if (file.tellg() != sizeof(nnue)) {
+        log("EvalFile size mismatch, expected " + std::to_string(sizeof(nnue)) + ", file size " + std::to_string(file.tellg()));
+        io::fail_rewind(inputLine);
+        return;
+    }
+
+    file.seekg(std::ios::beg);
+    file.read(reinterpret_cast<char*>(&nnue), sizeof(nnue));
+    if (!file) {
+        file.close();
+        zeroEval();
+
+        log("Error reading EvalFile " + fileName);
+        io::fail_rewind(inputLine);
+        return;
+    }
+
+    // everything is ok
+    file.close();
+    evalFileName = std::move(fileName);
+    return;
 }
 
 void Uci::setHash() {
@@ -239,6 +297,13 @@ void Uci::position() {
 }
 
 void Uci::go() {
+    if (evalFileName.empty()) {
+        Output ob{this};
+        ob << "info string No EvalFile loaded\n";
+        ob << "bestmove 0000";
+        return;
+    }
+
     limits.go(inputLine, position_.sideOf(White));
     if (consume("searchmoves")) { position_.limitMoves(inputLine); }
 
