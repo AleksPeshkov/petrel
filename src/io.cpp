@@ -70,7 +70,7 @@ bool hasMore(istream& in) {
 }
 
 ostream& app_version(ostream& out) {
-    out << "petrel";
+    out << "petrel 3.0 NNUE 128";
 
 #ifdef VERSION
         out << ' ' << VERSION;
