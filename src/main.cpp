@@ -22,11 +22,6 @@ constexpr const PiSingle piSingle; // 256
 const CastlingRules castlingRules; // 128
 constexpr const BitReverse bitReverse; // 32
 
-template <> io::czstring PieceType::The_string{"qrbnpk"};
-template <> io::czstring PromoType::The_string{"qrbn"};
-template <> io::czstring Color::The_string{"wb"};
-template <> io::czstring CastlingSide::The_string{"kq"};
-
 // global pointer to Uci instance to implement io::log()
 const Uci* The_uci = nullptr;
 
