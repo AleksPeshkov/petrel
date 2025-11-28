@@ -68,7 +68,7 @@ CXXFLAGS += $(WARNINGS)
 
 # === Linker Flags ===
 LDLIBS += -pthread
-LDFLAGS += $(LDLIBS) $(BUILD_FLAGS) -Wl,--no-as-needed
+LDFLAGS += $(LDLIBS) $(BUILD_FLAGS) -Wl,--no-as-needed -static
 
 # === Precompiled Header ===
 HEADER = StdAfx.hpp
