@@ -62,12 +62,17 @@ public:
     }
 };
 
+template <typename Enum>
+struct CharMap {
+    static constexpr io::czstring The_string = nullptr;
+};
+
 template <int _Size, typename _element_type = int, typename _storage_type = _element_type>
 class IndexChar : public Index<_Size, _element_type, _storage_type> {
     using Base = Index<_Size, _element_type, _storage_type>;
     using Base::v;
 
-    static io::czstring The_string;
+    static constexpr auto The_string = CharMap<_element_type>::The_string;
 
 public:
     using typename Base::_t;
