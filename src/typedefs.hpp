@@ -50,8 +50,8 @@ public:
 };
 
 enum color_t : u8_t { White, Black };
+template <> struct CharMap<color_t> { static constexpr io::czstring The_string = "wb"; };
 using Color = IndexChar<2, color_t>;
-template <> io::czstring Color::The_string;
 
 // color to move of the given ply
 constexpr Color::_t operator << (Color c, Ply ply) { return static_cast<Color::_t>((ply ^ static_cast<unsigned>(c)) & Color::Mask); }
@@ -67,8 +67,8 @@ enum chess_variant_t : u8_t { Orthodox, Chess960 };
 using ChessVariant = Index<2, chess_variant_t>;
 
 enum castling_side_t { KingSide, QueenSide };
+template <> struct CharMap<castling_side_t> { static constexpr io::czstring The_string = "kq"; };
 using CastlingSide = IndexChar<2, castling_side_t>;
-template <> io::czstring CastlingSide::The_string;
 
 enum piece_index_t { TheKing, Last = 15 }; // king index is always 0
 using Pi = Index<16, piece_index_t>; //piece index 0..15
@@ -81,11 +81,11 @@ enum piece_type_t {
     Pawn = 4,
     King = 5,
 };
+template <> struct CharMap<piece_type_t> { static constexpr io::czstring The_string = "qrbnpk"; };
+
 using SliderType = Index<3, piece_type_t>; // Queen, Rook, Bishop
 using PromoType = IndexChar<4, piece_type_t>; // Queen, Rook, Bishop, Knight
 using PieceType = IndexChar<6, piece_type_t>; // Queen, Rook, Bishop, Knight, Pawn, King
-template <> io::czstring PromoType::The_string;
-template <> io::czstring PieceType::The_string;
 
 constexpr bool isSlider(piece_type_t ty) { return ty < Knight; } // Queen, Rook, Bishop
 constexpr bool isLeaper(piece_type_t ty) { return ty >= Knight; } // Knight, Pawn, King
