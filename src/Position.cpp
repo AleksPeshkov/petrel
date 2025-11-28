@@ -104,8 +104,7 @@ void Position::makeMove(Square from, Square to) {
             MY.movePawn(pi, from, ep);
             OP.capture(~to); // also clears en passant victim
 
-            accumulator_[My].ep(::My, from, ep, to);
-            accumulator_[Op].ep(::Op, ~from, ~ep, ~to);
+            Accumulator::ep(accumulator_, from, ep, to);
             updateSliderAttacks<My>(MY.affectedBy(from, to, ep), OP.affectedBy(~from, ~to, ~ep));
             return; // end of en passant capture move
         }
@@ -136,14 +135,12 @@ void Position::makeMove(Square from, Square to) {
                 }
                 OP.capture(~to);
 
-                accumulator_[My].promote(::My, promo, from, to, captured);
-                accumulator_[Op].promote(::Op, promo, ~from, ~to, captured);
+                Accumulator::promote(accumulator_, promo, from, to, captured);
                 updateSliderAttacks<My>(MY.affectedBy(from) | pi, OP.affectedBy(~from));
                 return; // end of pawn promotion move with capture
             }
 
-            accumulator_[My].promote(::My, promo, from, to);
-            accumulator_[Op].promote(::Op, promo, ~from, ~to);
+            Accumulator::promote(accumulator_, promo, from, to);
             updateSliderAttacks<My>(MY.affectedBy(from, to) | pi, OP.affectedBy(~from, ~to));
             return; // end of pawn promotion move without capture
         }
@@ -161,14 +158,12 @@ void Position::makeMove(Square from, Square to) {
             }
             OP.capture(~to);
 
-            accumulator_[My].move(::My, Pawn, from, to, captured);
-            accumulator_[Op].move(::Op, Pawn, ~from, ~to, captured);
+            Accumulator::move(accumulator_, Pawn, from, to, captured);
             updateSliderAttacks<My>(MY.affectedBy(from), OP.affectedBy(~from));
             return; // end of simple pawn capture move
         }
 
-        accumulator_[My].move(::My, Pawn, from, to);
-        accumulator_[Op].move(::Op, Pawn, ~from, ~to);
+        Accumulator::move(accumulator_, Pawn, from, to);
         updateSliderAttacks<My>(MY.affectedBy(from, to), OP.affectedBy(~from, ~to));
         if (from.on(Rank2) && to.on(Rank4)) {
             setLegalEnPassant<My>(pi, to);
@@ -198,14 +193,12 @@ void Position::makeMove(Square from, Square to) {
             }
             OP.capture(~to);
 
-            accumulator_[My].move(::My, King, from, to, captured);
-            accumulator_[Op].move(::Op, King, ~from, ~to, captured);
+            Accumulator::move(accumulator_, King, from, to, captured);
             updateSliderAttacks<My>(MY.affectedBy(from));
             return; // end of king capture move
         }
 
-        accumulator_[My].move(::My, King, from, to);
-        accumulator_[Op].move(::Op, King, ~from, ~to);
+        Accumulator::move(accumulator_, King, from, to);
         updateSliderAttacks<My>(MY.affectedBy(from, to));
         return; // end of king non-capture move
     }
@@ -224,11 +217,10 @@ void Position::makeMove(Square from, Square to) {
         MY.castle(kingFrom, kingTo, pi, rookFrom, rookTo);
         OP.setOpKing(~kingTo);
 
+        Accumulator::castle(accumulator_, kingFrom, kingTo, rookFrom, rookTo);
         //TRICK: castling should not affect opponent's sliders, otherwise it is check or pin
         //TRICK: castling rook should attack 'kingFrom' square
         //TRICK: only first rank sliders can be affected
-        accumulator_[My].castle(::My, kingFrom, kingTo, rookFrom, rookTo);
-        accumulator_[Op].castle(::Op, ~kingFrom, ~kingTo, ~rookFrom, ~rookTo);
         updateSliderAttacks<My>(MY.affectedBy(rookFrom, kingFrom) & MY.piecesOn(Rank1));
         return; //end of castling move
     }
@@ -251,14 +243,12 @@ void Position::makeMove(Square from, Square to) {
         }
         OP.capture(~to);
 
-        accumulator_[My].move(::My, moved, from, to, captured);
-        accumulator_[Op].move(::Op, moved, ~from, ~to, captured);
+        Accumulator::move(accumulator_, moved, from, to, captured);
         updateSliderAttacks<My>(MY.affectedBy(from) | pi, OP.affectedBy(~from));
         return; // end of simple non-pawn non-king capture move
     }
 
-    accumulator_[My].move(::My, moved, from, to);
-    accumulator_[Op].move(::Op, moved, ~from, ~to);
+    Accumulator::move(accumulator_, moved, from, to);
     updateSliderAttacks<My>(MY.affectedBy(from, to), OP.affectedBy(~from, ~to));
     return; // end of simple non-pawn non-king quiet move
 }

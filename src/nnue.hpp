@@ -72,30 +72,12 @@ extern Nnue nnue;
 class alignas(64) Accumulator {
     //TODO: reshape input weights during net loading
     constexpr static Nnue::IndexL0 indexL0(Side::_t si, PieceType::_t ty, Square sq) {
-        constexpr int pieceType[6] = {4, 3, 2, 1, 0, 5};
+        constexpr int pieceType[6] = {Pawn, Knight, Bishop, Rook, Queen, King};
         return Nnue::IndexL0{ 6*64*(si) + 64*pieceType[ty] + (~sq) };
     }
 
     using _t = Nnue::IndexL1::arrayOf<vi16x16_t>;
     _t v;
-
-public:
-    constexpr static auto& w = nnue.inputWeights;
-    constexpr static auto& b = nnue.hiddenBiases;
-
-    constexpr void clear() {
-        for (auto i : Nnue::IndexL1::range()) {
-            v[i] = b[i];
-        }
-    }
-
-    const auto& operator[](Nnue::IndexL1 i) const { return v[i]; }
-
-    void drop(Side::_t si, PieceType ty, Square to) {
-        for (auto i : Nnue::IndexL1::range()) {
-            v[i] += w[indexL0(si, ty, to)][i];
-        }
-    }
 
     void move(Side::_t si, PieceType::_t ty, Square from, Square to) {
         for (auto i : Nnue::IndexL1::range()) {
@@ -131,7 +113,7 @@ public:
         for (auto i : Nnue::IndexL1::range()) {
             v[i] -= w[indexL0(si, Pawn, from)][i];
             v[i] += w[indexL0(si, Pawn, to)][i];
-            v[i] -= w[indexL0(si, Pawn, capture)][i];
+            v[i] -= w[indexL0(~si, Pawn, capture)][i];
         }
     }
 
@@ -145,6 +127,54 @@ public:
             v[i] += w[indexL0(si, Rook, rookTo)][i];
             v[i] += w[indexL0(si, King, kingTo)][i];
         }
+    }
+
+public:
+    constexpr static auto& w = nnue.inputWeights;
+    constexpr static auto& b = nnue.hiddenBiases;
+
+    constexpr void clear() {
+        for (auto i : Nnue::IndexL1::range()) {
+            v[i] = b[i];
+        }
+    }
+
+    const auto& operator[](Nnue::IndexL1 i) const { return v[i]; }
+
+    void drop(Side::_t si, PieceType ty, Square to) {
+        for (auto i : Nnue::IndexL1::range()) {
+            v[i] += w[indexL0(si, ty, to)][i];
+        }
+    }
+
+    static void move(Side::arrayOf<Accumulator>& a, PieceType::_t ty, Square from, Square to) {
+        a[Op].move(My, ty, from, to);
+        a[My].move(Op, ty, ~from, ~to);
+    }
+
+    static void move(Side::arrayOf<Accumulator>& a, PieceType::_t ty, Square from, Square to, NonKingType::_t captured) {
+        a[Op].move(My, ty, from, to, captured);
+        a[My].move(Op, ty, ~from, ~to, captured);
+    }
+
+    static void promote(Side::arrayOf<Accumulator>& a, PromoType promoted, Square from, Square to) {
+        a[Op].promote(My, promoted, from, to);
+        a[My].promote(Op, promoted, ~from, ~to);
+    }
+
+    static void promote(Side::arrayOf<Accumulator>& a, PromoType promoted, Square from, Square to, NonKingType::_t captured) {
+        a[Op].promote(My, promoted, from, to, captured);
+        a[My].promote(Op, promoted, ~from, ~to, captured);
+    }
+
+    static void ep(Side::arrayOf<Accumulator>& a, Square from, Square to, Square capture) {
+        a[Op].ep(My, from, to, capture);
+        a[My].ep(Op, ~from, ~to, ~capture);
+    }
+
+    static void castle(Side::arrayOf<Accumulator>& a, Square kingFrom, Square kingTo, Square rookFrom, Square rookTo) {
+        a[Op].castle(My, kingFrom, kingTo, rookFrom, rookTo);
+        a[My].castle(Op, ~kingFrom, ~kingTo, ~rookFrom, ~rookTo);
     }
 };
 
