@@ -19,7 +19,7 @@ use bullet_lib::{
 const HIDDEN_SIZE: usize = 128;
 const SCALE: i32 = 400;
 const QA: i16 = 255;
-const QB: i16 = 64;
+const QB: i16 = 22;
 
 fn main() {
     let mut trainer = ValueTrainerBuilder::default()

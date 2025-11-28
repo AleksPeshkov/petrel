@@ -28,7 +28,7 @@ constexpr vi16x16_t min(vi16x16_t a, vi16x16_t b) {
 
 struct alignas(64) Nnue {
     static constexpr int HIDDEN_SIZE = 128;
-    static constexpr i32_t SCALE = 128;
+    static constexpr i32_t SCALE = 400;
     static constexpr i16_t QA = 255;
     static constexpr i32_t QB = 64;
 
