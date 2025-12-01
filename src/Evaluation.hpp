@@ -35,13 +35,22 @@ struct Score {
     _t v;
 
     constexpr bool isOk() const { return MinusInfinity <= v && v <= PlusInfinity; }
-    constexpr bool isMate() const { assertOk(); return !(MinEval <= v && v <= MaxEval); }
+    constexpr bool isEval() const { assertOk(); return MinEval <= v && v <= MaxEval; }
+    constexpr bool isMate() const { assertOk(); return !isEval(); }
     constexpr void assertOk() const { assert (isOk()); }
-    constexpr void assertEval() const { assert (!isMate()); }
+    constexpr void assertEval() const { assert (isEval()); }
     constexpr void assertMate() const { assert (isMate()); }
 
     constexpr Score () : v{NoScore} {} // not isOk()
     constexpr Score (_t e) : v{e} {}
+
+    template <typename N>
+    constexpr static Score clamp(N e) {
+        return Score{static_cast<Score::_t>(
+            std::clamp<N>(e, MinEval, MaxEval)
+        )};
+    }
+
     constexpr explicit Score (int e) : v{static_cast<_t>(e)} { assertOk(); }
     constexpr operator const _t& () const { return v; }
 
@@ -60,7 +69,7 @@ struct Score {
     constexpr Score clamp() const {
         if (v < MinEval) { return MinEval; }
         if (MaxEval < v) { return MaxEval; }
-        assert (!isMate());
+        assert (isEval());
         return *this;
     }
 
