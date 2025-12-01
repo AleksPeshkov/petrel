@@ -62,6 +62,9 @@ struct alignas(64) Nnue {
         return (scalar / QA + outputBias) * SCALE / (QA * QB);
     }
 
+    // load from embedded binary data, defined in main.cpp
+    bool setEmbeddedEval();
+
 };
 
 extern Nnue nnue;

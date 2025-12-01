@@ -1,4 +1,4 @@
-#include <errno.h>
+#include <sysexits.h>
 #include "assert.hpp"
 #include "io.hpp"
 #include "nnue.hpp"
@@ -8,6 +8,12 @@
 #include "PiMask.hpp"
 #include "Uci.hpp"
 #include "VectorOfAll.hpp"
+
+#define INCBIN_PREFIX
+#include "incbin.h"
+
+// global const default nnue value
+INCBIN(EmbeddedNnue, "net/petrel128.bin");
 
 /**
 * Startup constant initialization
@@ -22,14 +28,20 @@ constexpr const PiSingle piSingle; // 256
 const CastlingRules castlingRules; // 128
 constexpr const BitReverse bitReverse; // 32
 
-// global pointer to Uci instance to implement io::log()
-const Uci* The_uci = nullptr;
+// global Uci instance
+Uci The_uci(std::cout);
 
 // global almost constant instance
 Nnue nnue;
 
+bool Nnue::setEmbeddedEval() {
+    if (EmbeddedNnueSize != sizeof(Nnue)) { return false; }
+    std::memcpy(this, EmbeddedNnueData, sizeof(Nnue));
+    return true;
+}
+
 void io::log(const std::string& message) {
-    if (The_uci) { The_uci->log(message); }
+    The_uci.log(message);
 }
 
 int main(int argc, const char* argv[]) {
@@ -48,7 +60,7 @@ int main(int argc, const char* argv[]) {
 
         if (option == "--help" || option == "-h") {
             std::cout
-                << "    Petrel chess engine. The UCI protocol compatible.\n\n"
+                << "    Petrel: UCI chess engine\n\n"
                 << "Options:\n"
                 << "      -h, --help        display this help\n"
                 << "      -v, --version     display version information\n"
@@ -68,25 +80,29 @@ int main(int argc, const char* argv[]) {
         return EINVAL;
     }
 
+    if (!nnue.setEmbeddedEval()) {
+        std::cerr << "petrel: fatal error: embedded NNUE data file has invalid size, expected " << sizeof(Nnue) << " bytes, \n";
+        return EX_SOFTWARE;
+    }
+
     // speed tricks
     std::ios_base::sync_with_stdio(false);
     std::cin.tie(nullptr);
     std::cerr.tie(nullptr);
 
-    Uci uci(std::cout);
-    The_uci = &uci;
+    The_uci.ucinewgame();
 
     if (!initFileName.empty()) {
         std::ifstream initFile{initFileName};
         if (initFile) {
-            uci.processInput(initFile);
+            The_uci.processInput(initFile);
         } else {
             std::cerr << "petrel: error opening file: " << initFileName << '\n';
             return EINVAL;
         }
     }
 
-    uci.processInput(std::cin);
+    The_uci.processInput(std::cin);
 
     return EXIT_SUCCESS;
 }
