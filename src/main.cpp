@@ -1,6 +1,7 @@
 #include <errno.h>
 #include "assert.hpp"
 #include "io.hpp"
+#include "nnue.hpp"
 #include "Bb.hpp"
 #include "Evaluation.hpp"
 #include "Hyperbola.hpp"
@@ -23,6 +24,9 @@ constexpr const BitReverse bitReverse; // 32
 
 // global pointer to Uci instance to implement io::log()
 const Uci* The_uci = nullptr;
+
+// global almost constant instance
+Nnue nnue;
 
 void io::log(const std::string& message) {
     if (The_uci) { The_uci->log(message); }
