@@ -116,6 +116,8 @@ private:
     mutable std::ofstream logFile;
     mutable std::mutex logMutex;
 
+    std::string evalFileName; // use embedded by default
+
     // try to consume the given token from the inputLine
     bool consume(io::czstring token) { return io::consume(inputLine, token); }
 
@@ -127,7 +129,6 @@ private:
     void uciok() const;
     void setoption();
     void setHash();
-    void ucinewgame();
     void position();
 
     void readyok() const;
@@ -143,8 +144,12 @@ private:
     ostream& info_nps(ostream&) const;
     ostream& info_fen(ostream&) const;
 
+    void loadEvalFile(const std::string&);
+    void setEmbeddedEval();
+
 public:
     Uci (ostream&);
+    void ucinewgame();
 
     // process UCI input commands
     void processInput(istream&);
