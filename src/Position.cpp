@@ -3,22 +3,45 @@
 void Position::makeMove(Square from, Square to) {
     PositionSide::swap(MY, OP);
 
-    //the position just swapped its sides, so we make the move for the Op
+    // the position just swapped its sides, so we make the move for the Op
     makeMove<Op>(from, to);
     zobrist_.flip();
     //assert (zobrist() == generateZobrist()); // true, but slow to compute
 }
 
-void Position::makeMove(const Position* parent, Square from, Square to) {
-    assert (parent);
-    rule50_ = parent->rule50_;
-    zobrist_ = parent->zobrist_;
-
+void Position::makeNullMove(const Position* parent) {
     // copy from the parent position but swap sides
+    assert (parent);
     positionSide_[My] = parent->OP;
     positionSide_[Op] = parent->MY;
+    zobrist_ = parent->zobrist_;
+    rule50_ = parent->rule50_;
 
-    //current position flipped its sides relative to parent, so we make the move inplace for the Op
+    // null move
+    rule50_.next();
+    occupied_[My] = parent->occupied_[Op];
+    occupied_[Op] = parent->occupied_[My];
+
+    // clear en passant status from the previous move
+    if (MY.hasEnPassant()) {
+        zobrist_.opEnPassant(MY.enPassantSquare());
+        OP.clearEnPassantKillers();
+        MY.clearEnPassantVictim();
+    }
+
+    zobrist_.flip();
+    //assert (zobrist() == generateZobrist()); // true, but slow to compute
+}
+
+void Position::makeMove(const Position* parent, Square from, Square to) {
+    // copy from the parent position but swap sides
+    assert (parent);
+    positionSide_[My] = parent->OP;
+    positionSide_[Op] = parent->MY;
+    zobrist_ = parent->zobrist_;
+    rule50_ = parent->rule50_;
+
+    // current position flipped its sides relative to parent, so we make the move inplace for the Op
     makeMove<Op>(from, to);
     zobrist_.flip();
 
@@ -27,12 +50,13 @@ void Position::makeMove(const Position* parent, Square from, Square to) {
 }
 
 void Position::makeMoveNoZobrist(const Position* parent, Square from, Square to) {
-    assert (parent);
     // copy from the parent position but swap sides
+    assert (parent);
     positionSide_[My] = parent->OP;
     positionSide_[Op] = parent->MY;
+    rule50_ = parent->rule50_;
 
-    //current position flipped its sides relative to parent, so we make the move inplace for the Op
+    // current position flipped its sides relative to parent, so we make the move inplace for the Op
     makeMove<Op, NoZobrist>(from, to);
 
     //assert (zobrist() == Zobrist{} || zobrist() == generateZobrist()); // true, but slow to compute
@@ -44,13 +68,13 @@ void Position::makeMove(Square from, Square to) {
 
     rule50_.next(); // will be reset later if the move is a capture or pawn move
 
-    //Assumes that the given move is valid and legal
+    // assumes that the given move is valid and legal
     assert (MY.checkers().none());
     OP.clearCheckers();
 
     Pi pi = MY.pieceAt(from);
 
-    //clear en passant status from the previous move
+    // clear en passant status from the previous move
     if (OP.hasEnPassant()) {
         if constexpr (Z) {
             zobrist_.opEnPassant(OP.enPassantSquare());
@@ -101,11 +125,11 @@ void Position::makeMove(Square from, Square to) {
                 OP.capture(~to);
 
                 updateSliderAttacks<My>(MY.affectedBy(from) | pi, OP.affectedBy(~from));
-                return; //end of pawn promotion move with capture
+                return; // end of pawn promotion move with capture
             }
 
             updateSliderAttacks<My>(MY.affectedBy(from, to) | pi, OP.affectedBy(~from, ~to));
-            return; //end of pawn promotion move without capture
+            return; // end of pawn promotion move without capture
         }
 
         if constexpr (Z) {
@@ -113,7 +137,7 @@ void Position::makeMove(Square from, Square to) {
         }
         MY.movePawn(pi, from, to);
 
-        //possible en passant capture and capture with promotion already treated
+        // possible en passant capture and capture with promotion already treated
         if (OP.has(~to)) {
             if constexpr (Z) {
                 zobrist_.op(OP.typeAt(~to), ~to);
@@ -121,7 +145,7 @@ void Position::makeMove(Square from, Square to) {
             OP.capture(~to);
 
             updateSliderAttacks<My>(MY.affectedBy(from), OP.affectedBy(~from));
-            return; //end of simple pawn capture move
+            return; // end of simple pawn capture move
         }
 
         updateSliderAttacks<My>(MY.affectedBy(from, to), OP.affectedBy(~from, ~to));
@@ -130,10 +154,10 @@ void Position::makeMove(Square from, Square to) {
             if constexpr (Z) {
                 if (MY.hasEnPassant()) { zobrist_.enPassant(MY.enPassantSquare()); }
             }
-            return; //end of pawn double push move
+            return; // end of pawn double push move
         }
 
-        return; //end of simple pawn push move
+        return; // end of simple pawn push move
     }
 
     if (MY.kingSquare().is(from)) {
@@ -160,7 +184,7 @@ void Position::makeMove(Square from, Square to) {
         return; // end of king non-capture move
     }
 
-    //castling move encoded as castling rook captures own king
+    // castling move encoded as castling rook captures own king
     if (MY.kingSquare().is(to)) {
         Square rookFrom = from;
         Square kingFrom = to;
@@ -181,7 +205,7 @@ void Position::makeMove(Square from, Square to) {
         return; //end of castling move
     }
 
-    //simple non-pawn non-king move
+    // simple non-pawn non-king move:
 
     if constexpr (Z) {
         if (MY.isCastling(pi)) { zobrist_.castling(from); } // move of the rook with castling right
@@ -198,11 +222,11 @@ void Position::makeMove(Square from, Square to) {
         OP.capture(~to);
 
         updateSliderAttacks<My>(MY.affectedBy(from) | pi, OP.affectedBy(~from));
-        return; //end of simple non-pawn non-king capture move
+        return; // end of simple non-pawn non-king capture move
     }
 
     updateSliderAttacks<My>(MY.affectedBy(from, to), OP.affectedBy(~from, ~to));
-    return; //end of simple non-pawn non-king move
+    return; // end of simple non-pawn non-king quiet move
 }
 
 template <Side::_t My>
@@ -311,10 +335,10 @@ Zobrist Position::generateZobrist() const {
 }
 
 Zobrist Position::createZobrist(Square from, Square to) const {
-    // side to move pieces encoding
+    // side to move pieces hash
     Zobrist mz{zobrist_};
 
-    // opponet side pieces encoding
+    // opponent side pieces hash
     Zobrist oz{0};
 
     Pi pi = MY.pieceAt(from);
@@ -323,7 +347,7 @@ Zobrist Position::createZobrist(Square from, Square to) const {
     if (OP.hasEnPassant()) {
         oz.enPassant(OP.enPassantSquare());
 
-        //en passant capture
+        // en passant capture
         if (ty.is(Pawn) && from.on(Rank5) && to.on(Rank5)) {
             mz.move(PieceType{Pawn}, from, Square{File{to}, Rank6});
             oz(PieceType{Pawn}, ~to);
@@ -360,7 +384,7 @@ Zobrist Position::createZobrist(Square from, Square to) const {
             goto zobrist;
         }
 
-        //the rest of pawns moves (non-promotion, non en passant, non double push)
+        // fall though the rest of pawns moves (non-promotion, non en passant, non double push)
     }
     else if (MY.kingSquare().is(to)) {
         Square kingFrom = to;
