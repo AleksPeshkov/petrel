@@ -131,6 +131,7 @@ ReturnStatus Node::search() {
 
     if (depth <= 0 && !inCheck()) {
         assert (depth == 0);
+        eval = evaluate();
         return quiescence();
     }
 
@@ -171,6 +172,20 @@ ReturnStatus Node::search() {
         score = eval;
         assert (!currentMove);
         return ReturnStatus::Continue;
+    }
+
+    if (
+        !inCheck()
+        && !isPv
+        && depth <= 2
+    ) {
+        auto delta = (depth == 1) ? 55 : 155;
+        if (MinEval <= beta && beta <= eval-delta) {
+            // Static Null Move Pruning (Reverse Futility Pruning)
+            score = eval;
+            assert (!currentMove);
+            return ReturnStatus::BetaCutoff;
+        }
     }
 
     // prepare empty child node to make moves into
@@ -391,8 +406,6 @@ ReturnStatus Node::quiescence() {
     assert (MinusInfinity <= alpha && alpha < beta && beta <= PlusInfinity);
     assert (!inCheck());
 
-    eval = evaluate();
-
     // stand pat
     score = eval;
     if (beta <= score) {
@@ -412,6 +425,7 @@ ReturnStatus Node::quiescence() {
     //TODO: create lighter quiescence node without zobrist hashing and repetition detection
     Node node{this};
     const auto child = &node;
+    child->depth = 0;
 
     // impossible to capture the king, do not even try to save time
     return goodCaptures(child, OP.nonKing());
