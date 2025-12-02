@@ -60,6 +60,7 @@ protected:
     TtSlot* origin; // pointer to the slot in TT
     TtSlot  ttSlot;
     bool isHit = false; // this node found in TT
+    Score eval; // static evaluation of the current position
 
     mutable Score alpha = MinusInfinity; // alpha-beta window lower margin
     Score beta = PlusInfinity; // alpha-beta window upper margin
@@ -81,7 +82,7 @@ protected:
     Node (const Node* parent); // prepare empty child node
 
     // propagate child last move search result score
-    [[nodiscard]] ReturnStatus negamax(Node* child) const;
+    [[nodiscard]] ReturnStatus negamax(Node* child, Ply R) const;
     void failHigh() const;
     void updateKillerMove(Move) const;
 
@@ -100,6 +101,7 @@ protected:
     }
 
     [[nodiscard]] ReturnStatus searchMove(Move move);
+    [[nodiscard]] ReturnStatus searchNullMove(Ply R);
     void makeMove(Square from, Square to);
 
     // convert internal move to be printable in UCI format
