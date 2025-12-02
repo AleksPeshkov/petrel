@@ -209,10 +209,12 @@ void Node::updatePv(Node* child) const {
 ReturnStatus Node::search() {
     assert (MinusInfinity <= alpha && alpha < beta && beta <= PlusInfinity);
     score = NoScore;
+    currentMove = {};
 
     if (moves().none()) {
         // checkmate or stalemate
         score = inCheck() ? Score::checkmated(ply) : Score{DrawScore};
+        assert (!currentMove);
         return ReturnStatus::Continue;
     }
 
@@ -221,11 +223,13 @@ ReturnStatus Node::search() {
         alpha = std::max(alpha, Score::checkmated(ply));
         if (!(alpha < beta)) {
             score = alpha;
+            assert (!currentMove);
             return ReturnStatus::BetaCutoff;
         }
 
         if (rule50().isDraw() || isRepetition() || isDrawMaterial()) {
             score = DrawScore;
+            assert (!currentMove);
             return ReturnStatus::Continue;
         }
 
@@ -249,6 +253,7 @@ ReturnStatus Node::search() {
     if (ply == MaxPly) {
         // no room to search deeper
         score = evaluate();
+        assert (!currentMove);
         return ReturnStatus::Continue;
     }
 
@@ -364,10 +369,12 @@ ReturnStatus Node::quiescence() {
     // stand pat
     score = evaluate();
     if (beta <= score) {
+        assert (!currentMove);
         return ReturnStatus::BetaCutoff;
     }
     if (ply == MaxPly) {
         // no room to search deeper
+        assert (!currentMove);
         return ReturnStatus::Continue;
     }
     if (alpha < score) {
