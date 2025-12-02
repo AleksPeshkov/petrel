@@ -125,6 +125,19 @@ ReturnStatus Node::searchRoot() {
     }
 }
 
+ReturnStatus Node::searchNullMove(Ply R) {
+    RETURN_IF_STOP (root.limits.countNode());
+
+    makeNullMove(parent);
+
+    parent->currentMove = {};
+
+    origin = root.tt.prefetch<TtSlot>(zobrist());
+    repetitionHash = RepetitionHash{};
+
+    return parent->negamax(this, R);
+}
+
 void Node::makeMove(Square from, Square to) {
     Position::makeMove(parent, from, to);
     origin = root.tt.prefetch<TtSlot>(zobrist());
@@ -140,14 +153,17 @@ ReturnStatus Node::searchMove(Move move) {
     parent->currentMove = move;
     makeMove(from, to);
 
-    if (rule50() < 2) { repetitionHash = RepetitionHash{}; }
+    if (rule50() < 2) { repetitionHash = {}; }
+    else if (grandParent && !grandParent->currentMove) { repetitionHash = {}; } // null move resets repetition but not rule50
     else if (grandParent) { repetitionHash = RepetitionHash{grandParent->repetitionHash, grandParent->zobrist()}; }
     else { repetitionHash = root.repetitions.repetitionHash(colorToMove()); }
 
-    return parent->negamax(this);
+    return parent->negamax(this, 1);
 }
 
-ReturnStatus Node::negamax(Node* child) const {
+ReturnStatus Node::negamax(Node* child, Ply R) const {
+    child->draft = draft - R; //TRICK: Ply >= 0
+    assert (child->draft >= 0);
     child->generateMoves();
     RETURN_IF_STOP (child->search());
 
@@ -168,6 +184,7 @@ ReturnStatus Node::negamax(Node* child) const {
 
         assert (alpha < childScore && childScore < beta);
         assert (isPv); // alpha < childScore < beta, so current window cannot be zero
+        assert (currentMove); // null move in PV is not allowed
 
         if (!child->isPv) {
             // Principal Variation Search (PVS) research with full window
@@ -175,7 +192,7 @@ ReturnStatus Node::negamax(Node* child) const {
             child->alpha = -beta;
             assert (child->beta == -alpha);
             assert (child->alpha < child->beta-1);
-            return negamax(child);
+            return negamax(child, 1);
         }
 
         score = childScore;
@@ -196,6 +213,11 @@ ReturnStatus Node::negamax(Node* child) const {
 }
 
 void Node::failHigh() const {
+    // currentMove is null (after NMP), write back previous TT move instead
+    if (!currentMove && isHit && Move{ttSlot}) {
+        currentMove = Move{ttSlot};
+    }
+
     bound = FailHigh;
     *origin = TtSlot{this};
     ++root.tt.writes;
@@ -273,6 +295,7 @@ ReturnStatus Node::search() {
     if (ply >= 1) {
         // mate-distance pruning
         alpha = std::max(alpha, Score::checkmated(ply));
+        beta  = std::min(beta, -Score::checkmated(ply) + Ply{1});
         if (!(alpha < beta)) {
             score = alpha;
             assert (!currentMove);
@@ -318,9 +341,11 @@ ReturnStatus Node::search() {
         }
     }
 
+    eval = evaluate();
+
     if (ply == MaxPly) {
         // no room to search deeper
-        score = evaluate();
+        score = eval;
         assert (!currentMove);
         return ReturnStatus::Continue;
     }
@@ -328,6 +353,18 @@ ReturnStatus Node::search() {
     // prepare empty child node to make moves into
     Node node{this};
     const auto child = &node;
+
+    // Null Move Pruning
+    if (
+        !inCheck()
+        && !isPv
+        && MinEval <= beta && beta <= eval
+        && draft >= 2 // overhead higher then gain at very low depth
+        && MY.evaluation().piecesMat() > 0 // no null move if only pawns left (zugzwang)
+    ) {
+        canBeKiller = false;
+        RETURN_CUTOFF (child->searchNullMove(3 + draft/6));
+    }
 
     if (isHit && Move{ttSlot}) {
         canBeKiller = ttSlot.canBeKiller();
@@ -511,8 +548,10 @@ ReturnStatus Node::quiescence() {
     assert (MinusInfinity <= alpha && alpha < beta && beta <= PlusInfinity);
     assert (!inCheck());
 
+    eval = evaluate();
+
     // stand pat
-    score = evaluate();
+    score = eval;
     if (beta <= score) {
         assert (!currentMove);
         return ReturnStatus::BetaCutoff;
