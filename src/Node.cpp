@@ -356,17 +356,29 @@ ReturnStatus Node::search() {
     Node node{this};
     const auto child = &node;
 
-    // Null Move Pruning
     if (
         !inCheck()
         && !isPv
-        && !beta.isMate()
         && eval >= beta
-        && draft >= 2 // overhead higher then gain at very low depth
-        && MY.evaluation().piecesMat() > 0 // no null move if only pawns left (zugzwang)
     ) {
-        canBeKiller = false;
-        RETURN_CUTOFF (child->searchNullMove(3 + draft/4));
+        // Static Null Move Pruning (Reverse Futility Pruning)
+        if (draft <= 2) {
+            auto delta = 245*draft - 190; // 55, 300
+            if (eval-delta >= beta) {
+                score = eval;
+                assert (!currentMove);
+                return ReturnStatus::BetaCutoff;
+            }
+        }
+
+        // Null Move Pruning
+        if (
+            draft >= 2 // overhead higher then gain at very low depth
+            && MY.evaluation().piecesMat() > 0 // no null move if only pawns left (zugzwang)
+        ) {
+            canBeKiller = false;
+            RETURN_CUTOFF (child->searchNullMove(3 + draft/4));
+        }
     }
 
     if (isHit && Move{ttSlot}) {
