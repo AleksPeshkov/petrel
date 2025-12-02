@@ -46,6 +46,8 @@ protected:
     // update the position and its zobrist hash
     void makeMove(const Position*, Square, Square);
 
+    void makeNullMove(const Position*);
+
     template <Side::_t> void setLegalEnPassant(Pi, Square);
     void setZobrist() { zobrist_ = generateZobrist(); }
     void setRule50(const Rule50& rule50) { rule50_ = rule50; }
