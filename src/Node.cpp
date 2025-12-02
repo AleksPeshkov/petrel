@@ -127,6 +127,7 @@ ReturnStatus Node::search() {
 
     if (depth <= 0 && !inCheck()) {
         assert (depth == 0);
+        eval = evaluate();
         return quiescence();
     }
 
@@ -169,6 +170,20 @@ ReturnStatus Node::search() {
         return ReturnStatus::Continue;
     }
 
+    if (
+        !inCheck()
+        && !isPv
+        && depth <= 2
+    ) {
+        auto delta = (depth == 1) ? 55 : 155;
+        if (beta <= eval-delta) {
+            // Static Null Move Pruning (Reverse Futility Pruning)
+            score = eval;
+            assert (!currentMove);
+            return ReturnStatus::BetaCutoff;
+        }
+    }
+
     // prepare empty child node to make moves into
     Node node{this};
     const auto child = &node;
@@ -177,9 +192,8 @@ ReturnStatus Node::search() {
     if (
         !inCheck()
         && !isPv
-        && !beta.isMate()
-        && eval >= beta
         && depth >= 2 // overhead higher then gain at very low depth
+        && beta <= eval
         && MY.evaluation().piecesMat() > 0 // no null move if only pawns left (zugzwang)
     ) {
         canBeKiller = false;
@@ -419,8 +433,6 @@ ReturnStatus Node::quiescence() {
     assert (MinusInfinity <= alpha && alpha < beta && beta <= PlusInfinity);
     assert (!inCheck());
 
-    eval = evaluate();
-
     // stand pat
     score = eval;
     if (beta <= score) {
@@ -440,6 +452,7 @@ ReturnStatus Node::quiescence() {
     //TODO: create lighter quiescence node without zobrist hashing and repetition detection
     Node node{this};
     const auto child = &node;
+    child->depth = 0;
 
     // impossible to capture the king, do not even try to save time
     return goodCaptures(child, OP.notKing());
