@@ -195,7 +195,7 @@ ReturnStatus Node::search() {
             && MY.material().phase() > 0 // no null move if only pawns left (zugzwang)
         ) {
             canBeKiller = false;
-            RETURN_CUTOFF (child->searchNullMove(3 + depth/6));
+            RETURN_CUTOFF (child->searchNullMove(4 + (depth-2)/4));
         }
     }
 
