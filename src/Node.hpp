@@ -78,7 +78,7 @@ protected:
     RepetitionHash repetitionHash; // mini-hash of all previous reversible positions zobrist keys
 
     Ply ply{0}; // distance from root (root is ply == 0)
-    Ply draft{0}; // remaining depth to horizon
+    Ply depth{0}; // remaining depth to horizon
 
     TtSlot* tt; // pointer to the slot in TT
     TtSlot  ttSlot;
