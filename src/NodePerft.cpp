@@ -271,7 +271,7 @@ void TtPerft::set(ZArg z, Ply d, node_count_t n) {
 }
 
 NodePerft::NodePerft (const PositionMoves& p, Uci& r, Ply d) :
-    PositionMoves{p}, parent{nullptr}, root{r}, draft{d} {}
+    PositionMoves{p}, parent{nullptr}, root{r}, depth{d} {}
 
 ReturnStatus NodePerft::visitRoot() {
     root.newSearch();
@@ -293,7 +293,7 @@ ReturnStatus NodePerft::visitRoot() {
         }
     }
 
-    root.info_perft_depth(draft, perft);
+    root.info_perft_depth(depth, perft);
     return ReturnStatus::Continue;
 }
 
@@ -313,7 +313,7 @@ ReturnStatus NodePerft::visit() {
 }
 
 ReturnStatus NodePerft::visitMove(Square from, Square to) {
-    switch (draft) {
+    switch (depth) {
         case 0:
             perft = 1;
             break;
@@ -325,19 +325,19 @@ ReturnStatus NodePerft::visitMove(Square from, Square to) {
             break;
 
         default: {
-            assert (draft >= 2);
+            assert (depth >= 2);
             makeZobrist(parent, from, to);
             root.tt.prefetch(zobrist(), 64);
 
             RETURN_IF_STOP (root.limits.countNode());
             makeMoveNoZobrist(parent, from, to);
 
-            perft = static_cast<TtPerft&>(root.tt).get(zobrist(), draft-2);
+            perft = static_cast<TtPerft&>(root.tt).get(zobrist(), depth-2);
 
             if (perft == NodeCountNone) {
                 perft = 0;
                 RETURN_IF_STOP(visit());
-                static_cast<TtPerft&>(root.tt).set(zobrist(), draft-2, perft);
+                static_cast<TtPerft&>(root.tt).set(zobrist(), depth-2, perft);
             }
         }
     }
