@@ -383,19 +383,19 @@ ostream& Uci::info_fen(ostream& o) const {
     return o;
 }
 
-void Uci::info_iteration(Ply draft) const {
+void Uci::info_iteration(Ply d) const {
     Output ob{this};
-    ob << "info depth " << draft; nps(ob);
+    ob << "info depth " << d; nps(ob);
 }
 
-void Uci::info_pv(Ply draft) const {
+void Uci::info_pv(Ply d) const {
     Output ob{this};
-    ob << "info depth " << draft; nps(ob) << pvScore << " pv" << pvMoves;
+    ob << "info depth " << d; nps(ob) << pvScore << " pv" << pvMoves;
 }
 
-void Uci::info_perft_depth(Ply draft, node_count_t perft) const {
+void Uci::info_perft_depth(Ply d, node_count_t perft) const {
     Output ob{this};
-    ob << "info depth " << draft << " perft " << perft; nps(ob);
+    ob << "info depth " << d << " perft " << perft; nps(ob);
 }
 
 void Uci::info_perft_currmove(int moveCount, const UciMove& currentMove, node_count_t perft) const {
