@@ -11,7 +11,7 @@ TtSlot::TtSlot (const Node* n) : TtSlot{
     n->score,
     n->ply,
     n->bound,
-    n->draft,
+    n->depth,
     n->canBeKiller
 } {}
 
@@ -19,7 +19,7 @@ Node::Node (const PositionMoves& p, const Uci& r) : PositionMoves{p}, root{r} {}
 
 Node::Node (const Node* p) :
     PositionMoves{}, root{p->root}, parent{p}, grandParent{p->parent},
-    ply{p->ply + 1}, draft{p->draft > 0 ? p->draft-1 : 0},
+    ply{p->ply + 1}, depth{p->depth > 0 ? p->depth-1 : 0},
     alpha{-p->beta}, beta{-p->alpha}, isPv(p->isPv),
     pvIndex{p->pvIndex+1},
     killer1{grandParent ? grandParent->killer1 : Move{}},
@@ -78,18 +78,18 @@ ReturnStatus Node::searchRoot() {
         }
     }
 
-    for (draft = 1; draft <= root.limits.depth; ++draft) {
+    for (depth = 1; depth <= root.limits.depth; ++depth) {
         setMoves(rootMovesClone);
         alpha = MinusInfinity;
         beta = PlusInfinity;
         auto returnStatus = search();
 
         root.newIteration();
-        root.refreshTtPv(draft);
+        root.refreshTtPv(depth);
 
         RETURN_IF_STOP (returnStatus);
 
-        root.info_iteration(draft);
+        root.info_iteration(depth);
 
         if (root.limits.isIterationDeadline()) { return ReturnStatus::Stop; }
     }
@@ -132,8 +132,8 @@ ReturnStatus Node::searchMove(Move move, Ply R) {
 }
 
 ReturnStatus Node::negamax(Node* child, Ply R) const {
-    child->draft = draft - R; //TRICK: Ply >= 0
-    assert (child->draft >= 0);
+    child->depth = depth - R; //TRICK: Ply >= 0
+    assert (child->depth >= 0);
     child->generateMoves();
     RETURN_IF_STOP (child->search());
 
@@ -147,7 +147,7 @@ ReturnStatus Node::negamax(Node* child, Ply R) const {
         }
     } else {
         if (beta <= childScore) {
-            if (currentMove && draft > child->draft+1) {
+            if (currentMove && depth > child->depth+1) {
                 if (child->isPv) {
                     // rare case (the first move from PV with reduced depth)
                     child->alpha = -beta;
@@ -257,7 +257,7 @@ void Node::updatePv(Node* child) const {
 
     if (ply == 0) {
         root.pvScore = score;
-        root.info_pv(draft);
+        root.info_pv(depth);
     }
 }
 
@@ -292,9 +292,9 @@ ReturnStatus Node::search() {
 
         if (inCheck()) {
             // check extension
-            draft = draft+1;
-        } else if (draft <= 0) {
-            assert (draft == 0);
+            depth = depth+1;
+        } else if (depth <= 0) {
+            assert (depth == 0);
             return quiescence();
         }
     }
@@ -309,7 +309,7 @@ ReturnStatus Node::search() {
         } else {
             ++root.tt.hits;
 
-            if (ttSlot.draft() >= draft && !isPv) {
+            if (ttSlot.draft() >= depth && !isPv) {
                 Bound ttBound = ttSlot.bound();
                 Score ttScore = ttSlot.score(ply);
 
@@ -345,11 +345,11 @@ ReturnStatus Node::search() {
         !inCheck()
         && !isPv
         && MinEval <= beta && beta <= eval
-        && draft >= 2 // overhead higher then gain at very low depth
+        && depth >= 2 // overhead higher then gain at very low depth
         && MY.evaluation().piecesMat() > 0 // no null move if only pawns left (zugzwang)
     ) {
         canBeKiller = false;
-        RETURN_CUTOFF (child->searchNullMove(3 + draft/6));
+        RETURN_CUTOFF (child->searchNullMove(3 + depth/6));
     }
 
     if (isHit && ttSlot.move()) {
@@ -417,8 +417,8 @@ ReturnStatus Node::search() {
     // Weak Move Reduction condition: !inCheck()
     bool canR = !inCheck();
 
-    // Weak Move Pruning: !inCheck() && !isPv && draft <= 2
-    bool canP = !inCheck() && !isPv && draft <= 2;
+    // Weak Move Pruning: !inCheck() && !isPv && depth <= 2
+    bool canP = !inCheck() && !isPv && depth <= 2;
 
     // quiet non-pawn, non-king moves from unsafe to safe squares
     // skip king moves because they are safe anyway (unless in check)
