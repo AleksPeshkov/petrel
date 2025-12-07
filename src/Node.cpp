@@ -122,11 +122,15 @@ ReturnStatus Node::search() {
         if (inCheck()) {
             // check extension
             depth = depth+1;
-        } else if (depth <= 0) {
-            assert (depth == 0);
-            return quiescence();
         }
     }
+
+    if (depth <= 0 && !inCheck()) {
+        assert (depth == 0);
+        return quiescence();
+    }
+
+    assert (depth > 0);
 
     ++root.tt.reads;
     ttSlot = *tt;
@@ -536,9 +540,11 @@ void Node::failHigh() const {
         currentMove = ttSlot.move();
     }
 
-    bound = FailHigh;
-    *tt = TtSlot{this};
-    ++root.tt.writes;
+    if (depth > 0) {
+        bound = FailHigh;
+        *tt = TtSlot{this};
+        ++root.tt.writes;
+    }
 
     if (parent && canBeKiller) {
         assert (currentMove);
@@ -547,9 +553,11 @@ void Node::failHigh() const {
 }
 
 void Node::updatePv() const {
-    bound = ExactScore;
-    *tt = TtSlot{this};
-    ++root.tt.writes;
+    if (depth > 0) {
+        bound = ExactScore;
+        *tt = TtSlot{this};
+        ++root.tt.writes;
+    }
 
     if (parent && canBeKiller) {
         assert (currentMove);
