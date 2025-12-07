@@ -10,9 +10,9 @@ class NodePerft : public PositionMoves {
     Uci& root;
 
     node_count_t perft = 0;
-    Ply draft;
+    Ply depth;
 
-    NodePerft (NodePerft* n) : parent{n}, root{n->root}, draft{n->draft-1} {}
+    NodePerft (NodePerft* n) : parent{n}, root{n->root}, depth{n->depth-1} {}
     ReturnStatus visit();
     ReturnStatus visitMove(Square from, Square to);
 
