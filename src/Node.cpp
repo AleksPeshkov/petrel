@@ -126,34 +126,38 @@ ReturnStatus Node::search() {
         if (inCheck()) {
             // check extension
             depth = depth+1;
-        } else if (depth <= 0) {
-            assert (depth == 0);
-            return quiescence();
         }
     }
 
-    ++root.tt.reads;
-    ttSlot = *tt;
-    isHit = (ttSlot == zobrist());
-    if (isHit) {
-        if (ttSlot.move() && !isLegalMove(ttSlot.move())) {
-            isHit = false;
-        } else {
-            ++root.tt.hits;
+    if (depth <= 0 && !inCheck()) {
+        assert (depth == 0);
+        return quiescence();
+    }
 
-            if (ttSlot.draft() >= depth && !isPv) {
-                Bound ttBound = ttSlot.bound();
-                Score ttScore = ttSlot.score(ply);
+    if (depth > 0) {
+        ++root.tt.reads;
+        ttSlot = *tt;
+        isHit = (ttSlot == zobrist());
+        if (isHit) {
+            if (ttSlot.move() && !isLegalMove(ttSlot.move())) {
+                isHit = false;
+            } else {
+                ++root.tt.hits;
 
-                //TODO: refresh TT record if age is old
-                if ((ttBound & FailHigh) && beta <= ttScore) {
-                    score = ttScore;
-                    currentMove = ttSlot.move();
-                    return ReturnStatus::BetaCutoff;
-                } else if ((ttBound & FailLow) && ttScore <= alpha) {
-                    score = ttScore;
-                    currentMove = ttSlot.move();
-                    return ReturnStatus::Continue;
+                if (ttSlot.draft() >= depth && !isPv) {
+                    Bound ttBound = ttSlot.bound();
+                    Score ttScore = ttSlot.score(ply);
+
+                    //TODO: refresh TT record if age is old
+                    if ((ttBound & FailHigh) && beta <= ttScore) {
+                        score = ttScore;
+                        currentMove = ttSlot.move();
+                        return ReturnStatus::BetaCutoff;
+                    } else if ((ttBound & FailLow) && ttScore <= alpha) {
+                        score = ttScore;
+                        currentMove = ttSlot.move();
+                        return ReturnStatus::Continue;
+                    }
                 }
             }
         }
@@ -510,9 +514,11 @@ void Node::failHigh() const {
         currentMove = ttSlot.move();
     }
 
-    bound = FailHigh;
-    *tt = TtSlot{this};
-    ++root.tt.writes;
+    if (depth > 0) {
+        bound = FailHigh;
+        *tt = TtSlot{this};
+        ++root.tt.writes;
+    }
 
     if (parent && canBeKiller) {
         assert (currentMove);
@@ -521,9 +527,11 @@ void Node::failHigh() const {
 }
 
 void Node::updatePv() const {
-    bound = ExactScore;
-    *tt = TtSlot{this};
-    ++root.tt.writes;
+    if (depth > 0) {
+        bound = ExactScore;
+        *tt = TtSlot{this};
+        ++root.tt.writes;
+    }
 
     if (parent && canBeKiller) {
         assert (currentMove);
