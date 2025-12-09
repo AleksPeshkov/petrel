@@ -1,7 +1,6 @@
 #ifndef PI_RANK_HPP
 #define PI_RANK_HPP
 
-#include "typedefs.hpp"
 #include "BitArray128.hpp"
 #include "PiMask.hpp"
 #include "VectorOfAll.hpp"
