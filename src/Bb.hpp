@@ -1,9 +1,7 @@
 #ifndef BB_HPP
 #define BB_HPP
 
-#include "bitops.hpp"
-#include "io.hpp"
-#include "typedefs.hpp"
+#include "Index.hpp"
 #include "BitSet.hpp"
 
 /**

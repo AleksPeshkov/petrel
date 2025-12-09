@@ -1,9 +1,7 @@
 #ifndef TT_HPP
 #define TT_HPP
 
-#include "bitops.hpp"
 #include "memory.hpp"
-#include "typedefs.hpp"
 #include "Zobrist.hpp"
 
 class Tt {

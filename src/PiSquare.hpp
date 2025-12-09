@@ -1,8 +1,8 @@
 #ifndef PI_SQUARE_HPP
 #define PI_SQUARE_HPP
 
+#include "Index.hpp"
 #include "PiMask.hpp"
-#include "Square.hpp"
 
 class PiSquare {
     using _t = Square::_t;

@@ -1,8 +1,7 @@
 #ifndef UCI_ROOT_HPP
 #define UCI_ROOT_HPP
 
-#include "io.hpp"
-#include "typedefs.hpp"
+#include "Index.hpp"
 #include "PositionMoves.hpp"
 
 class Uci;
