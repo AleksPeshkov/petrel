@@ -1,7 +1,7 @@
 #ifndef REPETITIONS_HPP
 #define REPETITIONS_HPP
 
-#include "typedefs.hpp"
+#include "Index.hpp"
 #include "Zobrist.hpp"
 
 // https://www.talkchess.com/forum/viewtopic.php?p=554664#p554664
