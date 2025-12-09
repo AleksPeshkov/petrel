@@ -1,6 +1,6 @@
 #ifndef STD_AFX_HPP
 #define STD_AFX_HPP
-
+/*
 #include <algorithm>
 #include <array>
 #include <atomic>
@@ -19,5 +19,5 @@
 #include <string>
 #include <thread>
 #include <type_traits>
-
+*/
 #endif

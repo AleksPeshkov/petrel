@@ -2,7 +2,7 @@
 #define VECTOR_OF_ALL_HPP
 
 #include "bitops128.hpp"
-#include "typedefs.hpp"
+#include "Index.hpp"
 
 class VectorOfAll {
     using _t = vu8x16_t;
