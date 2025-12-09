@@ -1,8 +1,7 @@
 #ifndef PI_MASK_HPP
 #define PI_MASK_HPP
 
-#include "io.hpp"
-#include "typedefs.hpp"
+#include "Index.hpp"
 #include "BitSet.hpp"
 #include "BitArray128.hpp"
 #include "VectorOfAll.hpp"
