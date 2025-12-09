@@ -1,8 +1,7 @@
 #ifndef UCI_MOVE_HPP
 #define UCI_MOVE_HPP
 
-#include "io.hpp"
-#include "typedefs.hpp"
+#include "Index.hpp"
 
 /**
  * Position independent move is 15 bits with the special move type flag to mark either castling, promotion or en passant move
