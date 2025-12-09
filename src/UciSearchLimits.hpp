@@ -1,9 +1,9 @@
 #ifndef UCI_SEARCH_LIMITS_HPP
 #define UCI_SEARCH_LIMITS_HPP
 
-#include "typedefs.hpp"
+#include <atomic>
+#include "Index.hpp"
 #include "chrono.hpp"
-#include "Thread.hpp"
 
 class UciSearchLimits {
     constexpr static int QuotaLimit = 200; // < 0.05ms
