@@ -1,9 +1,7 @@
 #ifndef ZOBRIST_HPP
 #define ZOBRIST_HPP
 
-#include "bitops.hpp"
-#include "io.hpp"
-#include "typedefs.hpp"
+#include "Index.hpp"
 
 class Z;
 using ZArg = Z;
