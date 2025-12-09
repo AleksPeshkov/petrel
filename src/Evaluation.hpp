@@ -1,8 +1,7 @@
 #ifndef EVALUATION_HPP
 #define EVALUATION_HPP
 
-#include "io.hpp"
-#include "typedefs.hpp"
+#include "Index.hpp"
 
 // position evaluation score, fits in 14 bits
 enum score_enum : i16_t {
