@@ -2,8 +2,7 @@
 #include "Uci.hpp"
 
 #define RETURN_CUTOFF(visitor) { ReturnStatus returnStatus = visitor; \
-    if (returnStatus == ReturnStatus::Stop) { return ReturnStatus::Stop; } \
-    if (returnStatus == ReturnStatus::BetaCutoff) { return ReturnStatus::BetaCutoff; }} ((void)0)
+    if (returnStatus != ReturnStatus::Continue) { return returnStatus; }} ((void)0)
 
 TtSlot::TtSlot (const Node* n) : TtSlot{
     n->zobrist(),
@@ -25,131 +24,6 @@ Node::Node (const Node* p) :
     killer2{grandParent ? grandParent->killer2 : Move{}},
     killer3{grandParent ? grandParent->killer3 : Move{}}
 {}
-
-ReturnStatus Node::searchRoot() {
-    auto rootMovesClone = moves();
-    repetitionHash = root.repetitions.repetitionHash(colorToMove());
-    tt = root.tt.prefetch<TtSlot>(zobrist());
-
-    if (root.limits.reached<IterationDeadline>()) {
-        // we have no time to search, return TT move immediately if found
-        ++root.tt.reads;
-        ttSlot = *tt;
-        isHit = (ttSlot == zobrist());
-        if (!isHit) {
-            io::log("#no time, no TT record found");
-        } else {
-            Move ttMove = ttSlot.move();
-            if (!isLegalMove(ttMove)) {
-                if (ttMove) {
-                    io::log("#no time, illegal TT move");
-                } else {
-                    io::log("#no time, TT null move found");
-                }
-            } else {
-                if (root.limits.canPonder) {
-                    Node node{this};
-                    const auto child = &node;
-
-                    child->makeMove(ttMove.from(), ttMove.to());
-                    ++root.tt.reads;
-                    child->ttSlot = *child->tt;
-                    child->isHit = (child->ttSlot == child->zobrist());
-                    if (child->isHit) {
-                        Move ttMove2 = child->ttSlot.move();
-                        if (ttMove2) {
-                            child->generateMoves();
-                            if (child->isLegalMove(ttMove2)) {
-                                ++root.tt.hits;
-                                root.pvMoves.clearPly(PvMoves::Index{child->pvIndex+1});
-                                root.pvMoves.set(child->pvIndex, child->uciMove(ttMove2), PvMoves::Index{child->pvIndex+1});
-                            }
-                        }
-                    }
-                }
-
-                ++root.tt.hits;
-                root.pvScore = ttSlot.score(ply);
-                root.pvMoves.set(pvIndex, uciMove(ttMove), PvMoves::Index{pvIndex+1});
-                io::log("#no time, return move from TT");
-                return ReturnStatus::Stop;
-            }
-        }
-    }
-
-    for (depth = 1; depth <= root.limits.depth; ++depth) {
-        setMoves(rootMovesClone);
-        alpha = MinusInfinity;
-        beta = PlusInfinity;
-        auto returnStatus = search();
-
-        root.newIteration();
-        refreshTtPv();
-
-        RETURN_IF_STOP (returnStatus);
-
-        root.info_iteration(depth);
-
-        if (root.limits.reached<IterationDeadline>()) { return ReturnStatus::Stop; }
-    }
-
-    return ReturnStatus::Continue;
-}
-
- // refresh PV in TT before new search iteration if it was occasionally overwritten
- void Node::refreshTtPv() {
-    Position pos{root.position_};
-    Score s = root.pvScore;
-    Ply d = depth;
-
-    const UciMove* pv = root.pvMoves;
-    for (Move move; (move = *pv++);) {
-        auto o = root.tt.addr<TtSlot>(pos.zobrist());
-        *o = TtSlot{pos.zobrist(), move, s, ExactScore, d, false};
-        ++root.tt.writes;
-
-        //we cannot use makeZobrist() because of en passant legality validation
-        pos.makeMove(move.from(), move.to());
-        s = -s;
-        d = d-1;
-    }
-}
-
-ReturnStatus Node::searchNullMove(Ply R) {
-    RETURN_IF_STOP (root.limits.countNode());
-
-    makeNullMove(parent);
-
-    parent->currentMove = {};
-
-    tt = root.tt.prefetch<TtSlot>(zobrist());
-    repetitionHash = RepetitionHash{};
-
-    return parent->negamax(this, R);
-}
-
-void Node::makeMove(Square from, Square to) {
-    Position::makeMove(parent, from, to);
-    tt = root.tt.prefetch<TtSlot>(zobrist());
-    root.pvMoves.clearPly(pvIndex);
-}
-
-ReturnStatus Node::searchMove(Move move, Ply R) {
-    RETURN_IF_STOP (root.limits.countNode());
-
-    Square from = move.from();
-    Square to = move.to();
-    parent->clearMove(from, to);
-    parent->currentMove = move;
-    makeMove(from, to);
-
-    if (rule50() < 2) { repetitionHash = {}; }
-    else if (grandParent && !grandParent->currentMove) { repetitionHash = {}; } // null move resets repetition but not rule50
-    else if (grandParent) { repetitionHash = RepetitionHash{grandParent->repetitionHash, grandParent->zobrist()}; }
-    else { repetitionHash = root.repetitions.repetitionHash(colorToMove()); }
-
-    return parent->negamax(this, R);
-}
 
 ReturnStatus Node::negamax(Node* child, Ply R) const {
     child->depth = depth - R; //TRICK: Ply >= 0
@@ -213,73 +87,6 @@ ReturnStatus Node::negamax(Node* child, Ply R) const {
     return ReturnStatus::Continue;
 }
 
-void Node::failHigh() const {
-    // currentMove is null (after NMP), write back previous TT move instead
-    if (!currentMove && isHit && ttSlot.move()) {
-        currentMove = ttSlot.move();
-    }
-
-    bound = FailHigh;
-    *tt = TtSlot{this};
-    ++root.tt.writes;
-
-    if (parent && canBeKiller) {
-        assert (currentMove);
-        parent->updateKillerMove(currentMove);
-    }
-}
-
-void Node::updateKillerMove(Move newKiller) const {
-    if (killer1 != newKiller) {
-        if (killer2 != newKiller) {
-            if (killer3 != newKiller) {
-                // fresh killer move
-                killer2 = killer1;
-                killer1 = newKiller;
-            } else {
-                // promote killer3 to killer1
-                killer3 = killer2;
-                killer2 = killer1;
-                killer1 = newKiller;
-            }
-        } else {
-            // promote killer2 to killer1
-            killer2 = killer1;
-            killer1 = newKiller;
-        }
-    }
-
-    if (grandParent && grandParent->killer1 != newKiller && grandParent->killer2 != newKiller) {
-        grandParent->killer3 = newKiller;
-    }
-
-    if (currentMove) {
-        root.counterMove.set(colorToMove(),  MY.typeAt(currentMove.from()), currentMove.to(), newKiller);
-    }
-
-    if (parent && parent->currentMove) {
-        root.followMove.set(parent->colorToMove(),  parent->MY.typeAt(parent->currentMove.from()), parent->currentMove.to(), newKiller);
-    }
-}
-
-void Node::updatePv(Node* child) const {
-    child->pvIndex = root.pvMoves.set(pvIndex, uciMove(currentMove), child->pvIndex);
-
-    bound = ExactScore;
-    *tt = TtSlot{this};
-    ++root.tt.writes;
-
-    if (parent && canBeKiller) {
-        assert (currentMove);
-        parent->updateKillerMove(currentMove);
-    }
-
-    if (ply == 0) {
-        root.pvScore = score;
-        root.info_pv(depth);
-    }
-}
-
 ReturnStatus Node::search() {
     assert (MinusInfinity <= alpha && alpha < beta && beta <= PlusInfinity);
     score = NoScore;
@@ -293,7 +100,9 @@ ReturnStatus Node::search() {
         return ReturnStatus::Continue;
     }
 
-    if (ply >= 1) {
+    if (parent) {
+        assert (ply >= 1);
+
         // mate-distance pruning
         alpha = std::max(alpha, Score::checkmated(ply));
         beta  = std::min(beta, -Score::checkmated(ply) + Ply{1});
@@ -659,6 +468,109 @@ ReturnStatus Node::goodCaptures(Node* child, const PiMask& victims) {
     return ReturnStatus::Continue;
 }
 
+ReturnStatus Node::searchNullMove(Ply R) {
+    RETURN_IF_STOP (root.limits.countNode());
+
+    makeNullMove(parent);
+
+    parent->currentMove = {};
+
+    tt = root.tt.prefetch<TtSlot>(zobrist());
+    repetitionHash = RepetitionHash{};
+
+    return parent->negamax(this, R);
+}
+
+void Node::makeMove(Square from, Square to) {
+    Position::makeMove(parent, from, to);
+    tt = root.tt.prefetch<TtSlot>(zobrist());
+    root.pvMoves.clearPly(pvIndex);
+}
+
+ReturnStatus Node::searchMove(Move move, Ply R) {
+    RETURN_IF_STOP (root.limits.countNode());
+
+    Square from = move.from();
+    Square to = move.to();
+    parent->clearMove(from, to);
+    parent->currentMove = move;
+    makeMove(from, to);
+
+    if (rule50() < 2) { repetitionHash = {}; }
+    else if (grandParent && !grandParent->currentMove) { repetitionHash = {}; } // null move resets repetition but not rule50
+    else if (grandParent) { repetitionHash = RepetitionHash{grandParent->repetitionHash, grandParent->zobrist()}; }
+    else { repetitionHash = root.repetitions.repetitionHash(colorToMove()); }
+
+    return parent->negamax(this, R);
+}
+
+void Node::failHigh() const {
+    // currentMove is null (after NMP), write back previous TT move instead
+    if (!currentMove && isHit && ttSlot.move()) {
+        currentMove = ttSlot.move();
+    }
+
+    bound = FailHigh;
+    *tt = TtSlot{this};
+    ++root.tt.writes;
+
+    if (parent && canBeKiller) {
+        assert (currentMove);
+        parent->updateKillerMove(currentMove);
+    }
+}
+
+void Node::updatePv(Node* child) const {
+    child->pvIndex = root.pvMoves.set(pvIndex, uciMove(currentMove), child->pvIndex);
+
+    bound = ExactScore;
+    *tt = TtSlot{this};
+    ++root.tt.writes;
+
+    if (parent && canBeKiller) {
+        assert (currentMove);
+        parent->updateKillerMove(currentMove);
+    }
+
+    if (ply == 0) {
+        root.pvScore = score;
+        root.info_pv(depth);
+    }
+}
+
+void Node::updateKillerMove(Move newKiller) const {
+    if (killer1 != newKiller) {
+        if (killer2 != newKiller) {
+            if (killer3 != newKiller) {
+                // fresh killer move
+                killer2 = killer1;
+                killer1 = newKiller;
+            } else {
+                // promote killer3 to killer1
+                killer3 = killer2;
+                killer2 = killer1;
+                killer1 = newKiller;
+            }
+        } else {
+            // promote killer2 to killer1
+            killer2 = killer1;
+            killer1 = newKiller;
+        }
+    }
+
+    if (grandParent && grandParent->killer1 != newKiller && grandParent->killer2 != newKiller) {
+        grandParent->killer3 = newKiller;
+    }
+
+    if (currentMove) {
+        root.counterMove.set(colorToMove(),  MY.typeAt(currentMove.from()), currentMove.to(), newKiller);
+    }
+
+    if (parent && parent->currentMove) {
+        root.followMove.set(parent->colorToMove(),  parent->MY.typeAt(parent->currentMove.from()), parent->currentMove.to(), newKiller);
+    }
+}
+
 UciMove Node::uciMove(Move move) const {
     Square from = move.from();
     Square to = move.to();
@@ -714,4 +626,93 @@ bool Node::isRepetition() const {
     }
 
     return root.repetitions.has(colorToMove(), z);
+}
+
+ReturnStatus Node::searchRoot() {
+    auto rootMovesClone = moves();
+    repetitionHash = root.repetitions.repetitionHash(colorToMove());
+    tt = root.tt.prefetch<TtSlot>(zobrist());
+
+    if (root.limits.reached<IterationDeadline>()) {
+        // we have no time to search, return TT move immediately if found
+        ++root.tt.reads;
+        ttSlot = *tt;
+        isHit = (ttSlot == zobrist());
+        if (!isHit) {
+            io::log("#no time, no TT record found");
+        } else {
+            Move ttMove = ttSlot.move();
+            if (!isLegalMove(ttMove)) {
+                if (ttMove) {
+                    io::log("#no time, illegal TT move");
+                } else {
+                    io::log("#no time, TT null move found");
+                }
+            } else {
+                if (root.limits.canPonder) {
+                    Node node{this};
+                    const auto child = &node;
+
+                    child->makeMove(ttMove.from(), ttMove.to());
+                    ++root.tt.reads;
+                    child->ttSlot = *child->tt;
+                    child->isHit = (child->ttSlot == child->zobrist());
+                    if (child->isHit) {
+                        Move ttMove2 = child->ttSlot.move();
+                        if (ttMove2) {
+                            child->generateMoves();
+                            if (child->isLegalMove(ttMove2)) {
+                                ++root.tt.hits;
+                                root.pvMoves.clearPly(PvMoves::Index{child->pvIndex+1});
+                                root.pvMoves.set(child->pvIndex, child->uciMove(ttMove2), PvMoves::Index{child->pvIndex+1});
+                            }
+                        }
+                    }
+                }
+
+                ++root.tt.hits;
+                root.pvScore = ttSlot.score(ply);
+                root.pvMoves.set(pvIndex, uciMove(ttMove), PvMoves::Index{pvIndex+1});
+                io::log("#no time, return move from TT");
+                return ReturnStatus::Stop;
+            }
+        }
+    }
+
+    for (depth = 1; depth <= root.limits.depth; ++depth) {
+        setMoves(rootMovesClone);
+        alpha = MinusInfinity;
+        beta = PlusInfinity;
+        auto returnStatus = search();
+
+        root.newIteration();
+        refreshTtPv();
+
+        RETURN_IF_STOP (returnStatus);
+
+        root.info_iteration(depth);
+
+        if (root.limits.reached<IterationDeadline>()) { return ReturnStatus::Stop; }
+    }
+
+    return ReturnStatus::Continue;
+}
+
+ // refresh PV in TT before new search iteration if it was occasionally overwritten
+ void Node::refreshTtPv() {
+    Position pos{root.position_};
+    Score s = root.pvScore;
+    Ply d = depth;
+
+    const UciMove* pv = root.pvMoves;
+    for (Move move; (move = *pv++);) {
+        auto o = root.tt.addr<TtSlot>(pos.zobrist());
+        *o = TtSlot{pos.zobrist(), move, s, ExactScore, d, false};
+        ++root.tt.writes;
+
+        //we cannot use makeZobrist() because of en passant legality validation
+        pos.makeMove(move.from(), move.to());
+        s = -s;
+        d = d-1;
+    }
 }
