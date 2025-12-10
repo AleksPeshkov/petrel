@@ -98,7 +98,7 @@ protected:
     void failHigh() const;
     void updateKillerMove(Move) const;
 
-    void updatePv(Node* child) const;
+    void updatePv() const;
 
     [[nodiscard]] ReturnStatus search();
     [[nodiscard]] ReturnStatus quiescence();
