@@ -214,7 +214,7 @@ ReturnStatus Node::searchMoves() {
         && !isPv()
         && Score{MinEval} <= beta && beta <= eval
         && depth >= 2 // overhead higher then gain at very low depth
-        && MY.evaluation().canNullMove() // avoid null move in late endgame
+        && MY.material().canNullMove() // avoid null move in late endgame
     ) {
         canBeKiller = false;
         RETURN_CUTOFF (child->searchNullMove(Ply{4 + (depth-2)/4}));
@@ -584,8 +584,8 @@ constexpr Color Node::colorToMove() const { return root.colorToMove(ply); }
 
 // insufficient mate material
 bool Node::isDrawMaterial() const {
-    auto& my = MY.evaluation();
-    auto& op = OP.evaluation();
+    auto& my = MY.material();
+    auto& op = OP.material();
 
     if (my.hasMatingPieces() || op.hasMatingPieces()) { return false; }
 
