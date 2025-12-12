@@ -3,6 +3,7 @@
 
 #include "nnue.hpp"
 #include "PositionSide.hpp"
+#include "Score.hpp"
 #include "Zobrist.hpp"
 
 // side to move

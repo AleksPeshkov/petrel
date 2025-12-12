@@ -32,7 +32,7 @@ void PositionSide::swap(PositionSide& MY, PositionSide& OP) {
     swap(MY.bbSide_, OP.bbSide_);
     swap(MY.bbPawns_, OP.bbPawns_);
     swap(MY.bbPawnAttacks_, OP.bbPawnAttacks_);
-    swap(MY.evaluation_, OP.evaluation_);
+    swap(MY.material_, OP.material_);
     swap(MY.opKing, OP.opKing);
 }
 
@@ -65,7 +65,7 @@ void PositionSide::capture(Square from) {
         bbPawnAttacks_ = bbPawns_.pawnAttacks();
     }
 
-    evaluation_.capture(ty, from);
+    material_.clear(NonKingType{ty});
     attacks_.clear(pi);
     squares.clear(pi);
     types.clear(pi);
@@ -78,7 +78,6 @@ void PositionSide::move(Pi pi, PieceType ty, Square from, Square to) {
 
     squares.move(pi, to);
     bbSide_.move(from, to);
-    evaluation_.move(ty, from, to);
 }
 
 // simple non king, non pawn move
@@ -126,7 +125,7 @@ Pi PositionSide::piPromoted(Pi pawn, Square from, PromoType ty, Square to) {
     assertOk(pawn, PieceType{Pawn}, from);
 
     bbSide_.move(from, to);
-    evaluation_.promote(from, to, ty);
+    material_.promote(ty);
 
     // remove pawn
     bbPawns_ -= Bb{from};
@@ -175,8 +174,6 @@ void PositionSide::castle(Square kingFrom, Square kingTo, Pi rook, Square rookFr
     bbSide_ -= Bb{rookFrom};
     bbSide_ += Bb{kingTo};
     bbSide_ += Bb{rookTo};
-
-    evaluation_.castle(kingFrom, kingTo, rookFrom, rookTo);
 
     traits.clearPinner(rook);
     setPinner(rook, SliderType{Rook}, rookTo);
@@ -297,7 +294,7 @@ bool PositionSide::dropValid(PieceType ty, Square to) {
 
     Pi pi = ty.is(King) ? Pi{TheKing} : PieceSet{pieces() | PiMask{Pi{TheKing}}}.piMostValuableVacant();
 
-    evaluation_.drop(ty, to);
+    material_.drop(ty);
     types.drop(pi, ty);
     squares.drop(pi, to);
 
