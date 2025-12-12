@@ -169,7 +169,7 @@ public:
     void makeMoveNoEval(Square, Square);
 
     // [0..6] startpos = 6, queens exchanged = 4, R vs R endgame = 1
-    auto gamePhase() const { return Evaluation::gamePhase(MY.evaluation(), OP.evaluation()); }
+    auto gamePhase() const { return Material::gamePhase(MY.material(), OP.material()); }
 
 // initial position setup in class UciPosition
 
