@@ -201,7 +201,7 @@ ReturnStatus Node::search() {
         && !isPv
         && depth >= 2 // overhead higher then gain at very low depth
         && beta <= eval
-        && MY.evaluation().piecesMat() > 0 // no null move if only pawns left (zugzwang)
+        && MY.material().phase() > 0 // no null move if only pawns left (zugzwang)
     ) {
         canBeKiller = false;
         RETURN_CUTOFF (child->searchNullMove(3 + depth/6));
@@ -628,8 +628,8 @@ constexpr Color Node::colorToMove() const { return root.colorToMove(ply); }
 
 // insufficient mate material
 bool Node::isDrawMaterial() const {
-    auto& my = MY.evaluation();
-    auto& op = OP.evaluation();
+    auto& my = MY.material();
+    auto& op = OP.material();
 
     if (my.hasMatingPieces() || op.hasMatingPieces()) { return false; }
 
