@@ -1,9 +1,9 @@
 #ifndef POSITION_SIDE_HPP
 #define POSITION_SIDE_HPP
 
-#include "Score.hpp"
 #include "PiBbMatrix.hpp"
 #include "PiMask.hpp"
+#include "Score.hpp"
 
 // static information about pieces from one player's side (either side to move or its opponent)
 // TRICK: all squares always relative to the point of view of given side
@@ -18,7 +18,7 @@ class PositionSide {
     Bb bbPawns_; // bitboard of squares of current side pawns
     Bb bbPawnAttacks_; // bitboard of squares attacked by pawns
 
-    Evaluation evaluation_; // PST incremental evaluation
+    Material material_; // incremental material count
     Square opKing; // square of the opponent's king (from current side point of view)
 
     #ifdef NDEBUG
@@ -47,8 +47,8 @@ public:
     // bitboard of squares attacked by the given side pawns
     constexpr const Bb& bbPawnAttacks() const { assert (bbPawnAttacks_ == bbPawns_.pawnAttacks()); return bbPawnAttacks_; }
 
-    // static evaluation data of the given side pieces
-    constexpr const Evaluation& evaluation() const { return evaluation_; }
+    // incremental piece count and material score for the given side to move
+    constexpr const Material& material() const { return material_; }
 
     bool has(Square sq) const { assert (bbSide_.has(sq) == squares.has(sq)); return bbSide_.has(sq); }
     Square squareOf(Pi pi) const { assertOk(pi); return squares.squareOf(pi); }
