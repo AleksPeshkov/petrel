@@ -191,7 +191,7 @@ void PositionMoves::generateMoves() {
     movesMade_ = 0;
 }
 
-void PositionMoves::makeMoveNoZobrist(PositionMoves* parent, Square from, Square to) {
+void PositionMoves::makeMoveNoZobrist(const PositionMoves* parent, Square from, Square to) {
     parent->clearMove(from, to);
     Position::makeMoveNoZobrist(parent, from, to);
     generateMoves();
