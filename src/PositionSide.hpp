@@ -1,12 +1,11 @@
 #ifndef POSITION_SIDE_HPP
 #define POSITION_SIDE_HPP
 
-#include "Evaluation.hpp"
 #include "PiBbMatrix.hpp"
 #include "PiSquare.hpp"
 #include "PiTrait.hpp"
 #include "PiType.hpp"
-
+#include "Score.hpp"
 
 // static information about pieces from one player's side (either side to move or its opponent)
 // TRICK: all squares always relative to the point of view of given side
@@ -21,7 +20,7 @@ class PositionSide {
     Bb bbPawns_; // bitboard of squares of current side pawns
     Bb bbPawnAttacks_; // bitboard of squares attacked by pawns
 
-    Evaluation evaluation_; // PST incremental evaluation
+    Material material_; // incremental material count
     Square opKing; // square of the opponent's king (from current side point of view)
 
     void move(Pi, PieceType::_t, Square, Square);
@@ -50,8 +49,8 @@ public:
     // bitboard of squares attacked by the given side pawns
     constexpr const Bb& bbPawnAttacks() const { assert (bbPawnAttacks_ == bbPawns_.pawnAttacks()); return bbPawnAttacks_; }
 
-    // static evaluation data of the given side pieces
-    constexpr const Evaluation& evaluation() const { return evaluation_; }
+    // incremental piece count and material score for the given side to move
+    constexpr const Material& material() const { return material_; }
 
     bool has(Square::_t sq) const { assert (bbSide_.has(sq) == squares.has(sq)); return bbSide_.has(sq); }
     Square squareOf(Pi pi) const { assertOk(pi); return squares.squareOf(pi); }
@@ -70,8 +69,6 @@ public:
     PiMask piecesOfType(PieceType::_t ty) const { return types.piecesOfType(ty); }
     PieceType typeOf(Pi pi) const { assertOk(pi); return types.typeOf(pi); }
     PieceType typeAt(Square sq) const { return typeOf(pieceAt(sq)); }
-    Score score(PieceType ty, Square sq) const { return evaluation().score(ty, sq); }
-    Score scoreAt(Square sq) const { return score(typeOf(pieceAt(sq)), sq); }
 
     PiMask pawns() const { return types.piecesOfType(Pawn); }
     bool isPawn(Pi pi) const { assertOk(pi); return types.isPawn(pi); }
