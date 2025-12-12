@@ -1,5 +1,5 @@
-#ifndef EVALUATION_HPP
-#define EVALUATION_HPP
+#ifndef SCORE_HPP
+#define SCORE_HPP
 
 #include "Index.hpp"
 
@@ -108,116 +108,73 @@ struct Score {
     }
 };
 
-//https://www.chessprogramming.org/PeSTO%27s_Evaluation_Function
-class PieceSquareTable {
-public:
-    static constexpr int PieceMatMax = 32; // initial chess position sum of non pawn pieces material points
-
+class PieceCountTable {
     union element_type {
-        struct PACKED {
-            unsigned openingPst:14;
-            unsigned endgamePst:14;
-
-            unsigned queens:4;  // number of queens
-            unsigned rooks:4;   // number of rooks
-            unsigned bishops:4; // number of bishops
-            unsigned knights:4; // number of knights
-            unsigned pawns:4;   // number of pawns
-
-            unsigned piecesMat:8; // sum of non pawn pieces material points (pawn = 1)
-            unsigned totalMat:8;  // sum of all pieces material points (pawn = 1)
+        struct {
+            u16_t centipawns; // material evaluation (pawn = 80)
+            u8_t phase; // game phase: sum of nonpawn nonking pieces in pawn units (startpos total is 32)
+            NonKingType::arrayOf<u8_t> count; // number of pieces of the given type
         } s;
-        u64_t v;
-
-        constexpr auto& operator += (const element_type& o) { v += o.v; return *this; }
-        constexpr auto& operator -= (const element_type& o) { v -= o.v; return *this; }
-
-        constexpr Score score(int material) const {
-            auto stage = std::min(material, PieceMatMax);
-            return Score{(s.openingPst*stage + s.endgamePst*(PieceMatMax - stage)) / PieceMatMax};
-        }
+        u64_t n;
+        static_assert (sizeof(s) == sizeof(n));
     };
 
-protected:
-    PieceType::arrayOf< Square::arrayOf<element_type> > pst;
+    PieceType::arrayOf<element_type> v;
 
 public:
-    PieceSquareTable ();
-    constexpr const element_type& operator() (PieceType::_t ty, Square sq) const { return pst[ty][sq]; }
-};
+    using _t = element_type;
 
-extern const PieceSquareTable pieceSquareTable;
+    constexpr PieceCountTable () {
+        constexpr u16_t centipawns[] = { 960, 480, 320, 320, 80, 0 }; // material eval: 12/6/4/4/1 * 80cp
+        constexpr u8_t phase[] = { 10, 5, 3, 3, 0, 0 }; // pawn units for game phase, startpos sum is 32
 
-class Evaluation {
-public:
-    using _t = PieceSquareTable::element_type;
+        for (auto ty : PieceType::range()) {
+            v[ty].s.centipawns = centipawns[ty];
+            v[ty].s.phase = phase[ty];
 
-private:
-    _t v;
-
-    constexpr void from(PieceType::_t ty, Square sq) { v -= pieceSquareTable(ty, sq); }
-    constexpr void to(PieceType::_t ty, Square sq) { v += pieceSquareTable(ty, sq); }
-
-public:
-    constexpr Evaluation () : v{} {}
-
-    static Score evaluate(const Evaluation& my, const Evaluation& op) {
-        return my.v.score(my.v.s.piecesMat) - op.v.score(op.v.s.piecesMat).clamp();
-    }
-
-    constexpr Score score(PieceType ty, Square sq) const {
-        return pieceSquareTable(ty, sq).score(v.s.piecesMat);
-    }
-
-    void drop(PieceType ty, Square t) { to(ty, t); }
-    void capture(PieceType ty, Square f) { assert (ty != King); from(ty, f); }
-    void move(PieceType::_t ty, Square f, Square t) { assert (f != t); from(ty, f); to(ty, t); }
-
-    void promote(Square f, Square t, PromoType ty) {
-        assert (f.on(Rank7) && t.on(Rank8));
-        from(Pawn, f);
-        to(ty, t);
-    }
-
-    void castle(Square kingFrom, Square kingTo, Square rookFrom, Square rookTo) {
-        assert (kingFrom != rookFrom);
-        assert (kingTo != rookTo);
-
-        from(King, kingFrom); from(Rook, rookFrom);
-        to(Rook, rookTo); to(King, kingTo);
-    }
-
-    constexpr int count(PieceType::_t ty) const {
-        switch (ty) {
-            case Queen:
-                return v.s.queens;
-            case Rook:
-                return v.s.rooks;
-            case Bishop:
-                return v.s.bishops;
-            case Knight:
-                return v.s.knights;
-            case Pawn:
-                return v.s.pawns;
-            default:
-                assert (false);
-                return 0;
+            for (auto i : NonKingType::range()) {
+                v[ty].s.count[i] = (ty == i);
+            }
         }
     }
 
-    // 10, 5, 3, 3, 0
-    constexpr int piecesMat() const {
-        return v.s.piecesMat;
+    constexpr const _t& operator[] (PieceType::_t ty) const { return v[ty]; }
+};
+
+extern const PieceCountTable pieceCountTable;
+
+class Material {
+    using _t = PieceCountTable::_t;
+    _t v;
+
+public:
+    constexpr Material () { v.n = 0; }
+
+    void drop(PieceType ty) { v.n += ::pieceCountTable[ty].n; }
+    void clear(NonKingType ty) { v.n -= ::pieceCountTable[ty].n; }
+
+    void promote(PromoType ty) {
+        clear(NonKingType{Pawn});
+        drop(PieceType{ty});
     }
 
-    // 12, 6, 4, 4, 1
-    constexpr int material() const {
-        return v.s.totalMat;
+    // material eval in centipawns
+    constexpr Score centipawns() const {
+        return Score::clamp(v.s.centipawns);
+    }
+
+    // 10, 5, 3, 3, 0 (startpos = 32)
+    constexpr int phase() const {
+        return v.s.phase;
+    }
+
+    constexpr int count(NonKingType::_t ty) const {
+        return v.s.count[ty];
     }
 
     // any queen, rook or pawn
     constexpr bool hasMatingPieces() const {
-        return (v.s.queens | v.s.rooks | v.s.pawns) != 0;
+        return count(Queen) + count(Rook) + count(Pawn) > 0;
     }
 
 };
