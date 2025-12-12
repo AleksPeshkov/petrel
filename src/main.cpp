@@ -3,9 +3,9 @@
 #include "io.hpp"
 #include "nnue.hpp"
 #include "Bb.hpp"
-#include "Evaluation.hpp"
 #include "Hyperbola.hpp"
 #include "PiMask.hpp"
+#include "Score.hpp"
 #include "Uci.hpp"
 #include "VectorOfAll.hpp"
 
@@ -22,11 +22,11 @@ const InBetween inBetween; // 32k 64*64*8
 const HyperbolaDir hyperbolaDir; // 4k 64*4*16
 const HyperbolaSq hyperbolaSq; // 1k 64*16
 const AttacksFrom attacksFrom; // 3k 6*64*8
-constexpr const VectorOfAll vectorOfAll; // 4k 256*16, used by bitReverse initialization
-const PieceSquareTable pieceSquareTable; // 3k 6*64*8
-constexpr const PiSingle piSingle; // 256
+constexpr VectorOfAll vectorOfAll; // 4k 256*16, used by bitReverse initialization
+constexpr PiSingle piSingle; // 256
 const CastlingRules castlingRules; // 128
-constexpr const BitReverse bitReverse; // 32
+constexpr PieceCountTable pieceCountTable; // 48 6*8
+constexpr BitReverse bitReverse; // 32
 
 // global Uci instance
 Uci The_uci(std::cout);

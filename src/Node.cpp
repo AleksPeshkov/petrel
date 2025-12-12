@@ -177,7 +177,7 @@ ReturnStatus Node::search() {
         && !beta.isMate()
         && eval >= beta
         && depth >= 2 // overhead higher then gain at very low depth
-        && MY.evaluation().piecesMat() > 0 // no null move if only pawns left (zugzwang)
+        && MY.material().phase() > 0 // no null move if only pawns left (zugzwang)
     ) {
         canBeKiller = false;
         RETURN_CUTOFF (child->searchNullMove(3 + depth/6));
@@ -340,7 +340,7 @@ ReturnStatus Node::search() {
     // king quiet moves (always safe), castling is rook move
     {
         // reduce king moves more in middle game
-        R = (MY.evaluation().piecesMat() > 16) ? 3 : 2;
+        R = (MY.material().phase() > 16) ? 3 : 2;
 
         if (!lmp || R == 2 || movesMade() == 0) { // late move pruning
             R = lmr ? R : Ply{1};
@@ -606,8 +606,8 @@ constexpr Color Node::colorToMove() const { return root.colorToMove(ply); }
 
 // insufficient mate material
 bool Node::isDrawMaterial() const {
-    auto& my = MY.evaluation();
-    auto& op = OP.evaluation();
+    auto& my = MY.material();
+    auto& op = OP.material();
 
     if (my.hasMatingPieces() || op.hasMatingPieces()) { return false; }
 
