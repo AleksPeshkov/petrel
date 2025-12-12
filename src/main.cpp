@@ -29,9 +29,9 @@ constinit HyperbolaDir hyperbolaDir; // 4k 64*4*16
 constinit HyperbolaSq hyperbolaSq; // 1k 64*16
 constinit AttacksFrom attacksFrom; // 3k 6*64*8
 constexpr VectorOfAll vectorOfAll; // 4k 256*16
-constinit PieceSquareTable pieceSquareTable; // 3k 6*64*8
 constexpr PiSingle piSingle; // 256
 constinit CastlingRules castlingRules; // 128
+constinit PieceCountTable pieceCountTable; // 48 6*8
 
 // global Uci instance
 Uci The_uci(std::cout);

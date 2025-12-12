@@ -11,7 +11,7 @@ constexpr AttacksFrom attacksFrom;
 constexpr VectorOfAll vectorOfAll;
 constexpr PiSingle piSingle;
 constexpr CastlingRules castlingRules;
-constexpr PieceSquareTable pieceSquareTable;
+constexpr PieceCountTable pieceCountTable; // 48 6*8
 
 void assertPassed(const char* fen, Square::_t sq, bool shouldBePassed, const char* msg) {
     UciPosition uciPosition;
