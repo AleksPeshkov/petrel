@@ -73,7 +73,8 @@ ReturnStatus Node::negamax(Node* child, Ply R) const {
         score = childScore;
         alpha = childScore;
         child->beta = -alpha;
-        updatePv(child);
+        child->pvIndex = root.pvMoves.set(pvIndex, uciMove(currentMove), child->pvIndex);
+        updatePv();
     }
 
     if (ply == 0 && root.limits.reached<RootMoveDeadline>()) {
@@ -520,9 +521,7 @@ void Node::failHigh() const {
     }
 }
 
-void Node::updatePv(Node* child) const {
-    child->pvIndex = root.pvMoves.set(pvIndex, uciMove(currentMove), child->pvIndex);
-
+void Node::updatePv() const {
     bound = ExactScore;
     *tt = TtSlot{this};
     ++root.tt.writes;
