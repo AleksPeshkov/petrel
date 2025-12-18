@@ -354,21 +354,16 @@ ReturnStatus Node::search() {
     }
 
     // king quiet moves (always safe), castling is rook move
-    {
-        // reduce king moves more in middle game
-        R = (MY.material().phase() > 16) ? 3 : 2;
-
-        if (!lmp || R == 2 || movesMade() == 0) { // late move pruning
-            R = lmr ? R : Ply{1};
-            Square from = MY.kingSquare();
-            for (Square to : movesOf(Pi{TheKing})) {
-                RETURN_CUTOFF (child->searchMove({from, to}, R));
-            }
+    if (!lmp || movesMade() == 0) { // late move pruning
+        R = lmr ? 3 : 1;
+        Square from = MY.kingSquare();
+        for (Square to : movesOf(Pi{TheKing})) {
+            RETURN_CUTOFF (child->searchMove({from, to}, R));
         }
     }
 
     // unsafe (losing) captures
-    R = lmr ? 2 : 1;
+    R = lmr ? 3 : 1;
     for (PiMask pieces = figures; pieces.any(); ) {
         Pi pi = pieces.leastValuable(); pieces -= pi;
 
