@@ -318,21 +318,16 @@ ReturnStatus Node::search() {
     }
 
     // king quiet moves (always safe), castling is rook move
-    {
-        // reduce king moves more in middle game
-        R = (MY.evaluation().piecesMat() > 16) ? 3 : 2;
-
-        if (!canP || R == 2 || movesMade() == 0) { // weak move pruning
-            R = canR ? R : Ply{1};
-            Square from = MY.kingSquare();
-            for (Square to : movesOf(Pi{TheKing})) {
-                RETURN_CUTOFF (child->searchMove({from, to}, R));
-            }
+    if (!canP || movesMade() == 0) { // weak move pruning
+        R = canR ? 3 : 1;
+        Square from = MY.kingSquare();
+        for (Square to : movesOf(Pi{TheKing})) {
+            RETURN_CUTOFF (child->searchMove({from, to}, R));
         }
     }
 
     // unsafe (losing) captures
-    R = canR ? 2 : 1;
+    R = canR ? 3 : 1;
     for (PiMask pieces = officers; pieces.any(); ) {
         Pi pi = pieces.leastValuable(); pieces -= pi;
 
