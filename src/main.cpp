@@ -1,4 +1,3 @@
-#include <sysexits.h>
 #include "assert.hpp"
 #include "io.hpp"
 #include "nnue.hpp"
@@ -82,6 +81,7 @@ int main(int argc, const char* argv[]) {
 
     if (!nnue.setEmbeddedEval()) {
         std::cerr << "petrel: fatal error: embedded NNUE data file has invalid size, expected " << sizeof(Nnue) << " bytes, \n";
+        constexpr int EX_SOFTWARE = 70; /* from <sysexits.h>: internal software error */
         return EX_SOFTWARE;
     }
 
