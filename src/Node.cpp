@@ -184,6 +184,12 @@ ReturnStatus Node::search() {
             score = eval;
             assert (!currentMove);
             return ReturnStatus::BetaCutoff;
+        } else {
+            delta = (depth == 1) ? 55_cp : 350_cp;
+            if (eval+delta < alpha && alpha <= MaxEval) {
+                // Razoring
+                return quiescence();
+            }
         }
     }
 
