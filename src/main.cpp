@@ -9,6 +9,12 @@
 #include "Uci.hpp"
 #include "VectorOfAll.hpp"
 
+#define INCBIN_PREFIX
+#include "incbin.h"
+
+// global const default nnue value
+INCBIN(EmbeddedNnue, "net/petrel128.bin");
+
 /**
 * Startup constant initialization
 */
@@ -22,14 +28,19 @@ constexpr const PiSingle piSingle; // 256
 const CastlingRules castlingRules; // 128
 constexpr const BitReverse bitReverse; // 32
 
-// global pointer to Uci instance to implement io::log()
-const Uci* The_uci = nullptr;
+// global Uci instance
+Uci The_uci(std::cout);
 
 // global almost constant instance
 Nnue nnue;
 
+void Nnue::setEmbeddedEval() {
+    assert (EmbeddedNnueSize == sizeof(Nnue));
+    std::memcpy(this, EmbeddedNnueData, sizeof(Nnue));
+}
+
 void io::log(const std::string& message) {
-    if (The_uci) { The_uci->log(message); }
+    The_uci.log(message);
 }
 
 int main(int argc, const char* argv[]) {
@@ -71,13 +82,15 @@ int main(int argc, const char* argv[]) {
         return EXIT_FAILURE;
     }
 
+    if (EmbeddedNnueSize != sizeof(Nnue)) {
+        std::cerr << "petrel: fatal error: embedded NNUE data file has invalid size, expected " << sizeof(Nnue) << " bytes, \n";
+        return ENOEXEC;
+    }
+
     // speed tricks
     std::ios_base::sync_with_stdio(false);
     std::cin.tie(nullptr);
     std::cerr.tie(nullptr);
-
-    Uci uci(std::cout);
-    The_uci = &uci;
 
     if (!initFileName.empty()) {
         std::ifstream initFile{initFileName};
@@ -86,9 +99,9 @@ int main(int argc, const char* argv[]) {
             return EXIT_FAILURE;
         }
 
-        uci.processInput(initFile);
+        The_uci.processInput(initFile);
     }
 
-    uci.processInput(std::cin);
+    The_uci.processInput(std::cin);
     return EXIT_SUCCESS;
 }
