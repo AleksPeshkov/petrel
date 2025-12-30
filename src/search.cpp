@@ -299,7 +299,7 @@ ReturnStatus Node::search() {
         && MY.evaluation().piecesMat() > 0 // no null move if only pawns left (zugzwang)
     ) {
         canBeKiller = false;
-        RETURN_CUTOFF (child->searchNullMove(Ply{3 + depth/6}));
+        RETURN_CUTOFF (child->searchNullMove(Ply{4 + (depth-2)/4}));
     }
 
     if (isHit && ttSlot.hasMove()) {
