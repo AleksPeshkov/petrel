@@ -44,24 +44,27 @@ int main(int argc, const char* argv[]) {
 
         if (option == "--help" || option == "-h") {
             std::cout
-                << "    Petrel chess engine. The UCI protocol compatible.\n\n"
+                << "    Petrel: UCI chess engine\n\n"
                 << "Options:\n"
-                << "      -h, --help        display this help\n"
-                << "      -v, --version     display version information\n"
-                << "      -f, --file [FILE] read file for initial UCI commands\n"
+                << "      -h, --help               Show this help message and exit.\n"
+                << "      -v, --version            Display version information and exit.\n"
+                << "      -f [FILE], --file [FILE] Read and execute UCI commands from the specified file\n"
             ;
             return EXIT_SUCCESS;
         }
 
         if (option == "--file" || option == "-f") {
-            if (i < argc) {
-                initFileName = argv[++i];
-                break;
+            if (++i >= argc) {
+                std::cerr << "petrel: option '" << option << "' requires a filename\n";
+                return EXIT_FAILURE;
             }
+
+            initFileName = argv[i];
+            continue;
         }
 
         std::cerr << "petrel: unknown option\n";
-        return EINVAL;
+        return EXIT_FAILURE;
     }
 
     // speed tricks
@@ -74,15 +77,14 @@ int main(int argc, const char* argv[]) {
 
     if (!initFileName.empty()) {
         std::ifstream initFile{initFileName};
-        if (initFile) {
-            uci.processInput(initFile);
-        } else {
-            std::cerr << "petrel: error opening file: " << initFileName << '\n';
-            return EINVAL;
+        if (!initFile) {
+            std::cerr << "petrel: error opening config file: " << initFileName << '\n';
+            return EXIT_FAILURE;
         }
+
+        uci.processInput(initFile);
     }
 
     uci.processInput(std::cin);
-
     return EXIT_SUCCESS;
 }
