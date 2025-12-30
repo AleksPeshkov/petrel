@@ -216,7 +216,7 @@ ReturnStatus Node::searchMoves() {
         && MY.evaluation().canNullMove() // avoid null move in late endgame
     ) {
         canBeKiller = false;
-        RETURN_CUTOFF (child->searchNullMove(Ply{3 + depth/6}));
+        RETURN_CUTOFF (child->searchNullMove(Ply{4 + (depth-2)/4}));
     }
 
     if (isHit && ttSlot.hasMove()) {
