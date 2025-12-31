@@ -115,6 +115,7 @@ private:
     std::string logFileName; // no log by default
     mutable std::ofstream logFile;
     mutable std::mutex logMutex;
+    bool isDebugOn = false;
 
     // try to consume the given token from the inputLine
     bool consume(io::czstring token) { return io::consume(inputLine, token); }
@@ -136,6 +137,7 @@ private:
     void ponderhit();
     void bestmove();
 
+    void debug();
     void goPerft();
     void info_perft_bestmove();
 
