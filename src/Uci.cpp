@@ -36,9 +36,8 @@ void Uci::output(const std::string& message) const {
         std::lock_guard<decltype(outMutex)> lock{outMutex};
         out << message << std::endl;
     }
-#ifndef NDEBUG
-    log(message);
-#endif
+
+    if (isDebugOn) { log(message); }
 }
 
 void Uci::log(const std::string& message) const {
@@ -61,10 +60,7 @@ void Uci::log(const std::string& message) const {
 void Uci::processInput(istream& in) {
     std::string currentLine(1024, '\0'); // preallocate 1024 bytes (~100 full moves)
     while (std::getline(in, currentLine)) {
-
-#ifndef NDEBUG
-        log('>' + currentLine);
-#endif
+        if (isDebugOn) { log('>' + currentLine); }
 
         inputLine.clear(); //clear error state from the previous line
         inputLine.str(currentLine);
@@ -79,6 +75,7 @@ void Uci::processInput(istream& in) {
         else if (consume("set"))       { setoption(); }
         else if (consume("ucinewgame")){ ucinewgame(); }
         else if (consume("uci"))       { uciok(); }
+        else if (consume("debug"))     { debug(); }
         else if (consume("perft"))     { goPerft(); }
         else if (consume("quit"))      { stop(); break; }
         else if (consume("exit"))      { stop(); break; }
@@ -175,6 +172,19 @@ void Uci::setoption() {
         io::fail_rewind(inputLine);
         return;
     }
+}
+
+void Uci::debug() {
+    if (!hasMoreInput()) {
+        Output ob{this};
+        ob << "info string debug is " << (isDebugOn ? "on" : "off");
+    }
+
+    if (consume("on"))  { isDebugOn = true; log("#debug on"); return; }
+    if (consume("off")) { isDebugOn = false; log("#debug off"); return; }
+
+    io::fail_rewind(inputLine);
+    return;
 }
 
 void Uci::setHash() {

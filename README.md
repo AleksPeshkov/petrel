@@ -22,6 +22,9 @@ option name Ponder type check default false
 option name UCI_Chess960 type check default false
 ```
 
+Only parsing errors and a sparse search warnings will be written into `Debug Log File` unless `debug on` is set
+then when all engine input and output will be logged.
+
 ## Command-line options
 
 ```
