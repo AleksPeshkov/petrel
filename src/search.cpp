@@ -303,9 +303,8 @@ ReturnStatus Node::search() {
         R = 1;
         if (canR) {
             if (from.on(Rank7)) { R = 4; } // underpromotion
-            else if (from.on(Rank6)) { R = 0; } // passed pawn push extension
-            else if (from.on(Rank5)) { R = 1; } // advanced pawn push extension
-            else { R = 2; } // default reduction for pawn moves
+            else if (from.on(Rank6)) { R = 1; } // passed pawn push extension
+            else { R = 3; } // default reduction for pawn moves
         }
 
         for (Square to : bbMovesOf(pi)) {
