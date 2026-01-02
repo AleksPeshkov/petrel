@@ -42,17 +42,16 @@ public:
     constexpr friend Bb operator >> (Bb bb, unsigned offset) { return Bb{static_cast<_t>(bb) >> offset}; }
 
     friend ostream& operator << (ostream& out, Bb bb) {
+        out << "    a b c d e f g h\n";
         for (auto rank : Rank::range()) {
+            out << Rank{rank} << " |";
             for (auto file : File::range()) {
-                if (bb.has(Square{file, rank})) {
-                    out << file;
-                }
-                else {
-                    out << '.';
-                }
+                Square sq{file, rank};
+                out << " " << (bb.has(sq) ? 'x'  : '.');
             }
             out << '\n';
         }
+        out << "    a b c d e f g h\n";
         return out;
     }
 
