@@ -50,10 +50,10 @@ Abbreviations in the code:
 Move Encoding
 -------------
 
-Internal minimal move representation tied to current Node: `{Pi, Square to}`
-Transposition friendly minimal encoding: `{Square from, Square to}`
-`class HistoryMove`: extra field to distinguish minimal encoded moves: {PieceType, Square from, Square to}
-`classUciMove`: encoding to convert internal move to UCI format independend from Position it is possible to make
+* Internal minimal move representation tied to current Node: `{Pi, Square to}`
+* Transposition friendly minimal encoding: `{Square from, Square to}`
+* `class HistoryMove`: extra field to distinguish minimal encoded moves: {PieceType, Square from, Square to}
+* `classUciMove`: encoding to convert internal move to UCI format independend from Position it is possible to make
 
 Universal Chess Interface (UCI) Extensions
 ------------------------------------------
