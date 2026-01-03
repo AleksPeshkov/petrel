@@ -15,10 +15,6 @@ UNIT_TEST_DIR = tests/unit
 # === Default Flags (Release) ===
 BUILD_FLAGS = -O3 -flto -finline-functions -DNDEBUG
 
-ifeq ($(CXX), g++)
-	BUILD_FLAGS += -flto=auto
-endif
-
 # === Tag Files for Build Type ===
 TAG_TEST  = $(BUILD_DIR)/.test
 TAG_DEBUG = $(BUILD_DIR)/.debug
@@ -32,7 +28,7 @@ else ifeq ($(wildcard $(TAG_DEBUG)), $(TAG_DEBUG))
 	BUILD_FLAGS += -fsanitize=address,undefined
 endif
 
-CXXFLAGS = $(BUILD_FLAGS) -std=c++20 -mssse3 -march=native -mtune=native -fno-exceptions -fno-rtti
+CXXFLAGS = $(BUILD_FLAGS) -std=c++20 -march=native -mtune=native -fno-exceptions -fno-rtti
 
 GIT_DATE := $(shell git log -1 --date=short --pretty=format:%cd 2>/dev/null || true)
 ifneq ($(GIT_DATE),)
@@ -50,12 +46,12 @@ ifneq ($(GIT_ORIGIN),)
 endif
 
 WARNINGS = -Wall -Wpedantic -Wextra
-WARNINGS += -Wno-ignored-attributes
 WARNINGS += -Wuninitialized -Wcast-qual -Wshadow -Wmissing-declarations -Wstrict-aliasing=1 -Wstrict-overflow=1 -Wsign-promo
 WARNINGS += -Wpacked -Wdisabled-optimization -Wredundant-decls -Wextra-semi -Wsuggest-override
-#WARNINGS += -Winline
+WARNINGS += -Winline
 
 ifeq ($(CXX), g++)
+	BUILD_FLAGS += -flto=auto
 	CXXFLAGS += -flax-vector-conversions
 	WARNINGS += -Wno-class-memaccess -Wno-invalid-constexpr
 	WARNINGS += -Wuseless-cast -Wcast-align=strict -Wsuggest-final-types -Wsuggest-final-methods
@@ -68,12 +64,7 @@ CXXFLAGS += $(WARNINGS)
 
 # === Linker Flags ===
 LDLIBS += -pthread
-LDFLAGS += $(LDLIBS) $(BUILD_FLAGS) -Wl,--no-as-needed
-
-# === Precompiled Header ===
-HEADER = StdAfx.hpp
-PRECOMP = $(BUILD_DIR)/$(HEADER).gch
-HEADER_SRC = $(SRC_DIR)/$(HEADER)
+LDFLAGS += $(LDLIBS) $(BUILD_FLAGS)
 
 SOURCES = $(wildcard $(SRC_DIR)/*.cpp)
 OBJECTS = $(patsubst $(SRC_DIR)/%.cpp, $(BUILD_DIR)/%.o, $(SOURCES))
@@ -83,7 +74,8 @@ MAKE_TARGET = make --jobs --warn-undefined-variables --no-print-directory $(TARG
 
 .PHONY: default release test debug clean run check _clear_console
 
-default: _clear_console $(BUILD_DIR) $(TARGET)
+default: _clear_console $(BUILD_DIR)
+	$(MAKE_TARGET)
 
 release: $(BUILD_DIR)
 	if [ -f $(TAG_TEST) ] || [ -f $(TAG_DEBUG) ]; then $(RM) $(BUILD_DIR); fi
@@ -120,14 +112,11 @@ _clear_console:
 
 # === Build Rules ===
 
-$(TARGET): $(PRECOMP) $(OBJECTS)
+$(TARGET): $(OBJECTS)
 	$(CXX) -o $@ $(LDFLAGS) $(OBJECTS)
 
-$(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp $(PRECOMP)
-	$(CXX) -c -o $@ $< -MMD -MP -include $(HEADER_SRC) -Winvalid-pch $(CXXFLAGS)
-
-$(PRECOMP): $(HEADER_SRC) | $(BUILD_DIR)
-	$(CXX) -o $@ $< -MD $(CXXFLAGS)
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp
+	$(CXX) -c -o $@ $< -MMD -MP $(CXXFLAGS)
 
 $(BUILD_DIR): Makefile
 	@$(RM) $@
