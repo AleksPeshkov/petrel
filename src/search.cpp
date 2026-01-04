@@ -192,14 +192,14 @@ ReturnStatus Node::search() {
         && !isPv
         && depth <= 2
     ) {
-        auto delta = (depth == 1) ? 55 : 155;
+        auto delta = (depth == 1) ? 100 : 300;
         if (MinEval <= beta && beta <= eval-delta) {
             // Static Null Move Pruning (Reverse Futility Pruning)
             score = eval;
             assert (!currentMove);
             return ReturnStatus::BetaCutoff;
         } else {
-            delta = (depth == 1) ? 55 : 350;
+            delta = (depth == 1) ? 100 : 600;
             if (eval+delta < alpha && alpha <= MaxEval) {
                 // Razoring
                 return quiescence();
