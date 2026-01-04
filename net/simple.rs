@@ -19,7 +19,7 @@ use bullet_lib::{
 const HIDDEN_SIZE: usize = 128;
 const SCALE: i32 = 400;
 const QA: i16 = 255;
-const QB: i16 = 22;
+const QB: i16 = 64;
 
 fn main() {
     let mut trainer = ValueTrainerBuilder::default()
@@ -56,8 +56,8 @@ fn main() {
             l1.forward(hidden_layer)
         });
 
-    const DATA_SB: usize = 80;
-    const EVAL_SCALE: f32 = 340.0;
+    const DATA_SB: usize = 120;
+    const EVAL_SCALE: f32 = 600.0;
     const DATASETS: &[&str] = &[
         "data/test77nov-unfilt-test79-maraprmay-v6-dd.skip-see-ge0.wdl-pdist.iter-1.bullet.bin",
         "data/test77nov-unfilt-test79-maraprmay-v6-dd.skip-see-ge0.wdl-pdist.iter-2.bullet.bin",
@@ -67,10 +67,14 @@ fn main() {
         "data/test77nov-unfilt-test79-maraprmay-v6-dd.skip-see-ge0.wdl-pdist.iter-6.bullet.bin",
         "data/test77nov-unfilt-test79-maraprmay-v6-dd.skip-see-ge0.wdl-pdist.iter-7.bullet.bin",
         "data/test77nov-unfilt-test79-maraprmay-v6-dd.skip-see-ge0.wdl-pdist.iter-8.bullet.bin",
+        "data/test77nov-unfilt-test79-maraprmay-v6-dd.skip-see-ge0.wdl-pdist.iter-9.bullet.bin",
+        "data/test77nov-unfilt-test79-maraprmay-v6-dd.skip-see-ge0.wdl-pdist.iter-10.bullet.bin",
+        "data/test77nov-unfilt-test79-maraprmay-v6-dd.skip-see-ge0.wdl-pdist.iter-11.bullet.bin",
+        "data/test77nov-unfilt-test79-maraprmay-v6-dd.skip-see-ge0.wdl-pdist.iter-12.bullet.bin",
     ];
 
     let schedule = TrainingSchedule {
-        net_id: "perspective128".to_string(),
+        net_id: "petrel128".to_string(),
         eval_scale: EVAL_SCALE,
         steps: TrainingSteps { batch_size: 16_384, batches_per_superbatch: 6_104, start_superbatch: 1, end_superbatch: DATA_SB },
         wdl_scheduler: wdl::LinearWDL { start: 0.0, end: 0.1 },
