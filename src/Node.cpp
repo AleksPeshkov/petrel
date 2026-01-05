@@ -39,17 +39,19 @@ ReturnStatus Node::negamax(Node* child, Ply R) const {
             score = childScore;
         }
     } else {
-        if (beta <= childScore) {
-            if (currentMove && depth > 1 && depth-1 > child->depth) {
-                if (child->isPv) {
-                    // rare case
-                    child->alpha = -beta;
-                    assert (child->beta == -alpha);
-                }
-                // reduced search full depth research (unless it was a null move search)
-                return negamax(child, 1);
+        if (currentMove && depth > 1 && depth-1 > child->depth) {
+            // reduced search full depth research (unless it was a null move search)
+
+            if (child->isPv) {
+                // rare case
+                child->alpha = -beta;
             }
 
+            assert (child->beta == -alpha);
+            return negamax(child, 1);
+        }
+
+        if (beta <= childScore) {
             score = childScore;
             failHigh();
             return ReturnStatus::BetaCutoff;
