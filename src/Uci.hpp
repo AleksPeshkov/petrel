@@ -15,7 +15,7 @@ template<int _Size>
 class CACHE_ALIGN HistoryMoves {
     constexpr static int N = _Size;
     using Index = ::Index<N>;
-    using _t = Side::arrayOf< PieceType::arrayOf<Square::arrayOf< typename Index:: template arrayOf<Move> >> >;
+    using _t = Side::arrayOf< PieceType::arrayOf<Square::arrayOf< typename Index:: template arrayOf<HistoryMove> >> >;
     _t v;
 
 public:
@@ -25,11 +25,11 @@ public:
         std::memset(&v, 0, sizeof(v)); //TRICK: Move{} == int16_t{0}
     }
 
-    constexpr const Move& get(int i, Color c, PieceType ty, Square sq) const {
+    constexpr const HistoryMove& get(int i, Color c, PieceType ty, Square sq) const {
         return v[c][ty][sq][Index{i}];
     }
 
-    constexpr void set(Color c, PieceType ty, Square sq, Move move) {
+    constexpr void set(Color c, PieceType ty, Square sq, HistoryMove move) {
         auto& slot = v[c][ty][sq];
 
         int last = N-1;

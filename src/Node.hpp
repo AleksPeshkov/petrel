@@ -36,12 +36,19 @@ class TtSlot {
 public:
     TtSlot () { static_assert (sizeof(TtSlot) == sizeof(u64_t)); }
 
-    TtSlot (Z z, Move move, Score score, Bound bound, Ply draft, bool canBeKiller) : v{
+    TtSlot (Z z,
+        Score score = DrawScore,
+        Bound bound = NoBound,
+        Ply draft = 0,
+        Square from = Square{static_cast<Square::_t>(0)},
+        Square to = Square{static_cast<Square::_t>(0)},
+        bool canBeKiller = false
+    ) : v{
         (z & HashMask)
         | (static_cast<_t>(static_cast<unsigned>(score) - NoScore) << ScoreShift) // convert to unsigned
         | (static_cast<_t>(bound) << BoundShift)
-        | (static_cast<_t>(move.from()) << FromShift)
-        | (static_cast<_t>(move.to()) << ToShift)
+        | (static_cast<_t>(from) << FromShift)
+        | (static_cast<_t>(to) << ToShift)
         | (static_cast<_t>(draft) << DraftShift)
         | (static_cast<_t>(canBeKiller) << KillerShift)
     } {}
@@ -49,10 +56,9 @@ public:
     TtSlot (const Node* node);
     bool operator == (Z z) const { return (v & HashMask) == (z & HashMask); }
 
-    Move move() const { return Move{
-        static_cast<Square::_t>(v >> FromShift & SquareMask),
-        static_cast<Square::_t>(v >> ToShift & SquareMask)
-    };}
+    bool hasMove() const { return !(from() == 0 && to() == 0); }
+    Square from() const { return Square{static_cast<Square::_t>(v >> FromShift & SquareMask)}; }
+    Square to() const { return Square{static_cast<Square::_t>(v >> ToShift & SquareMask)}; }
 
     Bound bound() const { return static_cast<Bound>(v >> BoundShift & BoundMask); }
     Ply draft() const { return Ply{static_cast<Ply::_t>(v >> DraftShift & DraftMask)}; }
@@ -91,12 +97,12 @@ protected:
     mutable Bound bound = FailLow; // FailLow is default unless have found Exact or FailHigh move later
     bool isPv = true; // alpha < beta-1, cannot use constexpr as alpha may change during search
 
-    mutable Move currentMove = {}; // last move made from *this into *child
+    mutable HistoryMove currentMove = {}; // last move made from *this into *child
     PvMoves::Index pvIndex{0}; // start of subPV for the current ply
 
     // Killer heuristic
     using KillerIndex = ::Index<3>;
-    mutable KillerIndex::arrayOf<Move> killer;
+    mutable KillerIndex::arrayOf<HistoryMove> killer;
     bool canBeKiller = false;  // good captures should not waste killer slots
 
     Node (const Node* parent); // prepare empty child node
@@ -104,7 +110,7 @@ protected:
     // propagate child last move search result score
     [[nodiscard]] ReturnStatus negamax(Node* child, Ply R) const;
     void failHigh() const;
-    void updateKillerMove(Move) const;
+    void updateHistory(HistoryMove) const;
 
     void updatePv() const;
     void refreshTtPv();
@@ -113,28 +119,46 @@ protected:
     [[nodiscard]] ReturnStatus quiescence();
 
     // promotions to queen, winning or equal captures, also uncertain by current SEE captures
-    [[nodiscard]] ReturnStatus goodCaptures(Node*, PiMask);
+    [[nodiscard]] ReturnStatus goodCaptures(Node*, PiMask, Ply R = 1);
     [[nodiscard]] ReturnStatus goodNonCaptures(Node*, Pi, Bb moves, Ply R);
 
     [[nodiscard]] ReturnStatus counterMove(Node*);
     [[nodiscard]] ReturnStatus followMove(Node*);
 
-    [[nodiscard]] ReturnStatus searchIfLegal(Move move, Ply R = 1) {
-        return parent->isLegalMove(move) ? searchMove(move, R) : ReturnStatus::Continue;
+    [[nodiscard]] ReturnStatus searchMove(Pi, Square, Ply R = 1);
+    [[nodiscard]] ReturnStatus searchMove(Square, Square, Ply R = 1);
+    [[nodiscard]] ReturnStatus searchMove(HistoryMove move, Ply R = 1) { return searchMove(move.from(), move.to(), R); }
+    [[nodiscard]] ReturnStatus searchNullMove(Ply R);
+
+    [[nodiscard]] ReturnStatus searchIfPossible(Square from, Square to, Ply R = 1) {
+        return parent->isPossibleMove(from, to) ? searchMove(from, to, R) : ReturnStatus::Continue;
     }
 
-    [[nodiscard]] ReturnStatus searchMove(Move move, Ply R = 1);
-    [[nodiscard]] ReturnStatus searchNullMove(Ply R);
+    [[nodiscard]] ReturnStatus searchIfPossible(HistoryMove move, Ply R = 1) {
+        return parent->isPossibleMove(move) ? searchMove(move, R) : ReturnStatus::Continue;
+    }
+
+    [[nodiscard]] ReturnStatus searchIfPossible(Pi pi, Square to, Ply R = 1) {
+        return parent->isPossibleMove(pi, to) ? searchMove(pi, to, R) : ReturnStatus::Continue;
+    }
+
     void makeMove(Square from, Square to);
 
     // convert internal move to be printable in UCI format
-    UciMove uciMove(Move move) const;
+    UciMove uciMove(Square, Square) const;
 
     // current node's side to move color
     constexpr Color colorToMove() const;
 
     bool isDrawMaterial() const;
     bool isRepetition() const;
+
+    HistoryMove ttMove() const {
+        return isHit && ttSlot.from() != ttSlot.to() && MY.has(ttSlot.from())
+            ? HistoryMove{MY.typeAt(ttSlot.from()), ttSlot.from(), ttSlot.to()}
+            : HistoryMove{}
+        ;
+    }
 
 public:
     Node (const PositionMoves&, const Uci&);

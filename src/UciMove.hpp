@@ -31,8 +31,6 @@ public:
         static_assert (sizeof(UciMove) == sizeof(int16_t));
     }
 
-    constexpr operator Move () const { return Move{from_, to_}; }
-
     // check if move is not null
     constexpr operator bool() const { return !(from_ == 0 && to_ == 0); }
 

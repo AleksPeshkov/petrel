@@ -328,27 +328,26 @@ enum class ReturnStatus {
 
 #define RETURN_IF_STOP(visitor) { if (visitor == ReturnStatus::Stop) { return ReturnStatus::Stop; } } ((void)0)
 
-/**
- * Internal move is 12 bits long (packed 'from' and 'to' squares) and linked to the position from it was made
- *
- * Castling encoded as the castling rook moves over own king source square.
- * Pawn promotion piece type encoded in place of destination square rank.
- * En passant capture encoded as the pawn moves over captured pawn square.
- * Null move is encoded as 0 {A8A8}
- **/
-class Move {
-protected:
-    Square::_t from_ = static_cast<Square::_t>(0);
-    Square::_t to_ = static_cast<Square::_t>(0);
+// HistoryMove { PieceType, Square, Square }
+class PACKED HistoryMove {
+    /**
+     * Castling encoded as the castling rook moves over own king source square.
+     * Pawn promotion piece type encoded in place of destination square rank.
+     * En passant capture encoded as the pawn moves over captured pawn square.
+     * Null move is encoded as 0 {A8A8}
+     */
+    Square::_t from_:6 = static_cast<Square::_t>(0);
+    Square::_t to_:6 = static_cast<Square::_t>(0);
+    PieceType::_t ty_:3 = static_cast<PieceType::_t>(0);
 
 public:
     // null move
-    constexpr Move () = default;
+    constexpr HistoryMove() = default;
 
-    constexpr Move (Square::_t f, Square::_t t) : from_{f}, to_{t} { static_assert (sizeof(Move) == sizeof(int16_t)); }
+    constexpr HistoryMove (PieceType ty, Square::_t f, Square::_t t) : from_{f}, to_{t}, ty_{ty} {  }
 
     // check if move is not null
-    constexpr operator bool() const { return !(from_ == 0 && to_ == 0); }
+    constexpr operator bool() const { return !(from_ == 0 && to_ == 0 && ty_ == 0); }
 
     // source square the piece moved from
     constexpr Square from() const { return Square{from_}; }
@@ -356,7 +355,12 @@ public:
     // destination square the piece moved to
     constexpr Square to() const { return Square{to_}; }
 
-    friend constexpr bool operator == (Move a, Move b) { return a.from_ == b.from_ && a.to_ == b.to_; }
+    // moved piece type
+    constexpr PieceType pieceType() const { return PieceType{ty_}; }
+
+    friend constexpr bool operator == (HistoryMove a, HistoryMove b) { return a.from_ == b.from_ && a.to_ == b.to_ && a.ty_ == b.ty_; }
 };
+
+static_assert (sizeof(HistoryMove) == sizeof(int16_t));
 
 #endif

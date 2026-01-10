@@ -6,8 +6,8 @@ void test_history_moves() {
     Square sq{C6};
 
     HistoryMoves<1> hm;
-    hm.set(c, ty, sq, Move{E2,E4});
-    assert (( hm.get(0, c, ty, sq) == Move{E2,E4} ));
+    hm.set(c, ty, sq, HistoryMove{PieceType{Pawn}, E2, E4});
+    assert (( hm.get(0, c, ty, sq) == HistoryMove{PieceType{Pawn}, E2, E4} ));
 }
 
 namespace TestHistoryMoves {
