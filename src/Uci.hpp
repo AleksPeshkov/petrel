@@ -29,23 +29,8 @@ public:
         return v[c][ty][sq][Index{i}];
     }
 
-    constexpr void set(Color c, PieceType ty, Square sq, HistoryMove move) {
-        auto& slot = v[c][ty][sq];
-
-        int last = N-1;
-        for (int i = 0; i < last; ++i) {
-            if (slot[i] == move) {
-                // if the move found in the middle, shift only the top part
-                last = i;
-                break;
-            }
-        }
-
-        // shift [0, last) elements one back
-        for (int i = last; i > 0; --i) {
-            slot[i] = slot[i-1];
-        }
-        slot[0] = move; // put most recently used move to the front
+    constexpr void set(Color c, PieceType ty, Square sq, HistoryMove historyMove) {
+        insert_unique(v[c][ty][sq], historyMove);
     }
 };
 

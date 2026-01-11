@@ -1,6 +1,7 @@
 #ifndef INDEX_HPP
 #define INDEX_HPP
 
+#include <algorithm>
 #include <array>
 #include <concepts>
 #include <limits>
@@ -62,6 +63,45 @@ public:
         });
     }
 };
+
+/**
+ * Inserts or moves `value` to position `Pos` in the array, preserving uniqueness.
+ * - If `value` is already present in [0, Pos): no action (already prioritized).
+ * - Else if `value` is found at i >= Pos: moves it to position `Pos`.
+ * - Otherwise: inserts at `Pos`, shifting [Pos, end-1] right (last element dropped).
+ *
+ * Useful for history heuristics where earlier positions have higher priority.
+ *
+ * @tparam Pos Target position (should be < Size)
+ * @tparam T Element type
+ * @tparam Size Array size
+ * @param arr Array to update
+ * @param value Value to insert or move
+ */
+template <size_t Pos = 0, typename T, size_t Size>
+void insert_unique(std::array<T, Size>& arr, const T& value) {
+    static_assert(Pos < Size);
+
+    auto begin = arr.begin();
+    auto pos = begin + Pos;
+    auto end = arr.end();
+
+    // find if existing before Pos
+    if (std::find(arr.begin(), pos, value) != pos) {
+        return; // already present → do nothing
+    }
+
+    // find if existing after Pos
+    auto found = std::find(pos, end, value);
+
+    if (found != end) {
+        std::rotate(pos, found, found + 1); // moves *found to *pos
+    } else {
+        // No match: shift all down, insert at *pos
+        std::copy_backward(pos, end - 1, end);
+        *pos = value;
+    }
+}
 
 template <typename Enum>
 struct CharMap {
