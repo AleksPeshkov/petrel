@@ -102,7 +102,7 @@ protected:
 
     // Killer heuristic
     using KillerIndex = ::Index<3>;
-    mutable KillerIndex::arrayOf<HistoryMove> killer;
+    mutable KillerIndex::arrayOf<HistoryMove> killer = {};
     bool canBeKiller = false;  // good captures should not waste killer slots
 
     Node (const Node* parent); // prepare empty child node
@@ -122,6 +122,7 @@ protected:
     [[nodiscard]] ReturnStatus goodCaptures(Node*, PiMask, Ply R = 1);
     [[nodiscard]] ReturnStatus goodNonCaptures(Node*, Pi, Bb moves, Ply R);
 
+    [[nodiscard]] ReturnStatus killerMove(Node*);
     [[nodiscard]] ReturnStatus counterMove(Node*);
     [[nodiscard]] ReturnStatus followMove(Node*);
 

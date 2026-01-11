@@ -22,9 +22,10 @@ Node::Node (const Node* p) :
     alpha{-p->beta}, beta{-p->alpha}, isPv(p->isPv),
     pvIndex{p->pvIndex+1}
 {
-    killer[0] = grandParent ? grandParent->killer[0] : HistoryMove{};
-    killer[1] = grandParent ? grandParent->killer[1] : HistoryMove{};
-    killer[2] = HistoryMove{};
+    if (grandParent) {
+        killer[0] = grandParent->killer[0];
+        killer[1] = grandParent->killer[1];
+    }
 }
 
 ReturnStatus Node::negamax(Node* child, Ply R) const {
@@ -231,22 +232,15 @@ ReturnStatus Node::search() {
     canBeKiller = !inCheck();
 
     if (parent && !inCheck()) {
-        // primary killer move, updated by previous siblings
-        RETURN_CUTOFF (child->searchIfPossible(parent->killer[0]));
-
+        RETURN_CUTOFF (killerMove(child));
         RETURN_CUTOFF (counterMove(child));
         RETURN_CUTOFF (followMove(child));
 
-        // secondary killer move, backup of previous primary killer
-        RETURN_CUTOFF (child->searchIfPossible(parent->killer[1]));
-
+        RETURN_CUTOFF (killerMove(child));
         RETURN_CUTOFF (counterMove(child));
         RETURN_CUTOFF (followMove(child));
 
-        // repeated killer heuristic (can change while searching descendants of previous killer[2])
-        while (isPossibleMove(parent->killer[2])) {
-            RETURN_CUTOFF (child->searchMove(parent->killer[2]));
-        }
+        RETURN_CUTOFF (killerMove(child));
     }
 
     // going to search only non-captures, mask out remaining unsafe captures to avoid redundant safety checks
@@ -467,7 +461,19 @@ ReturnStatus Node::goodCaptures(Node* child,PiMask victims, Ply R) {
     return ReturnStatus::Continue;
 }
 
-// countermove heuristic: refutation of the last opponent's move
+// Killer move heuristic
+ReturnStatus Node::killerMove(Node* child) {
+    for (auto i : KillerIndex::range()) {
+        auto move = parent->killer[i];
+        if (isPossibleMove(move)) {
+            RETURN_CUTOFF (child->searchMove(move));
+            break;
+        }
+    }
+    return ReturnStatus::Continue;
+}
+
+// Counter move heuristic: refutation of the last opponent's move
 ReturnStatus Node::counterMove(Node* child) {
     auto opMove{parent->currentMove};
     if (opMove) {
@@ -578,27 +584,10 @@ void Node::updatePv() const {
 }
 
 void Node::updateHistory(HistoryMove historyMove) const {
-    if (killer[0] != historyMove) {
-        if (killer[1] != historyMove) {
-            if (killer[2] != historyMove) {
-                // fresh killer move
-                killer[1] = killer[0];
-                killer[0] = historyMove;
-            } else {
-                // promote killer[2] to killer[0]
-                killer[2] = killer[1];
-                killer[1] = killer[0];
-                killer[0] = historyMove;
-            }
-        } else {
-            // promote killer[1] to killer[0]
-            killer[1] = killer[0];
-            killer[0] = historyMove;
-        }
-    }
+    insert_unique(killer, historyMove);
 
-    if (grandParent && grandParent->killer[0] != historyMove && grandParent->killer[1] != historyMove) {
-        grandParent->killer[2] = historyMove;
+    if (grandParent) {
+        insert_unique<1>(grandParent->killer, historyMove);
     }
 
     if (currentMove) {
