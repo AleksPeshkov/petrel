@@ -1,6 +1,6 @@
+#include "perft.hpp"
+#include "search.hpp"
 #include "Uci.hpp"
-#include "Node.hpp"
-#include "NodePerft.hpp"
 
 void trimTrailingWhitespace(std::string& str) {
     // Define the set of whitespace characters to remove (space, newline, carriage return, tab, etc.)
