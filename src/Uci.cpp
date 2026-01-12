@@ -1,7 +1,7 @@
-#include "Uci.hpp"
-#include "Node.hpp"
-#include "NodePerft.hpp"
+#include "perft.hpp"
+#include "search.hpp"
 #include "System.hpp"
+#include "Uci.hpp"
 
 namespace { // anonymous namespace
 
