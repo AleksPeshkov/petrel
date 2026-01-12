@@ -1,6 +1,6 @@
+#include "perft.hpp"
+#include "search.hpp"
 #include "Uci.hpp"
-#include "Node.hpp"
-#include "NodePerft.hpp"
 
 namespace { // anonymous namespace
 

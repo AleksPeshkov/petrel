@@ -1,4 +1,4 @@
-#include "Node.hpp"
+#include "search.hpp"
 #include "Uci.hpp"
 
 #define RETURN_CUTOFF(visitor) { ReturnStatus status = visitor; if (status != ReturnStatus::Continue) { return status; }} ((void)0)
