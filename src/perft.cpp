@@ -1,9 +1,7 @@
-#include "NodePerft.hpp"
-#include "bitops128.hpp"
+#include "perft.hpp"
 
-#include "Tt.hpp"
+#include "bitops128.hpp"
 #include "Uci.hpp"
-#include "Zobrist.hpp"
 
 // unpractical overengineered transposition table replacement scheme only for experiments
 
