@@ -288,8 +288,7 @@ ReturnStatus NodePerft::visitRoot() {
 
             RETURN_IF_STOP (child->visitMove(from, to));
 
-            UciMove move{from, to, isSpecial(from, to), root.colorToMove(), root.chessVariant()};
-            root.info_perft_currmove(++moveCount, move, perft - previousPerft);
+            root.info_perft_currmove(++moveCount, uciMove(from, to), perft - previousPerft);
         }
     }
 

@@ -94,7 +94,7 @@ struct Score {
         return score;
     }
 
-    friend ostream& operator << (ostream& out, const Score& score) {
+    friend ostream& operator << (ostream& out, Score score) {
         out << " score ";
 
         if (score == NoScore) {

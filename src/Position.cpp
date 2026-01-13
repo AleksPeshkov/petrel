@@ -296,7 +296,7 @@ bool Position::afterDrop() {
     return MY.checkers().none();
 }
 
-bool Position::isSpecial(Square from, Square to) const {
+bool Position::isSpecialMove(Square from, Square to) const {
     if (MY.kingSquare().is(to)) {
         return true; // castling
     }

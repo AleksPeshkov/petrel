@@ -76,7 +76,7 @@ ReturnStatus Node::negamax(Node* child, Ply R) const {
         score = childScore;
         alpha = childScore;
         child->beta = -alpha;
-        child->pvIndex = root.pvMoves.set(pvIndex, uciMove(currentMove), child->pvIndex);
+        child->pvIndex = root.pvMoves.set(pvIndex, uciMove(currentMove.from(), currentMove.to()), child->pvIndex);
         updatePv();
     }
 
@@ -595,12 +595,6 @@ void Node::updateKillerMove(Move newKiller) const {
     }
 }
 
-UciMove Node::uciMove(Move move) const {
-    Square from = move.from();
-    Square to = move.to();
-    return UciMove{from, to, isSpecial(from, to), colorToMove(), root.chessVariant()};
-}
-
 constexpr Color Node::colorToMove() const { return root.colorToMove(ply); }
 
 // insufficient mate material
@@ -688,7 +682,7 @@ ReturnStatus Node::searchRoot() {
                             if (child->isLegalMove(ttMove2)) {
                                 ++root.tt.hits;
                                 root.pvMoves.clearPly(PvMoves::Index{child->pvIndex+1});
-                                root.pvMoves.set(child->pvIndex, child->uciMove(ttMove2), PvMoves::Index{child->pvIndex+1});
+                                root.pvMoves.set(child->pvIndex, child->uciMove(ttMove2.from(), ttMove2.to()), PvMoves::Index{child->pvIndex+1});
                             }
                         }
                     }
@@ -696,7 +690,7 @@ ReturnStatus Node::searchRoot() {
 
                 ++root.tt.hits;
                 root.pvScore = ttSlot.score(ply);
-                root.pvMoves.set(pvIndex, uciMove(ttMove), PvMoves::Index{pvIndex+1});
+                root.pvMoves.set(pvIndex, uciMove(ttMove.from(), ttMove.to()), PvMoves::Index{pvIndex+1});
                 io::log("#no time, return move from TT");
                 return ReturnStatus::Stop;
             }
