@@ -21,11 +21,84 @@ void trimTrailingWhitespace(std::string& str) {
 }
 
 class Output : public io::ostringstream {
+protected:
     const Uci& uci;
 public:
     Output (const Uci* u) : io::ostringstream{}, uci{*u} {}
     ~Output () { uci.output(str()); }
 };
+
+class UciOutput : public Output {
+    Color colorToMove;
+
+public:
+    UciOutput(const Uci* u) : Output(u), colorToMove(uci.colorToMove()) {}
+
+    Color color() const { return colorToMove; }
+    Color flipColor() { return Color{colorToMove.flip()}; }
+
+    ChessVariant chessVariant() const { return uci.chessVariant(); }
+};
+
+// convert move to UCI format
+UciOutput& operator << (UciOutput& out, UciMove move) {
+    if (!move) { out << "0000"; return out; }
+
+    bool isWhite{ out.color() == White };
+    Square from_ = move.from();
+    Square to_ = move.to();
+    Square from = isWhite ? from_ : ~from_;
+    Square to = isWhite ? to_ : ~to_;
+
+    if (!move.isSpecial()) { out << from << to; return out; }
+
+    //pawn promotion
+    if (from_.on(Rank7)) {
+        //the type of a promoted pawn piece encoded in place of move to's rank
+        Square promotedTo{File{to}, isWhite ? Rank8 : Rank1};
+        out << from << promotedTo << PromoType{::promoTypeFrom(Rank{to_})};
+        return out;
+    }
+
+    //en passant capture
+    if (from_.on(Rank5)) {
+        //en passant capture move internally encoded as pawn captures pawn
+        assert (to_.on(Rank5));
+        out << from << Square{File{to}, isWhite ? Rank6 : Rank3};
+        return out;
+    }
+
+    //castling
+    if (from_.on(Rank1)) {
+        //castling move internally encoded as the rook captures the king
+
+        if (out.chessVariant() == Orthodox) {
+            if (from.on(FileA)) { out << to << Square{FileC, Rank{from}}; return out; }
+            if (from.on(FileH)) { out << to << Square{FileG, Rank{from}}; return out; }
+        }
+
+        // Chess960:
+        out << to << from;
+        return out;
+    }
+
+    //should never happen
+    assert (false);
+    io::log("#invalid move in UCI output");
+    out << "0000";
+    return out;
+}
+
+UciOutput& operator << (UciOutput& out, const UciMove pv[]) {
+    for (UciMove move; (move = *pv++); ) {
+        out << " "; out << move; out.flipColor();
+    }
+    return out;
+}
+
+UciOutput& operator << (UciOutput& out, const PvMoves& pvMoves) {
+    return out << static_cast<const UciMove*>(pvMoves);
+}
 
 static constexpr size_t mebibyte = 1024 * 1024;
 
@@ -323,26 +396,27 @@ void Uci::go() {
 }
 
 void Uci::bestmove() {
-    io::ostringstream o;
-    o << "info"; nps(o) << pvScore << " pv" << pvMoves;
-    output(o.str());
-
-    o.str("");
-    o << "bestmove " << pvMoves[0];
-    if (limits.canPonder && pvMoves[1]) {
-        o << " ponder " << pvMoves[1];
+    {
+        UciOutput ob{this};
+        ob << "info"; nps(ob); ob << pvScore << " pv"; ob << pvMoves;
     }
 
-    std::string sBestmove{o.str()};
+    UciOutput ob{this};
+
+    ob << "bestmove "; ob << pvMoves[0];
+    if (limits.canPonder && pvMoves[1]) {
+        ob << " ponder "; ob.flipColor(); ob << pvMoves[1];
+    }
+
     {
         std::lock_guard<decltype(bestmoveMutex)> lock{bestmoveMutex};
         if (limits.shouldDelayBestmove()) {
-            bestmove_ = sBestmove;
+            bestmove_  = std::string{ob.str()};
+            ob.str("");
             return;
         }
     }
 
-    output(sBestmove);
     limits.clear();
 }
 
@@ -526,8 +600,9 @@ void Uci::info_iteration(Ply d) const {
 }
 
 void Uci::info_pv(Ply d) const {
-    Output ob{this};
-    ob << "info depth " << d; nps(ob) << pvScore << " pv" << pvMoves;
+    UciOutput ob{this};
+    ob << "info depth " << d; nps(ob);
+    ob << pvScore << " pv"; ob << pvMoves;
 }
 
 void Uci::info_perft_depth(Ply d, node_count_t perft) const {
@@ -536,6 +611,7 @@ void Uci::info_perft_depth(Ply d, node_count_t perft) const {
 }
 
 void Uci::info_perft_currmove(int moveCount, const UciMove& currentMove, node_count_t perft) const {
-    Output ob{this};
-    ob << "info currmovenumber " << moveCount << " currmove " << currentMove << " perft " << perft; nps(ob);
+    UciOutput ob{this};
+    ob << "info currmovenumber " << moveCount << " currmove ";
+    ob << currentMove << " perft " << perft; nps(ob);
 }

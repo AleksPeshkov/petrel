@@ -56,6 +56,8 @@ class Position {
     // calculate Zobrist key from scratch
     Zobrist generateZobrist() const;
 
+    bool isSpecialMove(Square, Square) const;
+
 protected:
     constexpr PositionSide& positionSide(Side::_t side) { return positionSide_[side]; }
 
@@ -74,6 +76,9 @@ protected:
     void setZobrist() { zobrist_ = generateZobrist(); }
     void setRule50(const Rule50& rule50) { rule50_ = rule50; }
 
+    // convert internal move to be printable in UCI format
+    UciMove uciMove(Square from, Square to) const { return UciMove{from, to, isSpecialMove(from, to)}; }
+
 public:
     constexpr const PositionSide& positionSide(Side::_t side) const { return positionSide_[side]; }
 
@@ -87,8 +92,6 @@ public:
     constexpr const Rule50& rule50() const { return rule50_; }
 
     Score evaluate() const { return Evaluation::evaluate(MY.evaluation(), OP.evaluation()); }
-
-    bool isSpecial(Square, Square) const;
 
     // make move directly inside position itself
     void makeMove(Square, Square);
