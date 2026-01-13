@@ -3,13 +3,12 @@
 
 #include "BitArray128.hpp"
 #include "Bb.hpp"
-#include "VectorOfAll.hpp"
 
 class BitReverse {
 public:
     constexpr vu8x16_t bitSwap(vu8x16_t v) const {
         constexpr vu8x16_t nibbleSwap{0x00, 0x08, 0x04, 0x0c, 0x02, 0x0a, 0x06, 0x0e, 0x01, 0x09, 0x05, 0x0d, 0x03, 0x0b, 0x07, 0x0f,};
-        constexpr auto& nibbleMask = ::vectorOfAll[0x0f];
+        constexpr auto nibbleMask = ::all(0x0f);
         auto hi = shufflevector(nibbleSwap, nibbleMask & (v >> 4));
         auto lo = shufflevector(nibbleSwap << 4, nibbleMask & v);
         return hi | lo;
