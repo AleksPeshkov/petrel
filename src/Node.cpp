@@ -360,7 +360,7 @@ ReturnStatus Node::search() {
     }
 
     canBeKiller = false;
-    RETURN_CUTOFF (goodCaptures(child, OP.notKing()));
+    RETURN_CUTOFF (goodCaptures(child, OP.nonKing()));
     canBeKiller = !inCheck();
 
     if (parent && !inCheck()) {
@@ -414,7 +414,7 @@ ReturnStatus Node::search() {
     //TRICK: ~ is not a negate bitwise operation but byteswap -- flip opponent's bitboard
     Bb badSquares = ~(OP.bbPawnAttacks() | OP.bbSide());
     PiMask safePieces = {};
-    PiMask figures = MY.figures(); // Q, R, B, N
+    PiMask officers = MY.officers(); // Q, R, B, N
 
     // Weak Move Reduction condition: !inCheck()
     bool canR = !inCheck();
@@ -427,7 +427,7 @@ ReturnStatus Node::search() {
     // castling move is a rook move, king moves rarely good in middlegame,
     // skip pawns to avoid wasting time on safety check as pawns
     Ply R = canR ? 2 : 1;
-    for (Pi pi : figures) {
+    for (Pi pi : officers) {
         Square from = MY.squareOf(pi);
 
         if (!bbAttacked().has(from)) {
@@ -498,7 +498,7 @@ ReturnStatus Node::search() {
 
     // unsafe (losing) captures
     R = canR ? 2 : 1;
-    for (PiMask pieces = figures; pieces.any(); ) {
+    for (PiMask pieces = officers; pieces.any(); ) {
         Pi pi = pieces.leastValuable(); pieces -= pi;
 
         Square from = MY.squareOf(pi);
@@ -510,7 +510,7 @@ ReturnStatus Node::search() {
     // unsafe (losing) non-captures
     if (!canP || movesMade() == 0) { // weak move pruning
         R = canR ? 4 : 1;
-        for (PiMask pieces = figures; pieces.any(); ) {
+        for (PiMask pieces = officers; pieces.any(); ) {
             Pi pi = pieces.leastValuable(); pieces -= pi;
 
             Square from = MY.squareOf(pi);
@@ -584,7 +584,7 @@ ReturnStatus Node::quiescence() {
     const auto child = &node;
 
     // impossible to capture the king, do not even try to save time
-    return goodCaptures(child, OP.notKing());
+    return goodCaptures(child, OP.nonKing());
 }
 
 ReturnStatus Node::goodCaptures(Node* child,PiMask victims) {

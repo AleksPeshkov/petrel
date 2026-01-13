@@ -99,14 +99,19 @@ public:
     using Base = BitArray<PiMask, vu8x16_t>;
     using typename Base::_t;
     using Base::v;
+    using Base::any;
 
     constexpr static _t zero() { return ::all(0); }
 
     constexpr PiMask () : Base{zero()} {}
     constexpr PiMask (Pi pi) : Base( ::piSingle[pi] ) {}
+    explicit constexpr PiMask (_t a) : Base{a} { assertOk(); }
 
-    constexpr explicit PiMask (_t a) : Base{a} { assertOk(); }
-    constexpr PiMask (_t a, _t b) : Base{a == b} {}
+    static constexpr PiMask equals(_t a, _t b) { return PiMask{a == b}; }
+    static constexpr PiMask notEquals(_t a, _t b) { return PiMask{a != b}; }
+    static constexpr PiMask any(_t a) { return notEquals(a, zero()); }
+    static constexpr PiMask all() { return PiMask{::all(0xff)}; }
+
     constexpr operator const _t& () const { return v; }
 
     // check if either 0 or 0xff bytes are set
@@ -114,11 +119,6 @@ public:
 
     // assert if either 0 or 0xff bytes are set
     constexpr void assertOk() const { assert (isOk()); }
-
-    using Base::any;
-    // create a mask of non empty bytes
-    static PiMask any(_t a) { return PiMask{a != zero()}; }
-    static PiMask all() { return PiMask{::all(0xff)}; }
 
     explicit operator PieceSet() const {
         assertOk();
@@ -129,22 +129,22 @@ public:
         #endif
     }
 
-    bool has(Pi pi) const { return PieceSet{*this}.has(pi); }
-    bool none() const { return PieceSet{*this}.none(); }
-    bool isSingleton() const { return PieceSet{*this}.isSingleton(); }
+    constexpr bool has(Pi pi) const { return PieceSet{*this}.has(pi); }
+    constexpr bool none() const { return PieceSet{*this}.none(); }
+    constexpr bool isSingleton() const { return PieceSet{*this}.isSingleton(); }
 
-    Pi index() const { return PieceSet{*this}.index(); }
+    constexpr Pi index() const { return PieceSet{*this}.index(); }
 
     // most valuable piece in the first (lowest) set bit
-    Pi mostValuable() const { return PieceSet{*this}.first(); }
+    constexpr Pi mostValuable() const { return PieceSet{*this}.first(); }
 
     // least valuable pieces in the last (highest) set bit
-    Pi leastValuable() const { return PieceSet{*this}.last(); }
+    constexpr Pi leastValuable() const { return PieceSet{*this}.last(); }
 
-    int popcount() const { return PieceSet{*this}.popcount(); }
+    constexpr int popcount() const { return PieceSet{*this}.popcount(); }
 
-    PieceSet begin() const { return PieceSet{*this}; }
-    PieceSet end() const { return PieceSet{}; }
+    constexpr PieceSet begin() const { return PieceSet{*this}; }
+    constexpr PieceSet end() const { return PieceSet{}; }
 
     friend ostream& operator << (ostream& out, PiMask a) {
         return out << PieceSet(a);
@@ -199,7 +199,7 @@ public:
 
     PiOrder& forward(Pi pi) {
         // find index of pi in the shuffled vector
-        PiMask piMask{v, ::vectorOfAll[pi]};
+        PiMask piMask = PiMask::equals(v, ::vectorOfAll[pi]);
         Pi pos = piMask.index();
 
         v = ::shufflevector(v, forwardMask[pos]);

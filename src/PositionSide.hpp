@@ -59,10 +59,18 @@ public:
 
     // mask of all pieces of the given side
     PiMask pieces() const { assert (squares.pieces() == types.pieces()); return squares.pieces(); }
+
+    // Queens, Rooks, Bishops
     PiMask sliders() const { return types.sliders(); }
-    PiMask figures() const { return types.figures(); }
-    PiMask notPawns() const { return types.notPawns(); }
-    PiMask notKing() const { return types.notKing(); }
+
+    // Queens, Rooks, Bishops, Knights
+    PiMask officers() const { return types.officers(); }
+
+    // King, Queens, Rooks, Bishops, Knights
+    PiMask nonPawns() const { return types.nonPawns(); }
+
+    // Queens, Rooks, Bishops, Knights, Pawns
+    PiMask nonKing() const { return types.nonKing(); }
 
     Pi pieceAt(Square sq) const { assert (has(sq)); Pi pi = squares.pieceAt(sq); assertOk(pi); return pi; }
     PiMask piecesOn(Rank rank) const { return squares.piecesOn(rank); }
