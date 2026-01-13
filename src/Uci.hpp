@@ -11,7 +11,6 @@
 #include "Thread.hpp"
 #include "Tt.hpp"
 #include "UciPosition.hpp"
-#include "UciMove.hpp"
 
 enum deadline_t { HardDeadline, RootMoveDeadline, IterationDeadline };
 
@@ -252,10 +251,6 @@ public:
     }
 
     operator const UciMove* () const { return &pv[0]; }
-
-    friend ostream& operator << (ostream& out, const PvMoves& pvMoves) {
-        return out << static_cast<const UciMove*>(pvMoves);
-    }
 };
 
 /// Handling input and output of UCI (Universal Chess Interface)
