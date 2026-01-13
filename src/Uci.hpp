@@ -11,7 +11,6 @@
 #include "Thread.hpp"
 #include "Tt.hpp"
 #include "UciPosition.hpp"
-#include "UciMove.hpp"
 
 enum deadline_t { HardDeadline, RootMoveDeadline, IterationDeadline };
 

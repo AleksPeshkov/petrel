@@ -3,7 +3,6 @@
 
 #include "PositionMoves.hpp"
 #include "Repetitions.hpp"
-#include "UciMove.hpp"
 #include "Uci.hpp"
 
 class Node;
@@ -114,9 +113,6 @@ protected:
     [[nodiscard]] ReturnStatus searchMove(Move move, Ply R = 1);
     [[nodiscard]] ReturnStatus searchNullMove(Ply R);
     void makeMove(Square from, Square to);
-
-    // convert internal move to be printable in UCI format
-    UciMove uciMove(Move move) const;
 
     // current node's side to move color
     constexpr Color colorToMove() const;
