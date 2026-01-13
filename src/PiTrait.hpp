@@ -3,25 +3,26 @@
 
 #include "PiMask.hpp"
 
-enum class Trait : u8_t {
-    Empty      = 0,
-    Checker    = ::singleton<u8_t>(0), // any piece actually attacking enemy king
-    Pinner     = ::singleton<u8_t>(1), // potential pinner: sliding piece that can attack the enemy king square on empty board
-    Castling   = ::singleton<u8_t>(2), // rook with castling rights
-    EnPassant  = ::singleton<u8_t>(3), // pawn can be legally captured en passant OR pawn can perform a legal en passant capture
-    Promotable = ::singleton<u8_t>(4), // any pawn on the 7th rank
-    CheckerPinner = Checker | Pinner,  // Checker + Pinner
-};
-
 class PiTrait {
-    using element_type = Trait;
-
-    union {
-        element_type trait[16];
-        u8_t vu8x16 __attribute__((vector_size(16)));
+    enum trait_t : u8_t {
+        Empty       = 0,
+        Checkers    = ::singleton<u8_t>(0), // any piece actually attacking enemy king
+        Pinners     = ::singleton<u8_t>(1), // potential pinner: sliding piece that can attack the enemy king square on empty board
+        Castlings   = ::singleton<u8_t>(2), // rook with castling rights
+        EnPassants  = ::singleton<u8_t>(3), // pawn can be legally captured en passant OR pawn can perform a legal en passant capture
+        Promotables = ::singleton<u8_t>(4), // any pawn on the 7th rank
+        CheckersPinners = Checkers | Pinners,  // Checkers + Pinners
     };
 
-    PiMask any(element_type e) const { return PiMask::any(vu8x16 & ::vectorOfAll[static_cast<u8_t>(e)]); }
+    using element_type = trait_t;
+
+    // defined to make debugging clear
+    union {
+        element_type trait[16];
+        vu8x16_t vu8x16;
+    };
+
+    constexpr PiMask any(element_type e) const { return PiMask::any(vu8x16 & ::vectorOfAll[static_cast<u8_t>(e)]); }
     constexpr void clear(element_type e) { vu8x16 &= ::vectorOfAll[0xff ^ static_cast<u8_t>(e)]; }
 
     constexpr bool has(Pi pi, element_type e) const {
@@ -38,40 +39,40 @@ class PiTrait {
 
 public:
     constexpr PiTrait () : trait {
-        Trait::Empty, Trait::Empty, Trait::Empty, Trait::Empty,
-        Trait::Empty, Trait::Empty, Trait::Empty, Trait::Empty,
-        Trait::Empty, Trait::Empty, Trait::Empty, Trait::Empty,
-        Trait::Empty, Trait::Empty, Trait::Empty, Trait::Empty,
+        Empty, Empty, Empty, Empty,
+        Empty, Empty, Empty, Empty,
+        Empty, Empty, Empty, Empty,
+        Empty, Empty, Empty, Empty,
     } {}
 
-    constexpr void clear(Pi pi) { trait[pi] = Trait::Empty; }
-    constexpr bool isEmpty(Pi pi) const { return trait[pi] == Trait::Empty; }
+    constexpr void clear(Pi pi) { trait[pi] = Empty; }
+    constexpr bool isEmpty(Pi pi) const { return trait[pi] == Empty; }
 
-    PiMask castlingRooks() const { return any(Trait::Castling); }
-    constexpr bool isCastling(Pi pi) const { return has(pi, Trait::Castling); }
-    constexpr void setCastling(Pi pi) { assert (!isCastling(pi)); add(pi, Trait::Castling); }
-    constexpr void clearCastlings() { clear(Trait::Castling); }
+    constexpr PiMask castlingRooks() const { return any(Castlings); }
+    constexpr bool isCastling(Pi pi) const { return has(pi, Castlings); }
+    constexpr void setCastling(Pi pi) { assert (!isCastling(pi)); add(pi, Castlings); }
+    constexpr void clearCastlings() { clear(Castlings); }
 
-    PiMask enPassantPawns() const { return any(Trait::EnPassant); }
-    Pi getEnPassant() const { Pi pi = enPassantPawns().index(); return pi; }
-    constexpr bool isEnPassant(Pi pi) const { return has(pi, Trait::EnPassant); }
-    constexpr void setEnPassant(Pi pi) { add(pi, Trait::EnPassant); }
-    constexpr void clearEnPassant(Pi pi) { assert (isEnPassant(pi)); clear(pi, Trait::EnPassant); }
-    constexpr void clearEnPassants() { clear(Trait::EnPassant); }
+    constexpr PiMask enPassantPawns() const { return any(EnPassants); }
+    constexpr Pi getEnPassant() const { Pi pi = enPassantPawns().index(); return pi; }
+    constexpr bool isEnPassant(Pi pi) const { return has(pi, EnPassants); }
+    constexpr void setEnPassant(Pi pi) { add(pi, EnPassants); }
+    constexpr void clearEnPassant(Pi pi) { assert (isEnPassant(pi)); clear(pi, EnPassants); }
+    constexpr void clearEnPassants() { clear(EnPassants); }
 
-    PiMask pinners() const { return any(Trait::Pinner); }
-    constexpr bool isPinner(Pi pi) const { return has(pi, Trait::Pinner); }
-    constexpr void clearPinners() { clear(Trait::Pinner); }
-    constexpr void setPinner(Pi pi) { assert (!isPinner(pi)); add(pi, Trait::Pinner); }
-    constexpr void clearPinner(Pi pi) { clear(pi, Trait::Pinner); }
+    constexpr PiMask pinners() const { return any(Pinners); }
+    constexpr bool isPinner(Pi pi) const { return has(pi, Pinners); }
+    constexpr void clearPinners() { clear(Pinners); }
+    constexpr void setPinner(Pi pi) { assert (!isPinner(pi)); add(pi, Pinners); }
+    constexpr void clearPinner(Pi pi) { clear(pi, Pinners); }
 
-    PiMask checkers() const { return any(Trait::Checker); }
-    constexpr void clearCheckers() { clear(Trait::Checker); }
-    constexpr void setChecker(Pi pi) { assert (!has(pi, Trait::Checker)); add(pi, Trait::Checker); }
+    constexpr PiMask checkers() const { return any(Checkers); }
+    constexpr void clearCheckers() { clear(Checkers); }
+    constexpr void setChecker(Pi pi) { assert (!has(pi, Checkers)); add(pi, Checkers); }
 
-    PiMask promotables() const { return any(Trait::Promotable); }
-    constexpr bool isPromotable(Pi pi) const { return has(pi, Trait::Promotable); }
-    constexpr void setPromotable(Pi pi) { add(pi, Trait::Promotable); }
+    constexpr PiMask promotables() const { return any(Promotables); }
+    constexpr bool isPromotable(Pi pi) const { return has(pi, Promotables); }
+    constexpr void setPromotable(Pi pi) { add(pi, Promotables); }
 };
 
 #endif
