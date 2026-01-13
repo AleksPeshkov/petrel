@@ -76,7 +76,7 @@ ReturnStatus Node::negamax(Node* child, Ply R) const {
         score = childScore;
         alpha = childScore;
         child->beta = -alpha;
-        child->pvIndex = root.pvMoves.set(pvIndex, uciMove(currentMove), child->pvIndex);
+        child->pvIndex = root.pvMoves.set(pvIndex, uciMove(currentMove.from(), currentMove.to()), child->pvIndex);
         updatePv();
     }
 
@@ -595,12 +595,6 @@ void Node::updateKillerMove(Move newKiller) const {
     if (parent && parent->currentMove) {
         root.followMove.set(parent->colorToMove(),  parent->MY.typeAt(parent->currentMove.from()), parent->currentMove.to(), newKiller);
     }
-}
-
-UciMove Node::uciMove(Move move) const {
-    Square from = move.from();
-    Square to = move.to();
-    return UciMove{from, to, isSpecial(from, to), colorToMove(), root.chessVariant()};
 }
 
 constexpr Color Node::colorToMove() const { return root.colorToMove(ply); }

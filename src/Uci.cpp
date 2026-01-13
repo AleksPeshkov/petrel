@@ -22,11 +22,95 @@ void trimTrailingWhitespace(std::string& str) {
 }
 
 class Output : public io::ostringstream {
+protected:
     const Uci& uci;
 public:
     Output (const Uci* u) : io::ostringstream{}, uci{*u} {}
     ~Output () { uci.output(str()); }
 };
+
+class UciOutput : public Output {
+    Color colorToMove;
+
+public:
+    UciOutput(const Uci* u) : Output(u), colorToMove(uci.colorToMove()) {}
+
+    Color color() const { return colorToMove; }
+    Color flipColor() { return Color{colorToMove.flip()}; }
+
+    ChessVariant chessVariant() const { return uci.chessVariant(); }
+};
+
+// typesafe operator<< chaining
+UciOutput& operator << (UciOutput& out, io::czstring message) {
+    static_cast<ostream&>(out) << message; return out;
+}
+
+// convert move to UCI format
+UciOutput& operator << (UciOutput& out, UciMove move) {
+    if (!move) {
+        io::info("illegal move 0000 printed");
+        out << "0000";
+        return out;
+    }
+
+    Square from{move.from()};
+    Square to{move.to()};
+
+    bool isWhite{out.color() == White};
+    Square uciFrom{isWhite ? from : ~from};
+    Square uciTo{isWhite ? to : ~to};
+
+    if (!move.isSpecial()) {
+        out << uciFrom << uciTo;
+        return out;
+    }
+
+    //pawn promotion
+    if (from.on(Rank7)) {
+        //the type of a promoted pawn piece encoded in place of move to's rank
+        uciTo = Square{File{to}, isWhite ? Rank8 : Rank1};
+        out << uciFrom << uciTo << PromoType{::promoTypeFrom(Rank{to})};
+        return out;
+    }
+
+    //en passant capture
+    if (from.on(Rank5)) {
+        //en passant capture move internally encoded as pawn captures pawn
+        assert (to.on(Rank5));
+        out << uciFrom << Square{File{to}, isWhite ? Rank6 : Rank3};
+        return out;
+    }
+
+    //castling
+    if (from.on(Rank1)) {
+        //castling move internally encoded as the rook captures the king
+
+        if (out.chessVariant() == Orthodox) {
+            if (from.on(FileA)) { out << uciTo << Square{FileC, Rank{uciFrom}}; return out; }
+            if (from.on(FileH)) { out << uciTo << Square{FileG, Rank{uciFrom}}; return out; }
+        }
+
+        // Chess960:
+        out << uciTo << uciFrom;
+        return out;
+    }
+
+    //should never happen
+    assert (false);
+    io::error("invalid move in UCI output");
+    out << "0000";
+    return out;
+}
+
+UciOutput& operator << (UciOutput& out, const PvMoves& pvMoves) {
+    auto moves = static_cast<const UciMove*>(pvMoves);
+    out << " pv";
+    for (UciMove move; (move = *moves++); ) {
+        out << " "; out << move; out.flipColor();
+    }
+    return out;
+}
 
 static constexpr size_t mebibyte = 1024 * 1024;
 
@@ -347,26 +431,26 @@ void Uci::go() {
 }
 
 void Uci::bestmove() {
-    io::ostringstream o;
-    o << "info"; nps(o) << pvScore << " pv" << pvMoves;
-    output(o.str());
-
-    o.str("");
-    o << "bestmove " << pvMoves[0];
-    if (limits.canPonder && pvMoves[1]) {
-        o << " ponder " << pvMoves[1];
+    {
+        UciOutput ob{this};
+        ob << "info"; nps(ob); ob << pvScore; ob << pvMoves;
     }
 
-    std::string sBestmove{o.str()};
+    UciOutput ob{this};
+
+    ob << "bestmove "; ob << pvMoves[0];
+    if (limits.canPonder && pvMoves[1]) {
+        ob << " ponder "; ob.flipColor(); ob << pvMoves[1];
+    }
+
     {
         std::lock_guard<decltype(bestmoveMutex)> lock{bestmoveMutex};
         if (limits.shouldDelayBestmove()) {
-            bestmove_ = sBestmove;
+            bestmove_  = std::string{ob.str()};
+            ob.str("");
             return;
         }
     }
-
-    output(sBestmove);
 }
 
 void Uci::stop() {
@@ -539,22 +623,24 @@ ostream& Uci::info_fen(ostream& o) const {
     return o;
 }
 
-void Uci::info_iteration(Ply d) const {
+void Uci::info_iteration(Ply depth) const {
     Output ob{this};
-    ob << "info depth " << d; nps(ob);
+    ob << "info depth " << depth; nps(ob);
 }
 
-void Uci::info_pv(Ply d) const {
-    Output ob{this};
-    ob << "info depth " << d; nps(ob) << pvScore << " pv" << pvMoves;
+void Uci::info_pv(Ply depth) const {
+    UciOutput ob{this};
+    ob << "info depth " << depth; nps(ob);
+    ob << pvScore; ob << pvMoves;
 }
 
-void Uci::info_perft_depth(Ply d, node_count_t perft) const {
+void Uci::info_perft_depth(Ply depth, node_count_t perft) const {
     Output ob{this};
-    ob << "info depth " << d << " perft " << perft; nps(ob);
+    ob << "info depth " << depth << " perft " << perft; nps(ob);
 }
 
 void Uci::info_perft_currmove(int moveCount, const UciMove& currentMove, node_count_t perft) const {
-    Output ob{this};
-    ob << "info currmovenumber " << moveCount << " currmove " << currentMove << " perft " << perft; nps(ob);
+    UciOutput ob{this};
+    ob << "info currmovenumber " << moveCount << " currmove ";
+    ob << currentMove << " perft " << perft; nps(ob);
 }
