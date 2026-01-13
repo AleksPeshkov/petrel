@@ -3,48 +3,49 @@
 
 #include "PiMask.hpp"
 
-enum class Type : u8_t {
-    Empty   = 0,
-    Queen  = ::singleton<u8_t>(piece_type_t::Queen),
-    Rook   = ::singleton<u8_t>(piece_type_t::Rook),
-    Bishop = ::singleton<u8_t>(piece_type_t::Bishop),
-    Knight = ::singleton<u8_t>(piece_type_t::Knight),
-    Pawn   = ::singleton<u8_t>(piece_type_t::Pawn),
-    King   = ::singleton<u8_t>(piece_type_t::King),
-    Slider = Queen | Rook | Bishop,
-    Figure = Queen | Rook | Bishop | Knight,
-    NotPawn = Queen | Rook | Bishop | Knight | King,
-    NotKing = Queen | Rook | Bishop | Knight | Pawn,
-    Leaper = Pawn | Knight | King,
-    PNBRQ  = Pawn | Knight | Bishop | Rook | Queen,
-    PNBR   = Pawn | Knight | Bishop | Rook,
-    PNB    = Pawn | Knight | Bishop,
-};
-
 class PiType {
-    using element_type = Type;
+    enum pieces_t : u8_t {
+        None   = 0,
+        Queens  = ::singleton<u8_t>(Queen),
+        Rooks   = ::singleton<u8_t>(Rook),
+        Bishops = ::singleton<u8_t>(Bishop),
+        Knights = ::singleton<u8_t>(Knight),
+        Pawns   = ::singleton<u8_t>(Pawn),
+        Kings   = ::singleton<u8_t>(King),
+        Sliders  = Queens | Rooks | Bishops,
+        Leapers  = Pawns | Knights | Kings,
+        All      = Sliders | Leapers,
+        Officers = Queens | Rooks | Bishops | Knights,
+        NonPawns = Queens | Rooks | Bishops | Knights | Kings,
+        NonKings = Queens | Rooks | Bishops | Knights | Pawns,
+        PNBR     = Pawns | Knights | Bishops | Rooks,
+        PNB      = Pawns | Knights | Bishops,
+    };
+
+    using element_type = pieces_t;
 
     static constexpr PieceType::arrayOf<element_type> LessOrEqualValue = {
-        Type::PNBRQ, // Queen
-        Type::PNBR,  // Rook
-        Type::PNB,   // Bishop
-        Type::PNB,   // Knight
-        Type::Pawn,  // Pawn
-        Type::Empty, // King
+        NonKings, // Queen
+        PNBR,  // Rook
+        PNB,   // Bishop
+        PNB,   // Knight
+        Pawns, // Pawn
+        All,   // King
     };
 
     static constexpr PieceType::arrayOf<element_type> LessValue = {
-        Type::PNBR,  // Queen
-        Type::PNB,   // Rook
-        Type::Pawn,  // Bishop
-        Type::Pawn,  // Knight
-        Type::Empty, // Pawn
-        Type::Empty, // King
+        PNBR,  // Queen
+        PNB,   // Rook
+        Pawns, // Bishop
+        Pawns, // Knight
+        None,  // Pawn
+        NonKings, // King
     };
 
+    // defined to make debugging clear
     union {
-        Type type[16];
-        u8_t vu8x16 __attribute__((vector_size(16)));
+        pieces_t type[16];
+        vu8x16_t vu8x16;
     };
 
     constexpr element_type element(PieceType::_t ty) const { return static_cast<element_type>(::singleton<u8_t>(ty)); }
@@ -53,14 +54,14 @@ class PiType {
 
     constexpr bool has(Pi pi, element_type e) const { assertOk(pi); return (static_cast<u8_t>(type[pi]) & static_cast<u8_t>(e)) != 0; }
     constexpr bool is(Pi pi, PieceType::_t ty) const { assertOk(pi);  return has(pi, element(ty)); }
-    PiMask any(element_type e) const { return PiMask::any(vu8x16 & vector(e)); }
+    constexpr PiMask any(element_type e) const { return PiMask::any(vu8x16 & vector(e)); }
 
 public:
     constexpr PiType () : type {
-        Type::Empty, Type::Empty, Type::Empty, Type::Empty,
-        Type::Empty, Type::Empty, Type::Empty, Type::Empty,
-        Type::Empty, Type::Empty, Type::Empty, Type::Empty,
-        Type::Empty, Type::Empty, Type::Empty, Type::Empty,
+        None, None, None, None,
+        None, None, None, None,
+        None, None, None, None,
+        None, None, None, None,
     } {}
 
     constexpr bool isOk(Pi pi) const { return !isEmpty(pi) && ::isSingleton(static_cast<u8_t>(type[pi])); }
@@ -71,29 +72,39 @@ public:
         constexpr void assertOk(Pi pi) const { assert (isOk(pi)); }
     #endif
 
-    constexpr void drop(Pi pi, PieceType::_t ty) { assert (isEmpty(pi)); assert (pi != TheKing || ty == King); type[pi] = element(ty); }
-    constexpr void clear(Pi pi) { assertOk(pi); assert (pi != TheKing); assert (!is(pi, King)); type[pi] = Type::Empty; }
-    constexpr void promote(Pi pi, PromoType::_t ty) { assert (isPawn(pi)); type[pi] = element(ty); }
+    void drop(Pi pi, PieceType::_t ty) { assert (isEmpty(pi)); assert (pi != TheKing || ty == King); type[pi] = element(ty); }
+    void clear(Pi pi) { assertOk(pi); assert (pi != TheKing); assert (!is(pi, King)); type[pi] = None; }
+    void promote(Pi pi, PromoType::_t ty) { assert (isPawn(pi)); type[pi] = element(ty); }
 
-    constexpr bool isEmpty(Pi pi) const { return type[pi] == Type::Empty; }
+    constexpr bool isEmpty(Pi pi) const { return type[pi] == None; }
     constexpr bool isPawn(Pi pi) const { return is(pi, Pawn); }
     constexpr bool isRook(Pi pi) const { return is(pi, Rook); }
-    constexpr bool isSlider(Pi pi) const { assertOk(pi); return has(pi, Type::Slider); }
-    PieceType typeOf(Pi pi) const { assertOk(pi); return PieceType{static_cast<PieceType::_t>( ::lsb(static_cast<unsigned>(type[pi])) )}; }
+    constexpr bool isSlider(Pi pi) const { assertOk(pi); return has(pi, Sliders); }
+    constexpr PieceType typeOf(Pi pi) const { assertOk(pi); return PieceType{static_cast<PieceType::_t>( ::lsb(static_cast<unsigned>(type[pi])) )}; }
 
-    PiMask pieces() const { return PiMask::any(vu8x16); }
-    PiMask piecesOfType(PieceType::_t ty) const { assert (!PieceType{ty}.is(King)); return any(element(ty)); }
-    PiMask sliders() const { return any(Type::Slider); }
-    PiMask leapers() const { return any(Type::Leaper); }
-    PiMask figures() const { return any(Type::Figure); }
-    PiMask notPawns() const { return any(Type::NotPawn); }
-    PiMask notKing() const { return any(Type::NotKing); }
+    constexpr PiMask pieces() const { return PiMask::any(vu8x16); }
+    constexpr PiMask piecesOfType(PieceType::_t ty) const { assert (!PieceType{ty}.is(King)); return any(element(ty)); }
+
+    // Queens, Rooks, Bishops
+    constexpr PiMask sliders() const { return any(Sliders); }
+
+    // King, Pawns, Knights
+    constexpr PiMask leapers() const { return any(Leapers); }
+
+    // Queens, Rooks, Bishops, Knights
+    constexpr PiMask officers() const { return any(Officers); }
+
+    // King, Queens, Rooks, Bishops, Knights
+    constexpr PiMask nonPawns() const { return any(NonPawns); }
+
+    // Queens, Rooks, Bishops, Knights, Pawns
+    constexpr PiMask nonKing() const { return any(NonKings); }
 
     // less valuable pieces than given piece type
-    PiMask lessValue(PieceType ty) const {return any(LessValue[ty]); }
+    constexpr PiMask lessValue(PieceType ty) const {return any(LessValue[ty]); }
 
     // less or equal value pieces than given piece type
-    PiMask lessOrEqualValue(PieceType ty) const { return any(LessOrEqualValue[ty]); }
+    constexpr PiMask lessOrEqualValue(PieceType ty) const { return any(LessOrEqualValue[ty]); }
 };
 
 #endif
