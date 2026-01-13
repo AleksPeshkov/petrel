@@ -2,7 +2,7 @@
 #define PI_BB_H
 
 #include "Bb.hpp"
-#include "PiRank.hpp"
+#include "PiMask.hpp"
 
 /// array of 8 PiRank
 class PiBbMatrix {
