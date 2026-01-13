@@ -53,7 +53,7 @@ WARNINGS += -Winline
 ifeq ($(CXX), g++)
 	BUILD_FLAGS += -flto=auto
 	CXXFLAGS += -flax-vector-conversions
-	WARNINGS += -Wno-class-memaccess -Wno-invalid-constexpr
+	WARNINGS += -Wno-class-memaccess -Wno-invalid-constexpr -Wno-missing-declarations
 	WARNINGS += -Wuseless-cast -Wcast-align=strict -Wsuggest-final-types -Wsuggest-final-methods
 	WARNINGS += -Wnormalized -Wunsafe-loop-optimizations -Wvector-operation-performance
 else ifeq ($(CXX), clang)

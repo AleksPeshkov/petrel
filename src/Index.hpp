@@ -46,7 +46,7 @@ public:
     constexpr friend bool operator < (Index a, Index b) { return a.v < b.v; }
     constexpr friend bool operator <= (Index a, Index b) { return a.v <= b.v; }
 
-    friend ostream& operator << (ostream& out, Index& index) { return out << static_cast<int>(index.v); }
+    friend ostream& operator << (ostream& out, Index index) { return out << static_cast<int>(index.v); }
 
     friend istream& operator >> (istream& in, Index& index) {
         int n;
@@ -265,7 +265,7 @@ public:
     }
 };
 
-enum color_t : u8_t { White, Black };
+enum color_t { White, Black };
 template <> struct CharMap<color_t> { static constexpr io::czstring The_string = "wb"; };
 using Color = IndexChar<2, color_t>;
 
@@ -281,7 +281,7 @@ constexpr Side::_t operator~(Side::_t si) {
     return static_cast<Side::_t>(si ^ static_cast<Side::_t>(Side::Mask));
 }
 
-enum chess_variant_t : u8_t { Orthodox, Chess960 };
+enum chess_variant_t { Orthodox, Chess960 };
 using ChessVariant = Index<2, chess_variant_t>;
 
 enum castling_side_t { KingSide, QueenSide };
@@ -355,5 +355,40 @@ public:
 
     friend constexpr bool operator == (Move a, Move b) { return a.from_ == b.from_ && a.to_ == b.to_; }
 };
+
+static_assert (sizeof(Move) == sizeof(u16_t));
+
+// Position independent move is 13 bits with the special move type flag to mark either castling, promotion or en passant move
+// Any move's squares coordinates are relative to its side. Black side's move should flip squares before printing.
+class UciMove {
+    using _t = u16_t;
+
+    enum Shift { To = 0, From = To + 6, Special = From + 6 };
+
+    _t v;
+
+public:
+    // null move
+    constexpr UciMove() : v{0} {}
+
+    constexpr UciMove (Square from, Square to, bool special)
+        : v {static_cast<_t>((special << Shift::Special) + (from << Shift::From) + (to << Shift::To))}
+    {}
+
+    constexpr operator bool () const { return v; }
+    constexpr operator Move () const { return Move{from(), to()}; }
+
+    constexpr bool isSpecial() const { return v >> Shift::Special & 1; }
+
+    // source square the piece moved from
+    constexpr Square from() const { return Square{static_cast<Square::_t>(v >> Shift::From & Square::Mask)}; }
+
+    // destination square the piece moved to
+    constexpr Square to() const { return Square{static_cast<Square::_t>(v >> Shift::To & Square::Mask)}; }
+
+    friend constexpr bool operator == (UciMove a, UciMove b) { return a.v == b.v; }
+};
+
+static_assert (sizeof(UciMove) == sizeof(u16_t));
 
 #endif
