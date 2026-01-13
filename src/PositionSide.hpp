@@ -3,10 +3,7 @@
 
 #include "Evaluation.hpp"
 #include "PiBbMatrix.hpp"
-#include "PiSquare.hpp"
-#include "PiTrait.hpp"
-#include "PiType.hpp"
-
+#include "PiMask.hpp"
 
 // static information about pieces from one player's side (either side to move or its opponent)
 // TRICK: all squares always relative to the point of view of given side
