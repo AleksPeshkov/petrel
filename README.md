@@ -29,6 +29,19 @@ option name UCI_Chess960 type check default false
 Only parsing errors and a sparse search warnings will be written into `Debug Log File` unless `debug on` is set
 then when all engine input and output will be logged.
 
+## Command-line options
+
+```
+Options:
+    -f [FILE], --file [FILE]    Read and execute initial UCI commands from the specified file.
+    -h, --help                  Show this help message and exit.
+    -v, --version               Display version information and exit.
+
+Optional command:
+    bench [GO LIMITS]           Search a set of test positions, report total nodes and nps, and exit.
+```
+You can provide a configuration file. This file should contain UCI commands and will be processed first before bench command or interactive input from the standard input stream.
+
 ## Evaluation
 
 Very generic and not a point of author's interest.
