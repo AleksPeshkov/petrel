@@ -39,15 +39,18 @@ static constexpr T permil(T n, T m) { return (n * 1000) / m; }
 
 Uci::Uci(ostream &o) :
     tt(16 * mebibyte),
-    inputLine{std::string(1024, '\0')}, // preallocate 1024 bytes (~100 full moves)
+    inputLine{std::string(2048, '\0')}, // preallocate 2048 bytes (~200 full moves)
     out{o},
-    bestmove_(32, '\0')
+    bestmove_(sizeof("bestmove a7a8q ponder h2h1q"), '\0')
 {
+    inputLine.clear();
     bestmove_.clear();
     ucinewgame();
 }
 
-void Uci::output(const std::string& message) const {
+void Uci::output(std::string_view message) const {
+    if (message.empty()) { return; }
+
     {
         std::lock_guard<decltype(outMutex)> lock{outMutex};
         out << message << std::endl;
@@ -56,7 +59,7 @@ void Uci::output(const std::string& message) const {
     if (isDebugOn) { log(message); }
 }
 
-void Uci::log(const std::string& message) const {
+void Uci::log(std::string_view message) const {
     if (!logFile.is_open()) { return; }
 
     {
@@ -74,7 +77,7 @@ void Uci::log(const std::string& message) const {
 }
 
 void Uci::processInput(istream& in) {
-    std::string currentLine(1024, '\0'); // preallocate 1024 bytes (~100 full moves)
+    std::string currentLine(2048, '\0'); // preallocate 2048 bytes (~200 full moves)
     while (std::getline(in, currentLine)) {
         if (isDebugOn) { log('>' + currentLine); }
 
@@ -93,6 +96,7 @@ void Uci::processInput(istream& in) {
         else if (consume("uci"))       { uciok(); }
         else if (consume("debug"))     { debug(); }
         else if (consume("perft"))     { goPerft(); }
+        else if (consume("bench"))     { bench(); }
         else if (consume("quit"))      { stop(); break; }
         else if (consume("exit"))      { stop(); break; }
 
@@ -260,6 +264,10 @@ void Uci::position() {
         return;
     }
 
+#ifdef ENABLE_ASSERT_LOGGING
+    debugPosition = inputLine.str();
+#endif
+
     if (consume("startpos")) {
         position_.setStartpos();
         repetitions.clear();
@@ -299,6 +307,10 @@ istream& UciSearchLimits::go(istream& in, Side white) {
 }
 
 void Uci::go() {
+#ifdef ENABLE_ASSERT_LOGGING
+    debugGo = inputLine.str();
+#endif
+
     limits.go(inputLine, position_.sideOf(White));
     if (consume("searchmoves")) { position_.limitMoves(inputLine); }
 
@@ -374,6 +386,76 @@ void Uci::goPerft() {
         NodePerft{position_, *this, depth}.visitRoot();
         info_perft_bestmove();
     } );
+}
+
+void Uci::bench() {
+    std::string goLimits;
+
+    inputLine >> std::ws;
+    std::getline(inputLine, goLimits);
+
+    bench(goLimits);
+}
+
+void Uci::bench(std::string& goLimits) {
+    if (goLimits.empty()) {
+#ifdef NDEBUG
+        goLimits = "depth 16 nodes 10000000"; // default
+#else
+        goLimits = "depth 8 nodes 100000"; // default for slow build
+#endif
+    }
+
+    static std::string_view positions[][2] = {
+        {"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 25", "id kiwipete"},
+        {"8/1n3Np1/1N4Q1/1bkP4/p1p2p2/P1P2R2/3P2PK/B2R4 w - - 0 1", "bm d1h1; id mate # 3 talkchess.com/viewtopic.php?p=945368#p945368"},
+        {"4r1b1/1p4B1/pN2pR2/RB2k3/1P2N2p/2p3b1/n2P1p1r/5K1n w - - 0 1", "bm f1e2; id mate # 3 talkchess.com/viewtopic.php?p=909327#p909327"},
+        {"3R1R2/K3k3/1p1nPb2/pN2P2N/nP1ppp2/4P3/6P1/4Qq1r w - - 0 1", "bm e1e2; id mate #5 talkchess.com/viewtopic.php?p=904264"},
+        {"2k5/8/1pP1K3/1P6/8/8/8/8 w - -", "bm c6c7; id mate # 21 talkchess.com/viewtopic.php?p=386486#p386486"},
+        {"8/k7/3p4/p2P1p2/P2P1P2/8/8/K7 w - -", "bm a1b1; id Fine # 70"},
+        {"6k1/p1rqbppp/1p2p3/nb1pP3/3P1NBP/PP4P1/5PN1/R2Q2K1 w - - 0 26", "bm f4e3; id petrel 20251231"},
+        {"2kr3r/Qbp1q1bp/1np3p1/5p2/2P1pP2/1PN3P1/PBK3BP/3RR3 w - - 0 21", "bm e1e4; id petrel 20251206"},
+        {"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", "id startpos"},
+    };
+
+    uciok();
+
+    node_count_t totalBenchNodes = 0;
+    TimeInterval totalBenchTime = 0ms;
+
+    for (auto pos : positions) {
+        std::string fen{pos[0]};
+        inputLine.clear();
+        inputLine.str(fen);
+
+        position_.readFen(inputLine);
+        if (hasMoreInput()) {
+            log("error parsing bench fen: " + fen);
+            continue;
+        }
+
+        {
+            Output ob{this};
+            ob << "\n";
+            info_fen(ob);
+            ob << " ; " << pos[1];
+            ob << "\ngo " << goLimits;
+        }
+
+        newGame();
+
+        std::istringstream is{goLimits};
+        limits.go(is, position_.sideOf(White));
+
+        auto goStart = ::timeNow();
+        Node{position_, *this}.searchRoot();
+        totalBenchNodes += limits.getNodes();
+        bestmove();
+        totalBenchTime += elapsedSince(goStart);
+    }
+
+    Output ob{this};
+    ob << "\n" << totalBenchNodes << " nodes " << ::nps(totalBenchNodes, totalBenchTime) << " nps";
 }
 
 void Uci::refreshTtPv(Ply depth) const {

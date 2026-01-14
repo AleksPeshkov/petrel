@@ -278,6 +278,12 @@ private:
     // stream buffer for parsing current input line
     io::istringstream inputLine;
 
+#ifdef ENABLE_ASSERT_LOGGING
+    friend void assert_fail(const char*, const char*, unsigned, const char*);
+    std::string debugPosition;
+    std::string debugGo;
+#endif
+
     // output stream
     ostream& out;
     mutable std::mutex outMutex;
@@ -316,6 +322,7 @@ private:
     void ponderhit();
     void bestmove();
 
+    void bench();
     void debug();
     void goPerft();
     void info_perft_bestmove();
@@ -331,13 +338,15 @@ public:
     void processInput(istream&);
 
     // output to out stream and to log file
-    void output(const std::string&) const;
+    void output(std::string_view) const;
 
     // log messages to the logFile named by logFileName
-    void log(const std::string&) const;
+    void log(std::string_view) const;
 
     constexpr ChessVariant chessVariant() const { return position_.chessVariant(); }
     constexpr Color colorToMove(Ply ply = Ply{0}) const { return position_.colorToMove(ply); }
+
+    void bench(std::string& goLimits);
 
     void newGame() {
         tt.newGame();
