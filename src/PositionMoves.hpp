@@ -43,17 +43,20 @@ public:
     constexpr const MovesNumber& movesMade() const { return movesMade_; }
 
     // move is legal and not yet made
-    bool isLegalMove(Move move) const {
-        return move && isLegalMove(move.from(), move.to());
+    bool isPossibleMove(Pi pi, Square to) const { return moves_.has(pi, to); }
+
+    // move is legal and not yet made
+    bool isPossibleMove(Square from, Square to) const {
+        return MY.has(from) && isPossibleMove(MY.pieceAt(from), to);
     }
 
     // move is legal and not yet made
-    bool isLegalMove(Square from, Square to) const {
-        return MY.has(from) && moves_.has(MY.pieceAt(from), to);
+    bool isPossibleMove(HistoryMove move) const {
+        return move && isPossibleMove(move.from(), move.to()) && move.historyType() == MY.typeAt(move.from());
     }
 
-    // non null, non capture nor promotion move
-    bool isNonCapture(Move move) const;
+    // non capture nor promotion move
+    bool isNonCapture(Pi, Square) const;
 
     // attacked squares by not side to move pieces (op)
     constexpr const Bb& bbAttacked() const { return bbAttacked_; }
