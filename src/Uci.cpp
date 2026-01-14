@@ -41,6 +41,7 @@ Uci::Uci(ostream &o) :
     out{o},
     bestmove_(32, '\0')
 {
+    inputLine.clear();
     bestmove_.clear();
     ucinewgame();
 }
@@ -91,6 +92,7 @@ void Uci::processInput(istream& in) {
         else if (consume("uci"))       { uciok(); }
         else if (consume("debug"))     { debug(); }
         else if (consume("perft"))     { goPerft(); }
+        else if (consume("bench"))     { bench(); }
         else if (consume("quit"))      { stop(); break; }
         else if (consume("exit"))      { stop(); break; }
 
@@ -371,6 +373,72 @@ void Uci::goPerft() {
         NodePerft{position_, *this, depth}.visitRoot();
         info_perft_bestmove();
     } );
+}
+
+void Uci::bench() {
+    std::string goLimits;
+
+    inputLine >> std::ws;
+    std::getline(inputLine, goLimits);
+
+    bench(goLimits);
+}
+
+void Uci::bench(std::string& goLimits) {
+    if (goLimits.empty()) {
+#ifdef NDEBUG
+        goLimits = "depth 16 movetime 10000"; // default
+#else
+        goLimits = "depth 7 movetime 10000"; // default for slow build
+#endif
+    }
+
+    static std::string positions[][2] = {
+        {"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 25", "id kiwipete"},
+        {"1q1k4/2Rr4/8/2Q3K1/8/8/8/8 w - - 0 1", "bm g5h6; id zugzwang.002"},
+        {"1k2r2r/pbb2p2/2qn2p1/8/PP6/2P2N2/1Q2NPB1/R4RK1 b - -", "bm c6f3; id mate # 7 CCC-I No.10"},
+        {"6k1/p1rqbppp/1p2p3/nb1pP3/3P1NBP/PP4P1/5PN1/R2Q2K1 w - - 0 26", "bm f4e3; id petrel 20251231"},
+        {"2kr3r/Qbp1q1bp/1np3p1/5p2/2P1pP2/1PN3P1/PBK3BP/3RR3 w - - 0 21", "bm e1e4; id petrel 20251206"},
+        {"8/k7/3p4/p2P1p2/P2P1P2/8/8/K7 w - -", "bm a1b1; id Fine # 70"},
+        {"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", "id startpos"},
+    };
+
+    uciok();
+
+    node_count_t totalBenchNodes = 0;
+    TimeInterval totalBenchTime = 0ms;
+
+    for (auto pos : positions) {
+        inputLine.clear();
+        inputLine.str(pos[0]);
+        position_.readFen(inputLine);
+        if (hasMoreInput()) {
+            log("error parsing bench fen: " + pos[0]);
+            continue;
+        }
+
+        {
+            Output ob{this};
+            ob << "\n";
+            info_fen(ob);
+            ob << " ; " << pos[1];
+            ob << "\ngo " << goLimits;
+        }
+
+        newGame();
+
+        std::istringstream is{goLimits};
+        limits.go(is, position_.sideOf(White));
+
+        auto goStart = ::timeNow();
+        Node{position_, *this}.searchRoot();
+        totalBenchNodes += limits.getNodes();
+        bestmove();
+        totalBenchTime += elapsedSince(goStart);
+    }
+
+    Output ob{this};
+    ob << "\n" << totalBenchNodes << " nodes " << ::nps(totalBenchNodes, totalBenchTime) << " nps";
 }
 
 void Uci::refreshTtPv(Ply depth) const {
