@@ -539,7 +539,7 @@ void Uci::refreshTtPv(Ply depth) const {
     const UciMove* pv = pvMoves;
     for (UciMove move; (move = *pv++);) {
         auto o = tt.addr<TtSlot>(pos.zobrist());
-        *o = TtSlot{pos.zobrist(), move, score, ply, ExactScore, depth, false};
+        *o = TtSlot{pos.zobrist(), score, ply, ExactScore, depth, move.from(), move.to(), false};
         ++tt.writes;
 
         //we cannot use makeZobrist() because of en passant legality validation

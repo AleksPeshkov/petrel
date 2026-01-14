@@ -5,9 +5,9 @@
 #include <fstream>
 #include <mutex>
 #include "chrono.hpp"
+#include "history.hpp"
 #include "io.hpp"
 #include "Index.hpp"
-#include "Repetitions.hpp"
 #include "Thread.hpp"
 #include "Tt.hpp"
 #include "UciPosition.hpp"
@@ -212,63 +212,20 @@ public:
     }
 };
 
-class HistoryMoves {
-    using Index = ::Index<2>;
-    using _t = Side::arrayOf< PieceType::arrayOf<Square::arrayOf< Index::arrayOf<Move> >> >;
-    _t v;
-public:
-    void clear() { std::memset(&v, 0, sizeof(v)); }
-    const Move& get1 (Color c, PieceType ty, Square sq) const { return v[c][ty][sq][0]; }
-    const Move& get2 (Color c, PieceType ty, Square sq) const { return v[c][ty][sq][1]; }
-    void set(Color c, PieceType ty, Square sq, Move move) {
-        if (v[c][ty][sq][0] != move) {
-            v[c][ty][sq][1] = v[c][ty][sq][0];
-            v[c][ty][sq][0] = move;
-        }
-    }
-};
-
-// triangular array
-class CACHE_ALIGN PvMoves {
-    static constexpr auto triangularArraySize = (Ply::Last+1) * (Ply::Last+2) / 2;
-public:
-    using Index = ::Index<triangularArraySize>;
-    Index::arrayOf<UciMove> pv;
-
-public:
-    PvMoves () { clear(); }
-
-    void clear() { std::memset(&pv, 0, sizeof(pv)); }
-
-    void clearPly(Index i) { pv[i] = UciMove{}; }
-
-    Index set(Index parent, UciMove move, Index child) {
-        pv[parent++] = move;
-        assert (parent <= child);
-        while ((pv[parent++] = pv[child++]));
-        pv[parent] = UciMove{};
-        return parent; // new child index
-    }
-
-    operator const UciMove* () const { return &pv[0]; }
-
-    friend ostream& operator << (ostream& out, const PvMoves& pvMoves) {
-        return out << static_cast<const UciMove*>(pvMoves);
-    }
-};
-
 /// Handling input and output of UCI (Universal Chess Interface)
 class Uci {
 public:
     UciPosition position_; // result of parsing 'position' command
     UciSearchLimits limits; // result of parsing 'go' command
-
-    mutable Tt tt;
     Repetitions repetitions;
+
+    mutable HistoryMoves<4> counterMove;
+    mutable HistoryMoves<4> followMove;
+
     mutable PvMoves pvMoves;
     mutable Score pvScore{NoScore};
-    mutable HistoryMoves counterMove;
-    mutable HistoryMoves followMove;
+
+    mutable Tt tt; // main transposition table
 
 private:
     Thread mainSearchThread;
