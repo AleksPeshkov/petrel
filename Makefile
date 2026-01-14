@@ -76,7 +76,7 @@ DEPS = $(patsubst %.o, %.d, $(OBJECTS))
 
 MAKE_TARGET = make --jobs --warn-undefined-variables --no-print-directory $(TARGET)
 
-.PHONY: default release test debug clean run check _clear_console
+.PHONY: default release test debug clean run bench check unit _clear_console
 
 default: _clear_console $(BUILD_DIR)
 	$(MAKE_TARGET)
@@ -104,6 +104,10 @@ clean:
 run: default
 	clear
 	$(TARGET)
+
+bench: default
+	clear
+	$(TARGET) bench
 
 check: test _clear_console
 	$(EXPECT) $(TARGET) $(TEST_DIR)/test.rc
