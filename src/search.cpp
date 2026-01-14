@@ -177,7 +177,8 @@ ReturnStatus Node::search() {
     }
     assert (!currentMove);
 
-    eval = evaluate();
+    // skip costly evaluate() while in check, as it should not be used
+    eval = !inCheck() ? evaluate() : Score::checkmated(ply);
 
     if (ply == MaxPly) {
         // no room to search deeper

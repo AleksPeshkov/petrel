@@ -34,9 +34,10 @@ struct Score {
     _t v;
 
     constexpr bool isOk() const { return MinusInfinity <= v && v <= PlusInfinity; }
-    constexpr bool isMate() const { assertOk(); return !(MinEval <= v && v <= MaxEval); }
+    constexpr bool isEval() const { assertOk(); return MinEval <= v && v <= MaxEval; }
+    constexpr bool isMate() const { assertOk(); return !isEval(); }
     constexpr void assertOk() const { assert (isOk()); }
-    constexpr void assertEval() const { assert (!isMate()); }
+    constexpr void assertEval() const { assert (isEval()); }
     constexpr void assertMate() const { assert (isMate()); }
 
     constexpr Score () : v{NoScore} {} // not isOk()
