@@ -47,6 +47,14 @@ Abbreviations in the code:
 * `Bb bb`: BitBoard – a well-known 64-bit bitset representing squares on the chessboard.
 * `PiBbMatrix`: matrix of Pi × Bb (128 bytes), used for storing and updating piece attack information and generating moves from attacks.
 
+Move Encoding
+-------------
+
+* Internal minimal move representation tied to current Node: `{Pi, Square to}`
+* Transposition friendly minimal encoding: `{Square from, Square to}`
+* `class HistoryMove`: extra field to distinguish minimal encoded moves: {PieceType, Square from, Square to}
+* `classUciMove`: encoding to convert internal move to UCI format independend from Position it is possible to make
+
 Universal Chess Interface (UCI) Extensions
 ------------------------------------------
 Engine accepts command option `--file` (`-f`) to pass UCI initial commands from a file.
@@ -57,5 +65,3 @@ Engine accepts command option `--file` (`-f`) to pass UCI initial commands from 
 * `setoption` can be abbreviated to short forms like `set hash 1g`.
   `setoption Hash` accepts sizes in bytes `b`, kibibytes `k`, mebibytes `m`, UCI default), gibibytes `g`.
 * `perft N` performs PERFT to depth `N` using bulk counting and the transposition hash table.
-
-(c) 2025, Aleks Peshkov

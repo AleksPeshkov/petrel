@@ -28,7 +28,6 @@ using u64_t = std::uint64_t;
 #endif
 
 #define CACHE_ALIGN alignas(64)
-#define PACKED __attribute__((packed))
 
 template <typename T>
 constexpr typename std::enable_if<std::is_integral<T>::value, T>::type
