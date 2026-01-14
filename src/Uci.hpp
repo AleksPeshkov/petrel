@@ -150,6 +150,8 @@ private:
     bool isDebugOn = true;
 #endif
 
+    std::string evalFileName; // use embedded by default
+
     // try to consume the given token from the inputLine
     bool consume(io::czstring token) { return io::consume(inputLine, token); }
 
@@ -179,6 +181,9 @@ private:
     void info_readyok() const;
     void info_bestmove() const;
     void info_perft_bestmove() const;
+
+    void loadEvalFile(const std::string&);
+    void setEmbeddedEval();
 
 public:
     Uci (ostream&);
