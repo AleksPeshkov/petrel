@@ -327,6 +327,7 @@ private:
     void ponderhit();
     void bestmove();
 
+    void bench();
     void debug();
     void goPerft();
     void info_perft_bestmove();
@@ -355,6 +356,8 @@ public:
 
     constexpr ChessVariant chessVariant() const { return position_.chessVariant(); }
     constexpr Color colorToMove(Ply ply = Ply{0}) const { return position_.colorToMove(ply); }
+
+    void bench(std::string& goLimits);
 
     void newGame() {
         tt.newGame();
