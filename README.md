@@ -2,9 +2,9 @@
 
 Petrel is a conventional alpha-beta search engine, but its implementation details set it apart from others.
 
-Petrel 2.2 is rated 2775 Elo on the [Ultimate Bullet Classical](https://https://e4e6.com/) list.
+Petrel 3.2 is rated 3247 Elo on the [CCRL 40/15](https://computerchess.org.uk/ccrl/4040/cgi/engine_details.cgi?eng=Petrel%203.2%2064-bit) and 3334 on the [CCRL Blitz](https://computerchess.org.uk/ccrl/404/cgi/engine_details.cgi?eng=Petrel%203.2%2064-bit) lists.
 
-Petrel 2.1 is rated around 2600 Elo on the [CCRL Blitz](https://computerchess.org.uk/ccrl/404/cgi/engine_details.cgi?print=Details&each_game=1&eng=Petrel%202.1%2064-bit#Petrel_2_1_64-bit) and the [40/15](https://computerchess.org.uk/ccrl/4040/cgi/engine_details.cgi?print=Details&each_game=0&eng=Petrel%202.1%2064-bit#Petrel_2_1_64-bit) lists.
+Petrel 2.2 is rated 2775 Elo on the [Ultimate Bullet Classical](https://e4e6.com/) list.
 
 ## Features
 
@@ -19,12 +19,14 @@ Petrel 2.1 is rated around 2600 Elo on the [CCRL Blitz](https://computerchess.or
 ## Supported UCI options
 
 ```
+option name EvalFile type string default <empty>
 option name Debug Log File type string default <empty>
 option name Hash type spin min 2 max 16384 default 2
 option name Move Overhead type spin min 0 max 10000 default 0
 option name Ponder type check default false
 option name UCI_Chess960 type check default false
 ```
+If EvalFile option is `<empty>`, or file not found, or has invalid size: default embedded NNUE is used.
 
 Only parsing errors and a sparse search warnings will be written into `Debug Log File` unless `debug on` is set
 then when all engine input and output will be logged.
@@ -46,7 +48,9 @@ You can provide a configuration file. This file should contain UCI commands and 
 
 Very generic and not a point of author's interest.
 
-* Simple [**PeSTO** evaluation](https://www.chessprogramming.org/PeSTO%27s_Evaluation_Function)
+* Versions prior v3.0 use simple [**PeSTO** evaluation](https://www.chessprogramming.org/PeSTO%27s_Evaluation_Function)
+* Versions v3.0 and up use common bullet perspective [NNUE architecture](https://github.com/jw1912/bullet/blob/main/docs/1-basics.md):
+`768 -> (2*N) -> 1 (N=128)`
 
 ## Search
 
@@ -81,6 +85,7 @@ Relatively sophisticated scheme:
 ## Credits
 
 * Jim Ablett for [Windows, Linux and Android PGO builds](https://jim-ablett.kesug.com/) and code improvements
+* Linmiao Xu (Linrock), guru of NNUE training for cooked data and [description what he did](https://www.kaggle.com/competitions/fide-google-efficiency-chess-ai-challenge/writeups/linrock-my-solution-cfish-nnue-data-1st)
 
 ---
 

@@ -8,8 +8,19 @@
 #include "PiMask.hpp"
 #include "Uci.hpp"
 
+#define INCBIN_PREFIX
+#include "incbin.h"
+
+// global const default nnue value
+INCBIN(EmbeddedNnue, "net/petrel128.bin");
+
 // global almost constant instance
 Nnue nnue;
+
+void Nnue::setEmbeddedEval() {
+    assert (EmbeddedNnueSize == sizeof(Nnue));
+    std::memcpy(this, EmbeddedNnueData, sizeof(Nnue));
+}
 
 /**
 * Startup constant initialization
@@ -31,6 +42,11 @@ void io::log(const std::string& message) {
 }
 
 int main(int argc, const char* argv[]) {
+    if (EmbeddedNnueSize != sizeof(Nnue)) {
+        std::cerr << "petrel: fatal error: embedded NNUE data file has invalid size, expected " << sizeof(Nnue) << " bytes, \n";
+        return ENOEXEC;
+    }
+
     std::string initFileName;
     bool runBench = false;
     std::string benchLimits;

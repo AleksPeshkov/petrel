@@ -122,6 +122,8 @@ $(TARGET): $(OBJECTS)
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp
 	$(CXX) -c -o $@ $< -MMD -MP $(CXXFLAGS)
 
+$(BUILD_DIR)/main.o: net/petrel128.bin
+
 $(BUILD_DIR): Makefile
 	@$(RM) $@
 	@$(MKDIR) $@

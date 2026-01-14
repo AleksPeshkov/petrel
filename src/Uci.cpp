@@ -100,7 +100,7 @@ Uci::Uci(ostream &o) :
 {
     inputLine.clear();
     bestmove_.clear();
-    ucinewgame();
+    setEmbeddedEval();
 }
 
 void Uci::output(const std::string& message) const {
@@ -136,7 +136,7 @@ void Uci::processInput(istream& in) {
     while (std::getline(in, currentLine)) {
         if (isDebugOn) { log('>' + currentLine); }
 
-        inputLine.clear(); //clear error state from the previous line
+        inputLine.clear(); //clear previous errors
         inputLine.str(currentLine);
         inputLine >> std::ws;
 
@@ -169,6 +169,7 @@ void Uci::uciok() const {
     Output ob{this};
     ob << "id name " << io::app_version << '\n';
     ob << "id author Aleks Peshkov\n";
+    ob << "option name EvalFile type string default " << (evalFileName.empty() ? "<empty>" : evalFileName) << '\n';
     ob << "option name Debug Log File type string default " << (logFileName.empty() ? "<empty>" : logFileName) << '\n';
     ob << "option name Hash type spin"
        << " min "     << ::mebi(tt.minSize())
@@ -183,6 +184,22 @@ void Uci::uciok() const {
 
 void Uci::setoption() {
     consume("name");
+
+    if (consume("EvalFile")) {
+        consume("value");
+
+        inputLine >> std::ws;
+        std::string newEvalFileName;
+        std::getline(inputLine, newEvalFileName);
+
+        if (newEvalFileName == "<empty>") {
+            setEmbeddedEval();
+            return;
+        }
+
+        loadEvalFile(newEvalFileName);
+        return;
+    }
 
     if (consume("Debug Log File")) {
         consume("value");
@@ -217,7 +234,6 @@ void Uci::setoption() {
         setHash();
         return;
     }
-
 
     if (consume("Move Overhead")) {
         consume("value");
@@ -260,6 +276,46 @@ void Uci::debug() {
     if (consume("off")) { isDebugOn = false; log("#debug off"); return; }
 
     io::fail_rewind(inputLine);
+    return;
+}
+
+void Uci::setEmbeddedEval() {
+    nnue.setEmbeddedEval();
+    evalFileName.clear();
+    ucinewgame();
+}
+
+void Uci::loadEvalFile(const std::string& fileName) {
+    std::ifstream file(fileName, std::ios::binary);
+
+    if (!file.is_open()) {
+        log("Error opening EvalFile " + fileName);
+        io::fail_rewind(inputLine);
+        return;
+    }
+
+    file.seekg(0, std::ios::end);
+    if (file.tellg() != sizeof(nnue)) {
+        log("EvalFile size mismatch, expected " + std::to_string(sizeof(nnue)) + ", file size " + std::to_string(file.tellg()));
+        io::fail_rewind(inputLine);
+        return;
+    }
+
+    file.seekg(std::ios::beg);
+    file.read(reinterpret_cast<char*>(&nnue), sizeof(nnue));
+    if (!file) {
+        file.close();
+        setEmbeddedEval();
+
+        log("Error reading EvalFile " + fileName);
+        io::fail_rewind(inputLine);
+        return;
+    }
+
+    // everything is ok
+    file.close();
+    evalFileName = std::move(fileName);
+    ucinewgame();
     return;
 }
 
