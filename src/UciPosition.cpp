@@ -1,5 +1,5 @@
 #include <set>
-#include "Repetitions.hpp"
+#include "history.hpp"
 #include "UciPosition.hpp"
 
 namespace {
@@ -304,7 +304,7 @@ void UciPosition::limitMoves(istream& in) {
 
         Square from; Square to;
 
-        if (!readMove(in, from, to) || !isLegalMove(from, to)) {
+        if (!readMove(in, from, to) || !isPossibleMove(from, to)) {
             io::error("invalid move");
             io::fail_pos(in, before);
             return;
@@ -334,7 +334,7 @@ void UciPosition::playMoves(istream& in, Repetitions& repetitions) {
 
         Square from; Square to;
 
-        if (!readMove(in, from, to) || !isLegalMove(from, to)) {
+        if (!readMove(in, from, to) || !isPossibleMove(from, to)) {
             io::fail_pos(in, before);
             return;
         }
