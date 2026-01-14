@@ -325,38 +325,55 @@ enum class ReturnStatus {
     BetaCutoff, // prune current node search
 };
 
-/**
- * Internal move is 12 bits long (packed 'from' and 'to' squares) and linked to the position from it was made
- *
- * Castling encoded as the castling rook moves over own king source square.
- * Pawn promotion piece type encoded in place of destination square rank.
- * En passant capture encoded as the pawn moves over captured pawn square.
- * Null move is encoded as 0 {A8A8}
- **/
-class Move {
-protected:
-    Square::_t from_ = static_cast<Square::_t>(0);
-    Square::_t to_ = static_cast<Square::_t>(0);
+
+enum history_type_t { HistoryRBN, HistoryQueen, HistoryPawn, HistoryKing };
+
+using HistoryType = Index<4, history_type_t>;
+constexpr HistoryType::_t historyType(PieceType::_t ty) {
+    constexpr HistoryType::_t fromPieceType[] = { HistoryQueen, HistoryRBN, HistoryRBN, HistoryRBN, HistoryPawn, HistoryKing };
+    return fromPieceType[ty];
+}
+
+constexpr bool operator == (PieceType ty, HistoryType ht) { return ::historyType(ty) == ht; }
+
+// HistoryMove { Square to; Square from; HistoryType } (14 bits)
+// Castling encoded as the castling rook moves over own king source square.
+// Pawn promotion piece type encoded in place of destination square rank.
+// En passant capture encoded as the pawn moves over captured pawn square.
+// Null move is encoded as 0 {A8A8}
+class HistoryMove {
+    enum Shift { To = 0, From = To + 6, Type = From + 6 };
+
+    using _t = u16_t;
+    _t v;
 
 public:
+    static constexpr int Size = HistoryType::Size * Square::Size * Square::Size;
+    using Index = ::Index<Size>;
+
     // null move
-    constexpr Move () = default;
+    constexpr HistoryMove() : v{0} {}
 
-    constexpr Move (Square::_t f, Square::_t t) : from_{f}, to_{t} { static_assert (sizeof(Move) == sizeof(int16_t)); }
+    constexpr HistoryMove (PieceType ty, Square from, Square to)
+        : v {static_cast<_t>((::historyType(ty) << Shift::Type) + (from << Shift::From) + (to << Shift::To))}
+    {}
 
-    // check if move is not null
-    constexpr operator bool() const { return !(from_ == 0 && to_ == 0); }
+    // for using as array index or null move check
+    constexpr operator const _t& () const { return v; }
+
+    // moved piece type
+    constexpr HistoryType historyType() const { return HistoryType{static_cast<HistoryType::_t>(v >> Shift::Type)}; }
 
     // source square the piece moved from
-    constexpr Square from() const { return Square{from_}; }
+    constexpr Square from() const { return Square{static_cast<Square::_t>(v >> Shift::From & Square::Mask)}; }
 
     // destination square the piece moved to
-    constexpr Square to() const { return Square{to_}; }
+    constexpr Square to() const { return Square{static_cast<Square::_t>(v >> Shift::To & Square::Mask)}; }
 
-    friend constexpr bool operator == (Move a, Move b) { return a.from_ == b.from_ && a.to_ == b.to_; }
+    friend constexpr bool operator == (HistoryMove a, HistoryMove b) { return a.v == b.v; }
 };
 
-static_assert (sizeof(Move) == sizeof(u16_t));
+static_assert (sizeof(HistoryMove) == sizeof(u16_t));
 
 // Position independent move is 13 bits with the special move type flag to mark either castling, promotion or en passant move
 // Any move's squares coordinates are relative to its side. Black side's move should flip squares before printing.
@@ -376,7 +393,6 @@ public:
     {}
 
     constexpr operator bool () const { return v; }
-    constexpr operator Move () const { return Move{from(), to()}; }
 
     constexpr bool isSpecial() const { return v >> Shift::Special & 1; }
 

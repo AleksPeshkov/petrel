@@ -43,16 +43,19 @@ public:
     constexpr const MovesNumber& movesMade() const { return movesMade_; }
 
     // check if the given move is legal and not yet made
-    bool isLegalMove(Move move) const {
-        return move && isLegalMove(move.from(), move.to());
+    bool isPossibleMove(Pi pi, Square to) const { return moves_.has(pi, to); }
+
+    // check if the given move is legal and not yet made
+    bool isPossibleMove(Square from, Square to) const {
+        return MY.has(from) && isPossibleMove(MY.pieceAt(from), to);
     }
 
     // check if the given move is legal and not yet made
-    bool isLegalMove(Square from, Square to) const {
-        return MY.has(from) && moves_.has(MY.pieceAt(from), to);
+    bool isPossibleMove(HistoryMove move) const {
+        return move && isPossibleMove(move.from(), move.to()) && move.historyType() == MY.typeAt(move.from());
     }
 
-    bool isNonCapture(Move move) const;
+    bool isNonCapture(Pi, Square) const;
 
     // bitboard of squares attacked by any opponent (not side to move) piece (set during moves generation)
     constexpr const Bb& bbAttacked() const { return bbAttacked_; }
@@ -61,7 +64,7 @@ public:
     constexpr const bool& inCheck() const { return inCheck_; }
 
     // bitboard of all moves of the given piece not yet made
-    constexpr Bb movesOf(Pi pi) const { return moves_[pi]; }
+    constexpr Bb bbMovesOf(Pi pi) const { return moves_[pi]; }
 
     // pieces that have a not yet made legal move to the given square
     PiMask canMoveTo(Square sq) const { return moves_[sq]; }
