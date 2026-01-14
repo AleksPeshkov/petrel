@@ -56,6 +56,8 @@ private:
     bool isDebugOn = true;
 #endif
 
+    std::string evalFileName; // use embedded by default
+
     // try to consume the given token from the inputLine
     bool consume(io::czstring token) { return io::consume(inputLine, token); }
 
@@ -74,6 +76,8 @@ private:
 
     void setHash();
     void setdebug();
+    void loadEvalFile(const std::string&);
+    void setEmbeddedEval();
 
     void goPerft();
     void bench();

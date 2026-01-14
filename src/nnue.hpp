@@ -86,6 +86,9 @@ struct CACHE_ALIGN Nnue {
         i32_t output = sum[0] + sum[1] + sum[2] + sum[3] + sum[4] + sum[5] + sum[6] + sum[7];
         return (output / QA + l1b) * SCALE / (QA * QB);
     }
+
+    // load from embedded binary data, defined in main.cpp
+    void setEmbeddedEval();
 };
 
 extern Nnue nnue;
