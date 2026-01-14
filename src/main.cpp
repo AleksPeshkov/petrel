@@ -44,24 +44,51 @@ void assert_fail(const char *assertion, const char *file, unsigned int line, con
 #endif
 
 int main(int argc, const char* argv[]) {
-    if (argc > 1) {
-        std::string option = argv[1];
+    std::string initFileName;
+    bool runBench = false;
+    std::string benchLimits;
+
+    for (int i = 1; i < argc; ++i) {
+        std::string_view option{argv[i]};
 
         if (option == "--version" || option == "-v") {
-            std::cout
-                << io::app_version << '\n'
-                << "(c) Aleks Peshkov (aleks.peshkov@gmail.com)\n"
-            ;
+            std::cout << io::app_version << '\n';
             return EXIT_SUCCESS;
         }
 
         if (option == "--help" || option == "-h") {
             std::cout
-                << "    Petrel chess engine. The UCI protocol compatible.\n\n"
-                << "      -h, --help        display this help\n"
-                << "      -v, --version     display version information\n"
+                << "    Petrel: UCI chess engine\n"
+                << "\nOptions:\n"
+                << "    -f [FILE], --file [FILE]    Read and execute initial UCI commands from the specified file.\n"
+                << "    -h, --help                  Show this help message and exit.\n"
+                << "    -v, --version               Display version information and exit.\n"
+                << "\nOptional command:\n"
+                << "    bench [GO LIMITS]           Search a set of test positions, report total nodes and nps, and exit.\n"
+                << "\n";
             ;
             return EXIT_SUCCESS;
+        }
+
+        if (option == "--file" || option == "-f") {
+            if (++i >= argc) {
+                std::cerr << "petrel: option '" << option << "' requires a filename\n";
+                return EXIT_FAILURE;
+            }
+
+            initFileName = argv[i];
+            continue;
+        }
+
+        if (option == "bench" || option == "--bench" || option == "-b") {
+            // collect all remaining arguments
+            while (++i < argc) {
+                benchLimits += argv[i];
+                benchLimits += " ";
+            }
+
+            runBench = true;
+            continue;
         }
 
         std::cerr << "petrel: unknown option\n";
@@ -72,6 +99,21 @@ int main(int argc, const char* argv[]) {
     std::ios_base::sync_with_stdio(false);
     std::cin.tie(nullptr);
     std::cerr.tie(nullptr);
+
+    if (!initFileName.empty()) {
+        std::ifstream initFile{initFileName};
+        if (!initFile) {
+            std::cerr << "petrel: error opening config file: " << initFileName << '\n';
+            return EXIT_FAILURE;
+        }
+
+        The_uci.processInput(initFile);
+    }
+
+    if (runBench) {
+        The_uci.bench(benchLimits);
+        return EXIT_SUCCESS;
+    }
 
     The_uci.processInput(std::cin);
     return EXIT_SUCCESS;
