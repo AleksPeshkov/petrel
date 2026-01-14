@@ -101,6 +101,9 @@ struct CACHE_ALIGN Nnue {
         return (output / QA + outputBias) * SCALE / (QA * QB);
     }
 
+    // load from embedded binary data, defined in main.cpp
+    void setEmbeddedEval();
+
 };
 
 extern Nnue nnue;

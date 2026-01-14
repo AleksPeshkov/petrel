@@ -116,7 +116,7 @@ Uci::Uci(ostream &o) :
 {
     inputLine.clear();
     bestmove_.clear();
-    ucinewgame();
+    setEmbeddedEval();
 }
 
 void Uci::output(const std::string& message) const {
@@ -152,7 +152,7 @@ void Uci::processInput(istream& in) {
     while (std::getline(in, currentLine)) {
         if (isDebugOn) { log('>' + currentLine); }
 
-        inputLine.clear(); //clear error state from the previous line
+        inputLine.clear(); //clear previous errors
         inputLine.str(currentLine);
         inputLine >> std::ws;
 
@@ -185,6 +185,7 @@ void Uci::uciok() const {
     Output ob{this};
     ob << "id name " << io::app_version << '\n';
     ob << "id author Aleks Peshkov\n";
+    ob << "option name EvalFile type string default " << (evalFileName.empty() ? "<empty>" : evalFileName) << '\n';
     ob << "option name Debug Log File type string default " << (logFileName.empty() ? "<empty>" : logFileName) << '\n';
     ob << "option name Hash type spin"
        << " min "     << ::mebi(tt.minSize())
@@ -199,6 +200,24 @@ void Uci::uciok() const {
 
 void Uci::setoption() {
     consume("name");
+
+    if (consume("EvalFile")) {
+        consume("value");
+
+        inputLine >> std::ws;
+        std::string newFileName;
+        std::getline(inputLine, newFileName);
+        ::trimTrailingWhitespace(newFileName);
+
+        if (newFileName.empty() || newFileName == "<empty>") {
+            log("#EvalFile set <empty>");
+            setEmbeddedEval();
+            return;
+        }
+
+        loadEvalFile(newFileName);
+        return;
+    }
 
     if (consume("Debug Log File")) {
         consume("value");
@@ -241,7 +260,6 @@ void Uci::setoption() {
         return;
     }
 
-
     if (consume("Move Overhead")) {
         consume("value");
 
@@ -283,6 +301,50 @@ void Uci::debug() {
     if (consume("off")) { isDebugOn = false; log("#debug off"); return; }
 
     io::fail_rewind(inputLine);
+    return;
+}
+
+void Uci::setEmbeddedEval() {
+    nnue.setEmbeddedEval();
+    evalFileName.clear();
+    ucinewgame();
+}
+
+void Uci::loadEvalFile(const std::string& fileName) {
+    std::ifstream file(fileName, std::ios::binary);
+
+    if (!file.is_open()) {
+        log("Error opening EvalFile " + fileName);
+        return;
+    }
+
+    file.seekg(0, std::ios::end);
+    auto fileSize = file.tellg();
+    file.seekg(std::ios::beg);
+
+    if (fileSize == std::streamsize(-1)) {
+        log("Error reading EvalFile " + fileName + ": file size is unknown");
+        return;
+    }
+
+    if (static_cast<size_t>(fileSize) != sizeof(nnue)) {
+        log("EvalFile size mismatch, expected " + std::to_string(sizeof(nnue)) + ", file size " + std::to_string(file.tellg()));
+        return;
+    }
+
+    std::vector<char> buffer(sizeof(nnue));
+    file.read(buffer.data(), sizeof(nnue));
+    if (!file) {
+        log("Error reading EvalFile " + fileName);
+        return;
+    }
+
+    // everything is ok
+    std::memcpy(&nnue, buffer.data(), sizeof(nnue));
+    evalFileName = std::move(fileName);
+
+    // reset accumulator bias state
+    ucinewgame();
     return;
 }
 
