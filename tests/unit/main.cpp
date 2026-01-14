@@ -1,9 +1,11 @@
 #include "TestHyperbola.hpp"
+#include "TestHistoryMoves.hpp"
 #include "TestRepetitions.hpp"
 
 int main() {
     try {
         TestHyperbola::test();
+        TestHistoryMoves::test();
         TestRepetitions::test();
 
         std::cerr << "✅ All tests passed!\n";

@@ -5,6 +5,7 @@
 #include "PositionMoves.hpp"
 
 class Uci;
+class Repetitions;
 
 class UciPosition : public PositionMoves {
     int fullMoveNumber = 1; // number of full moves from the beginning of the game

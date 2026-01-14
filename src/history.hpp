@@ -1,8 +1,107 @@
-#ifndef REPETITIONS_HPP
-#define REPETITIONS_HPP
+#ifndef HISTORY_HPP
+#define HISTORY_HPP
 
 #include "Index.hpp"
 #include "Zobrist.hpp"
+
+template<int _Size>
+class CACHE_ALIGN HistoryMoves {
+public:
+    static constexpr int Size = _Size;
+    using Index = ::Index<Size>;
+
+private:
+    using Slot = Index:: template arrayOf<HistoryMove>;
+
+    using _t =
+        Color::arrayOf<
+            HistoryType::arrayOf<
+                Square::arrayOf<
+                    Slot
+                >
+            >
+        >
+    ;
+
+    _t v;
+
+public:
+    void clear() {
+        std::memset(&v, 0, sizeof(v)); //TRICK: Move{} == int16_t{0}
+    }
+
+    constexpr const HistoryMove& get(int i, Color color, HistoryMove slot) const {
+        return v[color][slot.historyType()][slot.to()][Index{i}];
+    }
+
+    constexpr void set(Color color, HistoryMove slot, HistoryMove historyMove) {
+        insert_unique(v[color][slot.historyType()][slot.to()], historyMove);
+    }
+};
+
+/**
+ * Inserts or moves `value` to position `Pos` in the array, preserving uniqueness.
+ * - If `value` is already present in [0, Pos): no action (already prioritized).
+ * - Else if `value` is found at i >= Pos: moves it to position `Pos`.
+ * - Otherwise: inserts at `Pos`, shifting [Pos, end-1] right (last element dropped).
+ *
+ * Useful for history heuristics where earlier positions have higher priority.
+ *
+ * @tparam Pos Target position (should be < Size)
+ * @tparam T Element type
+ * @tparam Size Array size
+ * @param arr Array to update
+ * @param value Value to insert or move
+ */
+template <size_t Pos = 0, typename T, size_t Size>
+void insert_unique(std::array<T, Size>& arr, const T& value) {
+    static_assert(Pos < Size);
+
+    auto begin = arr.begin();
+    auto pos = begin + Pos;
+    auto end = arr.end();
+
+    // find if existing before Pos
+    if (std::find(arr.begin(), pos, value) != pos) {
+        return; // already present → do nothing
+    }
+
+    // find if existing after Pos
+    auto found = std::find(pos, end, value);
+
+    if (found != end) {
+        std::rotate(pos, found, found + 1); // moves *found to *pos
+    } else {
+        // No match: shift all down, insert at *pos
+        std::copy_backward(pos, end - 1, end);
+        *pos = value;
+    }
+}
+
+// triangular array
+class CACHE_ALIGN PvMoves {
+    static constexpr auto triangularArraySize = (Ply::Last+1) * (Ply::Last+2) / 2;
+public:
+    using Index = ::Index<triangularArraySize>;
+    Index::arrayOf<UciMove> pv;
+
+public:
+    PvMoves () { clear(); }
+
+    void clear() { std::memset(&pv, 0, sizeof(pv)); }
+
+    void clearPly(Index i) { pv[i] = UciMove{}; }
+
+    Index set(Index parent, UciMove move, Index child) {
+        pv[parent++] = move;
+        assert (parent <= child);
+        while ((pv[parent++] = pv[child++]));
+        pv[parent] = UciMove{};
+        return parent; // new child index
+    }
+
+    operator const UciMove* () const { return &pv[0]; }
+};
 
 // https://www.talkchess.com/forum/viewtopic.php?p=554664#p554664
 class RepetitionHash {
