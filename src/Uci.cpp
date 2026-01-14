@@ -122,6 +122,7 @@ void Uci::processInput(istream& in) {
         else if (consume("uci"))       { uciok(); }
         else if (consume("debug"))     { debug(); }
         else if (consume("perft"))     { goPerft(); }
+        else if (consume("bench"))     { bench(); }
         else if (consume("quit"))      { stop(); break; }
         else if (consume("exit"))      { stop(); break; }
 
@@ -412,6 +413,75 @@ void Uci::goPerft() {
         NodePerft{position_, *this, depth}.visitRoot();
         info_perft_bestmove();
     } );
+}
+
+void Uci::bench() {
+    std::string goLimits;
+
+    inputLine >> std::ws;
+    std::getline(inputLine, goLimits);
+
+    bench(goLimits);
+}
+
+void Uci::bench(std::string& goLimits) {
+    if (goLimits.empty()) {
+#ifdef NDEBUG
+        goLimits = "depth 18 nodes 50000000"; // default
+#else
+        goLimits = "depth 8 nodes 100000"; // default for slow build
+#endif
+    }
+
+    std::istringstream is{goLimits};
+
+    static std::string_view positions[][2] = {
+        {"1B1Q2K1/q1p4P/4P3/3Pk1p1/1r1NrR1b/4pn1P/1pRp2n1/1B2N2b w - -", "bm c2c7; id mate#2 talkchess.com/viewtopic.php?p=190985"},
+        {"3R1R2/K3k3/1p1nPb2/pN2P2N/nP1ppp2/4P3/6P1/4Qq1r w - -", "bm e1e2; id mate#5 talkchess.com/viewtopic.php?p=904264"}, // depth 13
+        {"8/1Pp5/nP5K/p7/8/8/PR6/2r4k w - -", "bm b7b8n id Dann Corbit aleks.underpromotion.09"},
+        {"1k2b3/4bpp1/p2pp1P1/1p3P2/2q1P3/4B3/PPPQN2r/1K1R4 w - -", "bm f5f6 id Dann Corbit aleks.pawn-race.01"},
+        {"2b3r1/6pp/1kn2p2/7N/ppp1PN2/5P2/1PP2KPP/R7 b - - 1 28", "bm b6a5 talkchess.com/forum/viewtopic.php?t=85672"},
+        {"2kr3r/Qbp1q1bp/1np3p1/5p2/2P1pP2/1PN3P1/PBK3BP/3RR3 w - - 0 21", "bm e1e4; id petrel 20251206"},
+        {"6k1/p1rqbppp/1p2p3/nb1pP3/3P1NBP/PP4P1/5PN1/R2Q2K1 w - - 0 26", "bm f4e6; id petrel 20251231"},
+        {"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", "id startpos"},
+    };
+
+    uciok();
+
+    node_count_t benchNodes = 0;
+    auto benchStart = ::timeNow();
+
+    for (auto pos : positions) {
+        std::string fen{pos[0]};
+        inputLine.clear();
+        inputLine.str(fen);
+
+        position_.readFen(inputLine);
+        if (hasMoreInput()) {
+            error("failed parsing bench fen: " + fen);
+            continue;
+        }
+
+        {
+            Output ob{this};
+            ob << "\n"; info_fen(ob); ob << " ; " << pos[1];
+            ob << "\ngo " << goLimits;
+        }
+
+        is.clear();
+        is.seekg(0);
+        newGame();
+        newSearch();
+
+        limits.go(is, position_.sideOf(White));
+
+        Node{position_, *this}.searchRoot();
+        benchNodes += limits.getNodes();
+        bestmove();
+    }
+
+    Output ob{this};
+    ob << "\n" << benchNodes << " nodes " << ::nps(benchNodes, elapsedSince(benchStart)) << " nps";
 }
 
 void Uci::refreshTtPv(Ply depth) const {
