@@ -197,14 +197,12 @@ void PositionMoves::makeMoveNoZobrist(const PositionMoves* parent, Square from, 
     generateMoves();
 }
 
-bool PositionMoves::isNonCapture(Move move) const {
-    assert (move);
-
+bool PositionMoves::isNonCapture(Pi pi, Square to) const {
     // any promotion move, with or without capture (including underpromotion)
-    if (MY.isPromotable(MY.pieceAt(move.from()))) { return false; }
+    if (MY.isPromotable(pi)) { return false; }
 
-    //TRICK: can trigger false positive in case of underpromotion move
-    if (OP.bbSide().has(~move.to())) { return false; }
+    //TRICK: can trigger false negative in case of underpromotion move
+    if (OP.bbSide().has(~to)) { return false; }
 
     return true;
 }

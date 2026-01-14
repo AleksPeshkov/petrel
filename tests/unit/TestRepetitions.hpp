@@ -1,4 +1,4 @@
-#include "Repetitions.hpp"
+#include "history.hpp"
 
 void test_repetition_mask() {
     RepetitionHash m1;
