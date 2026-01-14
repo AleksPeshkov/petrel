@@ -8,8 +8,20 @@
 #include "Score.hpp"
 #include "Uci.hpp"
 
+#define INCBIN_PREFIX
+#include "incbin.h"
+
+// global const default nnue value
+INCBIN(EmbeddedNnue, "net/petrel128.bin");
+
 // global almost constant instance
 Nnue nnue;
+
+// copy NNUE weigths from embedded binary
+void Nnue::setEmbeddedEval() {
+    assert (EmbeddedNnueSize == sizeof(Nnue));
+    std::memcpy(this, EmbeddedNnueData, sizeof(Nnue));
+}
 
 /**
 * Startup constant initialization
@@ -48,6 +60,11 @@ void assert_fail(const char *assertion, const char *file, unsigned int line, con
 #endif
 
 int main(int argc, const char* argv[]) {
+    if (EmbeddedNnueSize != sizeof(Nnue)) {
+        std::cerr << "petrel: fatal error: embedded NNUE data file has invalid size, expected " << sizeof(Nnue) << " bytes, \n";
+        return ENOEXEC;
+    }
+
     std::string initFileName;
     bool runBench = false;
     std::string benchLimits;
