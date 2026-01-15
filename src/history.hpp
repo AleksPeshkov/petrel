@@ -9,20 +9,10 @@ class CACHE_ALIGN HistoryMoves {
 public:
     static constexpr int Size = _Size;
     using Index = ::Index<Size>;
-
-private:
     using Slot = Index:: template arrayOf<HistoryMove>;
 
-    using _t =
-        Color::arrayOf<
-            HistoryType::arrayOf<
-                Square::arrayOf<
-                    Slot
-                >
-            >
-        >
-    ;
-
+private:
+    using _t = Color::arrayOf<HistoryMove::Index::arrayOf<Slot>>;
     _t v;
 
 public:
@@ -31,11 +21,11 @@ public:
     }
 
     constexpr const HistoryMove& get(int i, Color color, HistoryMove slot) const {
-        return v[color][slot.historyType()][slot.to()][Index{i}];
+        return v[color][slot][Index{i}];
     }
 
     constexpr void set(Color color, HistoryMove slot, HistoryMove historyMove) {
-        insert_unique(v[color][slot.historyType()][slot.to()], historyMove);
+        insert_unique(v[color][slot], historyMove);
     }
 };
 
