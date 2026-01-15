@@ -1,271 +1,306 @@
-uci
-<uciok
-set UCI_Chess960 true
+>set debug log file test/test.log
+>uci
+uciok
+>set UCI_Chess960 true
 
-setoption hash 16
-isready
-<readyok
+>setoption hash 16
+>isready
+readyok
 
-perft 5
-<info currmovenumber 1 currmove b1a3 perft 198572 nodes 9306 *
-<info currmovenumber 2 currmove b1c3 perft 234656 nodes 18650 *
-<info currmovenumber 3 currmove g1f3 perft 233491 nodes 27524 *
-<info currmovenumber 4 currmove g1h3 perft 198502 nodes 35068 *
-<info currmovenumber 5 currmove d2d4 perft 361790 nodes 46300 *
-<info currmovenumber 6 currmove d2d3 perft 328511 nodes 57039 *
-<info currmovenumber 7 currmove e2e4 perft 405385 nodes 68143 *
-<info currmovenumber 8 currmove e2e3 perft 402988 nodes 79226 *
-<info currmovenumber 9 currmove c2c4 perft 240082 nodes 86308 *
-<info currmovenumber 10 currmove c2c3 perft 222861 nodes 92904 *
-<info currmovenumber 11 currmove f2f4 perft 198473 nodes 98238 *
-<info currmovenumber 12 currmove f2f3 perft 178889 nodes 103088 *
-<info currmovenumber 13 currmove b2b4 perft 216145 nodes 107530 *
-<info currmovenumber 14 currmove b2b3 perft 215255 nodes 111972 *
-<info currmovenumber 15 currmove g2g4 perft 214048 nodes 115523 *
-<info currmovenumber 16 currmove g2g3 perft 217210 nodes 119076 *
-<info currmovenumber 17 currmove a2a4 perft 217832 nodes 122169 *
-<info currmovenumber 18 currmove a2a3 perft 181046 nodes 124350 *
-<info currmovenumber 19 currmove h2h4 perft 218829 nodes 126553 *
-<info currmovenumber 20 currmove h2h3 perft 181044 nodes 127844 *
-<info depth 5 perft 4865609*
-<bestmove 0000
+>perft 5
+info currmovenumber 1 currmove b1a3 perft 198572 nodes 9306 *
+info currmovenumber 2 currmove b1c3 perft 234656 nodes 18650 *
+info currmovenumber 3 currmove g1f3 perft 233491 nodes 27524 *
+info currmovenumber 4 currmove g1h3 perft 198502 nodes 35068 *
+info currmovenumber 5 currmove d2d4 perft 361790 nodes 46300 *
+info currmovenumber 6 currmove d2d3 perft 328511 nodes 57039 *
+info currmovenumber 7 currmove e2e4 perft 405385 nodes 68143 *
+info currmovenumber 8 currmove e2e3 perft 402988 nodes 79226 *
+info currmovenumber 9 currmove c2c4 perft 240082 nodes 86308 *
+info currmovenumber 10 currmove c2c3 perft 222861 nodes 92904 *
+info currmovenumber 11 currmove f2f4 perft 198473 nodes 98238 *
+info currmovenumber 12 currmove f2f3 perft 178889 nodes 103088 *
+info currmovenumber 13 currmove b2b4 perft 216145 nodes 107530 *
+info currmovenumber 14 currmove b2b3 perft 215255 nodes 111972 *
+info currmovenumber 15 currmove g2g4 perft 214048 nodes 115523 *
+info currmovenumber 16 currmove g2g3 perft 217210 nodes 119076 *
+info currmovenumber 17 currmove a2a4 perft 217832 nodes 122169 *
+info currmovenumber 18 currmove a2a3 perft 181046 nodes 124350 *
+info currmovenumber 19 currmove h2h4 perft 218829 nodes 126553 *
+info currmovenumber 20 currmove h2h3 perft 181044 nodes 127844 *
+info depth 5 perft 4865609*
+bestmove 0000
 
-position fen 6kr///////6K1 b k
-perft 6
-<info depth 6 perft 325293*
+>position fen 6kr///////6K1 b k
+>perft 6
+info depth 6 perft 325293*
 
-position fen 5kr1///////5K2 b k
-perft 6
-<info depth 6 perft 401634*
+>position fen 5kr1///////5K2 b k
+>perft 6
+info depth 6 perft 401634*
 
-position fen 4kr2///////4K3 b k
-perft 6
-<info depth 6 perft 459256*
+>position fen 4kr2///////4K3 b k
+>perft 6
+info depth 6 perft 459256*
 
-position fen 3kr3///////3K4 b k
-perft 6
-<info depth 6 perft 539692*
+>position fen 3kr3///////3K4 b k
+>perft 6
+info depth 6 perft 539692*
 
-position fen 8/PPPk4/8/8/8/8/4Kppp/8 b - -
-perft 6
-<info depth 6 perft 28859283*
+>position fen 8/PPPk4/8/8/8/8/4Kppp/8 b - -
+>perft 6
+info depth 6 perft 28859283*
 
-position fen n1n5/1Pk5/8/8/8/8/5Kp1/5N1N b - -
-perft 6
-<info depth 6 perft 37665329*
+>position fen n1n5/1Pk5/8/8/8/8/5Kp1/5N1N b - -
+>perft 6
+info depth 6 perft 37665329*
 
-position fen r3k2r/8/8/8/8/8/8/R3K2R w KQkq
-perft 6
-<info depth 6 perft 179862938*
+>position fen r3k2r/8/8/8/8/8/8/R3K2R w KQkq
+>perft 6
+info depth 6 perft 179862938*
 
-position fen rnbqkb1r/pp1p1ppp/2p5/4P3/2B5/8/PPP1NnPP/RNBQK2R w KQkq - 0 6
-perft 3
-<info depth 3 perft 53392*
+>position fen rnbqkb1r/pp1p1ppp/2p5/4P3/2B5/8/PPP1NnPP/RNBQK2R w KQkq - 0 6
+>perft 3
+info depth 3 perft 53392*
 
-position fen 8/8/8/2rk/2p1p/5R/QP1P2B/2KR w - -
-perft 6
-<info depth 6 perft 102040304*
+>position fen 8/8/8/2rk/2p1p/5R/QP1P2B/2KR w - -
+>perft 6
+info depth 6 perft 102040304*
 
 #avoid illegal en passant capture:
-position fen 8/5bk1/8/2Pp4/8/1K6/8/8 w - d6 0 1
-position
-<info * fen 8/5bk1/8/2Pp4/8/1K6/8/8 w - -*
-perft 6
-<info depth 6 perft 824064*
+>position fen 8/5bk1/8/2Pp4/8/1K6/8/8 w - d6 0 1
+>position
+info * fen 8/5bk1/8/2Pp4/8/1K6/8/8 w - -*
+>perft 6
+info depth 6 perft 824064*
 
 #complex ep case
-position fen 3k4/8/8/K1Pp3r/8/8/8/8 w - d6 0 1
-position
-<info * fen 3k4/8/8/K1Pp3r/8/8/8/8 w - -*
-perft 6
-<info depth 6 perft 1020480*
+>position fen 3k4/8/8/K1Pp3r/8/8/8/8 w - d6 0 1
+>position
+info * fen 3k4/8/8/K1Pp3r/8/8/8/8 w - -*
+>perft 6
+info depth 6 perft 1020480*
 
 #en passant capture checks opponent:
-position fen 8/8/1k6/2b5/2pP4/8/5K2/8 b - d3 0 1
-perft 6
-<info depth 6 perft 1440467*
+>position fen 8/8/1k6/2b5/2pP4/8/5K2/8 b - d3 0 1
+>perft 6
+info depth 6 perft 1440467*
 
 #short castling gives check:
-position fen 5k2/8/8/8/8/8/8/4K2R w K - 0 1
-perft 6
-<info depth 6 perft 661072*
+>position fen 5k2/8/8/8/8/8/8/4K2R w K - 0 1
+>perft 6
+info depth 6 perft 661072*
 
 #castling (including losing cr due to rook capture):
-position fen r3k2r/7b/8/8/8/8/1B4BQ/R3K2R b KQkq - 0 1
-perft 4
-<info depth 4 perft 1274206*
+>position fen r3k2r/7b/8/8/8/8/1B4BQ/R3K2R b KQkq - 0 1
+>perft 4
+info depth 4 perft 1274206*
 
 #castling prevented:
-position fen r3k2r/8/3Q4/8/8/5q2/8/R3K2R b KQkq - 0 1
-perft 4
-<info depth 4 perft 1720476*
+>position fen r3k2r/8/3Q4/8/8/5q2/8/R3K2R b KQkq - 0 1
+>perft 4
+info depth 4 perft 1720476*
 
 #discovered check:
-position fen 8/8/1P2K3/8/2n5/1q6/8/5k2 b - - 0 1
-perft 5
-<info depth 5 perft 1004658*
+>position fen 8/8/1P2K3/8/2n5/1q6/8/5k2 b - - 0 1
+>perft 5
+info depth 5 perft 1004658*
 
 #underpromote to check:
-position fen 8/P1k5/K7/8/8/8/8/8 w - - 0 1
-perft 6
-<info depth 6 perft 92683*
+>position fen 8/P1k5/K7/8/8/8/8/8 w - - 0 1
+>perft 6
+info depth 6 perft 92683*
 
 #stalemate/checkmate:
-position fen 8/k1P5/8/1K6/8/8/8/8 w - - 0 1
-perft 7
-<info depth 7 perft 567584*
+>position fen 8/k1P5/8/1K6/8/8/8/8 w - - 0 1
+>perft 7
+info depth 7 perft 567584*
 
 #long castling gives check:
-position fen r3k3/8/8/8/8/8/8/3K4 b q - 0 1
-perft 6
-<info depth 6 perft 803711*
+>position fen r3k3/8/8/8/8/8/8/3K4 b q - 0 1
+>perft 6
+info depth 6 perft 803711*
 
 #promote out of check:
-position fen 2K2r2/4P3/8/8/8/8/8/3k4 w - - 0 1
-perft 6
-<info depth 6 perft 3821001*
+>position fen 2K2r2/4P3/8/8/8/8/8/3k4 w - - 0 1
+>perft 6
+info depth 6 perft 3821001*
 
 #self stalemate:
-position fen K1k5/8/P7/8/8/8/8/8 w - - 0 1
-perft 6
-<info depth 6 perft 2217*
+>position fen K1k5/8/P7/8/8/8/8/8 w - - 0 1
+>perft 6
+info depth 6 perft 2217*
 
 #double check:
-position fen 8/8/2k5/5q2/5n2/8/5K2/8 b - - 0 1
-perft 4
-<info depth 4 perft 23527*
+>position fen 8/8/2k5/5q2/5n2/8/5K2/8 b - - 0 1
+>perft 4
+info depth 4 perft 23527*
 
-position fen 3k4/3p4/8/K1P4r/8/8/8/8 b - -
-perft 6
-<info depth 6 perft 1134888*
+>position fen 3k4/3p4/8/K1P4r/8/8/8/8 b - -
+>perft 6
+info depth 6 perft 1134888*
 
 #short castling impossible although the rook never moved away from its corner
-position fen 1k6/1b6/8/8/7R/8/8/4K2R b K - 0 1
-perft 5
-<info depth 5 perft 1063513*
+>position fen 1k6/1b6/8/8/7R/8/8/4K2R b K - 0 1
+>perft 5
+info depth 5 perft 1063513*
 
 #long castling impossible although the rook never moved away from its corner
-position fen 1k6/8/8/8/R7/1n6/8/R3K3 b Q - 0 1
-perft 5
-<info depth 5 perft 346695*
+>position fen 1k6/8/8/8/R7/1n6/8/R3K3 b Q - 0 1
+>perft 5
+info depth 5 perft 346695*
 
-position fen r3k2r/8/8/8/3pPp2/8/8/R3K1RR b KQkq e3 0 1
-perft 6
-<info depth 6 perft 485647607*
+>position fen 2r1kr2/8/8/8/8/8/8/1R2K1R1 w GBfc - 0 1
+>perft 6
+info depth 6 perft 149271720*
 
-position fen r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1
-perft 6
-<info depth 6 perft 706045033*
+>position fen rkr5/8/8/8/8/8/8/5RKR w HFca - 0 1
+>perft 6
+info depth 6 perft 133255690*
 
-position fen 8/7p/p5pb/4k3/P1pPn3/8/P5PP/1rB2RK1 b - d3 0 28
-perft 6
-<info depth 6 perft 38633283*
+>position fen 2r3kr/8/8/8/8/8/8/2KRR3 w h - 3 2
+>perft 6
+info depth 6 perft 17874565*
 
-position fen 8/3K4/2p5/p2b2r1/5k2/8/8/1q6 b - - 1 67
-perft 7
-<info depth 7 perft 493407574*
+>position fen 5rkr/8/8/8/8/8/8/RKR5 w CAhf - 0 1
+>perft 6
+info depth 6 perft 133478824*
 
-position fen 8/p7/8/1P6/K1k3p1/6P1/7P/8 w - -
-perft 8
-<info depth 8 perft 8103790*
+>position fen 3rkr2/8/8/8/8/8/8/R3K2R w HAfd - 0 1
+>perft 6
+info depth 6 perft 119338266*
 
-position fen n1n5/PPPk4/8/8/8/8/4Kppp/5N1N b - -
-perft 6
-<info depth 6 perft 71179139*
+>position fen 4k3/8/8/8/8/8/8/4KR2 w F - 0 1
+>perft 6
+info depth 6 perft 459256*
 
-position fen r3k2r/p6p/8/B7/1pp1p3/3b4/P6P/R3K2R w KQkq -
-perft 6
-<info depth 6 perft 77054993*
+>position fen 4kr2/8/8/8/8/8/8/4K3 w f - 0 1
+>perft 6
+info depth 6 perft 443299*
 
-position fen 8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -
-perft 7
-<info depth 7 perft 178633661*
+>position fen 4k3/8/8/8/8/8/8/2R1K3 w C - 0 1
+>perft 6
+info depth 6 perft 763650*
 
-position fen 8/5p2/8/2k3P1/p3K3/8/1P6/8 b - -
-perft 8
-<info depth 8 perft 64451405*
+>position fen 2r1k3/8/8/8/8/8/8/4K3 w c - 0 1
+>perft 6
+info depth 6 perft 849646*
 
-position fen r3k2r/pb3p2/5npp/n2p4/1p1PPB2/6P1/P2N1PBP/R3K2R w KQkq -
-perft 5
-<info depth 5 perft 29179893*
+>position fen r3k2r/8/8/8/3pPp2/8/8/R3K1RR b KQkq e3 0 1
+>perft 6
+info depth 6 perft 485647607*
 
-set UCI_Chess960 false
+>position fen r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1
+>perft 6
+info depth 6 perft 706045033*
 
-position fen rnbqkbnr/pppppppp///4P//PPPP1PPP/RNBQKBNR b qkQK e3 0 1 moves g8h6 e4e5 f7f5
-position
-<info * fen rnbqkb1r/ppppp1pp/7n/4Pp2/8/8/PPPP1PPP/RNBQKBNR w KQkq f6*
-perft 6
-<info depth 6 perft 244063299*
+>position fen 8/7p/p5pb/4k3/P1pPn3/8/P5PP/1rB2RK1 b - d3 0 28
+>perft 6
+info depth 6 perft 38633283*
 
-position fen 8/PPP4k/8/8/8/8/4Kppp/8 w - - 0 1
-perft 6
-<info depth 6 perft 34336777*
+>position fen 8/3K4/2p5/p2b2r1/5k2/8/8/1q6 b - - 1 67
+>perft 7
+info depth 7 perft 493407574*
 
-position fen 2rkr3/5PP1/8/5Q2/5q2/8/5pp1/2RKR3 w KQkq - 0 1
-perft 5
-<info depth 5 perft 94370149*
+>position fen 8/p7/8/1P6/K1k3p1/6P1/7P/8 w - -
+>perft 8
+info depth 8 perft 8103790*
 
-set UCI_Chess960 true
+>position fen n1n5/PPPk4/8/8/8/8/4Kppp/5N1N b - -
+>perft 6
+info depth 6 perft 71179139*
 
-position fen bnrbnkrq/pppppppp/8/8/8/8/PPPPPPPP/BNRBNKRQ w CGkq - 0 1
-perft 6
-<info depth 6 perft 145999259*
+>position fen r3k2r/p6p/8/B7/1pp1p3/3b4/P6P/R3K2R w KQkq -
+>perft 6
+info depth 6 perft 77054993*
 
-position fen rbknqnbr/pppppppp/8/8/8/8/PPPPPPPP/RBKNQNBR w ahKQ - 0 1
-perft 6
-<info depth 6 perft 126480040*
+>position fen 8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -
+>perft 7
+info depth 7 perft 178633661*
 
-position fen qbrnnkbr/pppppppp/8/8/8/8/PPPPPPPP/QBRNNKBR w KQkq - 0 1
-perft 6
-<info depth 6 perft 121613156*
+>position fen 8/5p2/8/2k3P1/p3K3/8/1P6/8 b - -
+>perft 8
+info depth 8 perft 64451405*
 
-position fen nqbnrbkr/pppppppp/8/8/8/8/PPPPPPPP/NQBNRBKR w KQkq - 0 1
-perft 6
-<info depth 6 perft 93888956*
+>position fen r3k2r/pb3p2/5npp/n2p4/1p1PPB2/6P1/P2N1PBP/R3K2R w KQkq -
+>perft 5
+info depth 5 perft 29179893*
 
-position fen nrnkbqrb/pppppppp/8/8/8/8/PPPPPPPP/NRNKBQRB w KQkq - 0 1
-perft 6
-<info depth 6 perft 97044730*
+>set UCI_Chess960 false
 
-position fen rbbknnqr/pppppppp/8/8/8/8/PPPPPPPP/RBBKNNQR w KQkq - 0 1
-perft 6
-<info depth 6 perft 124381396*
+>position fen rnbqkbnr/pppppppp///4P//PPPP1PPP/RNBQKBNR b qkQK e3 0 1 moves g8h6 e4e5 f7f5
+>position
+info * fen rnbqkb1r/ppppp1pp/7n/4Pp2/8/8/PPPP1PPP/RNBQKBNR w KQkq f6*
+>perft 6
+info depth 6 perft 244063299*
 
-position fen r1k1r2q/p1ppp1pp/8/8/8/8/P1PPP1PP/R1K1R2Q w KQkq -
-perft 6
-<info depth 6 perft 172843489*
+>position fen 8/PPP4k/8/8/8/8/4Kppp/8 w - - 0 1
+>perft 6
+info depth 6 perft 34336777*
 
-position fen r1k2r1q/p1ppp1pp/8/8/8/8/P1PPP1PP/R1K2R1Q w KQkq - 0 1
-perft 6
-<info depth 6 perft 418430598*
+>position fen 2rkr3/5PP1/8/5Q2/5q2/8/5pp1/2RKR3 w KQkq - 0 1
+>perft 5
+info depth 5 perft 94370149*
 
-position fen 8/8/8/4B2b/6nN/8/5P2/2R1K2k w Q - 0 1
-perft 6
-<info depth 6 perft 44554839*
+>set UCI_Chess960 true
 
-position fen 2r5/8/8/8/8/8/6PP/k2KR3 w K - 0 1
-perft 7
-<info depth 7 perft 259604208*
+>position fen bnrbnkrq/pppppppp/8/8/8/8/PPPPPPPP/BNRBNKRQ w CGkq - 0 1
+>perft 6
+info depth 6 perft 145999259*
 
-position fen 4r3/3k4/8/8/8/8/6PP/qR1K1R2 w KQ - 0 1
-perft 6
-<info depth 6 perft 281330710*
+>position fen rbknqnbr/pppppppp/8/8/8/8/PPPPPPPP/RBKNQNBR w ahKQ - 0 1
+>perft 6
+info depth 6 perft 126480040*
 
-set UCI_Chess960 false
-position startpos moves e2e4 e7e5 f1c4 g8f6 d2d4 c7c6 d4e5 f6e4 g1e2 e4f2 e5e6 f8e7 e6d7 e8f8
-position
-<info * fen rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 *
-perft 5
-<info depth 5 perft 89941194*
-stop
+>position fen qbrnnkbr/pppppppp/8/8/8/8/PPPPPPPP/QBRNNKBR w KQkq - 0 1
+>perft 6
+info depth 6 perft 121613156*
 
-position fen r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 25
+>position fen nqbnrbkr/pppppppp/8/8/8/8/PPPPPPPP/NQBNRBKR w KQkq - 0 1
+>perft 6
+info depth 6 perft 93888956*
 
-perft 5
-<info depth 5 perft 193690690*
-<bestmove 0000
+>position fen nrnkbqrb/pppppppp/8/8/8/8/PPPPPPPP/NRNKBQRB w KQkq - 0 1
+>perft 6
+info depth 6 perft 97044730*
 
-isready
-<readyok
+>position fen rbbknnqr/pppppppp/8/8/8/8/PPPPPPPP/RBBKNNQR w KQkq - 0 1
+>perft 6
+info depth 6 perft 124381396*
 
-quit
+>position fen r1k1r2q/p1ppp1pp/8/8/8/8/P1PPP1PP/R1K1R2Q w KQkq -
+>perft 6
+info depth 6 perft 172843489*
+
+>position fen r1k2r1q/p1ppp1pp/8/8/8/8/P1PPP1PP/R1K2R1Q w KQkq - 0 1
+>perft 6
+info depth 6 perft 418430598*
+
+>position fen 8/8/8/4B2b/6nN/8/5P2/2R1K2k w Q - 0 1
+>perft 6
+info depth 6 perft 44554839*
+
+>position fen 2r5/8/8/8/8/8/6PP/k2KR3 w K - 0 1
+>perft 7
+info depth 7 perft 259604208*
+
+>position fen 4r3/3k4/8/8/8/8/6PP/qR1K1R2 w KQ - 0 1
+>perft 6
+info depth 6 perft 281330710*
+
+>set UCI_Chess960 false
+>position startpos moves e2e4 e7e5 f1c4 g8f6 d2d4 c7c6 d4e5 f6e4 g1e2 e4f2 e5e6 f8e7 e6d7 e8f8
+>position
+info * fen rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 *
+>perft 5
+info depth 5 perft 89941194*
+
+>position fen r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 25
+>perft 5
+info depth 5 perft 193690690*
+bestmove 0000
+
+>isready
+readyok
+
+>quit
