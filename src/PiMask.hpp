@@ -12,7 +12,7 @@ class CACHE_ALIGN VectorOfAll {
 
 public:
     constexpr VectorOfAll () {
-        for (auto i : Index0x100::range()) {
+        for (auto i : range<Index0x100>()) {
             v[i] = ::all(i);
         }
     }
@@ -35,7 +35,7 @@ public:
     using Base::Base;
 
     constexpr Pi vacantMostValuable() const {
-        for (Pi pi : Pi::range()) {
+        for (Pi pi : range<Pi>()) {
             if (!has(pi)) {
                 return pi;
             }
@@ -64,7 +64,7 @@ public:
     }
 
     constexpr Pi vacantMostValuable() const {
-        for (auto pi : Pi::range()) {
+        for (auto pi : range<Pi>()) {
             if (!has(pi)) {
                 return pi;
             }
@@ -76,34 +76,23 @@ public:
 
 #endif // NEON_VECTOR
 
+consteval Pi::arrayOf<vu8x16_t> make_pi_single_array() {
+    Pi::arrayOf<vu8x16_t> arr;
+    return arr;
+}
+
 class PiSingle {
     using _t = vu8x16_t;
-
     Pi::arrayOf<_t> v;
 
 public:
-    constexpr PiSingle () : v {{
-        {0xff,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0},
-        {0,0xff,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0},
-        {0,0,0xff,0, 0,0,0,0, 0,0,0,0, 0,0,0,0},
-        {0,0,0,0xff, 0,0,0,0, 0,0,0,0, 0,0,0,0},
-
-        {0,0,0,0, 0xff,0,0,0, 0,0,0,0, 0,0,0,0},
-        {0,0,0,0, 0,0xff,0,0, 0,0,0,0, 0,0,0,0},
-        {0,0,0,0, 0,0,0xff,0, 0,0,0,0, 0,0,0,0},
-        {0,0,0,0, 0,0,0,0xff, 0,0,0,0, 0,0,0,0},
-
-        {0,0,0,0, 0,0,0,0, 0xff,0,0,0, 0,0,0,0},
-        {0,0,0,0, 0,0,0,0, 0,0xff,0,0, 0,0,0,0},
-        {0,0,0,0, 0,0,0,0, 0,0,0xff,0, 0,0,0,0},
-        {0,0,0,0, 0,0,0,0, 0,0,0,0xff, 0,0,0,0},
-
-        {0,0,0,0, 0,0,0,0, 0,0,0,0, 0xff,0,0,0},
-        {0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0xff,0,0},
-        {0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0xff,0},
-        {0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0xff},
-    }}
-    {}
+    constexpr PiSingle() {
+        for (auto pi : range<Pi>()) {
+            std::array<uint8_t, 16> vec = {}; // zero
+            vec[static_cast<int>(pi)] = 0xff;
+            v[pi] = std::bit_cast<vu8x16_t>(vec);
+        }
+    }
 
     constexpr const _t& operator[] (Pi pi) const { return v[pi]; }
 };
@@ -150,6 +139,7 @@ public:
     constexpr bool none() const { return PieceSet{*this}.none(); }
     constexpr bool isSingleton() const { return PieceSet{*this}.isSingleton(); }
 
+    // get the singleton piece index
     constexpr Pi index() const { return PieceSet{*this}.index(); }
 
     // most valuable piece in the first (lowest) set bit
@@ -163,8 +153,8 @@ public:
     constexpr PieceSet begin() const { return PieceSet{*this}; }
     constexpr PieceSet end() const { return PieceSet{}; }
 
-    friend ostream& operator << (ostream& out, PiMask a) {
-        return out << PieceSet(a);
+    friend ostream& operator << (ostream& out, PiMask mask) {
+        return out << PieceSet{mask};
     }
 };
 
@@ -202,20 +192,19 @@ class PiSquare {
 
     // defined to make debugging clear
     union {
-        vu8x16_t vu8x16;
         Pi::arrayOf<_t> square;
+        vu8x16_t vu8x16;
     };
 
     constexpr void set(Pi pi, _t sq) { square[pi] = sq; }
     constexpr vu8x16_t vector(_t e) const { return ::vectorOfAll[e]; }
 
 public:
-    constexpr PiSquare (): square {
-        NoSq,NoSq,NoSq,NoSq,
-        NoSq,NoSq,NoSq,NoSq,
-        NoSq,NoSq,NoSq,NoSq,
-        NoSq,NoSq,NoSq,NoSq,
-    } {}
+    constexpr PiSquare () {
+        for (auto pi : range<Pi>()) {
+            square[pi] = NoSq;
+        }
+    }
 
     constexpr bool isOk(Pi pi) const { return !isEmpty(pi) && pieceAt(square[pi]) == pi; }
 
@@ -302,7 +291,7 @@ class PiType {
 
     // defined to make debugging clear
     union {
-        pieces_t type[16];
+        Pi::arrayOf<pieces_t> type;
         vu8x16_t vu8x16;
     };
 
@@ -315,12 +304,11 @@ class PiType {
     constexpr PiMask any(element_type e) const { return PiMask::any(vu8x16 & vector(e)); }
 
 public:
-    constexpr PiType () : type {
-        None, None, None, None,
-        None, None, None, None,
-        None, None, None, None,
-        None, None, None, None,
-    } {}
+    constexpr PiType () {
+        for (auto pi : range<Pi>()) {
+            type[pi] = None;
+        }
+    }
 
     constexpr bool isOk(Pi pi) const { return !isEmpty(pi) && ::isSingleton(static_cast<u8_t>(type[pi])); }
 
@@ -380,7 +368,7 @@ class PiTrait {
 
     // defined to make debugging clear
     union {
-        element_type trait[16];
+        Pi::arrayOf<element_type> trait;
         vu8x16_t vu8x16;
     };
 
@@ -400,12 +388,11 @@ class PiTrait {
     }
 
 public:
-    constexpr PiTrait () : trait {
-        Empty, Empty, Empty, Empty,
-        Empty, Empty, Empty, Empty,
-        Empty, Empty, Empty, Empty,
-        Empty, Empty, Empty, Empty,
-    } {}
+    constexpr PiTrait () {
+        for (auto pi : range<Pi>()) {
+            trait[pi] = Empty;
+        }
+    }
 
     constexpr void clear(Pi pi) { trait[pi] = Empty; }
     constexpr bool isEmpty(Pi pi) const { return trait[pi] == Empty; }
@@ -437,10 +424,10 @@ public:
     constexpr void setPromotable(Pi pi) { add(pi, Promotables); }
 };
 
-class PiOrder {
-    vu8x16_t v;
-
-    constexpr static Pi::arrayOf<vu8x16_t> forwardMask = {{
+class ShuffleToFront {
+    std::array<vu8x16_t, 16> shuffle;
+public:
+    constexpr ShuffleToFront() : shuffle{{
         {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15},
         {1,0,2,3,4,5,6,7,8,9,10,11,12,13,14,15},
         {2,0,1,3,4,5,6,7,8,9,10,11,12,13,14,15},
@@ -457,15 +444,27 @@ class PiOrder {
         {13,0,1,2,3,4,5,6,7,8,9,10,11,12,14,15},
         {14,0,1,2,3,4,5,6,7,8,9,10,11,12,13,15},
         {15,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14},
-    }};
+    }} {}
 
-    constexpr static vu8x16_t ordered = forwardMask[0];
+    constexpr const vu8x16_t& operator [] (Pi pi) const { return shuffle[pi]; }
+};
+
+class PiOrder {
+    using PiArray = Pi::arrayOf<Pi>;
+
+    union {
+        PiArray order;
+        vu8x16_t vu8x16;
+    };
+
+    static constexpr ShuffleToFront shuffleToFront{};
+    static constexpr vu8x16_t ordered = shuffleToFront[Pi{static_cast<Pi::_t>(0)}];
 
     constexpr bool isOk() const {
         // check all values [0, 15] are represented
         u32_t mask = 0;
         for (int i = 0; i < 16; ++i) {
-            mask |= ::singleton<int>(::u8(v, i));
+            mask |= ::singleton<int>(::u8(vu8x16, i));
         }
         return ::popcount(mask) == 16;
     }
@@ -473,22 +472,19 @@ class PiOrder {
     constexpr void assertOk() const { assert (isOk()); }
 
 public:
-    constexpr PiOrder () : v{ordered} { assertOk(); }
+    constexpr PiOrder () : vu8x16{ordered} { assertOk(); }
 
     constexpr PiMask operator () (PiMask pieces) const {
-        return PiMask{::shufflevector(static_cast<vu8x16_t>(pieces), v)};
+        return PiMask{::shufflevector(static_cast<vu8x16_t>(pieces), vu8x16)};
     }
 
-    constexpr Pi operator[] (Pi pi) const {
-        return Pi{static_cast<Pi::_t>(::u8(v, pi))};
-    }
+    constexpr const Pi& operator[] (Pi pi) const { return order[pi]; }
 
     PiOrder& forward(Pi pi) {
         // find index of pi in the shuffled vector
-        PiMask piMask = PiMask::equals(v, ::vectorOfAll[pi]);
-        Pi pos = piMask.index();
-
-        v = ::shufflevector(v, forwardMask[pos]);
+        PiMask mask = PiMask::equals(vu8x16, ::vectorOfAll[pi]);
+        // shuffle selected pi to the first position
+        vu8x16 = ::shufflevector(vu8x16, std::bit_cast<vu8x16_t>(shuffleToFront[mask.index()]));
         assertOk();
         return *this;
     }

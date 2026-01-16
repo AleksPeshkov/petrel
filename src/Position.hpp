@@ -5,13 +5,13 @@
 #include "Zobrist.hpp"
 
 // side to move
-#define MY positionSide(My)
+#define MY positionSide(Side{My})
 
 // opponent side
-#define OP positionSide(Op)
+#define OP positionSide(Side{Op})
 
 // all occupied squares by both sides from the current side point of view
-#define OCCUPIED occupied(My)
+#define OCCUPIED occupied(Side{My})
 
 // number of halfmoves without capture or pawn move
 class Rule50 {
@@ -59,7 +59,7 @@ class Position {
     bool isSpecialMove(Square, Square) const;
 
 protected:
-    constexpr PositionSide& positionSide(Side::_t side) { return positionSide_[side]; }
+    constexpr PositionSide& positionSide(Side side) { return positionSide_[side]; }
 
     // update the zobrist hash of incoming move
     void makeZobrist(const Position* parent, Square from, Square to) { zobrist_ = parent->createZobrist(from, to); }
@@ -80,10 +80,10 @@ protected:
     UciMove uciMove(Square from, Square to) const { return UciMove{from, to, isSpecialMove(from, to)}; }
 
 public:
-    constexpr const PositionSide& positionSide(Side::_t side) const { return positionSide_[side]; }
+    constexpr const PositionSide& positionSide(Side side) const { return positionSide_[side]; }
 
     // all occupied squares by both sides from the given side point of view
-    constexpr const Bb& occupied(Side::_t side) const { return occupied_[side]; }
+    constexpr const Bb& occupied(Side side) const { return occupied_[side]; }
 
     // position hash
     constexpr const Zobrist& zobrist() const { return zobrist_; }

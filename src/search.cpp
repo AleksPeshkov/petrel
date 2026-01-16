@@ -30,7 +30,7 @@ Node::Node (const Node* p) :
 
 ReturnStatus Node::negamax(Node* child, Ply R) const {
     child->depth = depth - R; //TRICK: Ply >= 0
-    assert (child->depth >= 0);
+    /* assert (child->depth >= 0); */
     child->generateMoves();
     RETURN_IF_STOP (child->search());
 
@@ -464,7 +464,7 @@ ReturnStatus Node::goodCaptures(Node* child,PiMask victims, Ply R) {
 // Counter move heuristic: refutation of the last opponent's move
 ReturnStatus Node::counterMove(Node* child) {
     if (parent && parent->currentMove) {
-        for (auto i : decltype(root.counterMove)::Index::range()) {
+        for (auto i : range<decltype(root.counterMove)::Index>()) {
             auto move = root.counterMove.get(i, parent->colorToMove(), parent->currentMove);
             if (isPossibleMove(move)) {
                 RETURN_CUTOFF (child->searchMove(move));
@@ -478,7 +478,7 @@ ReturnStatus Node::counterMove(Node* child) {
 // Follow up move heuristic: continue the idea of our last made move
 ReturnStatus Node::followMove(Node* child) {
     if (grandParent && grandParent->currentMove) {
-        for (auto i : decltype(root.followMove)::Index::range()) {
+        for (auto i : range<decltype(root.followMove)::Index>()) {
             auto move = root.followMove.get(i, grandParent->colorToMove(), grandParent->currentMove);
             if (isPossibleMove(move)) {
                 RETURN_CUTOFF (child->searchMove(move));
@@ -589,22 +589,22 @@ bool Node::isDrawMaterial() const {
     if (my.hasMatingPieces() || op.hasMatingPieces()) { return false; }
 
     // here both sides can have only minors pieces
-    auto myMinors = my.count(Knight) + my.count(Bishop);
-    auto opMinors = op.count(Knight) + op.count(Bishop);
+    auto myMinors = my.count(NonKingType{Knight}) + my.count(NonKingType{Bishop});
+    auto opMinors = op.count(NonKingType{Knight}) + op.count(NonKingType{Bishop});
 
     // lone minors cannot mate
     if (myMinors <= 1 && opMinors <= 1) { return true; }
 
     if (myMinors == 2) {
-        if (my.count(Bishop) == 0 && opMinors <= 1) { return true; }
-        if (my.count(Bishop) == 1 && opMinors == 1) { return true; }
-        if (my.count(Bishop) == 2 && op.count(Bishop) == 1) { return true; }
+        if (my.count(NonKingType{Bishop}) == 0 && opMinors <= 1) { return true; }
+        if (my.count(NonKingType{Bishop}) == 1 && opMinors == 1) { return true; }
+        if (my.count(NonKingType{Bishop}) == 2 && op.count(NonKingType{Bishop}) == 1) { return true; }
     }
 
     if (opMinors == 2) {
-        if (op.count(Bishop) == 0 && opMinors <= 1) { return true; }
-        if (op.count(Bishop) == 1 && myMinors == 1) { return true; }
-        if (op.count(Bishop) == 2 && my.count(Bishop) == 1) { return true; }
+        if (op.count(NonKingType{Bishop}) == 0 && opMinors <= 1) { return true; }
+        if (op.count(NonKingType{Bishop}) == 1 && myMinors == 1) { return true; }
+        if (op.count(NonKingType{Bishop}) == 2 && my.count(NonKingType{Bishop}) == 1) { return true; }
     }
 
     return false;
