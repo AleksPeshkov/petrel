@@ -30,7 +30,7 @@ Node::Node (const Node* p) :
 
 ReturnStatus Node::negamax(Node* child, Ply R) const {
     child->depth = depth - R; //TRICK: Ply >= 0
-    assert (child->depth >= 0);
+    /* assert (child->depth >= 0); */
     child->generateMoves();
     RETURN_IF_STOP (child->search());
 
@@ -457,7 +457,7 @@ ReturnStatus Node::goodCaptures(Node* child, PiMask victims) {
 // Counter move heuristic: refutation of the last opponent's move
 ReturnStatus Node::counterMove(Node* child) {
     if (parent && parent->currentMove) {
-        for (auto i : decltype(root.counterMove)::Index::range()) {
+        for (auto i : range<decltype(root.counterMove)::Index>()) {
             auto move = root.counterMove.get(i, parent->colorToMove(), parent->currentMove);
             if (isPossibleMove(move)) {
                 return child->searchMove(move);
@@ -470,7 +470,7 @@ ReturnStatus Node::counterMove(Node* child) {
 // Follow up move heuristic: continue the idea of our last made move
 ReturnStatus Node::followMove(Node* child) {
     if (grandParent && grandParent->currentMove) {
-        for (auto i : decltype(root.followMove)::Index::range()) {
+        for (auto i : range<decltype(root.followMove)::Index>()) {
             auto move = root.followMove.get(i, grandParent->colorToMove(), grandParent->currentMove);
             if (isPossibleMove(move)) {
                 return child->searchMove(move);

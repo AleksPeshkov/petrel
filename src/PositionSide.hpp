@@ -70,7 +70,7 @@ public:
     PiMask nonKing() const { return types.nonKing(); }
 
     Pi pieceAt(Square sq) const { assert (has(sq)); Pi pi = squares.pieceAt(sq); assertOk(pi); return pi; }
-    PiMask piecesOn(Rank rank) const { return squares.piecesOn(rank); }
+    PiMask piecesOn(Rank::_t rank) const { Rank{rank}.assertOk(); return squares.piecesOn(rank); }
 
     PiMask piecesOfType(PieceType ty) const { return types.piecesOfType(ty); }
     PieceType typeOf(Pi pi) const { assertOk(pi); return types.typeOf(pi); }
