@@ -292,7 +292,7 @@ ReturnStatus Node::search() {
 
     R = canR ? 3 : 1;
     while (safePieces.any()) {
-        Pi pi = safePieces.leastValuable(); safePieces -= pi;
+        Pi pi = safePieces.piLeastValuable(); safePieces -= pi;
 
         RETURN_CUTOFF (goodNonCaptures(child, pi, movesOf(pi) % badSquares, R));
     }
@@ -300,7 +300,7 @@ ReturnStatus Node::search() {
     // iterate pawns from Rank7 to Rank2
     // underpromotion with or without capture and pawn pushes
     for (Square from : MY.bbPawns()) {
-        Pi pi = MY.pieceAt(from);
+        Pi pi = MY.piAt(from);
 
         R = 1;
         if (canR) {
@@ -326,7 +326,7 @@ ReturnStatus Node::search() {
     // unsafe (losing) captures
     R = canR ? 3 : 2;
     for (PiMask pieces = officers; pieces.any(); ) {
-        Pi pi = pieces.leastValuable(); pieces -= pi;
+        Pi pi = pieces.piLeastValuable(); pieces -= pi;
 
         for (Square to : movesOf(pi) & ~OP.bbSide()) {
             RETURN_CUTOFF (child->searchMove(pi, to, R));
@@ -337,7 +337,7 @@ ReturnStatus Node::search() {
     if (!canP || movesMade() == 0) { // weak move pruning
         R = canR ? 4 : 3;
         for (PiMask pieces = officers; pieces.any(); ) {
-            Pi pi = pieces.leastValuable(); pieces -= pi;
+            Pi pi = pieces.piLeastValuable(); pieces -= pi;
 
             for (Square to : movesOf(pi)) {
                 RETURN_CUTOFF (child->searchMove(pi, to, R));
@@ -452,7 +452,7 @@ ReturnStatus Node::goodCaptures(Node* child,PiMask victims, Ply R) {
 
         while (attackers.any()) {
             // LVA (least valuable attacker) order
-            Pi pi = attackers.leastValuable(); attackers -= pi;
+            Pi pi = attackers.piLeastValuable(); attackers -= pi;
 
             RETURN_CUTOFF (child->searchMove(pi, to, R));
         }

@@ -76,13 +76,13 @@ void PositionMoves::correctCheckEvasionsByPawns(Bb checkLine, Square checkFrom) 
     for (Square from : affectedPawns) {
         Bb bb = (Bb{from.rankForward()} & checkLine) + (::attacksFrom(PieceType{Pawn}, from) & Bb{checkFrom});
         Rank rankTo = Rank{from}.forward();
-        moves_.set(MY.pieceAt(from), rankTo, bb[rankTo]);
+        moves_.set(MY.piAt(from), rankTo, bb[rankTo]);
     }
 
     //pawns double push over check line
     Bb pawnJumpEvasions = MY.bbPawns() & Bb{Rank2} & (checkLine << 16u) % (OCCUPIED << 8u);
     for (Square from : pawnJumpEvasions) {
-        moves_.add(MY.pieceAt(from), Rank{Rank4}, File{from});
+        moves_.add(MY.piAt(from), Rank{Rank4}, File{from});
     }
 }
 
@@ -102,7 +102,7 @@ void PositionMoves::excludePinnedMoves(PiMask opPinners) {
 
         if (piecesOnPinLine.isSingleton() && (piecesOnPinLine & MY.bbSide()).any()) {
             //we discovered a true pinned piece
-            Pi pinned = MY.pieceAt(piecesOnPinLine.index());
+            Pi pinned = MY.piAt(piecesOnPinLine.index());
 
             //exclude all pinned piece moves except those over the pin line
             moves_.filter(pinned, pinLine + Bb{pinFrom});
@@ -118,7 +118,7 @@ void PositionMoves::generateCheckEvasions() {
 
     if (checkers.isSingleton()) {
         //single checker case
-        Pi checker = checkers.index();
+        Pi checker = checkers.pi();
         Square checkFrom{~OP.squareOf(checker)};
 
         const Bb& checkLine = ::inBetween(MY.kingSquare(), checkFrom);

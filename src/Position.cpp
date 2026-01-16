@@ -72,7 +72,7 @@ void Position::makeMove(Square from, Square to) {
     assert (MY.checkers().none());
     OP.clearCheckers();
 
-    Pi pi = MY.pieceAt(from);
+    Pi pi = MY.piAt(from);
 
     // clear en passant status from the previous move
     if (OP.hasEnPassant()) {
@@ -113,7 +113,7 @@ void Position::makeMove(Square from, Square to) {
             if constexpr (Z) {
                 zobrist_.promote(from, promo, to);
             }
-            pi = MY.promote(pi, from, promo, to);
+            pi = MY.piPromoted(pi, from, promo, to);
 
             if (OP.has(~to)) {
                 if constexpr (Z) {
@@ -278,7 +278,7 @@ void Position::setLegalEnPassant(Pi victim, Square to) {
 
         if (!MY.isPinned(OCCUPIED - Bb{from} + Bb{ep} - Bb{to})) {
             MY.setEnPassantVictim(victim);
-            OP.setEnPassantKiller(OP.pieceAt(~from));
+            OP.setEnPassantKiller(OP.piAt(~from));
         }
     }
 }
@@ -301,7 +301,7 @@ bool Position::isSpecialMove(Square from, Square to) const {
         return true; // castling
     }
 
-    if (MY.isPawn(MY.pieceAt(from))) {
+    if (MY.isPawn(MY.piAt(from))) {
         if (from.on(Rank7)) {
             return true; // pawn promotion
         }
@@ -339,7 +339,7 @@ Zobrist Position::createZobrist(Square from, Square to) const {
     // opponent side pieces hash
     Zobrist oz{0};
 
-    Pi pi = MY.pieceAt(from);
+    Pi pi = MY.piAt(from);
     PieceType ty = MY.typeOf(pi);
 
     if (OP.hasEnPassant()) {
@@ -411,7 +411,7 @@ Zobrist Position::createZobrist(Square from, Square to) const {
 
 capture:
     if (OP.has(~to)) {
-        Pi victim = OP.pieceAt(~to);
+        Pi victim = OP.piAt(~to);
         oz(OP.typeOf(victim), ~to);
 
         if (OP.isCastling(victim)) { oz.castling(~to); }

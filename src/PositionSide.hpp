@@ -69,14 +69,14 @@ public:
     // Queens, Rooks, Bishops, Knights, Pawns
     PiMask nonKing() const { return types.nonKing(); }
 
-    Pi pieceAt(Square sq) const { assert (has(sq)); Pi pi = squares.pieceAt(sq); assertOk(pi); return pi; }
+    Pi piAt(Square sq) const { assert (has(sq)); Pi pi = squares.piAt(sq); assertOk(pi); return pi; }
     PiMask piecesOn(Rank rank) const { return squares.piecesOn(rank); }
 
     PiMask piecesOfType(PieceType ty) const { return types.piecesOfType(ty); }
     PieceType typeOf(Pi pi) const { assertOk(pi); return types.typeOf(pi); }
-    PieceType typeAt(Square sq) const { return typeOf(pieceAt(sq)); }
+    PieceType typeAt(Square sq) const { return typeOf(piAt(sq)); }
     Score score(PieceType ty, Square sq) const { return evaluation().score(ty, sq); }
-    Score scoreAt(Square sq) const { return score(typeOf(pieceAt(sq)), sq); }
+    Score scoreAt(Square sq) const { return score(typeOf(piAt(sq)), sq); }
 
     PiMask pawns() const { return types.piecesOfType(Pawn); }
     bool isPawn(Pi pi) const { assertOk(pi); return types.isPawn(pi); }
@@ -89,12 +89,12 @@ public:
 
     PiMask castlingRooks() const { return traits.castlingRooks(); }
     bool isCastling(Pi pi) const { assertOk(pi); return traits.isCastling(pi); }
-    bool isCastling(Square sq) const { return isCastling(pieceAt(sq)); }
+    bool isCastling(Square sq) const { return isCastling(piAt(sq)); }
 
     PiMask enPassantPawns() const { return traits.enPassantPawns(); }
     bool isEnPassant(Pi pi) const { return traits.isEnPassant(pi); }
     bool hasEnPassant() const { return enPassantPawns().any(); }
-    Square enPassantSquare() const { Square ep = squareOf(traits.getEnPassant()); assert (ep.on(Rank4)); return ep; }
+    Square enPassantSquare() const { Square ep = squareOf(traits.piEnPassant()); assert (ep.on(Rank4)); return ep; }
     File enPassantFile() const { return File{enPassantSquare()}; }
 
     PiMask pinners() const { return traits.pinners(); }
@@ -122,7 +122,7 @@ public:
     void movePawn(Pi, Square, Square);
     void moveKing(Square, Square);
     void castle(Square kingFrom, Square kingTo, Pi rook, Square rookFrom, Square rookTo);
-    Pi promote(Pi, Square, PromoType, Square);
+    Pi piPromoted(Pi, Square, PromoType, Square);
     void capture(Square);
 
     void setEnPassantVictim(Pi);
