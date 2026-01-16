@@ -5,13 +5,13 @@
 #include "Zobrist.hpp"
 
 // side to move
-#define MY positionSide(My)
+#define MY positionSide(Side{My})
 
 // opponent side
-#define OP positionSide(Op)
+#define OP positionSide(Side{Op})
 
 // all occupied squares by both sides from the current side point of view
-#define OCCUPIED occupied(My)
+#define OCCUPIED occupied(Side{My})
 
 // number of halfmoves without capture or pawn move
 class Rule50 {
@@ -59,7 +59,11 @@ class Position {
     bool isSpecialMove(Square, Square) const;
 
 protected:
-    constexpr PositionSide& positionSide(Side::_t side) { return positionSide_[side]; }
+    constexpr PositionSide& positionSide(Side side) { return positionSide_[side]; }
+    constexpr const PositionSide& positionSide(Side side) const { return positionSide_[side]; }
+
+    // all occupied squares by both sides from the given side point of view
+    constexpr const Bb& occupied(Side side) const { return occupied_[side]; }
 
     // update the zobrist hash of incoming move
     void makeZobrist(const Position* parent, Square from, Square to) { zobrist_ = parent->createZobrist(from, to); }
@@ -74,29 +78,24 @@ protected:
 
     template <Side::_t> void setLegalEnPassant(Pi, Square);
     void setZobrist() { zobrist_ = generateZobrist(); }
+
+    // number of halfmoves since last capture or pawn move
+    constexpr const Rule50& rule50() const { return rule50_; }
     void setRule50(const Rule50& rule50) { rule50_ = rule50; }
 
     // convert internal move to be printable in UCI format
     UciMove uciMove(Square from, Square to) const { return UciMove{from, to, isSpecialMove(from, to)}; }
 
 public:
-    constexpr const PositionSide& positionSide(Side::_t side) const { return positionSide_[side]; }
-
-    // all occupied squares by both sides from the given side point of view
-    constexpr const Bb& occupied(Side::_t side) const { return occupied_[side]; }
-
     // position hash
     constexpr const Zobrist& zobrist() const { return zobrist_; }
-
-    // number of halfmoves since last capture or pawn move
-    constexpr const Rule50& rule50() const { return rule50_; }
 
     Score evaluate() const { return Evaluation::evaluate(MY.evaluation(), OP.evaluation()); }
 
     // make move directly inside position itself
     void makeMove(Square, Square);
 
-// initial position setup
+// initial position setup in class UciPosition
 
     bool dropValid(Side, PieceType, Square);
     bool afterDrop();

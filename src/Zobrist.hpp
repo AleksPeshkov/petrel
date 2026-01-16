@@ -47,9 +47,9 @@ class Zobrist : public Z {
     enum { Castling = 6, EnPassant = 7 };
     using Index = ::Index<8>;
 
-    inline static constexpr Index::arrayOf<_t> zKey = {{
+    constexpr static Index::arrayOf<_t> zKey{
         ZQueen, ZRook, ZBishop, ZKnight, ZPawn, ZKing, ZCastling, ZEnPassant
-    }};
+    };
 
     constexpr static _t r(_t z, Square sq) { return ::rotateleft(z, sq); }
     constexpr static _t z(Index ty, Square sq) { return r(zKey[ty], sq); }
@@ -71,7 +71,7 @@ public:
     void castling(Square sq)  { assert (sq.on(Rank1)); my(Index{Castling}, sq); }
     void enPassant(Square sq) { assert (sq.on(Rank4)); my(Index{EnPassant}, sq); }
 
-    void op(PieceType ty, Square sq) { op(Index{ty}, sq);}
+    void op(NonKingType ty, Square sq) { op(Index{ty}, sq);}
     void opCastling(Square sq)  { assert (sq.on(Rank1)); op(Index{Castling}, sq); }
     void opEnPassant(Square sq) { assert (sq.on(Rank4)); op(Index{EnPassant}, sq); }
 

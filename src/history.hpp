@@ -4,6 +4,42 @@
 #include "Index.hpp"
 #include "Zobrist.hpp"
 
+/**
+ * Inserts or moves `value` to position `Pos` in the array, preserving uniqueness.
+ * - If `value` is already present in [0, Pos): no action (already prioritized).
+ * - Else if `value` is found at i >= Pos: moves it to position `Pos`.
+ * - Otherwise: inserts at `Pos`, shifting [Pos, end-1] right (last element dropped).
+ *
+ * Useful for history heuristics where earlier positions have higher priority.
+ *
+ * @tparam Pos Target position (should be < Size)
+ * @tparam T Element type
+ * @tparam Size Array size
+ * @param arr Array to update
+ * @param value Value to insert or move
+ */
+template <size_t Pos = 0, typename T, size_t Size>
+void insert_unique(std::array<T, Size>& arr, const T& value) {
+    static_assert(Pos < Size, "Pos must be less than container size");
+
+    auto begin = arr.begin();
+    auto pos = begin + Pos;
+    auto end = begin + Size;
+
+    // already in high-priority zone?
+    if (std::find(begin, pos, value) != pos) { return; }
+
+    // found later?
+    auto found = std::find(pos, end, value);
+    if (found != end) {
+        std::rotate(pos, found, found + 1);
+    } else {
+        // insert at Pos, shift right, drop last
+        std::copy_backward(pos, end - 1, end);
+        *pos = value;
+    }
+}
+
 template<int _Size>
 class CACHE_ALIGN HistoryMoves {
 public:
@@ -29,45 +65,6 @@ public:
     }
 };
 
-/**
- * Inserts or moves `value` to position `Pos` in the array, preserving uniqueness.
- * - If `value` is already present in [0, Pos): no action (already prioritized).
- * - Else if `value` is found at i >= Pos: moves it to position `Pos`.
- * - Otherwise: inserts at `Pos`, shifting [Pos, end-1] right (last element dropped).
- *
- * Useful for history heuristics where earlier positions have higher priority.
- *
- * @tparam Pos Target position (should be < Size)
- * @tparam T Element type
- * @tparam Size Array size
- * @param arr Array to update
- * @param value Value to insert or move
- */
-template <size_t Pos = 0, typename T, size_t Size>
-void insert_unique(std::array<T, Size>& arr, const T& value) {
-    static_assert(Pos < Size);
-
-    auto begin = arr.begin();
-    auto pos = begin + Pos;
-    auto end = arr.end();
-
-    // find if existing before Pos
-    if (std::find(arr.begin(), pos, value) != pos) {
-        return; // already present → do nothing
-    }
-
-    // find if existing after Pos
-    auto found = std::find(pos, end, value);
-
-    if (found != end) {
-        std::rotate(pos, found, found + 1); // moves *found to *pos
-    } else {
-        // No match: shift all down, insert at *pos
-        std::copy_backward(pos, end - 1, end);
-        *pos = value;
-    }
-}
-
 // triangular array
 class CACHE_ALIGN PvMoves {
     static constexpr auto triangularArraySize = (Ply::Last+1) * (Ply::Last+2) / 2;
@@ -83,14 +80,18 @@ public:
     void clearPly(Index i) { pv[i] = UciMove{}; }
 
     Index set(Index parent, UciMove move, Index child) {
-        pv[parent++] = move;
-        assert (parent <= child);
-        while ((pv[parent++] = pv[child++]));
-        pv[parent] = UciMove{};
-        return parent; // new child index
+        pv[parent] = move;
+        assert (parent < child);
+
+        auto from = static_cast<Index::_t>(child);
+        auto to = static_cast<Index::_t>(parent) + 1;
+        while ((pv[Index{to++}] = pv[Index{from++}])) {}
+
+        pv[Index{to}] = UciMove{};
+        return Index{to}; // new child index
     }
 
-    operator const UciMove* () const { return &pv[0]; }
+    operator const UciMove* () const { return &pv[Index{0}]; }
 
     friend ostream& operator << (ostream& out, const PvMoves& pvMoves) {
         return out << static_cast<const UciMove*>(pvMoves);
@@ -119,7 +120,7 @@ class RepetitionsSide {
 
     constexpr static RepIndex Last{RepIndex::Last};
 
-    RepIndex::arrayOf<RepEntry> reps;
+    std::array<RepEntry, RepIndex::Size> reps;
     int count = 0; // number of entries
     RepIndex last{RepIndex::Last}; // last added entry index
 
@@ -148,7 +149,7 @@ public:
     }
 
     void normalize() {
-        Index<25>::arrayOf<Z> duplicates;
+        std::array<Z, 25> duplicates;
         int duplicateCount = 0;
 
         // find duplicates
@@ -226,7 +227,7 @@ class Repetitions {
 
 public:
     void clear() {
-        for (auto c : Color::range()) {
+        for (auto c : range<Color>()) {
             v[c].clear();
         }
     }
@@ -238,7 +239,7 @@ public:
     void normalize(Color color) {
         // the very last position is search root and should be removed from history
         v[color].dropLast();
-        for (auto c : Color::range()) {
+        for (auto c : range<Color>()) {
             v[c].normalize();
         }
     }
