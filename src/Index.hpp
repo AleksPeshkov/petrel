@@ -1,12 +1,15 @@
 #ifndef INDEX_HPP
 #define INDEX_HPP
 
+#include <algorithm>
 #include <array>
+#include <cstddef>
 #include <concepts>
 #include <limits>
 #include <ranges>
 #include <type_traits>
 
+#include "assert.hpp"
 #include "bitops.hpp"
 #include "io.hpp"
 
@@ -27,7 +30,7 @@ protected:
 
 public:
     explicit constexpr Index (element_type i = static_cast<element_type>(0)) : v{i} { assertOk(); }
-    constexpr operator element_type () const { assertOk(); return static_cast<element_type>(v); }
+    constexpr operator element_type () const { return static_cast<element_type>(v); }
 
     constexpr void assertOk() const { assert (isOk()); }
     [[nodiscard]] constexpr bool isOk() const { return static_cast<unsigned>(v) < static_cast<unsigned>(Size); }
@@ -38,10 +41,10 @@ public:
     [[nodiscard]] constexpr Index operator ++ (int) { assertOk(); auto result = Index{v}; ++v; return result; }
 
     constexpr Index& flip() { assertOk(); v = static_cast<storage_t>(v ^ Mask); return *this; }
-    constexpr Index operator ~ () const { return Index{static_cast<Index::_t>(v)}.flip(); }
+    constexpr Index operator ~ () const { return Index{static_cast<_t>(v)}.flip(); }
 
-    constexpr friend bool operator < (Index a, Index b) { b.assertOk(); return a.v < b.v; }
-    constexpr friend bool operator <= (Index a, Index b) { b.assertOk(); return a.v <= b.v; }
+    constexpr friend bool operator < (Index a, Index b) { return a.v < b.v; }
+    constexpr friend bool operator <= (Index a, Index b) { return a.v <= b.v; }
 
     friend ostream& operator << (ostream& out, Index& index) { return out << static_cast<int>(index.v); }
 
@@ -66,12 +69,32 @@ struct CharMap {
     static constexpr io::czstring The_string = nullptr;
 };
 
+// Index with character I/O
 template <int _Size, typename _element_type = int, typename _storage_type = _element_type>
 class IndexChar : public Index<_Size, _element_type, _storage_type> {
     using Base = Index<_Size, _element_type, _storage_type>;
     using Base::v;
 
-    static constexpr auto The_string = CharMap<_element_type>::The_string;
+    static constexpr io::czstring The_string = CharMap<_element_type>::The_string;
+
+    static_assert(The_string != nullptr, "CharMap<Enum> must be specialized with a valid string");
+
+    static_assert([] {
+        // Ensure at least _Size non-null characters
+        for (int i = 0; i < _Size; ++i)
+            if (The_string[i] == '\0')
+                return false;
+        return true;
+    }(), "CharMap string must have at least _Size non-null characters");
+
+    static_assert([] {
+        // Ensure first _Size characters are unique
+        for (int i = 0; i < _Size; ++i)
+            for (int j = i + 1; j < _Size; ++j)
+                if (The_string[i] == The_string[j])
+                    return false;
+        return true;
+    }(), "CharMap string must have unique characters in first _Size positions");
 
 public:
     using typename Base::_t;
@@ -81,10 +104,12 @@ public:
     constexpr io::char_type to_char() const { return The_string[v]; }
     friend ostream& operator << (ostream& out, IndexChar index) { return out << index.to_char(); }
 
-    bool from_char(io::char_type c) {
-        auto p = std::memchr(The_string, c, _Size);
-        if (!p) { return false; }
-        v = static_cast<_t>(static_cast<io::czstring>(p) - The_string);
+    constexpr bool from_char(io::char_type c) {
+        const auto* begin = The_string;
+        const auto* end = begin + _Size;
+        const auto* p = std::find(begin, end, c);
+        if (p == end) return false;
+        v = static_cast<_t>(p - begin);
         assertOk();
         assert (c == to_char());
         return true;
@@ -103,7 +128,6 @@ public:
             return IndexChar{static_cast<_element_type>(i)};
         });
     }
-
 };
 
 // search tree distance in halfmoves
@@ -114,8 +138,6 @@ public:
     friend bool operator <= (Index a, int i) { return a <= i; }
 };
 constexpr Ply::_t MaxPly = Ply::Last; // Ply is limited to [0 .. MaxPly]
-
-using MovesNumber = int; // number of (legal) moves in the position
 
 using node_count_t = u64_t;
 enum : node_count_t {
@@ -146,13 +168,13 @@ public:
         }
         return in;
     }
-
 };
 
 enum rank_t { Rank8, Rank7, Rank6, Rank5, Rank4, Rank3, Rank2, Rank1, };
 class Rank : public Index<8, rank_t> {
 public:
     using Index::Index;
+
     constexpr Rank forward() const { return Rank{static_cast<Rank::_t>(v + Rank2 - Rank1)}; }
 
     constexpr io::char_type to_char() const { return static_cast<io::char_type>('8' - v); }
@@ -172,7 +194,6 @@ public:
         }
         return in;
     }
-
 };
 
 enum direction_t { FileDir, RankDir, DiagonalDir, AntidiagDir };
@@ -242,7 +263,6 @@ public:
             return Square{static_cast<Square::_t>(i)};
         });
     }
-
 };
 
 enum color_t : u8_t { White, Black };
@@ -254,10 +274,12 @@ constexpr Color::_t distance(Color c, Ply ply) { return static_cast<Color::_t>((
 
 enum side_to_move_t {
     My, // side to move
-    Op  // opposite to side to move
+    Op, // not side to move
 };
 using Side = Index<2, side_to_move_t>;
-constexpr Side::_t operator ~ (Side::_t si) { return static_cast<Side::_t>(si ^ static_cast<Side::_t>(Side::Mask)); }
+constexpr Side::_t operator~(Side::_t si) {
+    return static_cast<Side::_t>(si ^ static_cast<Side::_t>(Side::Mask));
+}
 
 enum chess_variant_t : u8_t { Orthodox, Chess960 };
 using ChessVariant = Index<2, chess_variant_t>;
@@ -279,15 +301,15 @@ enum piece_type_t {
 };
 template <> struct CharMap<piece_type_t> { static constexpr io::czstring The_string = "qrbnpk"; };
 
-using SliderType = Index<3, piece_type_t>; // Queen, Rook, Bishop
+using SliderType = Index<3, piece_type_t>;    // Queen, Rook, Bishop
 using PromoType = IndexChar<4, piece_type_t>; // Queen, Rook, Bishop, Knight
-using NonKingType = Index<5, piece_type_t>; // Queen, Rook, Bishop, Knight, Pawn
+using NonKingType = Index<5, piece_type_t>;   // Queen, Rook, Bishop, Knight, Pawn
 using PieceType = IndexChar<6, piece_type_t>; // Queen, Rook, Bishop, Knight, Pawn, King
 
 constexpr bool isSlider(piece_type_t ty) { return ty < Knight; } // Queen, Rook, Bishop
 constexpr bool isLeaper(piece_type_t ty) { return ty >= Knight; } // Knight, Pawn, King
 
-// encoding of the promoted piece type inside 12-bit move
+// encoding of the promoted piece type inside "to" square
 constexpr Rank::_t rankOf(PromoType::_t ty) { return static_cast<Rank::_t>(ty); }
 
 // decoding promoted piece type from move destination square rank
@@ -302,8 +324,6 @@ enum class ReturnStatus {
     Stop,       // stop current search (timeout or other termination reason)
     BetaCutoff, // prune current node search
 };
-
-#define RETURN_IF_STOP(visitor) { if (visitor == ReturnStatus::Stop) { return ReturnStatus::Stop; } } ((void)0)
 
 /**
  * Internal move is 12 bits long (packed 'from' and 'to' squares) and linked to the position from it was made
