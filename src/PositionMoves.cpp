@@ -2,7 +2,7 @@
 
 template <Side::_t My>
 void PositionMoves::generateEnPassantMoves() {
-    constexpr Side Op{~My};
+    constexpr Side::_t Op{~My};
 
     assert (MY.hasEnPassant());
     assert (OP.hasEnPassant());
@@ -10,25 +10,21 @@ void PositionMoves::generateEnPassantMoves() {
     File epFile = OP.enPassantFile();
     assert (MY.enPassantPawns() <= ( MY.pawns() & MY.attackersTo(Square{epFile, Rank6}) ));
 
-    moves_[Rank5] |= PiRank(epFile) & PiRank{MY.enPassantPawns()};
+    moves_[Rank{Rank5}] |= PiRank(epFile) & PiRank{MY.enPassantPawns()};
 }
 
 template <Side::_t My>
 void PositionMoves::populateUnderpromotions() {
-    constexpr Side Op{~My};
-
     //add underpromotions for each already generated legal queen promotion
     //TRICK: promoted piece type encoded inside pawn destination square rank
-    PiRank promotionFiles = moves_[Rank8] & PiRank{MY.pawns()};
-    moves_[::rankOf(Rook)]   += promotionFiles;
-    moves_[::rankOf(Bishop)] += promotionFiles;
-    moves_[::rankOf(Knight)] += promotionFiles;
+    PiRank promotionFiles = moves_[Rank{Rank8}] & PiRank{MY.pawns()};
+    moves_[::rankOf(PromoType{Rook})]   += promotionFiles;
+    moves_[::rankOf(PromoType{Bishop})] += promotionFiles;
+    moves_[::rankOf(PromoType{Knight})] += promotionFiles;
 }
 
 template <Side::_t My>
 void PositionMoves::generateLegalKingMoves() {
-    constexpr Side Op{~My};
-
     //TRICK: our attacks do not hide under attacked king shadow
     Bb kingMoves = ::attacksFrom(PieceType{King}, MY.kingSquare()) % (MY.bbSide() | bbAttacked());
     moves_.set(Pi{TheKing}, kingMoves);
@@ -36,8 +32,6 @@ void PositionMoves::generateLegalKingMoves() {
 
 template <Side::_t My>
 void PositionMoves::generateCastlingMoves() {
-    constexpr Side Op{~My};
-
     for (Pi pi : MY.castlingRooks()) {
         if ( ::castlingRules.isLegal(MY.kingSquare(), MY.squareOf(pi), OCCUPIED, bbAttacked()) ) {
             //castling encoded as the rook moves over the own king square
@@ -48,8 +42,6 @@ void PositionMoves::generateCastlingMoves() {
 
 template <Side::_t My>
 void PositionMoves::generatePawnMoves() {
-    constexpr Side Op{~My};
-
     for (Pi pi : MY.pawns()) {
         Square from{ MY.squareOf(pi) };
 
@@ -60,8 +52,8 @@ void PositionMoves::generatePawnMoves() {
         fileTo %= OCCUPIED[rankTo];
 
         //double push
-        if ((rankTo.is(Rank3)) && (fileTo % OCCUPIED[Rank4]).any()) {
-            moves_.set(pi, Rank4, fileTo);
+        if ((rankTo.is(Rank3)) && (fileTo % OCCUPIED[Rank{Rank4}]).any()) {
+            moves_.set(pi, Rank{Rank4}, fileTo);
         }
 
         //remove "captures" of free squares from default generated moves
@@ -73,8 +65,6 @@ void PositionMoves::generatePawnMoves() {
 
 template <Side::_t My>
 void PositionMoves::correctCheckEvasionsByPawns(Bb checkLine, Square checkFrom) {
-    constexpr Side Op{~My};
-
     //TRICK: assumes Rank8 = 0
     //simple pawn push over check line
     Bb potentialBlockers = checkLine << 8u;
@@ -92,15 +82,14 @@ void PositionMoves::correctCheckEvasionsByPawns(Bb checkLine, Square checkFrom) 
     //pawns double push over check line
     Bb pawnJumpEvasions = MY.bbPawns() & Bb{Rank2} & (checkLine << 16u) % (OCCUPIED << 8u);
     for (Square from : pawnJumpEvasions) {
-        moves_.add(MY.pieceAt(from), Rank4, File{from});
+        moves_.add(MY.pieceAt(from), Rank{Rank4}, File{from});
     }
-
 }
 
 //exclude illegal moves due absolute pin
 template <Side::_t My>
 void PositionMoves::excludePinnedMoves(PiMask opPinners) {
-    constexpr Side Op{~My};
+    constexpr Side::_t Op{~My};
 
     for (Pi pinner : opPinners) {
         Square pinFrom{~OP.squareOf(pinner)};
@@ -123,7 +112,7 @@ void PositionMoves::excludePinnedMoves(PiMask opPinners) {
 
 template <Side::_t My>
 void PositionMoves::generateCheckEvasions() {
-    constexpr Side Op{~My};
+    constexpr Side::_t Op{~My};
 
     PiMask checkers = OP.checkers();
 
@@ -157,7 +146,7 @@ void PositionMoves::generateCheckEvasions() {
 //generate all legal moves from the current position for the current side to move
 template <Side::_t My>
 void PositionMoves::generateMoves() {
-    constexpr Side Op{~My};
+    constexpr Side::_t Op{~My};
     bbAttacked_ = ~OP.attacks().gather();
 
     inCheck_ = bbAttacked().has(MY.kingSquare());
