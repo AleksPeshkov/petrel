@@ -14,7 +14,7 @@ class FenToBoard {
             else {
                 // FileD > FileE > FileC > FileF > FileB > FileG > FileA > FileH
                 // order gains a few Elo
-                constexpr Rank::arrayOf<int> order{6, 4, 2, 0, 1, 3, 5, 7};
+                constexpr File::arrayOf<int> order{6, 4, 2, 0, 1, 3, 5, 7};
                 return order[File{sq1}] < order[File{sq2}];
             }
         }
@@ -87,7 +87,7 @@ bool FenToBoard::drop(Color color, PieceType ty, Square sq) {
     }
 
     //max one king per each color
-    if (ty.is(King) && !pieces[color][King].empty()) {
+    if (ty.is(King) && !pieces[color][PieceType{King}].empty()) {
         io::log("#invalid fen: too many kings");
         return false;
     }
@@ -105,8 +105,8 @@ bool FenToBoard::drop(Color color, PieceType ty, Square sq) {
 
 bool FenToBoard::dropPieces(Position& position, Color colorToMove_) {
     //each side should have one king
-    for (auto color : Color::range()) {
-        if (pieces[color][King].empty()) {
+    for (auto color : range<Color>()) {
+        if (pieces[color][PieceType{King}].empty()) {
             io::log("#invalid fen: king is missing");
             return false;
         }
@@ -114,10 +114,10 @@ bool FenToBoard::dropPieces(Position& position, Color colorToMove_) {
 
     Position pos;
 
-    for (auto color : Color::range()) {
+    for (auto color : range<Color>()) {
         Side side{colorToMove_.is(color) ? My : Op};
 
-        for (auto ty : PieceType::range()) {
+        for (auto ty : range<PieceType>()) {
             while (!pieces[color][ty].empty()) {
                 auto piece = pieces[color][ty].begin();
 
@@ -143,10 +143,10 @@ public:
         {}
 
     friend ostream& operator << (ostream& out, const BoardToFen& board) {
-        for (auto rank : Rank::range()) {
+        for (auto rank : range<Rank>()) {
             int emptySqCount = 0;
 
-            for (auto file : File::range()) {
+            for (auto file : range<File>()) {
                 Square sq{file, rank};
 
                 if (board.whitePieces.has(sq)) {
@@ -374,14 +374,6 @@ istream& UciPosition::readBoard(istream& in) {
     return in;
 }
 
-bool UciPosition::setCastling(Side My, File file) {
-    return MY.setValidCastling(file);
-}
-
-bool UciPosition::setCastling(Side My, CastlingSide castlingSide) {
-    return MY.setValidCastling(castlingSide);
-}
-
 istream& UciPosition::readCastling(istream& in) {
     if (in.peek() == '-') { return in.ignore(); }
 
@@ -394,12 +386,12 @@ istream& UciPosition::readCastling(istream& in) {
 
             CastlingSide castlingSide;
             if (castlingSide.from_char(c)) {
-                if (setCastling(side, castlingSide)) { continue; }
+                if (positionSide(side).setValidCastling(castlingSide)) { continue; }
             }
             else {
                 File file;
                 if (file.from_char(c)) {
-                    if (setCastling(side, file)) { continue; }
+                    if (positionSide(side).setValidCastling(file)) { continue; }
                 }
             }
         }
