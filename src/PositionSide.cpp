@@ -54,10 +54,10 @@ void PositionSide::setLeaperAttacks() {
 
 void PositionSide::capture(Square from) {
     Pi pi = pieceAt(from);
-    PieceType ty = typeOf(pi);
+    NonKingType ty{typeOf(pi)};
     assert (!ty.is(King));
 
-    assertOk(pi, ty, from);
+    assertOk(pi, PieceType{ty}, from);
 
     bbSide_ -= Bb{from};
     if (ty.is(Pawn)) {

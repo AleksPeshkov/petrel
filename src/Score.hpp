@@ -95,7 +95,7 @@ struct Score {
         return score;
     }
 
-    friend ostream& operator << (ostream& out, Score score) {
+    friend ostream& operator << (ostream& out, const Score& score) {
         out << " score ";
 
         if (score == NoScore) {
@@ -291,8 +291,8 @@ public:
             },
         };
 
-        for (auto ty : PieceType::range()) {
-            for (auto sq : Square::range()) {
+        for (auto ty : range<PieceType>()) {
+            for (auto sq : range<Square>()) {
                 pst[ty][sq] = {{
                     static_cast<u16_t>(openingMat[ty] + openingPst[ty][sq]),
                     static_cast<u16_t>(endgameMat[ty] + endgamePst[ty][sq]),
@@ -305,7 +305,7 @@ public:
         }
     }
 
-    constexpr const element_type& operator() (PieceType::_t ty, Square sq) const { return pst[ty][sq]; }
+    constexpr const element_type& operator() (PieceType ty, Square sq) const { return pst[ty][sq]; }
 };
 
 extern const PieceSquareTable pieceSquareTable;
@@ -317,8 +317,8 @@ public:
 private:
     _t v;
 
-    constexpr void from(PieceType::_t ty, Square sq) { v -= pieceSquareTable(ty, sq); }
-    constexpr void to(PieceType::_t ty, Square sq) { v += pieceSquareTable(ty, sq); }
+    constexpr void from(PieceType ty, Square sq) { v -= pieceSquareTable(ty, sq); }
+    constexpr void to(PieceType ty, Square sq) { v += pieceSquareTable(ty, sq); }
 
 public:
     constexpr Evaluation () : v{} {}
@@ -330,24 +330,24 @@ public:
     }
 
     void drop(PieceType ty, Square t) { to(ty, t); }
-    void capture(PieceType ty, Square f) { assert (ty != King); from(ty, f); }
-    void move(PieceType::_t ty, Square f, Square t) { assert (f != t); from(ty, f); to(ty, t); }
+    void capture(NonKingType ty, Square f) { from(PieceType{ty}, f); }
+    void move(PieceType ty, Square f, Square t) { assert (f != t); from(ty, f); to(ty, t); }
 
     void promote(Square f, Square t, PromoType ty) {
         assert (f.on(Rank7) && t.on(Rank8));
-        from(Pawn, f);
-        to(ty, t);
+        from(PieceType{Pawn}, f);
+        to(PieceType{ty}, t);
     }
 
     void castle(Square kingFrom, Square kingTo, Square rookFrom, Square rookTo) {
         assert (kingFrom != rookFrom);
         assert (kingTo != rookTo);
 
-        from(King, kingFrom); from(Rook, rookFrom);
-        to(Rook, rookTo); to(King, kingTo);
+        from(PieceType{King}, kingFrom); from(PieceType{Rook}, rookFrom);
+        to(PieceType{Rook}, rookTo); to(PieceType{King}, kingTo);
     }
 
-    constexpr int count(PieceType::_t ty) const {
+    constexpr int count(NonKingType::_t ty) const {
         switch (ty) {
             case Queen:
                 return v.s.queens;
