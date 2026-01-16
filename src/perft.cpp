@@ -45,14 +45,13 @@ public:
 class CACHE_ALIGN HashBucket {
 public:
     using _t = vu64x2_t;
-    using Index = ::Index<4>;
 
 private:
-    Index::arrayOf<_t> v;
+    std::array<_t, 4> v;
 
 public:
     constexpr HashBucket() : v{{{0,0}, {0,0}, {0,0}, {0,0}}} {}
-    constexpr const _t& operator[] (Index::_t i) const { return v[i]; }
+    constexpr const _t& operator[] (int i) const { return v[i]; }
 
     constexpr HashBucket& operator = (const HashBucket& a) {
         v[0] = a[0];
@@ -62,7 +61,7 @@ public:
         return *this;
     }
 
-    constexpr void set(Index::_t i, _t m) {
+    constexpr void set(int i, _t m) {
         v[i] = m;
     }
 
@@ -151,8 +150,8 @@ public:
 
 union BucketUnion {
     struct {
-        Index<4>::arrayOf<PerftRecordSmall> d;
-        Index<2>::arrayOf<PerftRecord> b;
+        std::array<PerftRecordSmall, 4> d;
+        std::array<PerftRecord, 2> b;
     } v;
     HashBucket m;
 };
