@@ -53,7 +53,7 @@ void PositionSide::setLeaperAttacks() {
 }
 
 void PositionSide::capture(Square from) {
-    Pi pi = pieceAt(from);
+    Pi pi = piAt(from);
     NonKingType ty{typeOf(pi)};
     assert (!ty.is(King));
 
@@ -119,7 +119,7 @@ void PositionSide::movePawn(Pi pi, Square from, Square to) {
     assertOk(pi, PieceType{Pawn}, to);
 }
 
-Pi PositionSide::promote(Pi pawn, Square from, PromoType ty, Square to) {
+Pi PositionSide::piPromoted(Pi pawn, Square from, PromoType ty, Square to) {
     assert (from.on(Rank7));
     assert (to.on(Rank8));
     assert (traits.isPromotable(pawn));
@@ -138,7 +138,7 @@ Pi PositionSide::promote(Pi pawn, Square from, PromoType ty, Square to) {
 
     // drop promoted piece to the most valuable if possible
     //TODO: resort all pieces
-    Pi promo = PieceSet(pieces()).vacantMostValuable();
+    Pi promo = PieceSet(pieces()).piMostValuableVacant();
     assert (promo <= pawn);
 
     squares.drop(promo, to);
@@ -295,7 +295,7 @@ bool PositionSide::dropValid(PieceType ty, Square to) {
     }
     bbSide_ += Bb{to};
 
-    Pi pi = ty.is(King) ? Pi{TheKing} : PieceSet{pieces() | PiMask{Pi{TheKing}}}.vacantMostValuable();
+    Pi pi = ty.is(King) ? Pi{TheKing} : PieceSet{pieces() | PiMask{Pi{TheKing}}}.piMostValuableVacant();
 
     evaluation_.drop(ty, to);
     types.drop(pi, ty);
@@ -332,7 +332,7 @@ bool PositionSide::setValidCastling(CastlingSide castlingSide) {
         return false;
     }
 
-    Pi rook = pieceAt(outerSquare);
+    Pi rook = piAt(outerSquare);
     if (isCastling(rook)) {
         io::log("#invalid fen castling: rook is already set castling");
         return false;
@@ -354,7 +354,7 @@ bool PositionSide::setValidCastling(File file) {
         return false;
     }
 
-    Pi rook = pieceAt(rookFrom);
+    Pi rook = piAt(rookFrom);
     if (!types.isRook(rook)) {
         io::log("#invalid fen castling: castling piece is not rook");
         return false;
