@@ -248,7 +248,7 @@ istream& UciPosition::readMove(istream& in, Square& from, Square& to) const {
     if (colorToMove_.is(Black)) { from.flip(); to.flip(); }
 
     if (!MY.has(from)) { return io::fail_pos(in, before); }
-    Pi pi = MY.pieceAt(from);
+    Pi pi = MY.piAt(from);
 
     //convert special moves (castling, promotion, ep) to the internal move format
     if (MY.isPawn(pi)) {
@@ -310,7 +310,7 @@ void UciPosition::limitMoves(istream& in) {
             return;
         }
 
-        Pi pi = MY.pieceAt(from);
+        Pi pi = MY.piAt(from);
         if (!movesMatrix.has(pi, to)) {
             movesMatrix.add(pi, to);
             ++n;
@@ -404,7 +404,7 @@ bool UciPosition::setEnPassant(File file) {
     Square to{file, Rank4};
     if (!OP.has(to)) { return false; }
 
-    Pi victim = OP.pieceAt(to);
+    Pi victim = OP.piAt(to);
     if (!OP.isPawn(victim)) { return false; }
 
     if (OCCUPIED.has(~Square{file, Rank3})) { return false; }

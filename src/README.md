@@ -39,12 +39,15 @@ Abbreviations in the code:
 * `Color color`: `{White, Black}` – rarely used, but required for correct output of internal moves in standard chess notation.
 * `PieceType ty`: `{Queen = 0, Rook = 1, Bishop = 2, Knight = 3, Pawn = 4, King = 5}` – type of possible chess piece.
 * `Pi pi`: Piece Index – one of 16 piece slots in a byte vector; `{TheKing = 0}` is the slot dedicated to the king.
+* Variables of type `Pi` and functions that return type `Pi` generally have `pi` prefix, example: `Pi pi = piAt(Square sq)`
 * `PiMask`: intermediate data – piece vector of byte masks (0 or 0xFF) for selected pieces.
-    Pieces are sorted so that more valuable pieces occupy lower indexes.
+* Many variables have type PiMask and many functions return PiMask. No special name prefix for them.
+* Pieces are sorted so that more valuable pieces occupy lower indexes.
 * `PiSquare`: stores locations of active pieces or the `0xFF` NoSquare tag.
 * `PiType`: each piece type is represented as a separate bit, enabling quick grouping by criteria.
 * `PiTrait`: castling and en passant statuses, plus temporary information like currently checking pieces.
 * `Bb bb`: BitBoard – a well-known 64-bit bitset representing squares on the chessboard.
+* Variables of type `Bb` and functions that return `Bb` often have `bb` prefix, example: `Bb bb = bbPawns()`
 * `PiBbMatrix`: matrix of Pi × Bb (128 bytes), used for storing and updating piece attack information and generating moves from attacks.
 
 Move Encoding
