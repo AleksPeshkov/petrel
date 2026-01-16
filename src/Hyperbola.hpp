@@ -40,7 +40,7 @@ constexpr Square reverse(Square sq) { return Square{ ~File{sq}, ~Rank{sq} }; }
 
 struct CACHE_ALIGN HyperbolaSq : Square::arrayOf<vu64x2_t> {
     constexpr HyperbolaSq () {
-        for (auto sq :  Square::range()) {
+        for (auto sq : range<Square>()) {
             (*this)[sq] = vu64x2_t{ Bb{sq}, Bb{::reverse(sq)} };
         }
     }
@@ -49,9 +49,9 @@ extern const HyperbolaSq hyperbolaSq;
 
 struct CACHE_ALIGN HyperbolaDir : Square::arrayOf<Direction::arrayOf<vu64x2_t>> {
     constexpr HyperbolaDir () {
-        for (auto sq :  Square::range()) {
+        for (auto sq : range<Square>()) {
             Square rsq{::reverse(sq)};
-            for (auto dir : Direction::range()) {
+            for (auto dir : range<Direction>()) {
                 (*this)[sq][dir] = vu64x2_t{sq.line(dir), rsq.line(dir)};
             }
         }
@@ -80,7 +80,7 @@ public:
         Direction dir{ ty == Bishop ? DiagonalDir : FileDir };
 
         const auto& d0 = hyperbolaDir[from][dir];
-        const auto& d1 = hyperbolaDir[from][static_cast<Direction::_t>(dir+1)];
+        const auto& d1 = hyperbolaDir[from][Direction{static_cast<Direction::_t>(dir+1)}];
 
         // bishop attacks for Bishops, rooks attacks for Rooks and Queens
         auto result = ((occupied & d0) - sq) & d0;
@@ -88,8 +88,8 @@ public:
 
         if (ty == Queen) {
             // plus bishop attacks for Queens
-            const auto& d = hyperbolaDir[from][DiagonalDir];
-            const auto& a = hyperbolaDir[from][AntidiagDir];
+            const auto& d = hyperbolaDir[from][Direction{DiagonalDir}];
+            const auto& a = hyperbolaDir[from][Direction{AntidiagDir}];
             result |= ((occupied & d) - sq) & d;
             result |= ((occupied & a) - sq) & a;
         }

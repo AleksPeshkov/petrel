@@ -94,7 +94,7 @@ protected:
 
     // Killer heuristic
     using KillerIndex = ::Index<3>;
-    mutable KillerIndex::arrayOf<HistoryMove> killer = {};
+    mutable std::array<HistoryMove, KillerIndex::Size> killer = {};
     bool canBeKiller = false;  // good captures should not waste killer slots
 
     Node (const Node* parent); // prepare empty child node

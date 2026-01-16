@@ -13,34 +13,74 @@
 #include "bitops.hpp"
 #include "io.hpp"
 
-template <int _Size, typename _element_type = int, typename _storage_type = _element_type>
-class Index {
-    using element_type = _element_type;
-    using storage_t = _storage_type;
-public:
-    using _t = element_type;
-    constexpr static int Size = _Size;
-    constexpr static storage_t Mask =  static_cast<storage_t>(Size-1);
-    constexpr static element_type Last = static_cast<element_type>(_Size-1);
+template <typename T>
+concept IndexLike =
+    requires { T::Size; }
+    && std::is_integral_v<std::remove_cv_t<decltype(T::Size)>>
+    && (T::Size > 0)
+    && requires { typename T::_t; }
+    && std::is_constructible_v<T, typename T::_t>
+    && (std::is_integral_v<typename T::_t> || std::is_enum_v<typename T::_t>);
 
-    template <typename T> using arrayOf = std::array<T, Size>;
+template <IndexLike Index>
+static constexpr auto range() {
+    return std::views::iota(0, Index::Size) | std::views::transform([](int i) {
+        return Index{static_cast<Index::_t>(i)};
+    });
+}
+
+template <IndexLike Index>
+static constexpr auto reverse_range() { return std::views::reverse(range<Index>()); }
+
+template <typename T, IndexLike Index>
+class indexed_array : public std::array<T, Index::Size> {
+    using Base = std::array<T, Index::Size>;
+
+    // Delete all integral overloads
+    template <typename I> requires std::integral<I>
+    T& operator[](I) = delete;
+
+    template <typename I> requires std::integral<I>
+    const T& operator[](I) const = delete;
+
+public:
+    // allow only indexing with Index
+    constexpr T& operator[](Index i) {
+        return Base::operator[](static_cast<size_t>(static_cast<typename Index::_t>(i)));
+    }
+
+    constexpr const T& operator[](Index i) const {
+        return Base::operator[](static_cast<size_t>(static_cast<typename Index::_t>(i)));
+    }
+};
+
+template <int _Size, typename _element_type = int>
+class Index {
+public:
+    using _t = _element_type;
+    constexpr static int Size = _Size;
+    static_assert(Size > 0);
+    constexpr static _t Mask =  static_cast<_t>(Size-1);
+    constexpr static _t Last =  static_cast<_t>(Size-1);
+
+    template <typename T>
+    using arrayOf = indexed_array<T, Index>;
 
 protected:
-    storage_t v;
+    _t v;
 
 public:
-    explicit constexpr Index (element_type i = static_cast<element_type>(0)) : v{i} { assertOk(); }
-    constexpr operator element_type () const { return static_cast<element_type>(v); }
+    explicit constexpr Index (_t i = static_cast<_t>(0)) : v{i} { assertOk(); }
+    constexpr operator const _t& () const { return v; }
 
     constexpr void assertOk() const { assert (isOk()); }
     [[nodiscard]] constexpr bool isOk() const { return static_cast<unsigned>(v) < static_cast<unsigned>(Size); }
 
-    constexpr bool is(element_type i) const { return v == i; }
+    constexpr bool is(_t i) const { return v == i; }
 
-    constexpr Index& operator ++ () { assertOk(); v = static_cast<element_type>(v+1); return *this; }
-    [[nodiscard]] constexpr Index operator ++ (int) { assertOk(); auto result = Index{v}; ++v; return result; }
+    constexpr Index& operator ++ () { assertOk(); v = static_cast<_t>(v+1); return *this; }
 
-    constexpr Index& flip() { assertOk(); v = static_cast<storage_t>(v ^ Mask); return *this; }
+    constexpr Index& flip() { assertOk(); v = static_cast<_t>(v ^ Mask); return *this; }
     constexpr Index operator ~ () const { return Index{static_cast<_t>(v)}.flip(); }
 
     constexpr friend bool operator < (Index a, Index b) { return a.v < b.v; }
@@ -53,14 +93,8 @@ public:
         auto before = in.tellg();
         in >> n;
         if (n < 0 || Last < n) { return io::fail_pos(in, before); }
-        index = Index{static_cast<element_type>(n)};
+        index = Index{static_cast<_t>(n)};
         return in;
-    }
-
-    static constexpr auto range() {
-        return std::views::iota(0, Size) | std::views::transform([](int i) {
-            return Index{static_cast<element_type>(i)};
-        });
     }
 };
 
@@ -70,9 +104,9 @@ struct CharMap {
 };
 
 // Index with character I/O
-template <int _Size, typename _element_type = int, typename _storage_type = _element_type>
-class IndexChar : public Index<_Size, _element_type, _storage_type> {
-    using Base = Index<_Size, _element_type, _storage_type>;
+template <int _Size, typename _element_type = int>
+class IndexChar : public Index<_Size, _element_type> {
+    using Base = Index<_Size, _element_type>;
     using Base::v;
 
     static constexpr io::czstring The_string = CharMap<_element_type>::The_string;
@@ -121,12 +155,6 @@ public:
             if (!index.from_char(c)) { io::fail_char(in); }
         }
         return in;
-    }
-
-    static constexpr auto range() {
-        return std::views::iota(0, _Size) | std::views::transform([](int i) {
-            return IndexChar{static_cast<_element_type>(i)};
-        });
     }
 };
 
@@ -257,12 +285,6 @@ public:
         sq = Square{file, rank};
         return in;
     }
-
-    static constexpr auto range() {
-        return std::views::iota(0, Size) | std::views::transform([](int i) {
-            return Square{static_cast<Square::_t>(i)};
-        });
-    }
 };
 
 enum color_t { White, Black };
@@ -277,8 +299,8 @@ enum side_to_move_t {
     Op, // not side to move
 };
 using Side = Index<2, side_to_move_t>;
-constexpr Side::_t operator~(Side::_t si) {
-    return static_cast<Side::_t>(si ^ static_cast<Side::_t>(Side::Mask));
+constexpr Side::_t operator ~ (Side::_t si) {
+    return static_cast<Side::_t>(si ^ Side::Mask);
 }
 
 enum chess_variant_t { Orthodox, Chess960 };
@@ -288,7 +310,7 @@ enum castling_side_t { KingSide, QueenSide };
 template <> struct CharMap<castling_side_t> { static constexpr io::czstring The_string = "kq"; };
 using CastlingSide = IndexChar<2, castling_side_t>;
 
-enum piece_index_t { TheKing, Last = 15 }; // king index is always 0
+enum piece_index_t : u8_t { TheKing }; // king index is always 0
 using Pi = Index<16, piece_index_t>; //piece index 0..15
 
 enum piece_type_t {
@@ -310,13 +332,10 @@ constexpr bool isSlider(piece_type_t ty) { return ty < Knight; } // Queen, Rook,
 constexpr bool isLeaper(piece_type_t ty) { return ty >= Knight; } // Knight, Pawn, King
 
 // encoding of the promoted piece type inside "to" square
-constexpr Rank::_t rankOf(PromoType::_t ty) { return static_cast<Rank::_t>(ty); }
+constexpr Rank rankOf(PromoType ty) { return Rank{static_cast<Rank::_t>(static_cast<PromoType::_t>(ty))}; }
 
 // decoding promoted piece type from move destination square rank
-constexpr PromoType::_t promoTypeFrom(Rank::_t r) { assert (r < 4); return static_cast<PromoType::_t>(r); }
-
-// encoding piece type from move destination square rank
-constexpr PieceType::_t pieceTypeFrom(Rank::_t r) { assert (r < 4); return static_cast<PieceType::_t>(r); }
+constexpr PromoType promoTypeFrom(Rank rank) { return PromoType{static_cast<PromoType::_t>(static_cast<Rank::_t>(rank))}; }
 
 // continue or stop search
 enum class ReturnStatus {
@@ -358,8 +377,9 @@ public:
         : v {static_cast<_t>((::historyType(ty) << Shift::Type) + (from << Shift::From) + (to << Shift::To))}
     {}
 
-    // for using as array index or null move check
-    constexpr operator const _t& () const { return v; }
+    constexpr operator bool () const { return v; }
+
+    constexpr operator Index () const { return Index{v}; }
 
     // moved piece type
     constexpr HistoryType historyType() const { return HistoryType{static_cast<HistoryType::_t>(v >> Shift::Type)}; }

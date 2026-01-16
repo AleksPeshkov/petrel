@@ -31,7 +31,7 @@ public:
 
     void move(Square from, Square to) { assert (from != to); *this -= Bb{from}; *this += Bb{to}; }
 
-    constexpr BitRank operator[] (Rank::_t r) const { return BitRank{small_cast<BitRank::_t>(v >> 8*r)}; }
+    constexpr BitRank operator[] (Rank r) const { return BitRank{small_cast<BitRank::_t>(v >> 8*r)}; }
 
     constexpr Bb pawnAttacks() const { return (*this % Bb{FileA} >> 9u) | (*this % Bb{FileH} >> 7u); }
 
@@ -43,9 +43,9 @@ public:
 
     friend ostream& operator << (ostream& out, Bb bb) {
         out << "    a b c d e f g h\n";
-        for (auto rank : Rank::range()) {
+        for (auto rank : range<Rank>()) {
             out << Rank{rank} << " |";
-            for (auto file : File::range()) {
+            for (auto file : range<File>()) {
                 Square sq{file, rank};
                 out << " " << (bb.has(sq) ? 'x'  : '.');
             }
@@ -98,8 +98,8 @@ class CACHE_ALIGN InBetween {
 
 public:
     constexpr InBetween () {
-        for (auto from : Square::range()) {
-            for (auto to : Square::range()) {
+        for (auto from : range<Square>()) {
+            for (auto to : range<Square>()) {
                 Bb result{};
 
                 if (File{from} == File{to}) {
@@ -134,18 +134,18 @@ class CACHE_ALIGN AttacksFrom {
     PieceType::arrayOf< Square::arrayOf<Bb> > attack;
 public:
     constexpr AttacksFrom () {
-        for (auto sq: Square::range()) {
-            attack[Rook][sq]   = sq.file() + sq.rank();
-            attack[Bishop][sq] = sq.diagonal() + sq.antidiag();
-            attack[Queen][sq]  = attack[Rook][sq] + attack[Bishop][sq];
+        for (auto sq: range<Square>()) {
+            attack[PieceType{Rook}][sq]   = sq.file() + sq.rank();
+            attack[PieceType{Bishop}][sq] = sq.diagonal() + sq.antidiag();
+            attack[PieceType{Queen}][sq]  = attack[PieceType{Rook}][sq] + attack[PieceType{Bishop}][sq];
 
-            attack[Pawn][sq] = sq(-1, Rank3 - Rank2) + sq(+1, Rank3 - Rank2);
+            attack[PieceType{Pawn}][sq] = sq(-1, Rank3 - Rank2) + sq(+1, Rank3 - Rank2);
 
-            attack[Knight][sq] =
+            attack[PieceType{Knight}][sq] =
                 sq(+2, +1) + sq(+2, -1) + sq(+1, +2) + sq(+1, -2) +
                 sq(-2, -1) + sq(-2, +1) + sq(-1, -2) + sq(-1, +2);
 
-            attack[King][sq] =
+            attack[PieceType{King}][sq] =
                 sq(+1, +1) + sq(+1, 0) + sq(0, +1) + sq(+1, -1) +
                 sq(-1, -1) + sq(-1, 0) + sq(0, -1) + sq(-1, +1);
         }
@@ -168,8 +168,8 @@ class CastlingRules {
 
 public:
     constexpr CastlingRules () {
-        for (auto kingFile : File::range()) {
-            for (auto rookFile : File::range()) {
+        for (auto kingFile : range<File>()) {
+            for (auto rookFile : range<File>()) {
                 Square king{kingFile, Rank1};
                 Square rook{rookFile, Rank1};
 
