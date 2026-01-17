@@ -530,9 +530,8 @@ void Node::failHigh() const {
         ++root.tt.writes;
     }
 
-    if (parent && canBeKiller) {
-        assert (currentMove);
-        parent->updateHistory(currentMove);
+    if (canBeKiller) {
+        updateHistory(currentMove);
     }
 }
 
@@ -543,9 +542,8 @@ void Node::updatePv() const {
         ++root.tt.writes;
     }
 
-    if (parent && canBeKiller) {
-        assert (currentMove);
-        parent->updateHistory(currentMove);
+    if (canBeKiller) {
+        updateHistory(currentMove);
     }
 
     if (ply == 0) {
@@ -555,36 +553,20 @@ void Node::updatePv() const {
 }
 
 void Node::updateHistory(HistoryMove historyMove) const {
-    if (killer[0] != historyMove) {
-        if (killer[1] != historyMove) {
-            if (killer[2] != historyMove) {
-                // fresh killer move
-                killer[1] = killer[0];
-                killer[0] = historyMove;
-            } else {
-                // promote killer[2] to killer[0]
-                killer[2] = killer[1];
-                killer[1] = killer[0];
-                killer[0] = historyMove;
-            }
-        } else {
-            // promote killer[1] to killer[0]
-            killer[1] = killer[0];
-            killer[0] = historyMove;
-        }
-    }
-    //insert_unique(killer, historyMove);
+    assert (historyMove);
+    if (!parent) { return; }
 
-    if (grandParent) {
-        insert_unique<2>(grandParent->killer, historyMove);
+    insert_unique(parent->killer, historyMove);
+    if (parent->grandParent) {
+        insert_unique<2>(parent->grandParent->killer, historyMove);
     }
 
-    if (currentMove) {
-        root.counterMove.set(colorToMove(), currentMove, historyMove);
+    if (parent->currentMove) {
+        root.counterMove.set(parent->colorToMove(), parent->currentMove, historyMove);
     }
 
-    if (parent && parent->currentMove) {
-        root.followMove.set(parent->colorToMove(),  parent->currentMove, historyMove);
+    if (grandParent && grandParent->currentMove) {
+        root.followMove.set(grandParent->colorToMove(), grandParent->currentMove, historyMove);
     }
 }
 
