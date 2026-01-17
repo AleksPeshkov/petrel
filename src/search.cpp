@@ -564,25 +564,7 @@ void Node::updatePv() const {
 }
 
 void Node::updateHistory(HistoryMove historyMove) const {
-    if (killer[0] != historyMove) {
-        if (killer[1] != historyMove) {
-            if (killer[2] != historyMove) {
-                // fresh killer move
-                killer[1] = killer[0];
-                killer[0] = historyMove;
-            } else {
-                // promote killer[2] to killer[0]
-                killer[2] = killer[1];
-                killer[1] = killer[0];
-                killer[0] = historyMove;
-            }
-        } else {
-            // promote killer[1] to killer[0]
-            killer[1] = killer[0];
-            killer[0] = historyMove;
-        }
-    }
-    //insert_unique(killer, historyMove);
+    insert_unique(killer, historyMove);
 
     if (grandParent) {
         insert_unique<2>(grandParent->killer, historyMove);
