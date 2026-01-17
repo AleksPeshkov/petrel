@@ -93,9 +93,8 @@ protected:
     PvMoves::Index pvIndex{0}; // start of subPV for the current ply
 
     // Killer heuristic
-    using KillerIndex = ::Index<3>;
-    mutable KillerIndex::arrayOf<HistoryMove> killer = {};
-    bool canBeKiller = false;  // good captures should not waste killer slots
+    mutable std::array<HistoryMove, 3> killer = {};
+    bool canBeKiller = false;  // good captures and check evasions should not waste killer slots
 
     Node (const Node* parent); // prepare empty child node
 
