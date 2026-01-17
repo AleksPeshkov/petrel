@@ -236,10 +236,7 @@ ReturnStatus Node::search() {
         RETURN_CUTOFF (counterMove(child));
         RETURN_CUTOFF (followMove(child));
 
-        // repeated killer heuristic (can change while searching descendants of previous killer[2])
-        while (isPossibleMove(parent->killer[2])) {
-            RETURN_CUTOFF (child->searchMove(parent->killer[2]));
-        }
+        RETURN_CUTOFF (child->searchIfPossible(parent->killer[2]));
     }
 
     // going to search only non-captures, mask out remaining unsafe captures to avoid redundant safety checks
