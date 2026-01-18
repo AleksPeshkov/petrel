@@ -303,14 +303,7 @@ ReturnStatus Node::search() {
     for (Square from : MY.bbPawns()) {
         Pi pi = MY.piAt(from);
 
-        R = 1;
-        if (canR) {
-            if (from.on(Rank7)) { R = 5; } // underpromotion
-            else if (from.on(Rank6)) { R = 0; } // passed pawn push extension
-            else if (from.on(Rank5)) { R = 1; } // advanced pawn push extension
-            else { R = 3; } // default reduction for pawn moves
-        }
-
+        R = canR ? 3 : 1;
         for (Square to : movesOf(pi)) {
             RETURN_CUTOFF (child->searchMove(pi, to, R));
         }
