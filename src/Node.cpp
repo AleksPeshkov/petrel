@@ -325,7 +325,7 @@ ReturnStatus Node::search() {
     }
 
     // unsafe (losing) captures
-    R = canR ? 3 : 1;
+    R = canR ? 3 : 2;
     for (PiMask pieces = officers; pieces.any(); ) {
         Pi pi = pieces.leastValuable(); pieces -= pi;
 
@@ -337,7 +337,7 @@ ReturnStatus Node::search() {
 
     // unsafe (losing) non-captures
     if (!canP || movesMade() == 0) { // weak move pruning
-        R = canR ? 4 : 1;
+        R = canR ? 4 : 3;
         for (PiMask pieces = officers; pieces.any(); ) {
             Pi pi = pieces.leastValuable(); pieces -= pi;
 
