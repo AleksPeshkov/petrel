@@ -82,9 +82,9 @@ public:
 
     constexpr Bb operator() (signed fileOffset, signed rankOffset) const;
 
-    friend io::ostream& operator << (io::ostream& out, Square sq) { return out << File(sq) << Rank(sq); }
+    friend ostream& operator << (ostream& out, Square sq) { return out << File(sq) << Rank(sq); }
 
-    friend io::istream& read(io::istream& in, Square& sq) {
+    friend istream& read(istream& in, Square& sq) {
         File file; Rank rank;
 
         auto before = in.tellg();

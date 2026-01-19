@@ -65,10 +65,10 @@ class Uci {
     void bestmove() const;
 
 public:
-    Uci (io::ostream&);
+    Uci (ostream&);
 
     // process UCI input commands
-    void processInput(io::istream&);
+    void processInput(istream&);
 
     // output to out stream and to log file
     void output(const std::string&) const;

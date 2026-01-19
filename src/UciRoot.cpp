@@ -215,7 +215,7 @@ public:
 
 } //end of anonymous namespace
 
-ostream& UciRoot::writeFen(ostream& out) const {
+ostream& UciRoot::fen(ostream& out) const {
     auto& whitePieces = (*this)[sideOf(White)];
     auto& blackPieces = (*this)[sideOf(Black)];
 

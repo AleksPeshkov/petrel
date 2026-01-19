@@ -1,5 +1,4 @@
 #include "Node.hpp"
-#include "out.hpp"
 #include "AttacksFrom.hpp"
 #include "Uci.hpp"
 

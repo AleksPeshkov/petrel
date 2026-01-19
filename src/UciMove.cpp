@@ -1,7 +1,7 @@
 #include "UciMove.hpp"
 
 // convert move to UCI format
-io::ostream& operator << (io::ostream& out, const UciMove& move) {
+ostream& operator << (ostream& out, const UciMove& move) {
     if (!move) { return out << "0000"; }
 
     auto isWhite{ move.color == White };
@@ -44,7 +44,7 @@ io::ostream& operator << (io::ostream& out, const UciMove& move) {
     return out << "0000";
 }
 
-io::ostream& operator << (io::ostream& out, const UciMove pv[]) {
+ostream& operator << (ostream& out, const UciMove pv[]) {
     for (UciMove move; (move = *pv++); ) {
         out << " " << move;
     }

@@ -25,7 +25,7 @@ public:
         return ::popcount(v);
     }
 
-    friend io::ostream& operator << (io::ostream& out, PieceSet s) {
+    friend ostream& operator << (ostream& out, PieceSet s) {
         FOR_EACH(Pi, pi) {
             if (s.has(pi)) { out << pi; } else { out << '.'; }
         }
@@ -119,7 +119,7 @@ public:
     PieceSet begin() const { return PieceSet{*this}; }
     PieceSet end() const { return PieceSet{ PiMask{zero()} }; }
 
-    friend io::ostream& operator << (io::ostream& out, PiMask a) {
+    friend ostream& operator << (ostream& out, PiMask a) {
         return out << PieceSet(a);
     }
 };

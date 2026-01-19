@@ -35,103 +35,46 @@ template <> io::czstring Pi::The_string{"KQRrBbNn12345678"};
 */
 TimerManager The_timerManager; // Singleton instance
 
-namespace {
+// global pointer to Uci instance to implement io::log()
+const Uci* The_uci = nullptr;
 
-using std::ostream;
-
-ostream& app_version(ostream& out) {
-
-#ifndef NDEBUG
-    out << " DEBUG";
-#endif
-
-#ifdef GIT_DATE
-    out << ' ' << GIT_DATE;
-#else
-    char year[] {__DATE__[7], __DATE__[8], __DATE__[9], __DATE__[10], '\0'};
-
-    char month[] {
-        (__DATE__[0] == 'O' && __DATE__[1] == 'c' && __DATE__[2] == 't') ? '1' :
-        (__DATE__[0] == 'N' && __DATE__[1] == 'o' && __DATE__[2] == 'v') ? '1' :
-        (__DATE__[0] == 'D' && __DATE__[1] == 'e' && __DATE__[2] == 'c') ? '1' : '0',
-
-        (__DATE__[0] == 'J' && __DATE__[1] == 'a' && __DATE__[2] == 'n') ? '1' :
-        (__DATE__[0] == 'F' && __DATE__[1] == 'e' && __DATE__[2] == 'b') ? '2' :
-        (__DATE__[0] == 'M' && __DATE__[1] == 'a' && __DATE__[2] == 'r') ? '3' :
-        (__DATE__[0] == 'A' && __DATE__[1] == 'p' && __DATE__[2] == 'r') ? '4' :
-        (__DATE__[0] == 'M' && __DATE__[1] == 'a' && __DATE__[2] == 'y') ? '5' :
-        (__DATE__[0] == 'J' && __DATE__[1] == 'u' && __DATE__[2] == 'n') ? '6' :
-        (__DATE__[0] == 'J' && __DATE__[1] == 'u' && __DATE__[2] == 'l') ? '7' :
-        (__DATE__[0] == 'A' && __DATE__[1] == 'u' && __DATE__[2] == 'g') ? '8' :
-        (__DATE__[0] == 'S' && __DATE__[1] == 'e' && __DATE__[2] == 'p') ? '9' :
-        (__DATE__[0] == 'O' && __DATE__[1] == 'c' && __DATE__[2] == 't') ? '0' :
-        (__DATE__[0] == 'N' && __DATE__[1] == 'o' && __DATE__[2] == 'v') ? '1' :
-        (__DATE__[0] == 'D' && __DATE__[1] == 'e' && __DATE__[2] == 'c') ? '2' : '0',
-
-        '\0'
-    };
-
-    char day[] {((__DATE__[4] == ' ') ? '0' : __DATE__[4]), __DATE__[5], '\0'};
-
-    out << ' ' << year << '-' << month << '-' << day;
-#endif
-
-#ifdef GIT_ORIGIN
-    out << ' ' << GIT_ORIGIN;
-#endif
-
-#ifdef GIT_SHA
-    out << ' ' << GIT_SHA;
-#endif
-
-    return out;
+void io::log(const std::string& message) {
+    if (The_uci) { The_uci->log(message); }
 }
-
-ostream& option_version(ostream& out) {
-    return out
-        << "petrel" << app_version << '\n'
-        << "(c) Aleks Peshkov (aleks.peshkov@gmail.com)\n"
-    ;
-}
-
-ostream& option_help(ostream& out) {
-    return out
-        << "    Petrel chess engine. The UCI protocol compatible.\n\n"
-        << "      -h, --help        display this help\n"
-        << "      -v, --version     display version information\n"
-    ;
-}
-
-ostream& option_invalid(ostream& err) {
-    return err << "petrel: unkown option\n";
-}
-
-} // anonymous namespace
 
 int main(int argc, const char* argv[]) {
     if (argc > 1) {
         std::string option = argv[1];
 
-        if (option == "--help" || option == "-h") {
-            option_help(std::cout);
-            return EXIT_SUCCESS;
-        }
-
         if (option == "--version" || option == "-v") {
-            option_version(std::cout);
+            std::cout
+                << io::app_version << '\n'
+                << "(c) Aleks Peshkov (aleks.peshkov@gmail.com)\n"
+            ;
             return EXIT_SUCCESS;
         }
 
-        option_invalid(std::cerr);
+        if (option == "--help" || option == "-h") {
+            std::cout
+                << "    Petrel chess engine. The UCI protocol compatible.\n\n"
+                << "      -h, --help        display this help\n"
+                << "      -v, --version     display version information\n"
+            ;
+            return EXIT_SUCCESS;
+        }
+
+        std::cerr << "petrel: unknown option\n";
         return EINVAL;
     }
 
-    //speed tricks
+    // speed tricks
     std::ios_base::sync_with_stdio(false);
     std::cin.tie(nullptr);
     std::cerr.tie(nullptr);
 
     Uci uci(std::cout);
+    The_uci = &uci;
+
     uci.processInput(std::cin);
 
     return EXIT_SUCCESS;

@@ -22,7 +22,7 @@ public:
 
     operator const UciMove* () const { return &pv[0][0]; }
 
-    friend out::ostream& operator << (out::ostream& out, const PvMoves& pvMoves) {
+    friend ostream& operator << (ostream& out, const PvMoves& pvMoves) {
         return out << &pvMoves.pv[0][0];
     }
 
