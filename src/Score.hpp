@@ -1,0 +1,389 @@
+#ifndef SCORE_HPP
+#define SCORE_HPP
+
+#include "Index.hpp"
+
+static constexpr int ScoreBitSize = 14;
+
+// position evaluation score, fits in 14 bits
+enum score_enum : i16_t {
+    NoScore = -singleton(ScoreBitSize-1), //TRICK: assume two's complement
+    MinusInfinity = NoScore + 1, // negative bound, no position should eval to it
+    MinusMate = MinusInfinity + 1, // mated in 0, only even negative values for mated positions
+
+    // negative mate range of scores (loss)
+
+    MinEval = MinusMate + static_cast<i16_t>(MaxPly+1), // minimal (negative) non mate score bound for a position
+
+    // negative evaluation range of scores
+
+    DrawScore = 0,
+
+    // positive evalutation range of scores
+
+    MaxEval = -MinEval, // maximal (positive) non mate score bound for a position
+
+    // positive mate range of scores (win)
+
+    PlusMate = -MinusMate, // mate in 0 (impossible), only odd positive values for mate positions
+    PlusInfinity = -MinusInfinity, // positive bound, no position should eval to it
+};
+
+// position evaluation score, fits in 14 bits
+struct Score {
+    static constexpr int Mask = singleton(ScoreBitSize) - 1;
+    using _t = score_enum;
+    _t v;
+
+    constexpr bool isOk() const { return MinusInfinity <= v && v <= PlusInfinity; }
+    constexpr bool isEval() const { assertOk(); return MinEval <= v && v <= MaxEval; }
+    constexpr bool isMate() const { assertOk(); return !isEval(); }
+    constexpr void assertOk() const { assert (isOk()); }
+    constexpr void assertEval() const { assert (isEval()); }
+    constexpr void assertMate() const { assert (isMate()); }
+
+    constexpr Score () : v{NoScore} {} // not isOk()
+    constexpr Score (_t e) : v{e} {}
+    constexpr explicit Score (int e) : v{static_cast<_t>(e)} { assertOk(); }
+    constexpr operator const _t& () const { return v; }
+
+    constexpr Score operator - () const { assertOk(); return Score{-v}; }
+    constexpr Score operator ~ () const { assertOk(); return Score{-v}; }
+
+    constexpr friend Score operator + (Score s, int e) { s.assertOk(); Score r{static_cast<int>(s) + e}; r.assertOk(); return r; }
+    constexpr friend Score operator - (Score s, int e) { s.assertOk(); Score r{static_cast<int>(s) - e}; r.assertOk(); return r; }
+    constexpr friend Score operator + (Score s, Ply p) { s.assertMate(); Score r{static_cast<int>(s) + p}; r.assertMate(); return r; }
+    constexpr friend Score operator - (Score s, Ply p) { s.assertMate(); Score r{static_cast<int>(s) - p}; r.assertMate(); return r; }
+
+    // MinusMate + ply
+    static constexpr Score checkmated(Ply ply) { return Score{MinusMate} + ply; }
+
+    // clamp [MinEval, MaxEval] static evaluation to distinguish from mate scores
+    constexpr Score clamp() const {
+        if (v < MinEval) { return MinEval; }
+        if (MaxEval < v) { return MaxEval; }
+        assert (!isMate());
+        return *this;
+    }
+
+    constexpr unsigned toTt(Ply ply) const {
+        Score score{v};
+
+        if (score.v < MinEval) {
+            score.assertMate(); score = score - ply; score.assertMate();
+        }
+        else if (MaxEval < score.v) {
+            score.assertMate(); score = score + ply; score.assertMate();
+        }
+
+        // convert signed to unsigned
+        return static_cast<unsigned>(score.v - NoScore);
+    }
+
+    static constexpr Score fromTt(unsigned n, Ply ply) {
+        // convert unsigned to signed
+        Score score{static_cast<int>(n) + NoScore};
+
+        if (score < MinEval) {
+            score.assertMate(); score = score + ply; score.assertMate();
+        }
+        else if (MaxEval < score) {
+            score.assertMate(); score = score - ply; score.assertMate();
+        }
+        else {
+            score.assertEval();
+        }
+
+        return score;
+    }
+
+    friend ostream& operator << (ostream& out, const Score& score) {
+        out << " score ";
+
+        if (score == NoScore) {
+            return out << "none";
+        }
+
+        score.assertOk();
+
+        if (score < MinEval) {
+            return out << "mate " << (MinusMate - score) / 2;
+        }
+
+        if (MaxEval < score) {
+            return out << "mate " << (PlusMate - score + 1) / 2;
+        }
+
+        score.assertEval();
+        return out << "cp " << static_cast<signed>(score.v);
+    }
+};
+
+//https://www.chessprogramming.org/PeSTO%27s_Evaluation_Function
+class CACHE_ALIGN PieceSquareTable {
+public:
+    static constexpr int PieceMatMax = 32; // initial chess position sum of non pawn pieces material points
+
+    union element_type {
+        struct PACKED {
+            unsigned openingPst:14;
+            unsigned endgamePst:14;
+
+            unsigned queens:4;  // number of queens
+            unsigned rooks:4;   // number of rooks
+            unsigned bishops:4; // number of bishops
+            unsigned knights:4; // number of knights
+            unsigned pawns:4;   // number of pawns
+
+            unsigned piecesMat:8; // sum of non pawn pieces material points (pawn = 1)
+            unsigned totalMat:8;  // sum of all pieces material points (pawn = 1)
+        } s;
+        u64_t v;
+
+        constexpr auto& operator += (const element_type& o) { v += o.v; return *this; }
+        constexpr auto& operator -= (const element_type& o) { v -= o.v; return *this; }
+
+        constexpr Score score(int material) const {
+            auto stage = std::min(material, PieceMatMax);
+            return Score{(s.openingPst*stage + s.endgamePst*(PieceMatMax - stage)) / PieceMatMax};
+        }
+    };
+
+protected:
+    PieceType::arrayOf< Square::arrayOf<element_type> > pst;
+
+public:
+    // https://www.chessprogramming.org/PeSTO%27s_Evaluation_Function
+    constexpr PieceSquareTable () {
+        static_assert (sizeof(element_type) == sizeof(u64_t));
+
+        constexpr u16_t openingMat[] = { 1025, 477, 365, 337, 82, 100 }; // PeSTO piece opening values
+        constexpr u16_t endgameMat[] = { 936, 512, 297, 281, 94, 100 }; // PeSTO piece endgame values
+        constexpr u8_t piecesMat[] = { 10, 5, 3, 3, 0, 0 }; // for game phase, total sum is 32
+        constexpr u8_t totalMat[]  = { 12, 6, 4, 4, 1, 0 }; // for exchange evaluations
+        constexpr u8_t queens[]    = {  1, 0, 0, 0, 0, 0 };
+        constexpr u8_t rooks[]     = {  0, 1, 0, 0, 0, 0 };
+        constexpr u8_t bishops[]   = {  0, 0, 1, 0, 0, 0 };
+        constexpr u8_t knights[]   = {  0, 0, 0, 1, 0, 0 };
+        constexpr u8_t pawns[]     = {  0, 0, 0, 0, 1, 0 };
+
+        constexpr i16_t openingPst[PieceType::Size][Square::Size] = {
+            { // Queen
+                -28,   0,  29,  12,  59,  44,  43,  45,
+                -24, -39,  -5,   1, -16,  57,  28,  54,
+                -13, -17,   7,   8,  29,  56,  47,  57,
+                -27, -27, -16, -16,  -1,  17,  -2,   1,
+                -9, -26,  -9, -10,  -2,  -4,   3,  -3,
+                -14,   2, -11,  -2,  -5,   2,  14,   5,
+                -35,  -8,  11,   2,   8,  15,  -3,   1,
+                -1, -18,  -9,  10, -15, -25, -31, -50,
+            },
+            { // Rook
+                32,  42,  32,  51, 63,  9,  31,  43,
+                27,  32,  58,  62, 80, 67,  26,  44,
+                -5,  19,  26,  36, 17, 45,  61,  16,
+                -24, -11,   7,  26, 24, 35,  -8, -20,
+                -36, -26, -12,  -1,  9, -7,   6, -23,
+                -45, -25, -16, -17,  3,  0,  -5, -33,
+                -44, -16, -20,  -9, -1, 11,  -6, -71,
+                -19, -13,   1,  17, 16,  7, -37, -26,
+            },
+            { // Bishop
+                -29,   4, -82, -37, -25, -42,   7,  -8,
+                -26,  16, -18, -13,  30,  59,  18, -47,
+                -16,  37,  43,  40,  35,  50,  37,  -2,
+                -4,   5,  19,  50,  37,  37,   7,  -2,
+                -6,  13,  13,  26,  34,  12,  10,   4,
+                0,  15,  15,  15,  14,  27,  18,  10,
+                4,  15,  16,   0,   7,  21,  33,   1,
+                -33,  -3, -14, -21, -13, -12, -39, -21,
+            },
+            { // Knight
+                -167, -89, -34, -49,  61, -97, -15, -107,
+                -73, -41,  72,  36,  23,  62,   7,  -17,
+                -47,  60,  37,  65,  84, 129,  73,   44,
+                -9,  17,  19,  53,  37,  69,  18,   22,
+                -13,   4,  16,  13,  28,  19,  21,   -8,
+                -23,  -9,  12,  10,  19,  17,  25,  -16,
+                -29, -53, -12,  -3,  -1,  18, -14,  -19,
+                -105, -21, -58, -33, -17, -28, -19,  -23,
+            },
+            { // Pawn
+                0,   0,   0,   0,   0,   0,  0,   0,
+                98, 134,  61,  95,  68, 126, 34, -11,
+                -6,   7,  26,  31,  65,  56, 25, -20,
+                -14,  13,   6,  21,  23,  12, 17, -23,
+                -27,  -2,  -5,  12,  17,   6, 10, -25,
+                -26,  -4,  -4, -10,   3,   3, 33, -12,
+                -35,  -1, -20, -23, -15,  24, 38, -22,
+                0,   0,   0,   0,   0,   0,  0,   0,
+            },
+            { // King
+                -65,  23,  16, -15, -56, -34,   2,  13,
+                29,  -1, -20,  -7,  -8,  -4, -38, -29,
+                -9,  24,   2, -16, -20,   6,  22, -22,
+                -17, -20, -12, -27, -30, -25, -14, -36,
+                -49,  -1, -27, -39, -46, -44, -33, -51,
+                -14, -14, -22, -46, -44, -30, -15, -27,
+                1,   7,  -8, -64, -43, -16,   9,   8,
+                -15,  36,  12, -54,   8, -28,  24,  14,
+            }
+        };
+
+        constexpr i16_t endgamePst[PieceType::Size][Square::Size] = {
+            { // Queen
+                -9,  22,  22,  27,  27,  19,  10,  20,
+                -17,  20,  32,  41,  58,  25,  30,   0,
+                -20,   6,   9,  49,  47,  35,  19,   9,
+                3,  22,  24,  45,  57,  40,  57,  36,
+                -18,  28,  19,  47,  31,  34,  39,  23,
+                -16, -27,  15,   6,   9,  17,  10,   5,
+                -22, -23, -30, -16, -16, -23, -36, -32,
+                -33, -28, -22, -43,  -5, -32, -20, -41,
+            },
+            { // Rook
+                13, 10, 18, 15, 12,  12,   8,   5,
+                11, 13, 13, 11, -3,   3,   8,   3,
+                7,  7,  7,  5,  4,  -3,  -5,  -3,
+                4,  3, 13,  1,  2,   1,  -1,   2,
+                3,  5,  8,  4, -5,  -6,  -8, -11,
+                -4,  0, -5, -1, -7, -12,  -8, -16,
+                -6, -6,  0,  2, -9,  -9, -11,  -3,
+                -9,  2,  3, -1, -5, -13,   4, -20,
+            },
+            { // Bishop
+                -14, -21, -11,  -8, -7,  -9, -17, -24,
+                -8,  -4,   7, -12, -3, -13,  -4, -14,
+                2,  -8,   0,  -1, -2,   6,   0,   4,
+                -3,   9,  12,   9, 14,  10,   3,   2,
+                -6,   3,  13,  19,  7,  10,  -3,  -9,
+                -12,  -3,   8,  10, 13,   3,  -7, -15,
+                -14, -18,  -7,  -1,  4,  -9, -15, -27,
+                -23,  -9, -23,  -5, -9, -16,  -5, -17,
+            },
+            { // Knight
+                -58, -38, -13, -28, -31, -27, -63, -99,
+                -25,  -8, -25,  -2,  -9, -25, -24, -52,
+                -24, -20,  10,   9,  -1,  -9, -19, -41,
+                -17,   3,  22,  22,  22,  11,   8, -18,
+                -18,  -6,  16,  25,  16,  17,   4, -18,
+                -23,  -3,  -1,  15,  10,  -3, -20, -22,
+                -42, -20, -10,  -5,  -2, -20, -23, -44,
+                -29, -51, -23, -15, -22, -18, -50, -64,
+            },
+            { // Pawn
+                0,   0,   0,   0,   0,   0,   0,   0,
+                178, 173, 158, 134, 147, 132, 165, 187,
+                94, 100,  85,  67,  56,  53,  82,  84,
+                32,  24,  13,   5,  -2,   4,  17,  17,
+                13,   9,  -3,  -7,  -7,  -8,   3,  -1,
+                4,   7,  -6,   1,   0,  -5,  -1,  -8,
+                13,   8,   8,  10,  13,   0,   2,  -7,
+                0,   0,   0,   0,   0,   0,   0,   0,
+            },
+            { // King
+                -74, -35, -18, -18, -11,  15,   4, -17,
+                -12,  17,  14,  17,  17,  38,  23,  11,
+                10,  17,  23,  15,  20,  45,  44,  13,
+                -8,  22,  24,  27,  26,  33,  26,   3,
+                -18,  -4,  21,  24,  27,  23,   9, -11,
+                -19,  -3,  11,  21,  23,  16,   7,  -9,
+                -27, -11,   4,  13,  14,   4,  -5, -17,
+                -53, -34, -21, -11, -28, -14, -24, -43,
+            },
+        };
+
+        for (auto ty : PieceType::range()) {
+            for (auto sq : Square::range()) {
+                pst[ty][sq] = {{
+                    static_cast<u16_t>(openingMat[ty] + openingPst[ty][sq]),
+                    static_cast<u16_t>(endgameMat[ty] + endgamePst[ty][sq]),
+
+                    queens[ty], rooks[ty], bishops[ty], knights[ty], pawns[ty],
+
+                    piecesMat[ty], totalMat[ty],
+                }};
+            }
+        }
+    }
+
+    constexpr const element_type& operator() (PieceType::_t ty, Square sq) const { return pst[ty][sq]; }
+};
+
+extern const PieceSquareTable pieceSquareTable;
+
+class Evaluation {
+public:
+    using _t = PieceSquareTable::element_type;
+
+private:
+    _t v;
+
+    constexpr void from(PieceType::_t ty, Square sq) { v -= pieceSquareTable(ty, sq); }
+    constexpr void to(PieceType::_t ty, Square sq) { v += pieceSquareTable(ty, sq); }
+
+public:
+    constexpr Evaluation () : v{} {}
+
+    static Score evaluate(const Evaluation& my, const Evaluation& op) {
+        return my.v.score(my.v.s.piecesMat) - op.v.score(op.v.s.piecesMat).clamp();
+    }
+
+    constexpr Score score(PieceType ty, Square sq) const {
+        return pieceSquareTable(ty, sq).score(v.s.piecesMat);
+    }
+
+    void drop(PieceType ty, Square t) { to(ty, t); }
+    void capture(PieceType ty, Square f) { assert (ty != King); from(ty, f); }
+    void move(PieceType::_t ty, Square f, Square t) { assert (f != t); from(ty, f); to(ty, t); }
+
+    void promote(Square f, Square t, PromoType ty) {
+        assert (f.on(Rank7) && t.on(Rank8));
+        from(Pawn, f);
+        to(ty, t);
+    }
+
+    void castle(Square kingFrom, Square kingTo, Square rookFrom, Square rookTo) {
+        assert (kingFrom != rookFrom);
+        assert (kingTo != rookTo);
+
+        from(King, kingFrom); from(Rook, rookFrom);
+        to(Rook, rookTo); to(King, kingTo);
+    }
+
+    constexpr int count(PieceType::_t ty) const {
+        switch (ty) {
+            case Queen:
+                return v.s.queens;
+            case Rook:
+                return v.s.rooks;
+            case Bishop:
+                return v.s.bishops;
+            case Knight:
+                return v.s.knights;
+            case Pawn:
+                return v.s.pawns;
+            default:
+                assert (false);
+                return 0;
+        }
+    }
+
+    // 10, 5, 3, 3, 0
+    constexpr int piecesMat() const {
+        return v.s.piecesMat;
+    }
+
+    // 12, 6, 4, 4, 1
+    constexpr int material() const {
+        return v.s.totalMat;
+    }
+
+    // any queen, rook or pawn
+    constexpr bool hasMatingPieces() const {
+        return (v.s.queens | v.s.rooks | v.s.pawns) != 0;
+    }
+
+};
+
+#endif

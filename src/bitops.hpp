@@ -47,7 +47,7 @@ T narrow_cast(N n) {
     return r;
 }
 
-template <typename T, typename N>
+template <typename T = int, typename N>
 constexpr T singleton(N n) {
     return static_cast<T>(static_cast<T>(1u) << static_cast<T>(n));
 }
