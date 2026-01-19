@@ -10,15 +10,14 @@
 /**
 * Startup constant initialization
 */
-const InBetween inBetween; // 32k 64*64*8
-const HyperbolaDir hyperbolaDir; // 4k 64*4*16
-const HyperbolaSq hyperbolaSq; // 1k 64*16
-const AttacksFrom attacksFrom; // 3k 6*64*8
-constexpr const VectorOfAll vectorOfAll; // 4k 256*16
-const PieceSquareTable pieceSquareTable; // 3k 6*64*8
-constexpr const PiSingle piSingle; // 256
-const CastlingRules castlingRules; // 128
-constexpr const BitReverse bitReverse; // 32
+constexpr InBetween inBetween; // 32k 64*64*8, used by constexpr CastlingRules
+constexpr HyperbolaDir hyperbolaDir; // 4k 64*4*16
+constexpr HyperbolaSq hyperbolaSq; // 1k 64*16
+constexpr AttacksFrom attacksFrom; // 3k 6*64*8
+constexpr VectorOfAll vectorOfAll; // 4k 256*16
+constexpr PieceSquareTable pieceSquareTable; // 3k 6*64*8
+constexpr PiSingle piSingle; // 256
+constexpr CastlingRules castlingRules; // 128
 
 // global pointer to Uci instance to implement io::log()
 const Uci* The_uci = nullptr;
