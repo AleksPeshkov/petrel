@@ -311,6 +311,10 @@ ReturnStatus Node::search() {
         }
 
         for (Square to : movesOf(pi)) {
+            if (bbAttacked().has(to) && MY.attackersTo(to).none()) {
+                // skip move to defended square if nobody attacks it
+                continue;
+            }
             RETURN_CUTOFF (child->searchMove(pi, to, R));
         }
     }
