@@ -41,27 +41,28 @@ struct Score {
 
     constexpr Score () : v{NoScore} {} // not isOk()
     constexpr Score (_t e) : v{e} {}
+
+    template <typename N>
+    constexpr static Score clampEval(N e) {
+        return Score{static_cast<Score::_t>(
+            std::clamp<N>(e, MinEval, MaxEval)
+        )};
+    }
+
     constexpr explicit Score (int e) : v{static_cast<_t>(e)} { assertOk(); }
     constexpr operator const _t& () const { return v; }
 
     constexpr Score operator - () const { assertOk(); return Score{-v}; }
     constexpr Score operator ~ () const { assertOk(); return Score{-v}; }
 
-    constexpr friend Score operator + (Score s, int e) { s.assertOk(); Score r{static_cast<int>(s) + e}; r.assertOk(); return r; }
-    constexpr friend Score operator - (Score s, int e) { s.assertOk(); Score r{static_cast<int>(s) - e}; r.assertOk(); return r; }
+    constexpr friend Score operator + (Score s, int e) { s.assertEval(); return Score::clampEval(static_cast<int>(s) + e); }
+    constexpr friend Score operator - (Score s, int e) { s.assertEval(); return Score::clampEval(static_cast<int>(s) - e); }
+
     constexpr friend Score operator + (Score s, Ply p) { s.assertMate(); Score r{static_cast<int>(s) + p}; r.assertMate(); return r; }
     constexpr friend Score operator - (Score s, Ply p) { s.assertMate(); Score r{static_cast<int>(s) - p}; r.assertMate(); return r; }
 
     // MinusMate + ply
     static constexpr Score checkmated(Ply ply) { return Score{MinusMate} + ply; }
-
-    // clamp [MinEval, MaxEval] static evaluation to distinguish from mate scores
-    constexpr Score clamp() const {
-        if (v < MinEval) { return MinEval; }
-        if (MaxEval < v) { return MaxEval; }
-        assert (!isMate());
-        return *this;
-    }
 
     constexpr unsigned toTt(Ply ply) const {
         Score score{v};
@@ -140,9 +141,9 @@ public:
         constexpr auto& operator += (const element_type& o) { v += o.v; return *this; }
         constexpr auto& operator -= (const element_type& o) { v -= o.v; return *this; }
 
-        constexpr Score score(int material) const {
+        constexpr int score(int material) const {
             auto stage = std::min(material, PieceMatMax);
-            return Score{(s.openingPst*stage + s.endgamePst*(PieceMatMax - stage)) / PieceMatMax};
+            return (s.openingPst*stage + s.endgamePst*(PieceMatMax - stage));
         }
     };
 
@@ -323,11 +324,9 @@ public:
     constexpr Evaluation () : v{} {}
 
     static Score evaluate(const Evaluation& my, const Evaluation& op) {
-        return my.v.score(my.v.s.piecesMat) - op.v.score(op.v.s.piecesMat).clamp();
-    }
-
-    constexpr Score score(PieceType ty, Square sq) const {
-        return pieceSquareTable(ty, sq).score(v.s.piecesMat);
+        return Score::clampEval(
+            (my.v.score(my.v.s.piecesMat) - op.v.score(op.v.s.piecesMat)) / PieceSquareTable::PieceMatMax
+        );
     }
 
     void drop(PieceType ty, Square t) { to(ty, t); }
