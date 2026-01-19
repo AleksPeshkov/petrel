@@ -1,6 +1,4 @@
-#include "chrono.hpp"
 #include "Uci.hpp"
-#include "UciSearchLimits.hpp"
 #include "Node.hpp"
 #include "NodePerft.hpp"
 
@@ -103,7 +101,8 @@ void Uci::uciok() const {
        << " max "     << ::mebi(tt.maxSize())
        << " default " << ::mebi(tt.size())
        << '\n';
-    limits.options(ob);
+    ob << "option name Move Overhead type spin min 0 max 10000 default " << limits.moveOverhead << '\n';
+    ob << "option name Ponder type check default " << (limits.canPonder ? "true" : "false") << '\n';
     ob << "option name UCI_Chess960 type check default " << (chessVariant().is(Chess960) ? "true" : "false") << '\n';
     ob << "uciok";
 }
@@ -143,7 +142,6 @@ void Uci::setoption() {
         consume("value");
 
         inputLine >> limits.moveOverhead;
-        if (limits.moveOverhead == 0ms) { limits.moveOverhead = 100us; }
 
         if (!inputLine) { io::fail_rewind(inputLine); }
         return;
@@ -237,12 +235,32 @@ void Uci::position() {
     position_.playMoves(inputLine, repetitions);
 }
 
+istream& UciSearchLimits::go(istream& in, Side white) {
+    while (in >> std::ws, !in.eof()) {
+        if      (io::consume(in, "depth"))    { in >> depth; }
+        else if (io::consume(in, "nodes"))    { in >> nodesLimit; }
+        else if (io::consume(in, "movetime")) { in >> movetime; }
+        else if (io::consume(in, "wtime"))    { in >> time[white]; }
+        else if (io::consume(in, "btime"))    { in >> time[~white]; }
+        else if (io::consume(in, "winc"))     { in >> inc[white]; }
+        else if (io::consume(in, "binc"))     { in >> inc[~white]; }
+        else if (io::consume(in, "movestogo")){ in >> movestogo; }
+        else if (io::consume(in, "mate"))     { in >> mate; } // TODO: implement mate in n moves
+        else if (io::consume(in, "ponder"))   { ponder.store(true, std::memory_order_relaxed); }
+        else if (io::consume(in, "infinite")) { infinite.store(true, std::memory_order_relaxed); }
+        else { break; }
+    }
+
+    setSearchDeadline();
+    return in;
+}
+
 void Uci::go() {
+    newSearch();
     limits.go(inputLine, position_.sideOf(White));
     if (consume("searchmoves")) { position_.limitMoves(inputLine); }
 
     auto started = mainSearchThread.start([this] {
-        newSearch();
         Node{position_, *this}.searchRoot();
         bestmove();
     });
@@ -274,7 +292,6 @@ void Uci::bestmove() {
     }
 
     output(sBestmove);
-    limits.clear();
 }
 
 void Uci::stop() {
@@ -285,7 +302,6 @@ void Uci::stop() {
         if (!bestmove_.empty()) {
             output(bestmove_);
             bestmove_.clear();
-            limits.clear();
             return;
         }
     }
@@ -300,7 +316,6 @@ void Uci::ponderhit() {
         if (!bestmove_.empty()) {
             output(bestmove_);
             bestmove_.clear();
-            limits.clear();
             return;
         }
     }
@@ -308,11 +323,12 @@ void Uci::ponderhit() {
 }
 
 void Uci::goPerft() {
-    Ply depth;
+    newSearch();
+
+    Ply depth{1};
     inputLine >> depth;
     depth = std::min<Ply>(depth, 18); // current Tt implementation limit
 
-    limits.clear();
     mainSearchThread.start([this, depth] {
         NodePerft{position_, *this, depth}.visitRoot();
         info_perft_bestmove();
@@ -342,7 +358,6 @@ void Uci::info_perft_bestmove() {
     Output ob{this};
     info_nps(ob);
     ob << "bestmove 0000";
-    limits.clear();
 }
 
 void Uci::readyok() const {

@@ -274,8 +274,6 @@ NodePerft::NodePerft (const PositionMoves& p, Uci& r, Ply d) :
     PositionMoves{p}, parent{nullptr}, root{r}, depth{d} {}
 
 ReturnStatus NodePerft::visitRoot() {
-    root.newSearch();
-
     NodePerft node{this};
     const auto child = &node;
 
