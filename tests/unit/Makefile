@@ -8,6 +8,7 @@ MKDIR = mkdir -p
 # Compiler and flags
 CXX = clang++
 CXXFLAGS = -MMD -MP -std=c++20 -Wall -Wextra -g -I../../src
+CXXFLAGS += -mavx2
 SOURCES = $(wildcard *.cpp)
 OBJECTS = $(addprefix $(BUILD_DIR)/,$(notdir $(SOURCES:.cpp=.o)))
 DEPS = $(patsubst %.o, %.d, $(OBJECTS))
