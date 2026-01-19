@@ -1,6 +1,4 @@
-#include "chrono.hpp"
 #include "Uci.hpp"
-#include "UciSearchLimits.hpp"
 #include "Node.hpp"
 #include "NodePerft.hpp"
 
@@ -103,7 +101,8 @@ void Uci::uciok() const {
        << " max "     << ::mebi(tt.maxSize())
        << " default " << ::mebi(tt.size())
        << '\n';
-    limits.options(ob);
+    ob << "option name Move Overhead type spin min 0 max 10000 default " << limits.moveOverhead << '\n';
+    ob << "option name Ponder type check default " << (limits.canPonder ? "true" : "false") << '\n';
     ob << "option name UCI_Chess960 type check default " << (chessVariant().is(Chess960) ? "true" : "false") << '\n';
     ob << "uciok";
 }
@@ -232,6 +231,28 @@ void Uci::position() {
 
     consume("moves");
     position_.playMoves(inputLine, repetitions);
+}
+
+istream& UciSearchLimits::go(istream& in, Side white) {
+    clear();
+
+    while (in >> std::ws, !in.eof()) {
+        if      (io::consume(in, "depth"))    { in >> depth; }
+        else if (io::consume(in, "nodes"))    { in >> nodesLimit; }
+        else if (io::consume(in, "movetime")) { in >> movetime; }
+        else if (io::consume(in, "wtime"))    { in >> time[white]; }
+        else if (io::consume(in, "btime"))    { in >> time[~white]; }
+        else if (io::consume(in, "winc"))     { in >> inc[white]; }
+        else if (io::consume(in, "binc"))     { in >> inc[~white]; }
+        else if (io::consume(in, "movestogo")){ in >> movestogo; }
+        else if (io::consume(in, "mate"))     { in >> mate; } // TODO: implement mate in n moves
+        else if (io::consume(in, "ponder"))   { ponder.store(true, std::memory_order_relaxed); }
+        else if (io::consume(in, "infinite")) { infinite.store(true, std::memory_order_relaxed); }
+        else { break; }
+    }
+
+    setSearchDeadline();
+    return in;
 }
 
 void Uci::go() {
