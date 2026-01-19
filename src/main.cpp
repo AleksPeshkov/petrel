@@ -42,6 +42,19 @@ void io::log(const std::string& message) {
     if (The_uci) { The_uci->log(message); }
 }
 
+#ifdef ENABLE_ASSERT_LOGGING
+void assert_fail(const char *assertion, const char *file, unsigned int line, const char* func) {
+    std::ostringstream oss;
+    oss << "Assertion failed: " << func << ": " << assertion << " (" << file << ":" << line << ")";
+    std::string message = oss.str();
+    io::log("#" + message);
+    std::cerr << message << std::endl;
+
+    std::exit(EXIT_FAILURE); // graceful exit without core dump
+    __builtin_unreachable();
+}
+#endif
+
 int main(int argc, const char* argv[]) {
     if (argc > 1) {
         std::string option = argv[1];

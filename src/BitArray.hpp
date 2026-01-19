@@ -1,7 +1,7 @@
 #ifndef BIT_ARRAY_HPP
 #define BIT_ARRAY_HPP
 
-#include <cassert>
+#include "bitops.hpp"
 
 #define SELF static_cast<Self&>(*this)
 #define CONST_SELF static_cast<const Self&>(*this)
