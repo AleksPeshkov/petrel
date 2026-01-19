@@ -20,9 +20,9 @@ TAG_DEBUG = $(BUILD_DIR)/.debug
 
 # === Set Flags Based on Tags ===
 ifeq ($(wildcard $(TAG_TEST)), $(TAG_TEST))
-	BUILD_FLAGS = -Og -ggdb -DDEBUG
+	BUILD_FLAGS = -Og -ggdb -DDEBUG -DENABLE_ASSERT_LOGGING
 else ifeq ($(wildcard $(TAG_DEBUG)), $(TAG_DEBUG))
-	BUILD_FLAGS = -O0 -ggdb -DDEBUG
+	BUILD_FLAGS = -O0 -ggdb -DDEBUG -DENABLE_ASSERT_LOGGING
 endif
 
 CXXFLAGS = $(BUILD_FLAGS) -std=c++23 -mssse3 -march=native -mtune=native -fno-exceptions -fno-rtti
