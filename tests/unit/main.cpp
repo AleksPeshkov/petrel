@@ -1,7 +1,9 @@
+#include "TestHyperbola.hpp"
 #include "TestRepetitions.hpp"
 
 int main() {
     try {
+        TestHyperbola::test();
         TestRepetitions::test();
 
         std::cerr << "✅ All tests passed!\n";
