@@ -187,16 +187,16 @@ ReturnStatus Node::search() {
     if (
         !inCheck()
         && !isPv
-        && depth <= 2
+        && depth <= 3
     ) {
-        auto delta = (depth == 1) ? 55_cp : 155_cp;
+        auto delta = (depth == 1) ? 50_cp : (depth == 2) ? 150_cp : 200_cp;
         if (MinEval <= beta && beta <= eval-delta) {
             // Static Null Move Pruning (Reverse Futility Pruning)
             score = eval;
             assert (!currentMove);
             return ReturnStatus::BetaCutoff;
         } else {
-            delta = (depth == 1) ? 55_cp : 350_cp;
+            delta = (depth == 1) ? 50_cp : (depth == 2) ? 250_cp : 350_cp;
             if (eval+delta < alpha && alpha <= MaxEval) {
                 // Razoring
                 return quiescence();
