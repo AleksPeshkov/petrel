@@ -298,15 +298,14 @@ ReturnStatus Node::search() {
         RETURN_CUTOFF (goodNonCaptures(child, pi, movesOf(pi) % badSquares, R));
     }
 
-    // iterate pawns from Rank7 to Rank2
-    // underpromotion with or without capture and pawn pushes
-    for (Square from : MY.bbPawns()) {
+    // iterate pawns from Rank6 to Rank2
+    for (Square from : MY.bbPawns() % Bb{Rank7}) {
         Pi pi = MY.piAt(from);
+        assert (!MY.isPromotable(pi));
 
         R = 1;
         if (canR) {
-            if (from.on(Rank7)) { R = 5; } // underpromotion
-            else if (from.on(Rank6)) { R = 0; } // passed pawn push extension
+            if (from.on(Rank6)) { R = 0; } // passed pawn push extension
             else if (from.on(Rank5)) { R = 1; } // advanced pawn push extension
             else { R = 3; } // default reduction for pawn moves
         }
@@ -334,10 +333,12 @@ ReturnStatus Node::search() {
         }
     }
 
+    // all the rest moves:
     // unsafe (losing) non-captures
+    // plus underpromotions with or without capture and pawn pushes
     if (!canP || movesMade() == 0) { // weak move pruning
         R = canR ? 4 : 3;
-        for (PiMask pieces = officers; pieces.any(); ) {
+        for (PiMask pieces = MY.nonKing(); pieces.any(); ) {
             Pi pi = pieces.piLeastValuable(); pieces -= pi;
 
             for (Square to : movesOf(pi)) {
