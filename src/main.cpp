@@ -2,9 +2,9 @@
 
 #include "io.hpp"
 #include "Bb.hpp"
-#include "Evaluation.hpp"
 #include "Hyperbola.hpp"
 #include "PiMask.hpp"
+#include "Score.hpp"
 #include "Uci.hpp"
 
 /**

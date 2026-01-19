@@ -1,7 +1,7 @@
 #ifndef POSITION_SIDE_HPP
 #define POSITION_SIDE_HPP
 
-#include "Evaluation.hpp"
+#include "Score.hpp"
 #include "PiBbMatrix.hpp"
 #include "PiMask.hpp"
 
