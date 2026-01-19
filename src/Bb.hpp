@@ -42,17 +42,16 @@ public:
     constexpr friend Bb operator >> (Bb bb, unsigned offset) { return Bb{static_cast<_t>(bb) >> offset}; }
 
     friend ostream& operator << (ostream& out, Bb bb) {
+        out << "    a b c d e f g h\n";
         for (auto rank : Rank::range()) {
+            out << Rank{rank} << " |";
             for (auto file : File::range()) {
-                if (bb.has(Square{file, rank})) {
-                    out << file;
-                }
-                else {
-                    out << '.';
-                }
+                Square sq{file, rank};
+                out << " " << (bb.has(sq) ? 'x'  : '.');
             }
             out << '\n';
         }
+        out << "    a b c d e f g h\n";
         return out;
     }
 };
@@ -88,24 +87,34 @@ constexpr Bb Square::operator() (signed df, signed dr) const {
 }
 
 // line (file, rank, diagonal) in between two squares (excluding both ends) or 0 (32k)
-class InBetween {
+class CACHE_ALIGN InBetween {
     Square::arrayOf< Square::arrayOf<Bb> > inBetween;
+
+    static constexpr Bb areaInBetween(Square from, Square to) {
+        Bb::_t belowFrom{ ::singleton<Bb::_t>(from) - 1 };
+        Bb::_t belowTo{ ::singleton<Bb::_t>(to) - 1 };
+        return Bb{((belowFrom ^ belowTo) | ::singleton<Bb::_t>(to)) ^ ::singleton<Bb::_t>(to)};
+    }
 
 public:
     constexpr InBetween () {
         for (auto from : Square::range()) {
             for (auto to : Square::range()) {
-                Bb belowFrom{ ::singleton<Bb::_t>(from) - 1 };
-                Bb belowTo{ ::singleton<Bb::_t>(to) - 1 };
-                Bb areaInBetween = (belowFrom ^ belowTo) % Bb{to};
+                Bb result{};
 
-                Bb result = Bb{};
-                for (auto dir : Direction::range()) {
-                    Bb line = from.line(dir); // line bitboard for this direction
-                    if (line.has(to)) {       // Check if 'to' is on this line
-                        result = areaInBetween & line;
-                        break; // Only one valid direction per (from, to)
-                    }
+                if (File{from} == File{to}) {
+                    result = areaInBetween(from, to) & from.file();
+                }
+                else if (Rank{from} == Rank{to}) {
+                    result = areaInBetween(from, to) & from.rank();
+                }
+                else if (static_cast<int>(File{from}) + static_cast<int>(Rank{from})
+                    == static_cast<int>(File{to}) + static_cast<int>(Rank{to})) {
+                    result = areaInBetween(from, to) & from.diagonal();
+                }
+                else if (static_cast<int>(File{from}) - static_cast<int>(Rank{from})
+                    == static_cast<int>(File{to}) - static_cast<int>(Rank{to})) {
+                    result = areaInBetween(from, to) & from.antidiag();
                 }
 
                 inBetween[from][to] = result;
@@ -121,7 +130,7 @@ public:
 extern const InBetween inBetween;
 
 //attack bitboards of the piece types on the empty board (3k)
-class AttacksFrom {
+class CACHE_ALIGN AttacksFrom {
     PieceType::arrayOf< Square::arrayOf<Bb> > attack;
 public:
     constexpr AttacksFrom () {
@@ -155,7 +164,7 @@ class CastlingRules {
 
     File::arrayOf< File::arrayOf<Rules> > castlingRules;
 
-    static constexpr Bb exBetween(Square king, Square rook) { return ::inBetween(king, rook) + Bb{rook}; }
+    static constexpr Bb exBetween(Square king, Square rook) { return ::inBetween(king, rook) | Bb{rook}; }
 
 public:
     constexpr CastlingRules () {
