@@ -113,7 +113,6 @@ protected:
 
     [[nodiscard]] ReturnStatus searchMove(Move move, Ply R = 1);
     [[nodiscard]] ReturnStatus searchNullMove(Ply R);
-    void makeMove(Square from, Square to);
 
     // convert internal move to be printable in UCI format
     UciMove uciMove(Move move) const;
