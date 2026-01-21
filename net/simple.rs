@@ -10,11 +10,13 @@ use bullet_lib::{
 };
 
 const HIDDEN_SIZE: usize = 128;
-const QA: i16 = 255;
-const QB: i16 = 22;
+const QA: i16 = 256;
+const QB: i16 = 64;
 
 fn main() {
     const CPU_THREADS: usize = 16;
+    const LOSS_POW: f32 = 2.6;
+
     let mut trainer = ValueTrainerBuilder::default()
         .use_threads(CPU_THREADS/2)
         .inputs(Chess768)
@@ -29,7 +31,7 @@ fn main() {
         // are in the same range
         // `target` == wdl * game_result + (1 - wdl) * sigmoid(search score in centipawns / SCALE)
         // where `wdl` is determined by `wdl_scheduler`
-        .loss_fn(|output, target| output.sigmoid().squared_error(target))
+        .loss_fn(|output, target| output.sigmoid().power_error(target, LOSS_POW))
         .optimiser(AdamW)
         // the basic `(768 -> N)x2 -> 1` inference
         .build(|builder, stm_inputs, ntm_inputs| {
@@ -44,15 +46,15 @@ fn main() {
             l1.forward(hidden_layer)
         });
 
-    let superbatches: usize = 80;
-    let eval_scale: f32 = 340.0;
+    let superbatches: usize = 120;
+    let eval_scale: f32 = 800.0;
 
     let schedule = TrainingSchedule {
         net_id: "petrel128".to_string(),
         eval_scale,
         steps: TrainingSteps { batch_size: 16_384, batches_per_superbatch: 6_104, start_superbatch: 1, end_superbatch: superbatches },
         wdl_scheduler: wdl::LinearWDL { start: 0.0, end: 0.1 },
-        lr_scheduler: lr::LinearDecayLR { initial_lr: 0.0015, final_lr: 0.0, final_superbatch: superbatches },
+        lr_scheduler: lr::LinearDecayLR { initial_lr: 0.001, final_lr: 0.0, final_superbatch: superbatches },
         save_rate: 10,
     };
 
@@ -66,6 +68,10 @@ fn main() {
         "data/test77nov-unfilt-test79-maraprmay-v6-dd.skip-see-ge0.wdl-pdist.iter-6.bullet.bin",
         "data/test77nov-unfilt-test79-maraprmay-v6-dd.skip-see-ge0.wdl-pdist.iter-7.bullet.bin",
         "data/test77nov-unfilt-test79-maraprmay-v6-dd.skip-see-ge0.wdl-pdist.iter-8.bullet.bin",
+        "data/test77nov-unfilt-test79-maraprmay-v6-dd.skip-see-ge0.wdl-pdist.iter-9.bullet.bin",
+        "data/test77nov-unfilt-test79-maraprmay-v6-dd.skip-see-ge0.wdl-pdist.iter-10.bullet.bin",
+        "data/test77nov-unfilt-test79-maraprmay-v6-dd.skip-see-ge0.wdl-pdist.iter-11.bullet.bin",
+        "data/test77nov-unfilt-test79-maraprmay-v6-dd.skip-see-ge0.wdl-pdist.iter-12.bullet.bin",
     ];
     let data_loader = DirectSequentialDataLoader::new(data_set);
     let settings = LocalSettings { threads: 2, test_set: None, output_directory: "checkpoints", batch_queue_size: CPU_THREADS };
