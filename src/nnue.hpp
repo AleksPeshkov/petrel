@@ -58,8 +58,8 @@ struct CACHE_ALIGN Nnue {
     static constexpr int VECTOR_SIZE = sizeof(_t) / sizeof(i16_t);
     static constexpr int HIDDEN_SIZE = 128; // 2*128 = (8*32) = 256 bytes
     static constexpr int SCALE = 400;
-    static constexpr int QA = 255;
-    static constexpr int QB = 22;
+    static constexpr int QA = 256;
+    static constexpr int QB = 64;
 
     using FeautureIndex = Index<768>;
     using HalfAccumulatorIndex = Index<HIDDEN_SIZE / VECTOR_SIZE>;
@@ -79,12 +79,13 @@ struct CACHE_ALIGN Nnue {
         vi32x8_t sum{0};
 
         for (auto i : range<AccumulatorIndex>()) {
-            auto v16 = clamp(accumulator[i], static_cast<i16_t>(0), static_cast<i16_t>(QA)); // CReLU
+            auto v16 = clamp(accumulator[i], static_cast<i16_t>(0), static_cast<i16_t>(QA-1)); // CReLU
             sum += madd(v16, v16 * l1w[i]); //SCReLU
         }
 
         i32_t output = sum[0] + sum[1] + sum[2] + sum[3] + sum[4] + sum[5] + sum[6] + sum[7];
-        return (output / QA + l1b) * SCALE / (QA * QB);
+        i64_t result = (static_cast<i64_t>(output) + static_cast<i64_t>(l1b) * QA) * SCALE / (QA * QA * QB);
+        return static_cast<i32_t>(result);
     }
 
     // load from embedded binary data, defined in main.cpp
