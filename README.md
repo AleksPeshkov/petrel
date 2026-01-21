@@ -78,6 +78,24 @@ Relatively sophisticated scheme:
 10. SEE losing captures – Low valued pieces first
 11. SEE losing quiet moves – Low valued pieces first
 
+## Example of petrel's game [[PGN]](20251231_1705_petrel_3.2_N128_JA_2025-12-21_vs_EveAnn_3.6_64-bit.pgn")
+
+<div align="center">
+
+**6k1/p1rqbppp/1p2p3/nb1pP3/3P1NBP/PP4P1/5PN1/R2Q2K1 w - - 0 26**
+
+</div>
+<div align="center">
+  <div style="display: inline-block; width: 45%;">
+    <div style="font-size: 0.8em; color: gray; margin-top: 6px;">before&nbsp;26.Nxe6:</div>
+    <img src="26.Nxe6.png" style="width: auto; height: auto;" alt="before 26.Nxe6">
+  </div>
+  <div style="display: inline-block; width: 45%;">
+    <div style="font-size: 0.8em; color: gray; margin-top: 6px;">...finally&nbsp;after&nbsp;34.Bxd5:</div>
+    <img src="34.Bxd5.png" style="width: auto; height: auto;" alt="after 34.Bxd5">
+  </div>
+</div>
+
 ## Credits
 
 * Jim Ablett for [Windows, Linux and Android PGO builds](https://jim-ablett.kesug.com/) and code improvements
