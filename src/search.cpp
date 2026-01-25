@@ -178,7 +178,8 @@ ReturnStatus Node::search() {
 ReturnStatus Node::searchMoves() {
     assert (child);
 
-    eval = evaluate();
+    // skip costly evaluate() while in check, as it should not be used
+    eval = !inCheck() ? evaluate() : Score::mateLoss(ply);
 
     if (depth <= 0 && !inCheck()) {
         assert (depth == 0);
@@ -652,7 +653,7 @@ namespace {
             ++tt.writes;
 
             //we cannot use makeZobrist() because of en passant legality validation
-            pos.makeMove(move.from(), move.to());
+            pos.makeMoveNoEval(move.from(), move.to());
             score = -score;
             depth = Ply{depth-1};
             ply = Ply{ply+1};

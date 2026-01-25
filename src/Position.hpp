@@ -1,6 +1,7 @@
 #ifndef POSITION_HPP
 #define POSITION_HPP
 
+#include "nnue.hpp"
 #include "PositionSide.hpp"
 #include "Zobrist.hpp"
 
@@ -36,6 +37,7 @@ public:
 };
 
 class Position {
+    Accumulator accumulator; // NNUE evaluation accumulators (separate for each side)
     Side::arrayOf<PositionSide> positionSide_; //copied from the parent, updated incrementally
     Side::arrayOf<Bb> occupied_; // both color pieces combined, updated from positionSide[] after each move
 
@@ -45,8 +47,8 @@ class Position {
     template <Side::_t> void updateSliderAttacks(PiMask);
     template <Side::_t> void updateSliderAttacks(PiMask, PiMask);
 
-    enum UpdateZobrist { NoZobrist, WithZobrist };
-    template <Side::_t, UpdateZobrist = WithZobrist> void makeMove(Square, Square);
+    enum MakeMoveFlags { WithZobrist = 0b01, WithEval = 0b10, ZobristAndEval = WithZobrist | WithEval };
+    template <Side::_t, MakeMoveFlags> void makeMove(Square, Square);
 
     template <Side::_t> Zobrist generateZobrist() const;
 
@@ -57,6 +59,7 @@ class Position {
     Zobrist generateZobrist() const;
 
     bool isSpecialMove(Square, Square) const;
+    void copyParent(const Position* parent);
 
 protected:
     constexpr PositionSide& positionSide(Side side) { return positionSide_[side]; }
@@ -76,8 +79,11 @@ protected:
     // update the zobrist hash of incoming move
     void makeZobrist(const Position* parent, Square from, Square to) { zobrist_ = parent->createZobrist(from, to); }
 
-    // update the position without updating the zobrist hash
+    // update the position without updating the zobrist hash (because it already updated)
     void makeMoveNoZobrist(const Position*, Square, Square);
+
+    // make move directly inside position itself
+    void makeMove(Square, Square);
 
     // update the position and its zobrist hash
     void makeMove(const Position*, Square, Square);
@@ -101,14 +107,15 @@ public:
     // position static evaluation
     Score evaluate() const;
 
-    // make move directly inside position itself
-    void makeMove(Square, Square);
+    // update the position inside itself and its zobrist hash, but not NNUE accumulators
+    void makeMoveNoEval(Square, Square);
 
     // [0..6] startpos = 6, queens exchanged = 4, R vs R endgame = 1
     auto gamePhase() const { return Evaluation::gamePhase(MY.evaluation(), OP.evaluation()); }
 
 // initial position setup in class UciPosition
 
+    void clear(); // init accumulators
     bool dropValid(Side, PieceType, Square);
     bool afterDrop();
 };

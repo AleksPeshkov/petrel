@@ -113,6 +113,7 @@ bool FenToBoard::dropPieces(Position& position, Color colorToMove_) {
     }
 
     Position pos;
+    pos.clear();
 
     for (auto color : range<Color>()) {
         Side side{colorToMove_.is(color) ? My : Op};
@@ -339,7 +340,7 @@ void UciPosition::playMoves(istream& in, Repetitions& repetitions) {
             return;
         }
 
-        Position::makeMove(from, to);
+        Position::makeMoveNoEval(from, to);
         generateMoves();
         colorToMove_.flip();
 
