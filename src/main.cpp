@@ -1,11 +1,15 @@
 #include <errno.h>
 
 #include "io.hpp"
+#include "nnue.hpp"
 #include "Bb.hpp"
 #include "Hyperbola.hpp"
 #include "PiMask.hpp"
 #include "Score.hpp"
 #include "Uci.hpp"
+
+// global almost constant instance
+Nnue nnue;
 
 /**
 * Startup constant initialization
