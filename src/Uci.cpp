@@ -513,7 +513,7 @@ void Uci::refreshTtPv(Ply depth) const {
         ++tt.writes;
 
         //we cannot use makeZobrist() because of en passant legality validation
-        pos.makeMove(move.from(), move.to());
+        pos.makeMoveNoEval(move.from(), move.to());
         score = -score;
         depth = Ply{depth-1};
         ply = Ply{ply+1};

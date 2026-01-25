@@ -269,7 +269,8 @@ ReturnStatus Node::search() {
 ReturnStatus Node::searchMoves() {
     assert (child);
 
-    eval = evaluate();
+    // skip costly evaluate() while in check, as it should not be used
+    eval = !inCheck() ? evaluate() : Score::mateLoss(ply);
 
     if (depth <= 0 && !inCheck()) {
         assert (depth == 0);
