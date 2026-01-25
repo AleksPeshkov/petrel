@@ -86,7 +86,8 @@ public:
     // number of halfmoves since last capture or pawn move
     constexpr const Rule50& rule50() const { return rule50_; }
 
-    Score evaluate() const { return Evaluation::evaluate(MY.evaluation(), OP.evaluation()); }
+    // position static evaluation
+    Score evaluate() const;
 
     bool isSpecial(Square, Square) const;
 
