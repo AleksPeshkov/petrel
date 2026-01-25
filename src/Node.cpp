@@ -80,8 +80,8 @@ ReturnStatus Node::searchRoot() {
 
     for (depth = 1; depth <= root.limits.depth; ++depth) {
         setMoves(rootMovesClone);
-        alpha = MinusInfinity;
-        beta = PlusInfinity;
+        alpha = Score{MinusInfinity};
+        beta = Score{PlusInfinity};
         auto returnStatus = search();
 
         root.newIteration();
@@ -153,7 +153,7 @@ ReturnStatus Node::negamax(Node* child, Ply R) const {
                     child->alpha = -beta;
                     assert (child->beta == -alpha);
                 } else {
-                    assert (child->alpha == child->beta-1);
+                    assert (child->alpha == child->beta.minus1());
                 }
                 // reduced search full depth research (unless it was a null move search or leaf node)
                 return negamax(child, 1);
@@ -173,7 +173,7 @@ ReturnStatus Node::negamax(Node* child, Ply R) const {
             child->isPv = true;
             child->alpha = -beta;
             assert (child->beta == -alpha);
-            assert (child->alpha < child->beta-1);
+            assert (child->alpha < child->beta.minus1());
             return negamax(child, 1);
         }
 
@@ -189,7 +189,7 @@ ReturnStatus Node::negamax(Node* child, Ply R) const {
 
     // set zero window for the next sibling move search
     assert (child->beta == -alpha);
-    child->alpha = child->beta-1;
+    child->alpha = child->beta.minus1(); // can be either 1 centipawn or 1 mate distance ply
     child->isPv = false;
     return ReturnStatus::Continue;
 }
@@ -263,7 +263,7 @@ void Node::updatePv(Node* child) const {
 
 ReturnStatus Node::search() {
     assert (MinusInfinity <= alpha && alpha < beta && beta <= PlusInfinity);
-    score = NoScore;
+    score = Score{NoScore};
     currentMove = {};
     bound = FailLow;
 
@@ -285,7 +285,7 @@ ReturnStatus Node::search() {
         }
 
         if (rule50().isDraw() || isRepetition() || isDrawMaterial()) {
-            score = DrawScore;
+            score = Score{DrawScore};
             assert (!currentMove);
             return ReturnStatus::Continue;
         }
