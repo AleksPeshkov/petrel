@@ -125,6 +125,7 @@ bool FenToBoard::dropPieces(Position& position, Color colorToMove_) {
     }
 
     Position pos;
+    pos.clear();
 
     for (auto color : range<Color>()) {
         Side side{colorToMove_.is(color) ? My : Op};

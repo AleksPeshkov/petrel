@@ -3,6 +3,8 @@
 #include "Hyperbola.hpp"
 #include "UciPosition.hpp"
 
+Nnue nnue;
+
 constexpr InBetween inBetween;
 constexpr AttacksFrom attacksFrom;
 constexpr VectorOfAll vectorOfAll;
