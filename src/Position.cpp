@@ -1,5 +1,10 @@
 #include "Position.hpp"
 
+Score Position::evaluate() const {
+    auto eval = Evaluation::evaluate(MY.evaluation(), OP.evaluation());
+    return Score::clampEval(eval);
+}
+
 void Position::makeMove(Square from, Square to) {
     PositionSide::swap(MY, OP);
 

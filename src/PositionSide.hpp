@@ -75,8 +75,6 @@ public:
     PiMask piecesOfType(PieceType ty) const { return types.piecesOfType(ty); }
     PieceType typeOf(Pi pi) const { assertOk(pi); return types.typeOf(pi); }
     PieceType typeAt(Square sq) const { return typeOf(pieceAt(sq)); }
-    Score score(PieceType ty, Square sq) const { return evaluation().score(ty, sq); }
-    Score scoreAt(Square sq) const { return score(typeOf(pieceAt(sq)), sq); }
 
     PiMask pawns() const { return types.piecesOfType(Pawn); }
     bool isPawn(Pi pi) const { assertOk(pi); return types.isPawn(pi); }
