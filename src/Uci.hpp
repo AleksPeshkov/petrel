@@ -65,7 +65,7 @@ public:
     mutable Tt tt;
     Repetitions repetitions;
     mutable PvMoves pvMoves;
-    mutable Score pvScore = NoScore;
+    mutable Score pvScore{NoScore};
     mutable HistoryMoves counterMove;
     mutable HistoryMoves followMove;
 
@@ -143,7 +143,7 @@ public:
     void newSearch() {
         tt.newSearch();
         pvMoves.clear();
-        pvScore = NoScore;
+        pvScore = Score{NoScore};
     }
 
     void newIteration() const {
