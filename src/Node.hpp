@@ -51,9 +51,7 @@ public:
     Ply draft() const { return Ply{static_cast<Ply::_t>(v >> DraftShift & Ply::Mask)}; }
     bool canBeKiller() const { return v >> KillerShift & 1; }
 
-    Score score(Ply ply) const {
-        return Score::fromTt(v >> ScoreShift & Score::Mask, ply);
-    }
+    Score score(Ply ply) const { return Score::fromTt(v >> ScoreShift & Score::Mask, ply); }
 };
 
 class Uci;
@@ -74,11 +72,11 @@ protected:
     TtSlot* tt; // pointer to the slot in TT
     TtSlot  ttSlot;
     bool isHit = false; // this node found in TT
-    Score eval; // static evaluation of the current position
+    Score eval{NoScore}; // static evaluation of the current position
 
-    mutable Score alpha = MinusInfinity; // alpha-beta window lower margin
-    Score beta = PlusInfinity; // alpha-beta window upper margin
-    mutable Score score = NoScore; // best score found so far
+    mutable Score alpha{MinusInfinity}; // alpha-beta window lower margin
+    Score beta{PlusInfinity}; // alpha-beta window upper margin
+    mutable Score score{NoScore}; // best score found so far
     mutable Bound bound = FailLow; // FailLow is default unless have found Exact or FailHigh move later
     bool isPv = true; // alpha < beta-1, cannot use constexpr as alpha may change during search
 
