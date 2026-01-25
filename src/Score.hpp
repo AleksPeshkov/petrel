@@ -30,10 +30,23 @@ enum score_enum : i16_t {
 };
 
 // position evaluation score, fits in 14 bits
-struct Score {
-    static constexpr int Mask = singleton(ScoreBitSize) - 1;
+class Score {
+
     using _t = score_enum;
     _t v;
+
+    constexpr explicit Score (int e) : v{static_cast<_t>(e)} { assertOk(); }
+
+public:
+    static constexpr int Mask = singleton(ScoreBitSize) - 1;
+
+    explicit constexpr Score (_t e) : v{e} {}
+
+    friend constexpr Score operator""_cp(unsigned long long);
+
+    constexpr static Score clampEval(int e) {
+        return Score{static_cast<Score::_t>( std::clamp<int>(e, MinEval, MaxEval) )};
+    }
 
     constexpr bool isOk() const { return MinusInfinity <= v && v <= PlusInfinity; }
     constexpr bool isEval() const { assertOk(); return MinEval <= v && v <= MaxEval; }
@@ -42,29 +55,20 @@ struct Score {
     constexpr void assertEval() const { assert (isEval()); }
     constexpr void assertMate() const { assert (isMate()); }
 
-    constexpr Score () : v{NoScore} {} // not isOk()
-    constexpr Score (_t e) : v{e} {}
-    constexpr explicit Score (int e) : v{static_cast<_t>(e)} { assertOk(); }
+    constexpr Score minus1() const { return Score{v-1}; }
+
     constexpr operator const _t& () const { return v; }
 
     constexpr Score operator - () const { assertOk(); return Score{-v}; }
-    constexpr Score operator ~ () const { assertOk(); return Score{-v}; }
 
-    constexpr friend Score operator + (Score s, int e) { s.assertOk(); Score r{static_cast<int>(s) + e}; r.assertOk(); return r; }
-    constexpr friend Score operator - (Score s, int e) { s.assertOk(); Score r{static_cast<int>(s) - e}; r.assertOk(); return r; }
+    constexpr friend Score operator + (Score s, Score d) { s.assertEval(); return Score::clampEval(static_cast<int>(s) + d); }
+    constexpr friend Score operator - (Score s, Score d) { s.assertEval(); return Score::clampEval(static_cast<int>(s) - d); }
+
     constexpr friend Score operator + (Score s, Ply p) { s.assertMate(); Score r{static_cast<int>(s) + p}; r.assertMate(); return r; }
     constexpr friend Score operator - (Score s, Ply p) { s.assertMate(); Score r{static_cast<int>(s) - p}; r.assertMate(); return r; }
 
     // MinusMate + ply
     static constexpr Score checkmated(Ply ply) { return Score{MinusMate} + ply; }
-
-    // clamp [MinEval, MaxEval] static evaluation to distinguish from mate scores
-    constexpr Score clamp() const {
-        if (v < MinEval) { return MinEval; }
-        if (MaxEval < v) { return MaxEval; }
-        assert (!isMate());
-        return *this;
-    }
 
     constexpr unsigned toTt(Ply ply) const {
         Score score{v};
@@ -119,6 +123,8 @@ struct Score {
     }
 };
 
+constexpr Score operator""_cp(unsigned long long n) { return Score{static_cast<Score::_t>(n)}; }
+
 //https://www.chessprogramming.org/PeSTO%27s_Evaluation_Function
 class CACHE_ALIGN PieceSquareTable {
 public:
@@ -143,9 +149,9 @@ public:
         constexpr auto& operator += (const element_type& o) { v += o.v; return *this; }
         constexpr auto& operator -= (const element_type& o) { v -= o.v; return *this; }
 
-        constexpr Score score(int material) const {
+        constexpr int score(int material) const {
             auto stage = std::min(material, PieceMatMax);
-            return Score{(s.openingPst*stage + s.endgamePst*(PieceMatMax - stage)) / PieceMatMax};
+            return (s.openingPst*stage + s.endgamePst*(PieceMatMax - stage));
         }
     };
 
@@ -326,11 +332,9 @@ public:
     constexpr Evaluation () : v{} {}
 
     static Score evaluate(const Evaluation& my, const Evaluation& op) {
-        return my.v.score(my.v.s.piecesMat) - op.v.score(op.v.s.piecesMat).clamp();
-    }
-
-    constexpr Score score(PieceType ty, Square sq) const {
-        return pieceSquareTable(ty, sq).score(v.s.piecesMat);
+        return Score::clampEval(
+            (my.v.score(my.v.s.piecesMat) - op.v.score(op.v.s.piecesMat)) / PieceSquareTable::PieceMatMax
+        );
     }
 
     void drop(PieceType ty, Square t) { to(ty, t); }
