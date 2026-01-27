@@ -11,15 +11,20 @@
         assert (types.isPawn(pi) == bbPawns().has(sq));
         assert (!types.isPawn(pi) || (!sq.on(Rank1) && !sq.on(Rank8)));
 
-        assert (traits.isPromotable(pi) == (types.isPawn(pi) && sq.on(Rank7)));
-        assert (traits.isEnPassant(pi) <= ( types.isPawn(pi) && (sq.on(Rank4) || sq.on(Rank5)) ));
-        assert (traits.isCastling(pi)  <= (types.isRook(pi) && sq.on(Rank1)) );
+        assert (traits.isEnPassant(pi) <= types.isPawn(pi));
+        assert (traits.isEnPassant(pi) <= (sq.on(Rank4) || sq.on(Rank5)));
+
+        assert (traits.isPromotable(pi) <= types.isPawn(pi));
+        assert (traits.isPromotable(pi) <= squares.squareOf(pi).on(Rank7));
+
+        assert (traits.isCastling(pi) <= types.isRook(pi));
+        assert (traits.isCastling(pi) <= sq.on(Rank1));
     }
 
     void PositionSide::assertOk(Pi pi, PieceType ty, Square sq) const {
-        assertOk(pi);
         assert (squares.squareOf(pi) == sq);
         assert (types.typeOf(pi) == ty);
+        assertOk(pi);
     }
 #endif
 
