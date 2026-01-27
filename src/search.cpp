@@ -406,20 +406,17 @@ ReturnStatus Node::quiescence() {
 }
 
 ReturnStatus Node::goodCaptures(Node* child, PiMask victims) {
-    if (MY.promotables().any()) {
-        // queen promotions with capture, always good
-        for (Pi victim : OP.pieces() & OP.piecesOn(Rank{Rank1})) {
-            Square to = ~OP.squareOf(victim);
-            for (Pi pi : canMoveTo(to) & MY.promotables()) {
+    // queen promotion moves, with and without capture
+    for (Pi pi : MY.promotables()) {
+        Bb queenPromos = bbMovesOf(pi) & Bb{Rank8}; // filter out underpromotions
+        for (Square to : queenPromos) {
+            if (
+                OP.bbSide().has(~to) // promotion with capture, always good
+                || !bbAttacked().has(to) // move to safe square
+                || MY.attackersTo(to).any() // or we have support attackers
+            ) {
                 RETURN_CUTOFF (child->searchMove(pi, to));
             }
-        }
-
-        // queen promotions without capture
-        for (Pi pawn : MY.promotables()) {
-            Square from = MY.squareOf(pawn);
-            Square to{File{from}, Rank8};
-            RETURN_CUTOFF (child->searchIfPossible(pawn, to));
         }
     }
 
