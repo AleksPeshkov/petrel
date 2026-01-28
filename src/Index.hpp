@@ -159,13 +159,14 @@ public:
 };
 
 // search tree distance in halfmoves
-class Ply : public Index<64, u8_t> {
+class Ply : public Index<64> {
 public:
-    constexpr Ply(int i = 0) : Index{static_cast<_t>(i > 0 ? i : 0)} { assertOk(); }
-    friend bool operator < (Index a, int i) { return a < i; }
-    friend bool operator <= (Index a, int i) { return a <= i; }
+    explicit constexpr Ply(int i) : Index{i > 0 ? i : 0} { assertOk(); }
+    friend constexpr Ply operator""_ply(unsigned long long);
+    friend auto operator <=> (const Ply& a, const Ply& b) = default;
 };
-constexpr Ply::_t MaxPly = Ply::Last; // Ply is limited to [0 .. MaxPly]
+constexpr Ply MaxPly{Ply::Last}; // Ply is limited to [0 .. MaxPly]
+constexpr Ply operator""_ply(unsigned long long n) { return Ply{static_cast<Ply::_t>(n)}; }
 
 using node_count_t = u64_t;
 enum : node_count_t {
