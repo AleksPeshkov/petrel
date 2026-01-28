@@ -14,13 +14,14 @@ TtSlot::TtSlot (const Node* n) : TtSlot{
     n->canBeKiller
 } {}
 
-Node::Node (const PositionMoves& p, const Uci& r) : PositionMoves{p}, root{r} {}
+Node::Node (const PositionMoves& p, const Uci& r) :
+    PositionMoves{p}, root{r}, parent{nullptr}, grandParent{nullptr}, ply{0},
+    alpha{MinusInfinity}, beta{PlusInfinity}, isPv{true}, pvIndex{0}
+{}
 
 Node::Node (const Node* p) :
-    PositionMoves{}, root{p->root}, parent{p}, grandParent{p->parent},
-    ply{p->ply + 1}, depth{p->depth > 0 ? p->depth-1 : 0},
-    alpha{-p->beta}, beta{-p->alpha}, isPv(p->isPv),
-    pvIndex{p->pvIndex+1}
+    PositionMoves{}, root{p->root}, parent{p}, grandParent{p->parent}, ply{p->ply + 1},
+    alpha{-p->beta}, beta{-p->alpha}, isPv(p->isPv), pvIndex{p->pvIndex+1}
 {
     if (grandParent) {
         killer[0] = grandParent->killer[0];
@@ -29,7 +30,7 @@ Node::Node (const Node* p) :
 }
 
 ReturnStatus Node::negamax(Node* child, Ply R) const {
-    child->depth = depth - R; //TRICK: Ply >= 0
+    child->depth = Ply{depth - R}; //TRICK: Ply >= 0
     /* assert (child->depth >= 0); */
     child->generateMoves();
     RETURN_IF_STOP (child->search());
@@ -53,7 +54,7 @@ ReturnStatus Node::negamax(Node* child, Ply R) const {
                     assert (child->alpha == child->beta.minus1());
                 }
                 // reduced search full depth research (unless it was a null move search or leaf node)
-                return negamax(child, 1);
+                return negamax(child);
             }
 
             score = childScore;
@@ -73,7 +74,7 @@ ReturnStatus Node::negamax(Node* child, Ply R) const {
             assert (child->alpha < child->beta.minus1());
 
             assert (child->beta == -alpha);
-            return negamax(child, 1);
+            return negamax(child);
         }
 
         score = childScore;
@@ -128,7 +129,7 @@ ReturnStatus Node::search() {
 
         if (inCheck()) {
             // check extension
-            depth = depth+1;
+            depth = Ply{depth+1};
         }
     }
 
@@ -217,7 +218,7 @@ ReturnStatus Node::search() {
         && MY.evaluation().piecesMat() > 0 // no null move if only pawns left (zugzwang)
     ) {
         canBeKiller = false;
-        RETURN_CUTOFF (child->searchNullMove(3 + depth/6));
+        RETURN_CUTOFF (child->searchNullMove(Ply{3 + depth/6}));
     }
 
     if (isHit && ttSlot.hasMove()) {
@@ -257,7 +258,6 @@ ReturnStatus Node::search() {
     // skip king moves because they are safe anyway (unless in check)
     // castling move is a rook move, king moves rarely good in middlegame,
     // skip pawns to avoid wasting time on safety check as pawns
-    Ply R = canR ? 2 : 1;
     for (Pi pi : officers) {
         Square from = MY.squareOf(pi);
 
@@ -285,14 +285,13 @@ ReturnStatus Node::search() {
             //TODO: try protecting moves of other pieces
         }
 
-        RETURN_CUTOFF (goodNonCaptures(child, pi, bbMovesOf(pi) % badSquares, R));
+        RETURN_CUTOFF (goodNonCaptures(child, pi, bbMovesOf(pi) % badSquares, canR ? 2_ply : 1_ply));
     }
 
-    R = canR ? 3 : 1;
     while (safePieces.any()) {
         Pi pi = safePieces.leastValuable(); safePieces -= pi;
 
-        RETURN_CUTOFF (goodNonCaptures(child, pi, bbMovesOf(pi) % badSquares, R));
+        RETURN_CUTOFF (goodNonCaptures(child, pi, bbMovesOf(pi) % badSquares, canR ? 3_ply : 1_ply));
     }
 
     // iterate pawns from Rank7 to Rank2
@@ -300,11 +299,11 @@ ReturnStatus Node::search() {
     for (Square from : MY.bbPawns()) {
         Pi pi = MY.pieceAt(from);
 
-        R = 1;
+        Ply R = 1_ply;
         if (canR) {
-            if (from.on(Rank7)) { R = 4; } // underpromotion
-            else if (from.on(Rank6)) { R = 1; } // passed pawn push extension
-            else { R = 3; } // default reduction for pawn moves
+            if (from.on(Rank7)) { R = 4_ply; } // underpromotion
+            else if (from.on(Rank6)) { R = 1_ply; } // passed pawn push extension
+            else { R = 3_ply; } // default reduction for pawn moves
         }
 
         for (Square to : bbMovesOf(pi)) {
@@ -314,31 +313,28 @@ ReturnStatus Node::search() {
 
     // king quiet moves (always safe), castling is rook move
     if (!canP || movesMade() == 0) { // weak move pruning
-        R = canR ? 3 : 1;
-        Square from = MY.kingSquare();
         for (Square to : bbMovesOf(Pi{TheKing})) {
-            RETURN_CUTOFF (child->searchMove(from, to, R));
+            RETURN_CUTOFF (child->searchMove(Pi{TheKing}, to, canR ? 3_ply : 1_ply));
         }
     }
 
     // unsafe (losing) captures
-    R = canR ? 3 : 1;
     for (PiMask pieces = officers; pieces.any(); ) {
         Pi pi = pieces.leastValuable(); pieces -= pi;
 
         for (Square to : bbMovesOf(pi) & ~OP.bbSide()) {
-            RETURN_CUTOFF (child->searchMove(pi, to, R));
+            RETURN_CUTOFF (child->searchMove(pi, to, canR ? 3_ply : 1_ply));
         }
     }
 
     // unsafe (losing) non-captures
+    // underpromotion with or without capture and pawn pushes
     if (!canP || movesMade() == 0) { // weak move pruning
-        R = canR ? 4 : 1;
         for (PiMask pieces = officers; pieces.any(); ) {
             Pi pi = pieces.leastValuable(); pieces -= pi;
 
             for (Square to : bbMovesOf(pi)) {
-                RETURN_CUTOFF (child->searchMove(pi, to, R));
+                RETURN_CUTOFF (child->searchMove(pi, to, canR ? 4_ply : 1_ply));
             }
         }
     }
@@ -402,7 +398,6 @@ ReturnStatus Node::quiescence() {
     //TODO: create lighter quiescence node without zobrist hashing and repetition detection
     Node node{this};
     const auto child = &node;
-    child->depth = 0;
 
     // impossible to capture the king, do not even try to save time
     return goodCaptures(child, OP.nonKing());
@@ -513,7 +508,7 @@ ReturnStatus Node::searchMove(Square from, Square to, Ply R) {
     parent->currentMove = HistoryMove{parent->MY.typeAt(from), from, to};
     makeMove(from, to);
 
-    if (rule50() < 2) { repetitionHash = {}; }
+    if (rule50() < 2_ply) { repetitionHash = {}; }
     else if (grandParent) { repetitionHash = RepetitionHash{grandParent->repetitionHash, grandParent->zobrist()}; }
     else { repetitionHash = root.repetitions.repetitionHash(colorToMove()); }
 
@@ -609,7 +604,7 @@ bool Node::isDrawMaterial() const {
 }
 
 bool Node::isRepetition() const {
-    if (rule50() < 4) { return false; }
+    if (rule50() < 4_ply) { return false; }
 
     auto& z = zobrist();
 
@@ -632,7 +627,7 @@ ReturnStatus Node::searchRoot() {
     auto rootMovesClone = moves();
     repetitionHash = root.repetitions.repetitionHash(colorToMove());
 
-    for (depth = 1; depth <= root.limits.depth; ++depth) {
+    for (depth = 1_ply; depth <= root.limits.depth; ++depth) {
         tt = root.tt.prefetch<TtSlot>(zobrist());
         setMoves(rootMovesClone);
         alpha = Score{MinusInfinity};

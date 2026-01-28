@@ -305,7 +305,7 @@ public:
     void log(std::string_view) const;
 
     constexpr ChessVariant chessVariant() const { return position_.chessVariant(); }
-    constexpr Color colorToMove(Ply ply = Ply{0}) const { return position_.colorToMove(ply); }
+    constexpr Color colorToMove(Ply ply = 0_ply) const { return position_.colorToMove(ply); }
 
     void bench(std::string& goLimits);
 
