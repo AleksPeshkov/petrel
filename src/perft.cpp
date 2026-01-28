@@ -96,7 +96,7 @@ public:
     }
 
     constexpr Ply getDepth() const {
-        return key & 0xf;
+        return Ply{static_cast<Ply::_t>(key & 0xf)};
     }
 
 };
@@ -130,7 +130,7 @@ public:
     }
 
     constexpr Ply getDepth() const {
-        return (nodes & DepthMask) >> DepthShift;
+        return Ply{static_cast<Ply::_t>((nodes & DepthMask) >> DepthShift)};
     }
 
     constexpr node_count_t getNodes() const {
@@ -328,12 +328,12 @@ ReturnStatus NodePerft::visitMove(Square from, Square to) {
             RETURN_IF_STOP (root.limits.countNode());
             makeMoveNoZobrist(parent, from, to);
 
-            perft = static_cast<TtPerft&>(root.tt).get(zobrist(), depth-2);
+            perft = static_cast<TtPerft&>(root.tt).get(zobrist(), Ply{depth-2});
 
             if (perft == NodeCountNone) {
                 perft = 0;
                 RETURN_IF_STOP(visit());
-                static_cast<TtPerft&>(root.tt).set(zobrist(), depth-2, perft);
+                static_cast<TtPerft&>(root.tt).set(zobrist(), Ply{depth-2}, perft);
             }
         }
     }

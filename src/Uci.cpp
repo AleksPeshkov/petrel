@@ -451,9 +451,9 @@ void Uci::ponderhit() {
 }
 
 void Uci::goPerft() {
-    Ply depth;
+    Ply depth{1};
     inputLine >> depth;
-    depth = std::min<Ply>(depth, 18); // current Tt implementation limit
+    depth = std::min<Ply>(depth, 18_ply); // current Tt implementation limit
 
     limits.clear();
     mainSearchThread.start([this, depth] {
@@ -536,7 +536,7 @@ void Uci::refreshTtPv(Ply depth) const {
     Position pos{position_};
     Score pos_score = pvScore;
     Ply d = depth;
-    Ply pos_ply = 0;
+    Ply pos_ply = 0_ply;
 
     const UciMove* pv = pvMoves;
     for (UciMove move; (move = *pv++);) {
@@ -547,8 +547,8 @@ void Uci::refreshTtPv(Ply depth) const {
         //we cannot use makeZobrist() because of en passant legality validation
         pos.makeMove(move.from(), move.to());
         pos_score = -pos_score;
-        d = d-1;
-        pos_ply = pos_ply+1;
+        d = Ply{d-1};
+        pos_ply = Ply{pos_ply+1};
     }
 }
 
