@@ -34,7 +34,7 @@ ReturnStatus Node::negamax(Node* child, Ply R) const {
     child->generateMoves();
     RETURN_IF_STOP (child->search());
 
-    assert (MinusInfinity <= alpha && alpha < beta && beta <= PlusInfinity);
+    assert (Score{MinusInfinity} <= alpha && alpha < beta && beta <= Score{PlusInfinity});
 
     auto childScore = -child->score;
 
@@ -99,7 +99,7 @@ ReturnStatus Node::negamax(Node* child, Ply R) const {
 }
 
 ReturnStatus Node::search() {
-    assert (MinusInfinity <= alpha && alpha < beta && beta <= PlusInfinity);
+    assert (Score{MinusInfinity} <= alpha && alpha < beta && beta <= Score{PlusInfinity});
     score = Score{NoScore};
     currentMove = {};
     bound = FailLow;
@@ -193,14 +193,14 @@ ReturnStatus Node::search() {
         && depth <= 3
     ) {
         auto delta = (depth == 1) ? 50_cp : (depth == 2) ? 150_cp : 200_cp;
-        if (MinEval <= beta && beta <= eval-delta) {
+        if (Score{MinEval} <= beta && beta <= eval-delta) {
             // Static Null Move Pruning (Reverse Futility Pruning)
             score = eval;
             assert (!currentMove);
             return ReturnStatus::BetaCutoff;
         } else {
             delta = (depth == 1) ? 50_cp : (depth == 2) ? 250_cp : 350_cp;
-            if (eval+delta < alpha && alpha <= MaxEval) {
+            if (eval+delta < alpha && alpha <= Score{MaxEval}) {
                 // Razoring
                 return quiescence();
             }
@@ -215,7 +215,7 @@ ReturnStatus Node::search() {
     if (
         !inCheck()
         && !isPv
-        && MinEval <= beta && beta <= eval
+        && Score{MinEval} <= beta && beta <= eval
         && depth >= 2 // overhead higher then gain at very low depth
         && MY.evaluation().piecesMat() > 0 // no null move if only pawns left (zugzwang)
     ) {
@@ -382,7 +382,7 @@ ReturnStatus Node::goodNonCaptures(Node* child, Pi pi, Bb moves, Ply R) {
 }
 
 ReturnStatus Node::quiescence() {
-    assert (MinusInfinity <= alpha && alpha < beta && beta <= PlusInfinity);
+    assert (Score{MinusInfinity} <= alpha && alpha < beta && beta <= Score{PlusInfinity});
     assert (!inCheck());
 
     // stand pat
