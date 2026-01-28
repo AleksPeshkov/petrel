@@ -150,6 +150,7 @@ ReturnStatus Node::search() {
             isHit = false;
         } else {
             ++root.tt.hits;
+            canBeKiller = ttSlot.canBeKiller();
 
             if (ttSlot.draft() >= depth && !isPv) {
                 Bound ttBound = ttSlot.bound();
