@@ -29,9 +29,7 @@ class TtSlot {
     _t v;
 
 public:
-    TtSlot () { static_assert (sizeof(TtSlot) == sizeof(u64_t)); }
-
-    TtSlot (Z z,
+    TtSlot (Z z = Z{0},
         Score score = Score{NoScore},
         Ply ply = 0,
         Bound bound = NoBound,
@@ -47,7 +45,7 @@ public:
         | (static_cast<_t>(to) << ToShift)
         | (static_cast<_t>(draft) << DraftShift)
         | (static_cast<_t>(canBeKiller) << KillerShift)
-    } {}
+    } { static_assert (sizeof(TtSlot) == sizeof(u64_t)); }
 
     TtSlot (const Node* node);
     bool operator == (Z z) const { return (v & HashMask) == (z & HashMask); }
