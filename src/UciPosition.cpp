@@ -343,7 +343,7 @@ void UciPosition::playMoves(istream& in, Repetitions& repetitions) {
         generateMoves();
         colorToMove_.flip();
 
-        if (rule50() < 1) { repetitions.clear(); }
+        if (rule50() < 1_ply) { repetitions.clear(); }
         repetitions.push(colorToMove_, zobrist());
 
         if (colorToMove_.is(White)) { ++fullMoveNumber; }

@@ -486,7 +486,7 @@ void Uci::goPerft() {
 
     Ply depth{1};
     inputLine >> depth;
-    depth = std::min<Ply>(depth, 18); // current Tt implementation limit
+    depth = std::min<Ply>(depth, 18_ply); // current Tt implementation limit
 
     mainSearchThread.start([this, depth] {
         NodePerft{position_, *this, depth}.visitRoot();
@@ -564,7 +564,7 @@ void Uci::bench(std::string& goLimits) {
 void Uci::refreshTtPv(Ply depth) const {
     Position pos{position_};
     Score score = pvScore;
-    Ply ply = 0;
+    Ply ply = 0_ply;
 
     const UciMove* pv = pvMoves;
     for (UciMove move; (move = *pv++);) {
@@ -575,8 +575,8 @@ void Uci::refreshTtPv(Ply depth) const {
         //we cannot use makeZobrist() because of en passant legality validation
         pos.makeMove(move.from(), move.to());
         score = -score;
-        depth = depth-1;
-        ply = ply+1;
+        depth = Ply{depth-1};
+        ply = Ply{ply+1};
     }
 }
 
