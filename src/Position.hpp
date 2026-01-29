@@ -65,6 +65,12 @@ protected:
     // all occupied squares by both sides from the given side point of view
     constexpr const Bb& occupied(Side side) const { return occupied_[side]; }
 
+    // 'my' attackers count greater than 'op' attackers
+    constexpr bool safeForMe(Square sq) const { return MY.attackersTo(sq).popcount() > OP.attackersTo(~sq).popcount(); }
+
+    // 'op' attackers count greater than 'my' attackers
+    constexpr bool safeForOp(Square sq) const { return OP.attackersTo(~sq).popcount() > MY.attackersTo(sq).popcount(); }
+
     // update the zobrist hash of incoming move
     void makeZobrist(const Position* parent, Square from, Square to) { zobrist_ = parent->createZobrist(from, to); }
 
