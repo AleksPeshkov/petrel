@@ -310,20 +310,17 @@ ReturnStatus Node::search() {
             RETURN_CUTOFF (child->searchMove(pi, to, 1_ply));
         }
     }
-/*
+
     // passed pawn push from Rank5 down to Rank2
     for (Square from : MY.bbPassedPawns() % (Bb{Rank6} | Bb{Rank7})) {
         Pi pi = MY.piAt(from);
         for (Square to : bbMovesOf(pi)) {
-            if (!bbAttacked().has(to) || MY.attackersTo(to).any()) {
-                // move to safe square or we have supporting attackers
-                RETURN_CUTOFF (child->searchMove(pi, to, canR ? 2_ply : 1_ply));
-            }
+            RETURN_CUTOFF (child->searchMove(pi, to, canR ? 3_ply : 1_ply));
         }
     }
-*/
+
     // not passed pawn pushes from most advanced to Rank2
-    for (Square from : MY.bbPawns() % (Bb{Rank6} | Bb{Rank7})) {
+    for (Square from : MY.bbPawns() % MY.bbPassedPawns()) {
         Pi pi = MY.piAt(from);
         for (Square to : bbMovesOf(pi)) {
             RETURN_CUTOFF (child->searchMove(pi, to, canR ? 3_ply : 1_ply));
