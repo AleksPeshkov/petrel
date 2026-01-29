@@ -111,6 +111,7 @@ void Position::makeMove(Square from, Square to) {
             }
             MY.movePawn(pi, from, to);
             OP.capture(~ep); // also clears en passant victim
+            updateAllPassedPawns();
 
             if constexpr (Flags & WithEval) {
                 accumulator.ep(from, to, ep);
@@ -144,6 +145,7 @@ void Position::makeMove(Square from, Square to) {
                     zobrist_.op(captured, ~to);
                 }
                 OP.capture(~to);
+                // promotion move cannot affect other passed pawns
 
                 if constexpr (Flags & WithEval) {
                     accumulator.promote(promo, from, to, captured);
@@ -171,6 +173,7 @@ void Position::makeMove(Square from, Square to) {
                 zobrist_.op(captured, ~to);
             }
             OP.capture(~to);
+            updateAllPassedPawns();
 
             if constexpr (Flags & WithEval) {
                 accumulator.move(PieceType{Pawn}, from, to, captured);
@@ -178,6 +181,7 @@ void Position::makeMove(Square from, Square to) {
             updateSliderAttacks<My>(MY.affectedBy(from), OP.affectedBy(~from));
             return; // end of simple pawn capture move
         }
+        updateAllPassedPawns();
 
         if constexpr (Flags & WithEval) {
             accumulator.move(PieceType{Pawn}, from, to);
@@ -210,6 +214,9 @@ void Position::makeMove(Square from, Square to) {
                 zobrist_.op(captured, ~to);
             }
             OP.capture(~to);
+            if (captured.is(Pawn)) {
+                MY.updatePassedPawns(OP);
+            }
 
             if constexpr (Flags & WithEval) {
                 accumulator.move(PieceType{King}, from, to, captured);
@@ -266,6 +273,9 @@ void Position::makeMove(Square from, Square to) {
             zobrist_.op(captured, ~to);
         }
         OP.capture(~to);
+        if (captured.is(Pawn)) {
+            MY.updatePassedPawns(OP);
+        }
 
         if constexpr (Flags & WithEval) {
             accumulator.move(moved, from, to, captured);
@@ -343,8 +353,10 @@ bool Position::dropValid(Side si, PieceType ty, Square to) {
 }
 
 bool Position::afterDrop() {
+    updateAllPassedPawns();
     PositionSide::finalSetup(MY, OP);
     updateSliderAttacks<Op>(OP.pieces(), MY.pieces());
+
     rule50_.clear();
 
     //opponent should not be in check
