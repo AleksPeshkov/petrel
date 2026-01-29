@@ -259,27 +259,23 @@ ReturnStatus Node::search() {
         RETURN_CUTOFF (child->searchIfPossible(parent->killer[2]));
     }
 
-    // going to search only non-captures, mask out remaining unsafe captures to avoid redundant safety checks
-    //TRICK: ~ is not a negate bitwise operation but byteswap -- flip opponent's bitboard
-    Bb bbAvoid = ~(OP.bbPawnAttacks() | OP.bbSide());
-    PiMask safePieces = {}; // pieces on safe squares
-    PiMask officers = MY.officers(); // Q, R, B, N
-
     // Weak Move Reduction condition: !inCheck()
     bool canR = !inCheck();
 
     // Weak Move Pruning: !inCheck() && !isPv() && depth <= 2
     bool canP = !inCheck() && !isPv() && depth <= 2_ply;
 
-    // quiet non-pawn, non-king moves from unsafe to safe squares
-    // skip king moves because they are safe anyway (unless in check)
-    // castling move is a rook move, king moves rarely good in middlegame,
-    // skip pawns to avoid wasting time on safety check as pawns
-    for (Pi pi : officers) {
+    // going to search only non-captures, mask out remaining unsafe captures to avoid redundant safety checks
+    //TRICK: ~ is not a negate bitwise operation but byteswap -- flip opponent's bitboard
+    Bb bbAvoid = ~(OP.bbPawnAttacks() | OP.bbSide());
+    PiMask safePieces = {}; // pieces on safe squares
+
+    // officers (Q, R, B/N order) moves from unsafe to safe squares
+    for (Pi pi : MY.officers()) {
         Square from = MY.sq(pi);
 
         if (!bbAttacked().has(from)) {
-            // piece on safe square
+            // piece is not attacked at all
             safePieces += pi;
             continue;
         }
@@ -288,14 +284,8 @@ ReturnStatus Node::search() {
 
         // attacked by more valuable attacker
         if (OP.attackersTo(~from).none(OP.lessOrEqualValue(MY.typeOf(pi)))) {
-            if (MY.bbPawnAttacks().has(from)) {
-                // square defended by a pawn
-                safePieces += pi;
-                continue;
-            }
-
-            if (MY.attackersTo(from).popcount() >= OP.attackersTo(~from).popcount()) {
-                // enough total defenders, possibly false positive
+            if (MY.bbPawnAttacks().has(from) || safeForMe(from)) {
+                // piece is protected
                 safePieces += pi;
                 continue;
             }
@@ -305,38 +295,40 @@ ReturnStatus Node::search() {
         RETURN_CUTOFF (goodNonCaptures(pi, bbMovesOf(pi) % bbAvoid, canR ? 2_ply : 1_ply));
     }
 
+    // safe officers moves
     while (safePieces.any()) {
         Pi pi = safePieces.piLast(); safePieces -= pi;
-
         RETURN_CUTOFF (goodNonCaptures(pi, bbMovesOf(pi) % bbAvoid, canR ? 3_ply : 1_ply));
     }
 
-    // iterate pawns from Rank7 to Rank2
-    // underpromotion with or without capture and pawn pushes
-    for (Square from : MY.bbPawns()) {
+    // push to Rank7 extension
+    for (Square from : MY.bbPawns() & Bb{Rank6}) {
         Pi pi = MY.pi(from);
-
-        Ply R = 1_ply;
-        if (canR) {
-            if (from.on(Rank7)) { R = 4_ply; } // underpromotion
-            else if (from.on(Rank6)) { R = 1_ply; } // passed pawn push extension
-            else { R = 3_ply; } // default reduction for pawn moves
-        }
-
-        for (Square to : bbMovesOf(pi)) {
-            RETURN_CUTOFF (child->searchMove(pi, to, R));
+        Square to{File{from}, Rank7};
+        if (bbMovesOf(pi).has(to)) {
+            RETURN_CUTOFF (child->searchMove(pi, to, 1_ply));
         }
     }
 
-    // king quiet moves (always safe), castling is rook move
+    // all remaining pawn moves
+    // losing queen promotions, all underpromotions
+    // losing passed pawns moves, all non passed pawns moves
+    for (Square from : MY.bbPawns()) {
+        Pi pi = MY.pi(from);
+        for (Square to : bbMovesOf(pi)) {
+            RETURN_CUTOFF (child->searchMove(pi, to, canR ? 3_ply : 1_ply));
+        }
+    }
+
+    // king quiet moves (always safe), castling is a rook move
     if (!canP || movesMade() == 0) { // weak move pruning
         for (Square to : bbMovesOf(Pi{TheKing})) {
             RETURN_CUTOFF (child->searchMove(Pi{TheKing}, to, canR ? 3_ply : 1_ply));
         }
     }
 
-    // unsafe (losing) captures
-    for (PiMask pieces = officers; pieces.any(); ) {
+    // unsafe (losing) captures (N/B, R, Q order)
+    for (PiMask pieces = MY.officers(); pieces.any(); ) {
         Pi pi = pieces.piLast(); pieces -= pi;
 
         for (Square to : bbMovesOf(pi) & ~OP.bbSide()) {
@@ -344,10 +336,9 @@ ReturnStatus Node::search() {
         }
     }
 
-    // unsafe (losing) non-captures
-    // underpromotion with or without capture and pawn pushes
+    // unsafe (losing) non-captures (N/B, R, Q order)
     if (!canP || movesMade() == 0) { // weak move pruning
-        for (PiMask pieces = officers; pieces.any(); ) {
+        for (PiMask pieces = MY.officers(); pieces.any(); ) {
             Pi pi = pieces.piLast(); pieces -= pi;
 
             for (Square to : bbMovesOf(pi)) {
@@ -376,12 +367,12 @@ ReturnStatus Node::goodNonCaptures(Pi pi, Bb moves, Ply R) {
 
         if (bbAttacked().has(to)) {
             if ((OP.attackersTo(~to) & opLessValue).any()) {
-                // skip move if square defended by less valued piece
+                // square defended by less valued opponent's piece
                 continue;
             }
 
-            if ((MY.attackersTo(to) % PiMask{pi}).none()) {
-                // skip move to defended square if nobody else attacks it
+            if (!(MY.bbPawnAttacks().has(to) || safeForMe(to))) {
+                // skip move to the defended square
                 continue;
             }
         }
@@ -425,11 +416,8 @@ ReturnStatus Node::goodCaptures(PiMask victims) {
     for (Pi pi : MY.promotables()) {
         Bb queenPromos = bbMovesOf(pi) & Bb{Rank8}; // filter out underpromotions
         for (Square to : queenPromos) {
-            if (
-                OP.bbSide().has(~to) // promotion with capture, always good
-                || !bbAttacked().has(to) // move to safe square
-                || MY.attackersTo(to).any() // or we have support attackers
-            ) {
+            if (!safeForOp(to) || OP.bbSide().has(~to)) {
+                // move to safe square or always good promotion with capture
                 RETURN_CUTOFF (child->searchMove(pi, to));
             }
         }
@@ -453,7 +441,7 @@ ReturnStatus Node::goodCaptures(PiMask victims) {
         //TODO: check if defending pawn is pinned and cannot recapture
         //TODO: try killer heuristics for uncertain and bad captures
         //TODO: try more complex and precise SEE
-        if (OP.bbPawnAttacks().has(~to) || OP.attackersTo(~to).popcount() >= MY.attackersTo(to).popcount()) {
+        if (OP.bbPawnAttacks().has(~to) || !safeForMe(to)) {
             attackers &= MY.lessOrEqualValue(OP.typeOf(victim));
         }
 
