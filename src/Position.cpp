@@ -298,6 +298,14 @@ bool Position::afterDrop() {
     return MY.checkers().none();
 }
 
+Bb Position::bbPassedPawns() const {
+    Bb blockers = ~(OP.bbPawns() | OP.bbPawnAttacks() >> 8u);
+    for (int i = 0; i < 5; ++i) {
+        blockers |= blockers << 8u;
+    }
+    return MY.bbPawns() % blockers;
+}
+
 bool Position::isSpecialMove(Square from, Square to) const {
     if (MY.kingSquare().is(to)) {
         return true; // castling

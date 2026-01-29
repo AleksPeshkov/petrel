@@ -251,10 +251,7 @@ ReturnStatus Node::search() {
             Bb badSquares = ~(OP.bbPawnAttacks() | OP.bbSide());
             PiMask safePieces = {}; // pieces on safe squares
 
-            // quiet non-pawn, non-king moves from unsafe to safe squares
-            // skip king moves because they are safe anyway (unless in check)
-            // castling move is a rook move, king moves rarely good in middlegame,
-            // skip pawns to avoid wasting time on safety check as pawns
+            // officers (Q, R, B/N order) moves from unsafe to safe squares
             for (Pi pi : MY.officers()) {
                 Square from = MY.squareOf(pi);
 
@@ -280,46 +277,41 @@ ReturnStatus Node::search() {
                 RETURN_CUTOFF (goodNonCaptures(child, pi, bbMovesOf(pi) % badSquares, 2_ply));
             }
 
+            // safe passed pawns moves
+            for (Square from : bbPassedPawns() % Bb{Rank7}) {
+                Pi pi = MY.piAt(from);
+                for (Square to : bbMovesOf(pi)) {
+                    if (safeForMe(to)) {
+                        RETURN_CUTOFF (child->searchMove(from, to, from.on(Rank6) ? 1_ply : 2_ply));
+                    }
+                }
+            }
+
+            // safe officers moves
             while (safePieces.any()) {
                 Pi pi = safePieces.piLeastValuable(); safePieces -= pi;
-
                 RETURN_CUTOFF (goodNonCaptures(child, pi, bbMovesOf(pi) % badSquares, 3_ply));
             }
         }
 
-        // losing queen promotions and all underpromotions
-        for (Square from : MY.bbPawns() & Bb{Rank7}) {
+        // all remaining pawn moves
+        // losing queen promotions, all underpromotions
+        // losing passed pawns moves, all non passed pawns moves
+        for (Square from : MY.bbPawns()) {
             Pi pi = MY.piAt(from);
             for (Square to : bbMovesOf(pi)) {
-                RETURN_CUTOFF (child->searchMove(pi, to, 4_ply));
+                RETURN_CUTOFF (child->searchMove(from, to, 3_ply));
             }
         }
 
-        // push to Rank7 extension
-        for (Square from : MY.bbPawns() & Bb{Rank6}) {
-            Pi pi = MY.piAt(from);
-            Square to{File{from}, Rank7};
-            if (bbMovesOf(pi).has(to)) {
-                RETURN_CUTOFF (child->searchMove(pi, to, 1_ply));
-            }
-        }
-
-        // pawn pushes from most Rank5 to to Rank2
-        for (Square from : MY.bbPawns() % (Bb{Rank6} | Bb{Rank7})) {
-            Pi pi = MY.piAt(from);
-            for (Square to : bbMovesOf(pi)) {
-                RETURN_CUTOFF (child->searchMove(pi, to, 3_ply));
-            }
-        }
-
-        // king quiet moves (always safe), castling is rook move
+        // king quiet moves (always safe), castling is a rook move
         if (!canP || movesMade() == 0) { // weak move pruning
             for (Square to : bbMovesOf(Pi{TheKing})) {
                 RETURN_CUTOFF (child->searchMove(Pi{TheKing}, to, 3_ply));
             }
         }
 
-        // unsafe (losing) captures
+        // unsafe (losing) captures (N/B, R, Q order)
         for (PiMask pieces = MY.officers(); pieces.any(); ) {
             Pi pi = pieces.piLeastValuable(); pieces -= pi;
 
@@ -328,7 +320,7 @@ ReturnStatus Node::search() {
             }
         }
 
-        // unsafe (losing) non-captures
+        // unsafe (losing) non-captures (N/B, R, Q order)
         if (!canP || movesMade() == 0) { // weak move pruning
             for (PiMask pieces = MY.officers(); pieces.any(); ) {
                 Pi pi = pieces.piLeastValuable(); pieces -= pi;

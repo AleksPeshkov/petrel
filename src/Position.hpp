@@ -65,6 +65,8 @@ protected:
     // all occupied squares by both sides from the given side point of view
     constexpr const Bb& occupied(Side side) const { return occupied_[side]; }
 
+    Bb bbPassedPawns() const;
+
     // opponent attackers less than my attackers count to the square
     constexpr bool safeForMe(Square sq) const { return OP.attackersTo(~sq).popcount() <= MY.attackersTo(sq).popcount(); }
 
