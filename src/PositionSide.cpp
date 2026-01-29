@@ -8,7 +8,7 @@
         Square sq = squares.squareOf(pi);
         assert (has(sq));
 
-        assert (types.isPawn(pi) == bbPawns().has(sq));
+        assert (types.isPawn(pi) == bbPawns_.has(sq));
         assert (!types.isPawn(pi) || (!sq.on(Rank1) && !sq.on(Rank8)));
 
         assert (traits.isEnPassant(pi) <= types.isPawn(pi));
@@ -37,6 +37,7 @@ void PositionSide::swap(PositionSide& MY, PositionSide& OP) {
     swap(MY.bbSide_, OP.bbSide_);
     swap(MY.bbPawns_, OP.bbPawns_);
     swap(MY.bbPawnAttacks_, OP.bbPawnAttacks_);
+    swap(MY.bbPassedPawns_, OP.bbPassedPawns_);
     swap(MY.material_, OP.material_);
     swap(MY.opKing, OP.opKing);
 }
@@ -66,7 +67,8 @@ void PositionSide::capture(Square from) {
 
     bbSide_ -= Bb{from};
     if (ty.is(Pawn)) {
-        bbPawns_ -= Bb{from};
+        bbPawns_ &= bbSide_;
+        bbPassedPawns_ &= bbSide_;
         bbPawnAttacks_ = bbPawns_.pawnAttacks();
     }
 
@@ -134,6 +136,7 @@ Pi PositionSide::piPromoted(Pi pawn, Square from, PromoType ty, Square to) {
 
     // remove pawn
     bbPawns_ -= Bb{from};
+    bbPassedPawns_ -= Bb{from};
     bbPawnAttacks_ = bbPawns_.pawnAttacks();
     attacks_.clear(pawn);
     squares.clear(pawn);
@@ -250,6 +253,14 @@ void PositionSide::updateSlidersCheckers(PiMask affectedSliders, Bb occupiedBb) 
             traits.setChecker(pi);
         }
     }
+}
+
+void PositionSide::updatePassedPawns(const PositionSide& op) {
+    Bb blockers = ~(op.bbPawns_ | op.bbPawnAttacks() >> 8u);
+    for (int i = 0; i < 5; ++i) {
+        blockers |= blockers << 8u;
+    }
+    bbPassedPawns_ = bbPawns_ % blockers;
 }
 
 void PositionSide::setEnPassantVictim(Pi pi) {

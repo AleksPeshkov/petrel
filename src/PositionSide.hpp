@@ -17,6 +17,7 @@ class PositionSide {
     Bb bbSide_; // bitboard of squares of all current side pieces
     Bb bbPawns_; // bitboard of squares of current side pawns
     Bb bbPawnAttacks_; // bitboard of squares attacked by pawns
+    Bb bbPassedPawns_; // bitboard of current side passed pawns
 
     Material material_; // incremental material count
     Square opKing; // square of the opponent's king (from current side point of view)
@@ -39,13 +40,16 @@ public:
     constexpr const PiBbMatrix& attacks() const { return attacks_; }
 
     // bitboard of squares occupied by the given side pieces
-    constexpr const Bb& bbSide() const { return bbSide_; }
+    constexpr const Bb& bbSide() const { assert (bbPawns_ <= bbSide_); return bbSide_; }
 
     // bitboard of squares occupied by the given side pawns
-    constexpr const Bb& bbPawns() const { return bbPawns_; }
+    constexpr const Bb& bbPawns() const { assert (bbPassedPawns_ <= bbPawns_); return bbPawns_; }
 
     // bitboard of squares attacked by the given side pawns
     constexpr const Bb& bbPawnAttacks() const { assert (bbPawnAttacks_ == bbPawns_.pawnAttacks()); return bbPawnAttacks_; }
+
+    // the given side passed pawns (not blocked and promotion pass not attacked by opponent pawns)
+    constexpr const Bb& bbPassedPawns() const { assert (bbPassedPawns_ <= bbPawns_); return bbPassedPawns_; }
 
     // incremental piece count and material score for the given side to move
     constexpr const Material& material() const { return material_; }
@@ -131,6 +135,7 @@ public:
 
     void updateSliders(PiMask, Bb);
     void updateSlidersCheckers(PiMask, Bb);
+    void updatePassedPawns(const PositionSide&);
 
     //used only during initial position setup
     bool dropValid(PieceType, Square);

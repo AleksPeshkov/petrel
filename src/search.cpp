@@ -294,20 +294,39 @@ ReturnStatus Node::search() {
         RETURN_CUTOFF (goodNonCaptures(child, pi, bbMovesOf(pi) % badSquares, canR ? 3_ply : 1_ply));
     }
 
-    // iterate pawns from Rank7 to Rank2
-    // underpromotion with or without capture and pawn pushes
-    for (Square from : MY.bbPawns()) {
+    // losing queen promotions and all underpromotions
+    for (Square from : MY.bbPassedPawns() & Bb{Rank7}) {
         Pi pi = MY.piAt(from);
-
-        Ply R = 1_ply;
-        if (canR) {
-            if (from.on(Rank7)) { R = 4_ply; } // underpromotion
-            else if (from.on(Rank6)) { R = 1_ply; } // passed pawn push extension
-            else { R = 3_ply; } // default reduction for pawn moves
-        }
-
         for (Square to : bbMovesOf(pi)) {
-            RETURN_CUTOFF (child->searchMove(pi, to, R));
+            RETURN_CUTOFF (child->searchMove(pi, to, canR ? 4_ply : 1_ply));
+        }
+    }
+
+    // push to Rank7 extension
+    for (Square from : MY.bbPassedPawns() & Bb{Rank6}) {
+        Pi pi = MY.piAt(from);
+        Square to{File{from}, Rank7};
+        if (bbMovesOf(pi).has(to)) {
+            RETURN_CUTOFF (child->searchMove(pi, to, 1_ply));
+        }
+    }
+/*
+    // passed pawn push from Rank5 down to Rank2
+    for (Square from : MY.bbPassedPawns() % (Bb{Rank6} | Bb{Rank7})) {
+        Pi pi = MY.piAt(from);
+        for (Square to : bbMovesOf(pi)) {
+            if (!bbAttacked().has(to) || MY.attackersTo(to).any()) {
+                // move to safe square or we have supporting attackers
+                RETURN_CUTOFF (child->searchMove(pi, to, canR ? 2_ply : 1_ply));
+            }
+        }
+    }
+*/
+    // not passed pawn pushes from most advanced to Rank2
+    for (Square from : MY.bbPawns() % (Bb{Rank6} | Bb{Rank7})) {
+        Pi pi = MY.piAt(from);
+        for (Square to : bbMovesOf(pi)) {
+            RETURN_CUTOFF (child->searchMove(pi, to, canR ? 3_ply : 1_ply));
         }
     }
 
@@ -328,7 +347,6 @@ ReturnStatus Node::search() {
     }
 
     // unsafe (losing) non-captures
-    // underpromotion with or without capture and pawn pushes
     if (!canP || movesMade() == 0) { // weak move pruning
         for (PiMask pieces = officers; pieces.any(); ) {
             Pi pi = pieces.piLeastValuable(); pieces -= pi;

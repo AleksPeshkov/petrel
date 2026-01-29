@@ -47,6 +47,7 @@ class Position {
 
     template <Side::_t> void updateSliderAttacks(PiMask);
     template <Side::_t> void updateSliderAttacks(PiMask, PiMask);
+    void updateAllPassedPawns() { MY.updatePassedPawns(OP); OP.updatePassedPawns(MY); }
 
     enum MakeMoveFlags { WithZobrist = 0b01, WithEval = 0b10, ZobristAndEval = WithZobrist | WithEval };
     template <Side::_t, MakeMoveFlags> void makeMove(Square, Square);
@@ -64,7 +65,6 @@ class Position {
 
 protected:
     constexpr PositionSide& positionSide(Side side) { return positionSide_[side]; }
-    constexpr const PositionSide& positionSide(Side side) const { return positionSide_[side]; }
 
     // all occupied squares by both sides from the given side point of view
     constexpr const Bb& occupied(Side side) const { return occupied_[side]; }
@@ -94,6 +94,8 @@ protected:
     UciMove uciMove(Square from, Square to) const { return UciMove{from, to, isSpecialMove(from, to)}; }
 
 public:
+    constexpr const PositionSide& positionSide(Side side) const { return positionSide_[side]; }
+
     // position hash
     constexpr const Zobrist& zobrist() const { return zobrist_; }
 
