@@ -263,23 +263,18 @@ ReturnStatus Node::search() {
         Square from = MY.squareOf(pi);
 
         if (!bbAttacked().has(from)) {
-            // piece on safe square
+            // piece is not attacked at all
             safePieces += pi;
             continue;
         }
 
         assert (OP.attackersTo(~from).any());
 
-        // attacked by more valuable attacker
         if ((OP.attackersTo(~from) & OP.lessOrEqualValue(MY.typeOf(pi))).none()) {
-            if (MY.bbPawnAttacks().has(from)) {
-                // square defended by a pawn
-                safePieces += pi;
-                continue;
-            }
+            // attacked by more valuable attacker
 
-            if (MY.attackersTo(from).popcount() >= OP.attackersTo(~from).popcount()) {
-                // enough total defenders, possibly false positive
+            if (MY.bbPawnAttacks().has(from) || safeForMe(from)) {
+                // piece is protected
                 safePieces += pi;
                 continue;
             }
@@ -295,20 +290,28 @@ ReturnStatus Node::search() {
         RETURN_CUTOFF (goodNonCaptures(child, pi, bbMovesOf(pi) % badSquares, canR ? 3_ply : 1_ply));
     }
 
-    // iterate pawns from Rank7 to Rank2
-    // underpromotion with or without capture and pawn pushes
-    for (Square from : MY.bbPawns()) {
+    // losing queen promotions and all underpromotions
+    for (Square from : MY.bbPawns() & Bb{Rank7}) {
         Pi pi = MY.piAt(from);
-
-        Ply R = 1_ply;
-        if (canR) {
-            if (from.on(Rank7)) { R = 4_ply; } // underpromotion
-            else if (from.on(Rank6)) { R = 1_ply; } // passed pawn push extension
-            else { R = 3_ply; } // default reduction for pawn moves
-        }
-
         for (Square to : bbMovesOf(pi)) {
-            RETURN_CUTOFF (child->searchMove(pi, to, R));
+            RETURN_CUTOFF (child->searchMove(pi, to, canR ? 4_ply : 1_ply));
+        }
+    }
+
+    // push to Rank7 extension
+    for (Square from : MY.bbPawns() & Bb{Rank6}) {
+        Pi pi = MY.piAt(from);
+        Square to{File{from}, Rank7};
+        if (bbMovesOf(pi).has(to)) {
+            RETURN_CUTOFF (child->searchMove(pi, to, 1_ply));
+        }
+    }
+
+    // pawn pushes from most Rank5 to to Rank2
+    for (Square from : MY.bbPawns() % (Bb{Rank6} | Bb{Rank7})) {
+        Pi pi = MY.piAt(from);
+        for (Square to : bbMovesOf(pi)) {
+            RETURN_CUTOFF (child->searchMove(pi, to, canR ? 3_ply : 1_ply));
         }
     }
 
@@ -329,7 +332,6 @@ ReturnStatus Node::search() {
     }
 
     // unsafe (losing) non-captures
-    // underpromotion with or without capture and pawn pushes
     if (!canP || movesMade() == 0) { // weak move pruning
         for (PiMask pieces = officers; pieces.any(); ) {
             Pi pi = pieces.piLeastValuable(); pieces -= pi;
@@ -409,11 +411,8 @@ ReturnStatus Node::goodCaptures(Node* child, PiMask victims) {
     for (Pi pi : MY.promotables()) {
         Bb queenPromos = bbMovesOf(pi) & Bb{Rank8}; // filter out underpromotions
         for (Square to : queenPromos) {
-            if (
-                OP.bbSide().has(~to) // promotion with capture, always good
-                || !bbAttacked().has(to) // move to safe square
-                || MY.attackersTo(to).any() // or we have support attackers
-            ) {
+            if (safeForMe(to) || OP.bbSide().has(~to)) {
+                // move to safe square or always good promotion with capture
                 RETURN_CUTOFF (child->searchMove(pi, to));
             }
         }
@@ -437,7 +436,7 @@ ReturnStatus Node::goodCaptures(Node* child, PiMask victims) {
         //TODO: check if defending pawn is pinned and cannot recapture
         //TODO: try killer heuristics for uncertain and bad captures
         //TODO: try more complex and precise SEE
-        if (OP.bbPawnAttacks().has(~to) || OP.attackersTo(~to).popcount() >= MY.attackersTo(to).popcount()) {
+        if (OP.bbPawnAttacks().has(~to) || safeForOp(to)) {
             attackers &= MY.lessOrEqualValue(OP.typeOf(victim));
         }
 
