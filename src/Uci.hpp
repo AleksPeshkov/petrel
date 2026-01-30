@@ -169,7 +169,7 @@ public:
     }
 
     // ponder || infinite
-    bool shouldDelayBestmove() {
+    bool shouldDelayBestmove() const {
         return ponder.load(std::memory_order_relaxed) || infinite.load(std::memory_order_relaxed);
     }
 
@@ -244,8 +244,8 @@ private:
     mutable std::mutex outMutex;
 
     // if we are in infinite or ponder mode, we cannot send bestmove immediately
-    std::string bestmove_;
-    std::mutex bestmoveMutex;
+    mutable std::string bestmove_;
+    mutable std::mutex bestmoveMutex;
 
     // avoid race conditions betweeen Uci output and main search thread output
 
@@ -269,28 +269,29 @@ private:
     // something left unparsed
     bool hasMoreInput() { return io::hasMore(inputLine); }
 
-    //UCI command handlers
+//UCI command handlers
 
     void uciok() const;
-    void setoption();
-    void setHash();
     void ucinewgame();
     void position();
-
-    void readyok() const;
     void go();
     void stop();
     void ponderhit();
-    void bestmove();
+    void setoption();
 
-    void bench();
-    void debug();
+    void setHash();
+    void setdebug();
+
     void goPerft();
-    void info_perft_bestmove();
+    void bench();
 
     ostream& nps(ostream&) const;
     ostream& info_nps(ostream&) const;
     ostream& info_fen(ostream&) const;
+
+    void info_readyok() const;
+    void info_bestmove() const;
+    void info_perft_bestmove() const;
 
 public:
     Uci (ostream&);
@@ -329,10 +330,9 @@ public:
     void refreshTtPv(Ply depth) const;
 
     void info_pv(Ply) const;
-    void info_iteration(Ply) const;
 
     void info_perft_depth(Ply, node_count_t) const;
-    void info_perft_currmove(int moveCount, const UciMove& currentMove, node_count_t) const;
+    void info_perft_currmove(int moveCount, UciMove currentMove, node_count_t) const;
 };
 
 #endif

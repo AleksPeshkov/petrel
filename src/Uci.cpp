@@ -156,7 +156,7 @@ void Uci::processInput(istream& in) {
     while (std::getline(in, currentLine)) {
         if (isDebugOn) { log('>' + currentLine); }
 
-        inputLine.clear(); //clear error state from the previous line
+        inputLine.clear(); //clear previous errors
         inputLine.str(currentLine);
         inputLine >> std::ws;
 
@@ -164,12 +164,12 @@ void Uci::processInput(istream& in) {
         else if (consume("position"))  { position(); }
         else if (consume("stop"))      { stop(); }
         else if (consume("ponderhit")) { ponderhit(); }
-        else if (consume("isready"))   { readyok(); }
+        else if (consume("isready"))   { info_readyok(); }
         else if (consume("setoption")) { setoption(); }
         else if (consume("set"))       { setoption(); }
         else if (consume("ucinewgame")){ ucinewgame(); }
         else if (consume("uci"))       { uciok(); }
-        else if (consume("debug"))     { debug(); }
+        else if (consume("debug"))     { setdebug(); }
         else if (consume("perft"))     { goPerft(); }
         else if (consume("bench"))     { bench(); }
         else if (consume("quit"))      { stop(); break; }
@@ -245,7 +245,6 @@ void Uci::setoption() {
         return;
     }
 
-
     if (consume("Move Overhead")) {
         consume("value");
 
@@ -274,20 +273,6 @@ void Uci::setoption() {
         io::fail_rewind(inputLine);
         return;
     }
-}
-
-void Uci::debug() {
-    if (!hasMoreInput()) {
-        Output ob{this};
-        ob << "info string debug is " << (isDebugOn ? "on" : "off");
-        return;
-    }
-
-    if (consume("on"))  { isDebugOn = true; log("#debug on"); return; }
-    if (consume("off")) { isDebugOn = false; log("#debug off"); return; }
-
-    io::fail_rewind(inputLine);
-    return;
 }
 
 void Uci::setHash() {
@@ -325,6 +310,20 @@ void Uci::setHash() {
 
     tt.setSize(quantity);
     newGame();
+}
+
+void Uci::setdebug() {
+    if (!hasMoreInput()) {
+        Output ob{this};
+        ob << "info string debug is " << (isDebugOn ? "on" : "off");
+        return;
+    }
+
+    if (consume("on"))  { isDebugOn = true; log("#debug on"); return; }
+    if (consume("off")) { isDebugOn = false; log("#debug off"); return; }
+
+    io::fail_rewind(inputLine);
+    return;
 }
 
 void Uci::ucinewgame() {
@@ -392,36 +391,13 @@ void Uci::go() {
 
     auto started = mainSearchThread.start([this] {
         Node{position_, *this}.searchRoot();
-        bestmove();
+        info_bestmove();
     });
     if (!started) {
         log("#Search not started");
-        bestmove();
+        info_bestmove();
     }
     std::this_thread::yield();
-}
-
-void Uci::bestmove() {
-    {
-        UciOutput ob{this};
-        ob << "info"; nps(ob); ob << pvScore << " pv"; ob << pvMoves;
-    }
-
-    UciOutput ob{this};
-
-    ob << "bestmove "; ob << pvMoves[0];
-    if (limits.canPonder && pvMoves[1]) {
-        ob << " ponder "; ob.flipColor(); ob << pvMoves[1];
-    }
-
-    {
-        std::lock_guard<decltype(bestmoveMutex)> lock{bestmoveMutex};
-        if (limits.shouldDelayBestmove()) {
-            bestmove_  = std::string{ob.str()};
-            ob.str("");
-            return;
-        }
-    }
 }
 
 void Uci::stop() {
@@ -452,6 +428,91 @@ void Uci::ponderhit() {
     std::this_thread::yield();
 }
 
+// update TT with PV (in case it have been overwritten)
+void Uci::refreshTtPv(Ply depth) const {
+    Position pos{position_};
+    Score score = pvScore;
+    Ply ply = 0_ply;
+
+    const UciMove* pv = pvMoves;
+    for (UciMove move; (move = *pv++);) {
+        auto o = tt.addr<TtSlot>(pos.zobrist());
+        *o = TtSlot{pos.zobrist(), score, ply, ExactScore, depth, move.from(), move.to(), false};
+        ++tt.writes;
+
+        //we cannot use makeZobrist() because of en passant legality validation
+        pos.makeMove(move.from(), move.to());
+        score = -score;
+        depth = Ply{depth-1};
+        ply = Ply{ply+1};
+    }
+}
+
+void Uci::info_bestmove() const {
+    // avoid printing identical info lines
+    if (lastInfoNodes != limits.getNodes()) {
+        UciOutput ob{this};
+        ob << "info"; nps(ob); ob << pvScore << " pv"; ob << pvMoves;
+    }
+
+    UciOutput ob{this};
+    ob << "bestmove "; ob << pvMoves[0];
+    if (limits.canPonder && pvMoves[1]) {
+        ob << " ponder "; ob.flipColor(); ob << pvMoves[1];
+    }
+
+    {
+        std::lock_guard<decltype(bestmoveMutex)> lock{bestmoveMutex};
+        if (limits.shouldDelayBestmove()) {
+            bestmove_  = std::string{ob.str()};
+            ob.str("");
+            return;
+        }
+    }
+}
+
+void Uci::info_readyok() const {
+    Output ob{this};
+#ifndef NDEBUG
+    info_fen(ob) << '\n';
+#endif
+    info_nps(ob);
+    ob << "readyok";
+}
+
+ostream& Uci::info_fen(ostream& o) const {
+    o << "info" << position_.evaluate() << " fen " << position_;
+    return o;
+}
+
+void Uci::info_pv(Ply depth) const {
+    UciOutput ob{this};
+    ob << "info depth " << depth; nps(ob); ob << pvScore << " pv"; ob << pvMoves;
+}
+
+ostream& Uci::nps(ostream& o) const {
+    // avoid printing identical nps info in a row
+    if (lastInfoNodes == limits.getNodes()) { return o; }
+    lastInfoNodes = limits.getNodes();
+
+    o << " nodes " << lastInfoNodes;
+
+    auto elapsedTime = limits.elapsedSinceStart();
+    if (elapsedTime >= 1ms) {
+        o << " time " << elapsedTime << " nps " << ::nps(lastInfoNodes, elapsedTime);
+    }
+
+    return o;
+}
+
+ostream& Uci::info_nps(ostream& o) const {
+    if (limits.getNodes() == 0) { lastInfoNodes = 0; return o; }
+    if (lastInfoNodes == limits.getNodes()) { return o; }
+
+    o << "info"; nps(o) << '\n';
+    return o;
+}
+
 void Uci::goPerft() {
     newSearch();
 
@@ -463,6 +524,22 @@ void Uci::goPerft() {
         NodePerft{position_, *this, depth}.visitRoot();
         info_perft_bestmove();
     } );
+}
+
+void Uci::info_perft_bestmove() const {
+    Output ob{this};
+    info_nps(ob);
+    ob << "bestmove 0000";
+}
+
+void Uci::info_perft_depth(Ply depth, node_count_t perft) const {
+    Output ob{this};
+    ob << "info depth " << depth << " perft " << perft; nps(ob);
+}
+
+void Uci::info_perft_currmove(int moveCount, UciMove currentMove, node_count_t perft) const {
+    UciOutput ob{this};
+    ob << "info currmovenumber " << moveCount << " currmove "; ob << currentMove << " perft " << perft; nps(ob);
 }
 
 void Uci::bench() {
@@ -524,93 +601,9 @@ void Uci::bench(std::string& goLimits) {
 
         Node{position_, *this}.searchRoot();
         benchNodes += limits.getNodes();
-        bestmove();
+        info_bestmove();
     }
 
     Output ob{this};
     ob << "\n" << benchNodes << " nodes " << ::nps(benchNodes, elapsedSince(benchStart)) << " nps";
-}
-
-void Uci::refreshTtPv(Ply depth) const {
-    Position pos{position_};
-    Score score = pvScore;
-    Ply ply = 0_ply;
-
-    const UciMove* pv = pvMoves;
-    for (UciMove move; (move = *pv++);) {
-        auto o = tt.addr<TtSlot>(pos.zobrist());
-        *o = TtSlot{pos.zobrist(), score, ply, ExactScore, depth, move.from(), move.to(), false};
-        ++tt.writes;
-
-        //we cannot use makeZobrist() because of en passant legality validation
-        pos.makeMove(move.from(), move.to());
-        score = -score;
-        depth = Ply{depth-1};
-        ply = Ply{ply+1};
-    }
-}
-
-void Uci::info_perft_bestmove() {
-    Output ob{this};
-    info_nps(ob);
-    ob << "bestmove 0000";
-}
-
-void Uci::readyok() const {
-    Output ob{this};
-#ifndef NDEBUG
-    info_fen(ob) << '\n';
-#endif
-    info_nps(ob);
-    ob << "readyok";
-}
-
-ostream& Uci::nps(ostream& o) const {
-    // avoid printing identical nps info in a row
-    if (lastInfoNodes == limits.getNodes()) { return o; }
-    lastInfoNodes = limits.getNodes();
-
-    o << " nodes " << lastInfoNodes;
-
-    auto elapsedTime = limits.elapsedSinceStart();
-    if (elapsedTime >= 1ms) {
-        o << " time " << elapsedTime << " nps " << ::nps(lastInfoNodes, elapsedTime);
-    }
-
-    return o;
-}
-
-ostream& Uci::info_nps(ostream& o) const {
-    if (limits.getNodes() == 0) { lastInfoNodes = 0; return o; }
-    if (lastInfoNodes == limits.getNodes()) { return o; }
-
-    o << "info"; nps(o) << '\n';
-    return o;
-}
-
-ostream& Uci::info_fen(ostream& o) const {
-    o << "info" << position_.evaluate() << " fen " << position_;
-    return o;
-}
-
-void Uci::info_iteration(Ply d) const {
-    Output ob{this};
-    ob << "info depth " << d; nps(ob);
-}
-
-void Uci::info_pv(Ply d) const {
-    UciOutput ob{this};
-    ob << "info depth " << d; nps(ob);
-    ob << pvScore << " pv"; ob << pvMoves;
-}
-
-void Uci::info_perft_depth(Ply d, node_count_t perft) const {
-    Output ob{this};
-    ob << "info depth " << d << " perft " << perft; nps(ob);
-}
-
-void Uci::info_perft_currmove(int moveCount, const UciMove& currentMove, node_count_t perft) const {
-    UciOutput ob{this};
-    ob << "info currmovenumber " << moveCount << " currmove ";
-    ob << currentMove << " perft " << perft; nps(ob);
 }
