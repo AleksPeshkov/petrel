@@ -164,7 +164,7 @@ void Uci::processInput(istream& in) {
         else if (consume("position"))  { position(); }
         else if (consume("stop"))      { stop(); }
         else if (consume("ponderhit")) { ponderhit(); }
-        else if (consume("isready"))   { readyok(); }
+        else if (consume("isready"))   { info_readyok(); }
         else if (consume("setoption")) { setoption(); }
         else if (consume("set"))       { setoption(); }
         else if (consume("ucinewgame")){ ucinewgame(); }
@@ -392,36 +392,13 @@ void Uci::go() {
 
     auto started = mainSearchThread.start([this] {
         Node{position_, *this}.searchRoot();
-        bestmove();
+        info_bestmove();
     });
     if (!started) {
         log("#Search not started");
-        bestmove();
+        info_bestmove();
     }
     std::this_thread::yield();
-}
-
-void Uci::bestmove() {
-    {
-        UciOutput ob{this};
-        ob << "info"; nps(ob); ob << pvScore << " pv"; ob << pvMoves;
-    }
-
-    UciOutput ob{this};
-
-    ob << "bestmove "; ob << pvMoves[0];
-    if (limits.canPonder && pvMoves[1]) {
-        ob << " ponder "; ob.flipColor(); ob << pvMoves[1];
-    }
-
-    {
-        std::lock_guard<decltype(bestmoveMutex)> lock{bestmoveMutex};
-        if (limits.shouldDelayBestmove()) {
-            bestmove_  = std::string{ob.str()};
-            ob.str("");
-            return;
-        }
-    }
 }
 
 void Uci::stop() {
@@ -525,13 +502,14 @@ void Uci::bench(std::string& goLimits) {
 
         Node{position_, *this}.searchRoot();
         benchNodes += limits.getNodes();
-        bestmove();
+        info_bestmove();
     }
 
     Output ob{this};
     ob << "\n" << benchNodes << " nodes " << ::nps(benchNodes, elapsedSince(benchStart)) << " nps";
 }
 
+// update TT with PV (in case it have been overwritten)
 void Uci::refreshTtPv(Ply depth) const {
     Position pos{position_};
     Score score = pvScore;
@@ -551,13 +529,36 @@ void Uci::refreshTtPv(Ply depth) const {
     }
 }
 
-void Uci::info_perft_bestmove() {
+void Uci::info_bestmove() const {
+    {
+        UciOutput ob{this};
+        ob << "info"; nps(ob); ob << pvScore << " pv"; ob << pvMoves;
+    }
+
+    UciOutput ob{this};
+
+    ob << "bestmove "; ob << pvMoves[0];
+    if (limits.canPonder && pvMoves[1]) {
+        ob << " ponder "; ob.flipColor(); ob << pvMoves[1];
+    }
+
+    {
+        std::lock_guard<decltype(bestmoveMutex)> lock{bestmoveMutex};
+        if (limits.shouldDelayBestmove()) {
+            bestmove_  = std::string{ob.str()};
+            ob.str("");
+            return;
+        }
+    }
+}
+
+void Uci::info_perft_bestmove() const {
     Output ob{this};
     info_nps(ob);
     ob << "bestmove 0000";
 }
 
-void Uci::readyok() const {
+void Uci::info_readyok() const {
     Output ob{this};
 #ifndef NDEBUG
     info_fen(ob) << '\n';
@@ -594,11 +595,6 @@ ostream& Uci::info_fen(ostream& o) const {
     return o;
 }
 
-void Uci::info_iteration(Ply d) const {
-    Output ob{this};
-    ob << "info depth " << d; nps(ob);
-}
-
 void Uci::info_pv(Ply d) const {
     UciOutput ob{this};
     ob << "info depth " << d; nps(ob);
@@ -610,7 +606,7 @@ void Uci::info_perft_depth(Ply d, node_count_t perft) const {
     ob << "info depth " << d << " perft " << perft; nps(ob);
 }
 
-void Uci::info_perft_currmove(int moveCount, const UciMove& currentMove, node_count_t perft) const {
+void Uci::info_perft_currmove(int moveCount, UciMove currentMove, node_count_t perft) const {
     UciOutput ob{this};
     ob << "info currmovenumber " << moveCount << " currmove ";
     ob << currentMove << " perft " << perft; nps(ob);
