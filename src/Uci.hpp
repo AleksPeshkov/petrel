@@ -169,7 +169,7 @@ public:
     }
 
     // ponder || infinite
-    bool shouldDelayBestmove() {
+    bool shouldDelayBestmove() const {
         return ponder.load(std::memory_order_relaxed) || infinite.load(std::memory_order_relaxed);
     }
 
@@ -287,8 +287,8 @@ private:
     mutable std::mutex outMutex;
 
     // if we are in infinite or ponder mode, we cannot send bestmove immediately
-    std::string bestmove_;
-    std::mutex bestmoveMutex;
+    mutable std::string bestmove_;
+    mutable std::mutex bestmoveMutex;
 
     // avoid race conditions betweeen Uci output and main search thread output
 
@@ -314,20 +314,21 @@ private:
     void ucinewgame();
     void position();
 
-    void readyok() const;
     void go();
+    void goPerft();
     void stop();
     void ponderhit();
-    void bestmove();
 
     void bench();
     void debug();
-    void goPerft();
-    void info_perft_bestmove();
 
     ostream& nps(ostream&) const;
     ostream& info_nps(ostream&) const;
     ostream& info_fen(ostream&) const;
+
+    void info_readyok() const;
+    void info_bestmove() const;
+    void info_perft_bestmove() const;
 
 public:
     Uci (ostream&);
