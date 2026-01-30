@@ -627,7 +627,12 @@ ReturnStatus Node::searchRoot() {
     auto rootMovesClone = moves();
     repetitionHash = root.repetitions.repetitionHash(colorToMove());
 
-    for (depth = 1_ply; depth <= root.limits.depth; ++depth) {
+    Ply maxDepth = root.limits.depth;
+    if (rootMovesClone.popcount() <= 1) {
+        maxDepth = root.limits.canPonder ? 2_ply : 1_ply;
+    }
+
+    for (depth = 1_ply; depth <= maxDepth; ++depth) {
         tt = root.tt.prefetch<TtSlot>(zobrist());
         setMoves(rootMovesClone);
         alpha = Score{MinusInfinity};
