@@ -623,7 +623,18 @@ ReturnStatus Node::searchRoot() {
     auto rootMovesClone = moves();
     repetitionHash = root.repetitions.repetitionHash(colorToMove());
 
-    for (depth = 1_ply; depth <= root.limits.depth; ++depth) {
+    Ply maxDepth = root.limits.depth;
+
+    auto moveCount = rootMovesClone.popcount();
+    if (moveCount == 0) {
+        root.pvScore = inCheck() ? Score::mateLoss(0_ply) : Score{DrawScore};
+        return ReturnStatus::Continue;
+    } else if (moveCount == 1) {
+        // minimal search to get score and ponder move
+        maxDepth = root.limits.canPonder ? 2_ply : 1_ply;
+    }
+
+    for (depth = 1_ply; depth <= maxDepth; ++depth) {
         tt = root.tt.prefetch<TtSlot>(zobrist());
         setMoves(rootMovesClone);
         alpha = Score{MateLoss};
