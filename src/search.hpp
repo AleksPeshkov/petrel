@@ -103,7 +103,7 @@ protected:
     void failHigh() const;
     void updateHistory(HistoryMove) const;
 
-    void updatePv() const;
+    [[nodiscard]] ReturnStatus updatePv() const;
 
     [[nodiscard]] ReturnStatus search();
     [[nodiscard]] ReturnStatus searchMoves();

@@ -12,204 +12,115 @@
 #include "Tt.hpp"
 #include "UciPosition.hpp"
 
-enum deadline_t { HardDeadline, RootMoveDeadline, IterationDeadline };
-
 class UciSearchLimits {
-    friend class Uci; // for bench()
+    constexpr static TimeInterval UnlimitedTime{TimeInterval::max()};
+    constexpr static node_count_t NodeCountMax{std::numeric_limits<node_count_t>::max()};
+    constexpr static int QuotaLimit{1000};
 
-    constexpr static int QuotaLimit = 1000;
+    mutable node_count_t nodes_{0}; // (0 <= nodes_ && nodes_ <= nodesLimit_)
+    mutable node_count_t nodesLimit_{NodeCountMax}; // search limit
 
-    mutable node_count_t nodes = 0; // (0 <= nodes && nodes <= nodesLimit)
-    mutable node_count_t nodesLimit = NodeCountMax; // search limit
+    // number of remaining nodes before slow checking for search stop
+    // (0 <= nodesQuota_ && nodesQuota_ <= QuotaLimit)
+    mutable int nodesQuota_{0};
 
-    //number of remaining nodes before slow checking for search stop
-    mutable int nodesQuota = 0; // (0 <= nodesQuota && nodesQuota <= QuotaLimit)
+    // set either by UCI 'stop' command or by the search thread internal check of either search limit reached
+    mutable std::atomic_bool timeout_{false};
 
-    mutable std::atomic_bool stop_{false};
-    mutable std::atomic_bool infinite{false};
-    mutable std::atomic_bool ponder{false};
+    // 'go ponder' mode, changed by the input thread, read by both search and input
+    mutable std::atomic_bool pondering_{false};
 
-    TimePoint searchStartTime;
+    // 'go infinite' mode, non atomic, used only by the input thread itself
+    mutable bool infinite_{false};
 
-    TimeInterval deadline[3] = {
-        TimeInterval::max(), // HardDeadline      : tested every QuotaLimit nodes
-        TimeInterval::max(), // RootMoveDeadline  : tested after every root move search ends
-        TimeInterval::max()  // IterationDeadline : tested when iteration ends
-    };
+    TimePoint searchStartTime_{};
 
-    Side::arrayOf<TimeInterval> time = {{ 0ms, 0ms }};
-    Side::arrayOf<TimeInterval> inc = {{ 0ms, 0ms }};
-    TimeInterval movetime = 0ms;
+    // maximum move thinking time
+    TimeInterval timePool_{UnlimitedTime};
 
-    int movestogo = 0;
-    int mate = 0;
+    Side::arrayOf<TimeInterval> time_{ 0ms, 0ms };
+    Side::arrayOf<TimeInterval> inc_{ 0ms, 0ms };
+    TimeInterval movetime_{0ms};
+    int movestogo_{0};
 
-    constexpr void assertNodesOk() const {
-        assert (0 <= nodesQuota);
-        assert (nodesQuota < QuotaLimit);
-        //assert (0 <= nodes);
-        assert (nodes <= nodesLimit);
-        assert (static_cast<decltype(nodesLimit)>(nodesQuota) <= nodes);
+    Ply maxDepth_{MaxPly};
+
+    // the first move after ucinewgame will spend more thinking time
+    bool isNewGame_{true};
+
+    constexpr void assertNodesOk() const;
+
+    // time allocation strategy
+    static constexpr int LookAheadMoves = 16;
+
+    constexpr int lookAheadMoves() const {
+        return movestogo_ > 0 ? std::min(movestogo_, LookAheadMoves) : LookAheadMoves;
     }
 
-    constexpr void setNoDeadline() {
-        deadline[HardDeadline]      = TimeInterval::max();
-        deadline[RootMoveDeadline]  = TimeInterval::max();
-        deadline[IterationDeadline] = TimeInterval::max();
+    // unify sudden death, increment and cyclic time controls
+    constexpr TimeInterval lookAheadTime(Side si) const {
+        return time_[si] + inc_[si] * (lookAheadMoves() - 1);
     }
 
-    constexpr TimeInterval average(Side si) const {
-        assert (movestogo >= 0);
-
-        if (!movestogo && inc[si] == 0ms) {
-            return time[si] / 25; // sudden death
-        }
-
-        auto moves = movestogo ? std::min(movestogo, 20) : 20;
-        return inc[si] + (time[si]-inc[si])/moves;
+    constexpr TimeInterval averageMoveTime(Side si) const {
+        return lookAheadTime(si) / lookAheadMoves();
     }
 
-    void setSearchDeadline() {
-        if (infinite.load(std::memory_order_relaxed)) {
-            setNoDeadline();
-            return;
-        }
-        if (movetime > 0ms) {
-            setNoDeadline();
-            deadline[HardDeadline] = movetime;
-            return;
-        }
-        if (time[Side{My}] == 0ms) {
-            setNoDeadline();
-            return;
-        }
+    void setSearchDeadlines();
 
-        // average remaining time per move
-        auto myAverage = average(Side{My}) + (canPonder ? average(Side{Op}) / 2 : 0ms);
-        auto hardInterval = std::min(time[Side{My}], myAverage * 2) - moveOverhead;
-        hardInterval = std::max(TimeInterval{0}, hardInterval);
+    ReturnStatus refreshQuota() const;
+    bool isStopped() const { return timeout_.load(std::memory_order_seq_cst); }
 
-        deadline[HardDeadline]      = hardInterval;   // 200% average time
-        deadline[RootMoveDeadline]  = hardInterval/2; // 100% average time
-        deadline[IterationDeadline] = hardInterval/4; // 50% average time
-    }
+    // IterationDeadline = ~1/2, HardDeadline = ~3x of averageMoveTime
+    enum deadline_t { IterationDeadline = 11, AverageTimeScale = 20, HardDeadline = 64 };
+    template <deadline_t Deadline> bool reached() const;
 
-    ReturnStatus refreshQuota() const {
-        assertNodesOk();
-        nodes -= nodesQuota;
+    // EasyMove = 3/5, HardMove = 8/5 (Fibonacci numbers)
+    enum move_control_t { ExactTime = 0, EasyMove = 3, NormalMove = 5, HardMove = 8 };
 
-        auto nodesRemaining = nodesLimit - nodes;
-        if (nodesRemaining >= QuotaLimit) {
-            nodesQuota = QuotaLimit;
-        }
-        else {
-            nodesQuota = static_cast<decltype(nodesQuota)>(nodesRemaining);
-            if (nodesQuota == 0) {
-                assertNodesOk();
-                return ReturnStatus::Stop;
-            }
-        }
+    // ExactTime = 0, EasyMove = 3, NormalMove = 5, HardMove = 8
+    mutable move_control_t timeControl_{ExactTime};
 
-        if (reached<HardDeadline>()) {
-            nodesLimit = nodes;
-            nodesQuota = 0;
-
-            assertNodesOk();
-            return ReturnStatus::Stop;
-        }
-
-        assert (0 < nodesQuota && nodesQuota <= QuotaLimit);
-        nodes += nodesQuota;
-        --nodesQuota; //count current node
-
-        assertNodesOk();
-        return ReturnStatus::Continue;
-    }
+    // determine EasyMove / NormalMove / HardMove
+    mutable UciMove easyMove_{}; // prvious root best move
 
 public:
-    Ply depth{MaxPly};
+// UCI configurable options
 
-    bool canPonder{false};
+    constexpr static TimeInterval MoveOverheadDefault{200us};
+    TimeInterval moveOverhead_{MoveOverheadDefault};
+    bool canPonder_{false};
 
-    TimeInterval moveOverhead = 0us;
+    void newGame() { isNewGame_ = true; newSearch(); }
 
-    // clear all limits except canPonder and moveOverhead
-    void clear() {
-        nodes = 0;
-        nodesLimit = NodeCountMax;
-        nodesQuota = 0;
-        searchStartTime = timeNow();
-        setNoDeadline();
-        movetime = 0ms;
-        time = {{ 0ms, 0ms }};
-        inc = {{ 0ms, 0ms }};
-        depth = MaxPly;
-        movestogo = 0;
-        mate = 0;
-        ponder.store(false, std::memory_order_relaxed);
-        infinite.store(false, std::memory_order_relaxed);
-        stop_.store(false, std::memory_order_relaxed);
-    }
+    // start search timer, clear all limits except canPonder_, moveOverhead_ and isNewGame_
+    void newSearch();
 
-    istream& go(istream&, Side);
-
-    void ponderhit() {
-        ponder.store(false, std::memory_order_relaxed);
-        reached<HardDeadline>();
-    }
-
-    void stop() const {
-        infinite.store(false, std::memory_order_relaxed);
-        ponder.store(false, std::memory_order_relaxed);
-        stop_.store(true, std::memory_order_release);
-    }
-
-    bool isStopped() const {
-        return stop_.load(std::memory_order_acquire);
-    }
+    TimeInterval elapsedSinceStart() const { return ::elapsedSince(searchStartTime_); }
 
     // ponder || infinite
     bool shouldDelayBestmove() const {
-        return ponder.load(std::memory_order_relaxed) || infinite.load(std::memory_order_relaxed);
+        return pondering_.load(std::memory_order_release) || infinite_;
     }
 
-    template <deadline_t DeadlineKind>
-    bool reached() const {
-        if (isStopped()) { return true; }
+    // exact number of visited nodes
+    constexpr node_count_t getNodes() const { return nodes_ - nodesQuota_; }
 
-        bool isDeadlineReached =
-            !ponder.load(std::memory_order_relaxed)
-            && deadline[DeadlineKind] != TimeInterval::max()
-            && deadline[DeadlineKind] < elapsedSinceStart()
-        ;
+    constexpr Ply maxDepth() const { return maxDepth_; }
 
-        if (isDeadlineReached) { stop(); }
-        return isDeadlineReached;
-    }
+// called from the Uci input handling thread:
 
-    TimeInterval elapsedSinceStart() const {
-        return ::elapsedSince(searchStartTime);
-    }
+    istream& go(istream&, Side);
+    void stop();
+    void ponderhit();
 
-    /// exact number of visited nodes
-    constexpr node_count_t getNodes() const {
-        assertNodesOk();
-        return nodes - nodesQuota;
-    }
+// defined and used in search.cpp:
 
-    ReturnStatus countNode() const {
-        assertNodesOk();
+    bool hardDeadlineReached() const { return reached<HardDeadline>(); }
+    bool iterationDeadlineReached() const { return reached<IterationDeadline>(); }
 
-        if (nodesQuota == 0 || isStopped()) {
-            return refreshQuota();
-        }
-
-        assert (nodesQuota > 0);
-        --nodesQuota;
-
-        assertNodesOk();
-        return ReturnStatus::Continue;
-    }
+    ReturnStatus countNode() const;
+    void updateMoveComplexity(UciMove bestMove) const;
 };
 
 /// Handling input and output of UCI (Universal Chess Interface)
@@ -318,6 +229,7 @@ public:
     void bench(std::string& goLimits);
 
     void newGame() {
+        limits.newGame();
         tt.newGame();
         counterMove.clear();
         followMove.clear();
@@ -331,7 +243,7 @@ public:
                 bestmove_.clear();
             }
         }
-        limits.clear();
+        limits.newSearch();
         tt.newSearch();
         pvMoves.clear();
         pvScore = Score{NoScore};
