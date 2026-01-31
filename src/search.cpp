@@ -3,6 +3,52 @@
 
 #define RETURN_CUTOFF(visitor) { ReturnStatus status = visitor; if (status != ReturnStatus::Continue) { return status; }} ((void)0)
 
+ReturnStatus UciSearchLimits::refreshQuota() const {
+    assertNodesOk();
+    nodes_ -= nodesQuota_;
+
+    auto nodesRemaining = nodesLimit_ - nodes_;
+    if (nodesRemaining >= QuotaLimit) {
+        nodesQuota_ = QuotaLimit;
+    }
+    else {
+        nodesQuota_ = static_cast<decltype(nodesQuota_)>(nodesRemaining);
+        if (nodesQuota_ == 0) {
+            assertNodesOk();
+            return ReturnStatus::Stop;
+        }
+    }
+
+    if (reached<HardDeadline>()) {
+        nodesLimit_ = nodes_;
+        nodesQuota_ = 0;
+
+        assertNodesOk();
+        return ReturnStatus::Stop;
+    }
+
+    assert (0 < nodesQuota_ && nodesQuota_ <= QuotaLimit);
+    nodes_ += nodesQuota_;
+    --nodesQuota_; //count current node
+
+    assertNodesOk();
+    return ReturnStatus::Continue;
+}
+
+ReturnStatus UciSearchLimits::countNode() const {
+    assertNodesOk();
+
+    if (nodesQuota_ == 0 || isStopped()) {
+        return refreshQuota();
+    }
+
+    assert (nodesQuota_ > 0);
+    --nodesQuota_;
+
+    assertNodesOk();
+    return ReturnStatus::Continue;
+}
+
 TtSlot::TtSlot (const Node* n) : TtSlot{
     n->zobrist(),
     n->score,
@@ -82,10 +128,6 @@ ReturnStatus Node::negamax(Node* child, Ply R) const {
         child->beta = -alpha;
         child->pvIndex = root.pvMoves.set(pvIndex, uciMove(currentMove.from(), currentMove.to()), child->pvIndex);
         updatePv();
-    }
-
-    if (ply == 0 && depth > 1 && root.limits.reached<RootMoveDeadline>()) {
-        return ReturnStatus::Stop;
     }
 
     // set zero window for the next sibling move search
@@ -548,6 +590,22 @@ void Node::updatePv() const {
     if (ply == 0) {
         root.pvScore = score;
         root.info_pv(depth);
+
+        const auto& bestMove = root.pvMoves[0];
+        auto& complexity = root.limits.moveComplexity;
+        auto& easyMove = root.limits.easyMove;
+
+        if (!easyMove) {
+            // Easy Move: root best move never changed
+            easyMove = bestMove;
+        } else if (easyMove != bestMove) {
+            easyMove = bestMove;
+            // Hard Move: root best move just have changed
+            complexity = HardMove;
+        } else if (complexity == HardMove) {
+            // Normal Move: root best move have not changed during two iterations
+            complexity = NormalMove;
+        }
     }
 }
 
