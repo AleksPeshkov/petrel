@@ -3,6 +3,94 @@
 
 #define RETURN_CUTOFF(visitor) { ReturnStatus status = visitor; if (status != ReturnStatus::Continue) { return status; }} ((void)0)
 
+constexpr void UciSearchLimits::assertNodesOk() const {
+    assert (0 <= nodesQuota_);
+    assert (nodesQuota_ < QuotaLimit);
+    //assert (0 <= nodes);
+    assert (nodes_ <= nodesLimit_);
+    assert (static_cast<decltype(nodesLimit_)>(nodesQuota_) <= nodes_);
+}
+
+template <deadline_t Deadline>
+bool UciSearchLimits::reached() const {
+    if (isStopped()) { return true; }
+    if (nodes_ == 0 || deadline_ == NoDeadline || ponder_.load(std::memory_order_relaxed)) { return false; }
+    if (moveComplexity == MoveTime && Deadline != HardDeadline) { return false; }
+
+    TimeInterval current = deadline_;
+    if (moveComplexity != MoveTime) {
+        current *= static_cast<int>(moveComplexity) * Deadline;
+        current /= static_cast<int>(NormalMove) * HardDeadline;
+    }
+
+    bool isDeadlineReached = current < elapsedSinceStart();
+    if (isDeadlineReached) {
+        nodesLimit_ = nodes_;
+        nodesQuota_ = 0;
+        assertNodesOk();
+        stop_.store(true, std::memory_order_release);
+    }
+    return isDeadlineReached;
+}
+
+ReturnStatus UciSearchLimits::refreshQuota() const {
+    assertNodesOk();
+    nodes_ -= nodesQuota_;
+
+    auto nodesRemaining = nodesLimit_ - nodes_;
+    if (nodesRemaining >= QuotaLimit) {
+        nodesQuota_ = QuotaLimit;
+    }
+    else {
+        nodesQuota_ = static_cast<decltype(nodesQuota_)>(nodesRemaining);
+        if (nodesQuota_ == 0) {
+            assertNodesOk();
+            return ReturnStatus::Stop;
+        }
+    }
+
+    if (reached<HardDeadline>()) {
+        return ReturnStatus::Stop;
+    }
+
+    assert (0 < nodesQuota_ && nodesQuota_ <= QuotaLimit);
+    nodes_ += nodesQuota_;
+    --nodesQuota_; //count current node
+
+    assertNodesOk();
+    return ReturnStatus::Continue;
+}
+
+ReturnStatus UciSearchLimits::countNode() const {
+    assertNodesOk();
+
+    if (nodesQuota_ == 0 || isStopped()) {
+        return refreshQuota();
+    }
+
+    assert (nodesQuota_ > 0);
+    --nodesQuota_;
+
+    assertNodesOk();
+    return ReturnStatus::Continue;
+}
+
+void UciSearchLimits::updateMoveComplexity(UciMove bestMove) const {
+    if (moveComplexity == MoveTime) { return; }
+
+    if (!easyMove) {
+        // Easy Move: root best move never changed
+        easyMove = bestMove;
+    } else if (easyMove != bestMove) {
+        easyMove = bestMove;
+        // Hard Move: root best move just have changed
+        moveComplexity = HardMove;
+    } else if (moveComplexity == HardMove) {
+        // Normal Move: root best move have not changed during last two iterations
+        moveComplexity = NormalMove;
+    }
+}
+
 TtSlot::TtSlot (const Node* n) : TtSlot{
     n->zobrist(),
     n->score,
@@ -79,11 +167,7 @@ ReturnStatus Node::negamax(Node* child, Ply R) const {
         alpha = childScore;
         child->beta = -alpha;
         child->pvIndex = root.pvMoves.set(pvIndex, uciMove(currentMove.from(), currentMove.to()), child->pvIndex);
-        updatePv();
-    }
-
-    if (ply == 0 && depth > 1 && root.limits.reached<RootMoveDeadline>()) {
-        return ReturnStatus::Stop;
+        RETURN_IF_STOP (updatePv());
     }
 
     // set zero window for the next sibling move search
@@ -527,7 +611,7 @@ void Node::failHigh() const {
     }
 }
 
-void Node::updatePv() const {
+ReturnStatus Node::updatePv() const {
     if (depth > 0) {
         bound = ExactScore;
         *tt = TtSlot{this};
@@ -540,9 +624,20 @@ void Node::updatePv() const {
     }
 
     if (ply == 0) {
+        const auto& bestMove = root.pvMoves[0];
+        root.limits.updateMoveComplexity(bestMove);
+
         root.pvScore = score;
         root.info_pv(depth);
+
+        // good place to check as there are no wasted search nodes
+        // and HardDeadline just possibly changed
+        if (root.limits.reached<HardDeadline>()) {
+            return ReturnStatus::Stop;
+        }
     }
+
+    return ReturnStatus::Continue;
 }
 
 void Node::updateHistory(HistoryMove historyMove) const {
@@ -621,7 +716,7 @@ ReturnStatus Node::searchRoot() {
     auto rootMovesClone = moves();
     repetitionHash = root.repetitions.repetitionHash(colorToMove());
 
-    Ply maxDepth = root.limits.depth;
+    Ply maxDepth = root.limits.maxDepth();
 
     auto moveCount = rootMovesClone.popcount();
     if (moveCount == 0) {
