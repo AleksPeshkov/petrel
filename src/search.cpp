@@ -151,6 +151,10 @@ ReturnStatus Node::search() {
         return ReturnStatus::Continue;
     }
 
+    // prepare empty child node to make moves into
+    Node node{this};
+    const auto child = &node;
+
     if (parent) {
         assert (ply >= 1);
 
@@ -173,6 +177,13 @@ ReturnStatus Node::search() {
             // check extension
             depth = Ply{depth+1};
         }
+    } else {
+        // the last best root move is the most recent one
+        for (auto it = root.rootBestMoves.rbegin(); it != root.rootBestMoves.rend(); ++it) {
+            const auto& move = *it;
+            RETURN_CUTOFF(child->searchMove(move.from(), move.to()));
+        }
+        currentMove = {}; // according to inner nodes precondtions
     }
 
     if (depth <= 0 && !inCheck()) {
@@ -216,8 +227,6 @@ ReturnStatus Node::search() {
         }
     }
 
-    assert (!currentMove);
-
     // skip costly evaluate() while in check, as it should not be used
     eval = !inCheck() ? evaluate() : Score::checkmated(ply);
 
@@ -247,10 +256,6 @@ ReturnStatus Node::search() {
             }
         }
     }
-
-    // prepare empty child node to make moves into
-    Node node{this};
-    const auto child = &node;
 
     // Null Move Pruning
     if (
@@ -681,6 +686,18 @@ bool Node::isRepetition() const {
     return root.repetitions.has(colorToMove(), z);
 }
 
+namespace {
+    void push_back_unique(std::vector<UciMove>& moves, UciMove bestMove) {
+        if (!moves.empty() && moves.back() == bestMove) { return; }
+
+        auto rit = std::find(moves.rbegin(), moves.rend(), bestMove);
+        if (rit == moves.rend()) { moves.push_back(bestMove); return; }
+
+        auto it = rit.base() - 1;
+        std::rotate(it, it + 1, moves.end()); // move found value to back
+    }
+}
+
 ReturnStatus Node::searchRoot() {
     auto rootMovesClone = moves();
     repetitionHash = root.repetitions.repetitionHash(colorToMove());
@@ -696,6 +713,10 @@ ReturnStatus Node::searchRoot() {
         alpha = Score{MinusInfinity};
         beta = Score{PlusInfinity};
         auto returnStatus = search();
+
+        if (returnStatus != ReturnStatus::Stop) {
+            ::push_back_unique(root.rootBestMoves, root.pvMoves[0]);
+        }
 
         root.newIteration();
         root.refreshTtPv(depth);

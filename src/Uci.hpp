@@ -137,6 +137,9 @@ public:
 
     mutable Tt tt; // main transposition table
 
+    // the last move is the most recent one
+    mutable std::vector<UciMove> rootBestMoves;
+
 private:
     Thread mainSearchThread;
 
@@ -234,6 +237,7 @@ public:
         tt.newSearch();
         pvMoves.clear();
         pvScore = Score{NoScore};
+        rootBestMoves.clear();
     }
 
     void newIteration() const {
