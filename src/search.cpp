@@ -317,6 +317,15 @@ ReturnStatus Node::searchMoves() {
         RETURN_CUTOFF (child->searchMove(ttSlot.from(), ttSlot.to()));
     }
 
+    if (!parent) {
+        assert (ply == 0);
+        canBeKiller = true;
+        for (auto move : root.rootBestMoves) {
+            if (!move) { break; }
+            RETURN_CUTOFF (child->searchIfPossible(move.from(), move.to()));
+        }
+    }
+
     canBeKiller = false;
     RETURN_CUTOFF (goodCaptures(OP.nonKing()));
     canBeKiller = !inCheck();
@@ -632,6 +641,7 @@ ReturnStatus Node::updatePv() const {
     if (ply == 0) {
         const auto& bestMove = root.pvMoves[0];
         root.limits.updateMoveComplexity(bestMove);
+        ::insert_unique(root.rootBestMoves, bestMove);
 
         root.pvScore = score;
         root.info_pv(depth);
