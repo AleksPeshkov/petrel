@@ -20,6 +20,7 @@ public:
     Repetitions repetitions;
     Tt tt; // main transposition table
 
+    mutable std::array<UciMove, 6> rootBestMoves;
     mutable PrincipalVariation pv;
     mutable HistoryMoves<4> counterMove;
     mutable HistoryMoves<4> followMove;
