@@ -164,6 +164,7 @@ void Uci::newSearch() {
     limits.newSearch();
     tt.newSearch();
     pv.clear();
+    rootBestMoves = {};
 }
 
 void Uci::newIteration() const {
