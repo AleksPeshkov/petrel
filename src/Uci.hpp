@@ -109,6 +109,8 @@ public:
 
     mutable Tt tt; // main transposition table
 
+    mutable std::array<UciMove, 6> rootBestMoves;
+
 private:
     Thread mainSearchThread;
 
@@ -207,6 +209,7 @@ public:
         tt.newSearch();
         pvMoves.clear();
         pvScore = Score{NoScore};
+        rootBestMoves = {};
     }
 
     void newIteration() const {
