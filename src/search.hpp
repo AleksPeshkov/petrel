@@ -151,6 +151,14 @@ protected:
     }
 
 public:
+    void assertOk() const {
+        assert (alpha < beta);
+        //assert (score < beta || bound == FailHigh);
+        assert (alpha <= score || bound == FailLow);
+        assert (Score{MateLoss} <= alpha);
+        assert (beta <= Score{MateWin});
+    }
+
     Node (const PositionMoves&, const Uci&);
     ReturnStatus searchRoot();
 };
