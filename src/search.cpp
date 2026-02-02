@@ -16,7 +16,7 @@ TtSlot::TtSlot (const Node* n) : TtSlot{
 
 Node::Node (const PositionMoves& p, const Uci& r) :
     PositionMoves{p}, root{r}, parent{nullptr}, grandParent{nullptr}, ply{0}, pvAncestor{0_ply},
-    alpha{MinusInfinity}, beta{PlusInfinity}, pvIndex{0}
+    alpha{MateLoss}, beta{MateWin}, pvIndex{0}
 {}
 
 Node::Node (const Node* p) :
@@ -36,8 +36,7 @@ ReturnStatus Node::negamax(Ply R) const {
     /* assert (child->depth >= 0); */
     child->generateMoves();
     RETURN_IF_STOP (child->search());
-
-    assert (Score{MinusInfinity} <= alpha && alpha < beta && beta <= Score{PlusInfinity});
+    assertOk();
 
     auto childScore = -child->score;
 
@@ -97,14 +96,14 @@ ReturnStatus Node::negamax(Ply R) const {
 }
 
 ReturnStatus Node::search() {
-    assert (Score{MinusInfinity} <= alpha && alpha < beta && beta <= Score{PlusInfinity});
     score = Score{NoScore};
     currentMove = {};
     bound = FailLow;
+    assertOk();
 
     if (moves().none()) {
         // checkmate or stalemate
-        score = inCheck() ? Score::checkmated(ply) : Score{DrawScore};
+        score = inCheck() ? Score::mateLoss(ply) : Score{DrawScore};
         assert (!currentMove);
         return ReturnStatus::Continue;
     }
@@ -119,9 +118,8 @@ ReturnStatus Node::search() {
         assert (ply >= 1);
 
         // mate-distance pruning
-        alpha = std::max(alpha, Score::checkmated(ply));
-        beta  = std::min(beta, -Score::checkmated(ply) + Ply{1});
-        if (!(alpha < beta)) {
+        alpha = std::max(alpha, Score::mateLoss(ply));
+        if (!(alpha < std::min(beta, Score::mateWin(Ply{ply+1})))) {
             score = alpha;
             assert (!currentMove);
             return ReturnStatus::BetaCutoff;
@@ -377,7 +375,7 @@ ReturnStatus Node::goodNonCaptures(Pi pi, Bb moves, Ply R) {
 }
 
 ReturnStatus Node::quiescence() {
-    assert (Score{MinusInfinity} <= alpha && alpha < beta && beta <= Score{PlusInfinity});
+    assertOk();
     assert (!inCheck());
 
     assert (child);
@@ -395,6 +393,10 @@ ReturnStatus Node::quiescence() {
 
     assert (child->alpha == -beta);
     assert (child->beta == -alpha);
+
+    assert (child->alpha == -beta);
+    assert (child->beta == -alpha);
+    child->assertOk();
 
     // impossible to capture the king, do not even try to save time
     return goodCaptures(OP.nonKing());
@@ -624,8 +626,8 @@ ReturnStatus Node::searchRoot() {
     for (depth = 1_ply; depth <= root.limits.depth; ++depth) {
         tt = root.tt.prefetch<TtSlot>(zobrist());
         setMoves(rootMovesClone);
-        alpha = Score{MinusInfinity};
-        beta = Score{PlusInfinity};
+        alpha = Score{MateLoss};
+        beta = Score{MateWin};
         auto returnStatus = search();
 
         root.newIteration();

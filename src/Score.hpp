@@ -7,25 +7,28 @@ static constexpr int ScoreBitSize = 14;
 
 // position evaluation score, fits in 14 bits
 enum score_enum : i16_t {
-    NoScore = -singleton(ScoreBitSize-1), //TRICK: assume two's complement
-    MinusInfinity = NoScore + 1, // negative bound, no position should eval to it
-    MinusMate = MinusInfinity + 1, // mated in 0, only even negative values for mated positions
+    NoScore = -singleton(ScoreBitSize-1), //-8192 TRICK: assume two's complement
+    MinusInfinity = NoScore + 1, // no position should eval to it
 
-    // negative mate range of scores (loss)
+    MateLoss = MinusInfinity + 1, // -8190, mated in 0, only even negative values for mated positions
 
-    MinEval = MinusMate + static_cast<i16_t>(MaxPly+1), // minimal (negative) non mate score bound for a position
+    // ... negative mate range of scores (loss) ...
 
-    // negative evaluation range of scores
+    MinEval = MateLoss + Ply::Size, // minimal (negative) non mate score
+
+    // ... negative position static evaluation range of scores ...
 
     DrawScore = 0,
 
-    // positive evalutation range of scores
+    //... positive position static evalutation range of scores ...
 
     MaxEval = -MinEval, // maximal (positive) non mate score bound for a position
 
-    // positive mate range of scores (win)
+    // ... positive mate range of scores (win) ...
 
-    PlusMate = -MinusMate, // mate in 0 (impossible), only odd positive values for mate positions
+    MateWin = -MateLoss, // mate in 0 (impossible), only odd positive values for positions winned with mate
+    MateIn1 = MateWin - 1,
+
     PlusInfinity = -MinusInfinity, // positive bound, no position should eval to it
 };
 
@@ -47,15 +50,18 @@ public:
     constexpr friend Score operator + (Score s, Ply p) { s.assertMate(); Score r{static_cast<_t>(s.v + p)}; r.assertMate(); return r; }
     constexpr friend Score operator - (Score s, Ply p) { s.assertMate(); Score r{static_cast<_t>(s.v - p)}; r.assertMate(); return r; }
 
-    constexpr void assertOk() const { assert (MinusInfinity <= v && v <= PlusInfinity); }
+    constexpr void assertOk() const { assert (MateLoss <= v && v <= MateWin); }
     constexpr bool isEval() const { assertOk(); return MinEval <= v && v <= MaxEval; }
     constexpr void assertEval() const { assert (isEval()); }
     constexpr void assertMate() const { assert (!isEval()); }
 
     friend constexpr auto operator <=> (Score, Score) = default;
 
-    // MinusMate + ply
-    static constexpr Score checkmated(Ply ply) { return Score{MinusMate} + ply; }
+    // MateLoss + ply
+    static constexpr Score mateLoss(Ply ply) { return Score{MateLoss} + ply; }
+
+    // MateWin - ply
+    static constexpr Score mateWin(Ply ply) { return -Score::mateLoss(ply); }
 
     constexpr unsigned toTt(Ply ply) const {
         Score score{v};
@@ -105,11 +111,11 @@ public:
         score.assertOk();
 
         if (score.v < MinEval) {
-            return out << "mate " << (MinusMate - score.v) / 2;
+            return out << "mate " << (MateLoss - score.v) / 2;
         }
 
         if (MaxEval < score.v) {
-            return out << "mate " << (PlusMate - score.v + 1) / 2;
+            return out << "mate " << (MateWin - score.v + 1) / 2;
         }
 
         score.assertEval();
