@@ -70,6 +70,7 @@ protected:
     const Uci& root; // common search thread data
     const Node* const parent; // previous (ply-1) opposite side to move node or nullptr
     const Node* const grandParent; // previous side to move node (ply-2) or nullptr
+    Node* child = nullptr; // child node to make moves into, created in search()
 
     RepetitionHash repetitionHash; // mini-hash of all previous reversible positions zobrist keys
 
@@ -98,21 +99,22 @@ protected:
     Node (const Node* parent); // prepare empty child node
 
     // propagate child last move search result score
-    [[nodiscard]] ReturnStatus negamax(Node* child, Ply R = 1_ply) const;
+    [[nodiscard]] ReturnStatus negamax(Ply R = 1_ply) const;
     void failHigh() const;
     void updateHistory(HistoryMove) const;
 
     void updatePv() const;
 
     [[nodiscard]] ReturnStatus search();
+    [[nodiscard]] ReturnStatus searchMoves();
     [[nodiscard]] ReturnStatus quiescence();
 
     // promotions to queen, winning or equal captures, plus complex SEE captures
-    [[nodiscard]] ReturnStatus goodCaptures(Node*, PiMask);
-    [[nodiscard]] ReturnStatus goodNonCaptures(Node*, Pi, Bb moves, Ply R);
+    [[nodiscard]] ReturnStatus goodCaptures(PiMask);
+    [[nodiscard]] ReturnStatus goodNonCaptures(Pi, Bb moves, Ply R);
 
-    [[nodiscard]] ReturnStatus counterMove(Node*);
-    [[nodiscard]] ReturnStatus followMove(Node*);
+    [[nodiscard]] ReturnStatus counterMove();
+    [[nodiscard]] ReturnStatus followMove();
 
     [[nodiscard]] ReturnStatus searchMove(Pi, Square, Ply R = 1_ply);
     [[nodiscard]] ReturnStatus searchMove(Square, Square, Ply R = 1_ply);
