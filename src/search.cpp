@@ -30,7 +30,8 @@ Node::Node (const Node* p) :
     }
 }
 
-ReturnStatus Node::negamax(Node* child, Ply R) const {
+ReturnStatus Node::negamax(Ply R) const {
+    assert (child);
     child->depth = Ply{depth - R}; //TRICK: Ply >= 0
     /* assert (child->depth >= 0); */
     child->generateMoves();
@@ -57,8 +58,8 @@ ReturnStatus Node::negamax(Node* child, Ply R) const {
                 } else {
                     assert (child->alpha == child->beta.minus1());
                 }
-                // reduced search full depth research (unless it was a null move search or leaf node)
-                return negamax(child);
+                // full depth research (unless it was a null move search or leaf node)
+                return negamax();
             }
 
             score = childScore;
@@ -76,7 +77,8 @@ ReturnStatus Node::negamax(Node* child, Ply R) const {
             assert (child->isPv());
             child->alpha = -beta;
             assert (child->beta == -alpha);
-            return negamax(child);
+            // Principal Variation Search (PVS) research with full window and full depth
+            return negamax();
         }
 
         score = childScore;
@@ -110,6 +112,12 @@ ReturnStatus Node::search() {
         assert (!currentMove);
         return ReturnStatus::Continue;
     }
+    if (ply == MaxPly) {
+        // no room to search deeper
+        score = evaluate();
+        assert (!currentMove);
+        return ReturnStatus::Continue;
+    }
 
     if (!isRoot()) {
         // mate-distance pruning
@@ -131,12 +139,6 @@ ReturnStatus Node::search() {
             // check extension
             depth = Ply{depth+1};
         }
-    }
-
-    if (depth <= 0 && !inCheck()) {
-        assert (depth == 0);
-        eval = evaluate();
-        return quiescence();
     }
 
     if (depth > 0) {
@@ -174,16 +176,21 @@ ReturnStatus Node::search() {
         }
     }
 
-    assert (!currentMove);
+// search all moves:
+
+    // prepare empty child node to make moves into
+    //TRICK: dangling child pointer is dangerous, but it can be useful during debug
+    Node node{this};
+    this->child = &node;
 
     eval = evaluate();
 
-    if (ply == MaxPly) {
-        // no room to search deeper
-        score = eval;
-        assert (!currentMove);
-        return ReturnStatus::Continue;
+    if (depth <= 0 && !inCheck()) {
+        assert (depth == 0);
+        return quiescence();
     }
+
+    assert (!currentMove);
 
     if (
         !inCheck()
@@ -205,10 +212,6 @@ ReturnStatus Node::search() {
         }
     }
 
-    // prepare empty child node to make moves into
-    Node node{this};
-    const auto child = &node;
-
     // Null Move Pruning
     if (
         !inCheck()
@@ -227,17 +230,17 @@ ReturnStatus Node::search() {
     }
 
     canBeKiller = false;
-    RETURN_CUTOFF (goodCaptures(child, OP.nonKing()));
+    RETURN_CUTOFF (goodCaptures(OP.nonKing()));
     canBeKiller = !inCheck();
 
     if (parent && !inCheck()) {
         RETURN_CUTOFF (child->searchIfPossible(parent->killer[0]));
-        RETURN_CUTOFF (counterMove(child));
-        RETURN_CUTOFF (followMove(child));
+        RETURN_CUTOFF (counterMove());
+        RETURN_CUTOFF (followMove());
 
         RETURN_CUTOFF (child->searchIfPossible(parent->killer[1]));
-        RETURN_CUTOFF (counterMove(child));
-        RETURN_CUTOFF (followMove(child));
+        RETURN_CUTOFF (counterMove());
+        RETURN_CUTOFF (followMove());
 
         RETURN_CUTOFF (child->searchIfPossible(parent->killer[2]));
     }
@@ -285,13 +288,13 @@ ReturnStatus Node::search() {
             //TODO: try protecting moves of other pieces
         }
 
-        RETURN_CUTOFF (goodNonCaptures(child, pi, bbMovesOf(pi) % bbAvoid, canR ? 2_ply : 1_ply));
+        RETURN_CUTOFF (goodNonCaptures(pi, bbMovesOf(pi) % bbAvoid, canR ? 2_ply : 1_ply));
     }
 
     while (safePieces.any()) {
         Pi pi = safePieces.piLast(); safePieces -= pi;
 
-        RETURN_CUTOFF (goodNonCaptures(child, pi, bbMovesOf(pi) % bbAvoid, canR ? 3_ply : 1_ply));
+        RETURN_CUTOFF (goodNonCaptures(pi, bbMovesOf(pi) % bbAvoid, canR ? 3_ply : 1_ply));
     }
 
     // iterate pawns from Rank7 to Rank2
@@ -348,7 +351,7 @@ ReturnStatus Node::search() {
     return ReturnStatus::Continue;
 }
 
-ReturnStatus Node::goodNonCaptures(Node* child, Pi pi, Bb moves, Ply R) {
+ReturnStatus Node::goodNonCaptures(Pi pi, Bb moves, Ply R) {
     PieceType ty = MY.typeOf(pi);
     assert (!ty.is(Pawn));
     PiMask opLessValue = OP.lessValue(ty);
@@ -379,31 +382,27 @@ ReturnStatus Node::quiescence() {
     assert (Score{MinusInfinity} <= alpha && alpha < beta && beta <= Score{PlusInfinity});
     assert (!inCheck());
 
+    assert (child);
+
     // stand pat
     score = eval;
     if (beta <= score) {
         assert (!currentMove);
         return ReturnStatus::BetaCutoff;
     }
-    if (ply == MaxPly) {
-        // no room to search deeper
-        assert (!currentMove);
-        return ReturnStatus::Continue;
-    }
     if (alpha < score) {
         alpha = score;
+        child->beta = -alpha;
     }
 
-    // prepare empty child node to make moves into
-    //TODO: create lighter quiescence node without zobrist hashing and repetition detection
-    Node node{this};
-    const auto child = &node;
+    assert (child->alpha == -beta);
+    assert (child->beta == -alpha);
 
     // impossible to capture the king, do not even try to save time
-    return goodCaptures(child, OP.nonKing());
+    return goodCaptures(OP.nonKing());
 }
 
-ReturnStatus Node::goodCaptures(Node* child, PiMask victims) {
+ReturnStatus Node::goodCaptures(PiMask victims) {
     // queen promotion moves, with and without capture
     for (Pi pi : MY.promotables()) {
         Bb queenPromos = bbMovesOf(pi) & Bb{Rank8}; // filter out underpromotions
@@ -452,7 +451,7 @@ ReturnStatus Node::goodCaptures(Node* child, PiMask victims) {
 }
 
 // Counter move heuristic: refutation of the last opponent's move
-ReturnStatus Node::counterMove(Node* child) {
+ReturnStatus Node::counterMove() {
     assert (parent);
     if (parent->currentMove) {
         for (auto i : range<decltype(root.counterMove)::Index>()) {
@@ -467,7 +466,7 @@ ReturnStatus Node::counterMove(Node* child) {
 }
 
 // Follow up move heuristic: continue the idea of our last made move
-ReturnStatus Node::followMove(Node* child) {
+ReturnStatus Node::followMove() {
     if (grandParent && grandParent->currentMove) {
         for (auto i : range<decltype(root.followMove)::Index>()) {
             auto move = root.followMove.get(i, grandParent->colorToMove(), grandParent->currentMove);
@@ -489,7 +488,7 @@ ReturnStatus Node::searchNullMove(Ply R) {
     tt = root.tt.prefetch<TtSlot>(zobrist());
     repetitionHash = RepetitionHash{};
 
-    return parent->negamax(this, R);
+    return parent->negamax(R);
 }
 
 ReturnStatus Node::searchMove(Pi pi, Square to, Ply R) {
@@ -509,7 +508,7 @@ ReturnStatus Node::searchMove(Square from, Square to, Ply R) {
     else if (grandParent) { repetitionHash = RepetitionHash{grandParent->repetitionHash, grandParent->zobrist()}; }
     else { repetitionHash = root.repetitions.repetitionHash(colorToMove()); }
 
-    return parent->negamax(this, R);
+    return parent->negamax(R);
 }
 
 void Node::failHigh() const {
