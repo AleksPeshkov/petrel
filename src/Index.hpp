@@ -341,11 +341,10 @@ constexpr PromoType promoTypeFrom(Rank rank) { return PromoType{static_cast<Prom
 
 // continue or stop search
 enum class ReturnStatus {
-    Continue,   // continue search normally
-    Stop,       // stop current search (timeout or other termination reason)
-    BetaCutoff, // prune current node search
+    Continue, // continue search normally
+    Stop,     // stop current search (timeout or other termination reason)
+    Cutoff,   // prune current node search (futility or beta cutoff)
 };
-
 
 enum history_type_t { HistoryRBN, HistoryQueen, HistoryPawn, HistoryKing };
 
