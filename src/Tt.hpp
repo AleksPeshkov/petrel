@@ -1,7 +1,7 @@
 #ifndef TT_HPP
 #define TT_HPP
 
-#include "memory.hpp"
+#include "System.hpp"
 #include "Zobrist.hpp"
 
 class Tt {
@@ -10,7 +10,7 @@ class Tt {
 
     void free() {
         if (size_) {
-            ::freeAligned(memory);
+            System::freeAligned(memory);
             memory = nullptr;
             size_ = 0;
         }
@@ -28,7 +28,7 @@ class Tt {
             free();
 
             for (; bytes >= minBytes; bytes >>= 1) {
-                auto ptr = ::allocateAligned(bytes, minBytes);
+                auto ptr = System::allocateAligned(bytes, minBytes);
 
                 if (ptr) {
                     memory = ptr;
@@ -58,7 +58,7 @@ public:
     static constexpr size_t minSize() { return 2 * 1024 * 1024; }
 
     // all currently available memory
-    static size_t maxSize() { return ::bit_floor(::getAvailableMemory()); }
+    static size_t maxSize() { return ::bit_floor(System::getAvailableMemory()); }
 
     void setSize(size_t bytes) { allocate(bytes); }
     void newGame() { zeroFill(); }

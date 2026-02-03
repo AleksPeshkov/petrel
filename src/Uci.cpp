@@ -1,6 +1,7 @@
 #include "Uci.hpp"
 #include "Node.hpp"
 #include "NodePerft.hpp"
+#include "System.hpp"
 
 namespace { // anonymous namespace
 
@@ -41,7 +42,8 @@ Uci::Uci(ostream &o) :
     tt(16 * mebibyte),
     inputLine{std::string(1024, '\0')}, // preallocate 1024 bytes (~100 full moves)
     out{o},
-    bestmove_(32, '\0')
+    bestmove_(sizeof("bestmove a7a8q ponder h2h1q"), '\0'),
+    pid{System::getPid()}
 {
     bestmove_.clear();
     ucinewgame();
@@ -61,7 +63,7 @@ void Uci::log(const std::string& message) const {
 
     {
         std::lock_guard<decltype(logMutex)> lock{logMutex};
-        logFile << message << std::endl;
+        logFile << pid << " " << message << std::endl;
 
         // recover if the logFile is in a bad state
         if (!logFile) {
