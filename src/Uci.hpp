@@ -293,6 +293,8 @@ private:
     std::string logFileName; // no log by default
     mutable std::ofstream logFile;
     mutable std::mutex logMutex;
+    const int pid; // system process id (for debug output)
+    TimePoint logStartTime;
 
 #ifdef NDEBUG
     bool isDebugOn = false;

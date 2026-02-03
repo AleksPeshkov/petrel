@@ -1,6 +1,7 @@
 #include "Uci.hpp"
 #include "Node.hpp"
 #include "NodePerft.hpp"
+#include "System.hpp"
 
 namespace { // anonymous namespace
 
@@ -41,7 +42,9 @@ Uci::Uci(ostream &o) :
     tt(16 * mebibyte),
     inputLine{std::string(1024, '\0')}, // preallocate 1024 bytes (~100 full moves)
     out{o},
-    bestmove_(32, '\0')
+    bestmove_(sizeof("bestmove a7a8q ponder h2h1q"), '\0'),
+    pid{System::getPid()},
+    logStartTime{::timeNow()}
 {
     bestmove_.clear();
     ucinewgame();
@@ -61,7 +64,11 @@ void Uci::log(const std::string& message) const {
 
     {
         std::lock_guard<decltype(logMutex)> lock{logMutex};
-        logFile << message << std::endl;
+        auto timeStamp = ::elapsedSince(logStartTime);
+        auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(timeStamp).count();
+        auto us = (std::chrono::duration_cast<std::chrono::microseconds>(timeStamp) % 1000).count();
+        logFile << pid << " " << ms << '.' << std::setfill('0') << std::setw(3) << us;
+        logFile << " " << message << std::endl;
 
         // recover if the logFile is in a bad state
         if (!logFile) {
@@ -154,6 +161,7 @@ void Uci::setoption() {
                 return;
             }
             logFileName = std::move(newFileName);
+            logStartTime = ::timeNow();
         }
 
         return;
