@@ -6,6 +6,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <string_view>
 
 namespace io {
     using std::ostream;
@@ -29,7 +30,7 @@ namespace io {
 
 // defined in main.cpp
 
-    void log(const std::string&);
+    void log(std::string_view);
 }
 
 using io::ostream;
