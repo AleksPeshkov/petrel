@@ -40,16 +40,19 @@ static constexpr T permil(T n, T m) { return (n * 1000) / m; }
 
 Uci::Uci(ostream &o) :
     tt(16 * mebibyte),
-    inputLine{std::string(1024, '\0')}, // preallocate 1024 bytes (~100 full moves)
+    inputLine{std::string(2048, '\0')}, // preallocate 2048 bytes (~200 full moves)
     out{o},
     bestmove_(sizeof("bestmove a7a8q ponder h2h1q"), '\0'),
     pid{System::getPid()}
 {
+    inputLine.clear();
     bestmove_.clear();
     ucinewgame();
 }
 
-void Uci::output(const std::string& message) const {
+void Uci::output(std::string_view message) const {
+    if (message.empty()) { return; }
+
     {
         std::lock_guard<decltype(outMutex)> lock{outMutex};
         out << message << std::endl;
@@ -58,7 +61,7 @@ void Uci::output(const std::string& message) const {
     if (isDebugOn) { log(message); }
 }
 
-void Uci::log(const std::string& message) const {
+void Uci::log(std::string_view message) const {
     if (!logFile.is_open()) { return; }
 
     {
@@ -76,7 +79,7 @@ void Uci::log(const std::string& message) const {
 }
 
 void Uci::processInput(istream& in) {
-    std::string currentLine(1024, '\0'); // preallocate 1024 bytes (~100 full moves)
+    std::string currentLine(2048, '\0'); // preallocate 2048 bytes (~200 full moves)
     while (std::getline(in, currentLine)) {
         if (isDebugOn) { log('>' + currentLine); }
 
@@ -264,6 +267,10 @@ void Uci::position() {
 
     mainSearchThread.waitReady();
 
+#ifdef ENABLE_ASSERT_LOGGING
+    debugPosition = inputLine.str();
+#endif
+
     if (consume("startpos")) {
         position_.setStartpos();
         repetitions.clear();
@@ -301,6 +308,10 @@ istream& UciSearchLimits::go(istream& in, Side white) {
 }
 
 void Uci::go() {
+#ifdef ENABLE_ASSERT_LOGGING
+    debugGo = inputLine.str();
+#endif
+
     newSearch();
     limits.go(inputLine, position_.sideOf(White));
     if (consume("searchmoves")) { position_.limitMoves(inputLine); }

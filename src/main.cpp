@@ -19,17 +19,21 @@ constexpr PieceSquareTable pieceSquareTable; // 3k 6*64*8
 constexpr PiSingle piSingle; // 256
 constexpr CastlingRules castlingRules; // 128
 
-// global pointer to Uci instance to implement io::log()
-const Uci* The_uci = nullptr;
+// global Uci instance
+Uci The_uci(std::cout);
 
-void io::log(const std::string& message) {
-    if (The_uci) { The_uci->log(message); }
+void io::log(std::string_view message) {
+    The_uci.log(message);
 }
 
 #ifdef ENABLE_ASSERT_LOGGING
 void assert_fail(const char *assertion, const char *file, unsigned int line, const char* func) {
     std::ostringstream oss;
-    oss << "Assertion failed: " << func << ": " << assertion << " (" << file << ":" << line << ")";
+    oss << "Assertion failed: " << func << ": " << assertion << " (" << file << ":" << line << ")\n";
+    oss << "node " << The_uci.limits.getNodes() << " root fen " << The_uci.position_ << '\n';
+    oss << The_uci.debugPosition << '\n';
+    oss << The_uci.debugGo << '\n';
+
     std::string message = oss.str();
     io::log("#" + message);
     std::cerr << message << std::endl;
@@ -61,7 +65,7 @@ int main(int argc, const char* argv[]) {
         }
 
         std::cerr << "petrel: unknown option\n";
-        return EINVAL;
+        return EXIT_FAILURE;
     }
 
     // speed tricks
@@ -69,10 +73,6 @@ int main(int argc, const char* argv[]) {
     std::cin.tie(nullptr);
     std::cerr.tie(nullptr);
 
-    Uci uci(std::cout);
-    The_uci = &uci;
-
-    uci.processInput(std::cin);
-
+    The_uci.processInput(std::cin);
     return EXIT_SUCCESS;
 }
