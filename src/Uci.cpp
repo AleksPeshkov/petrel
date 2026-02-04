@@ -40,25 +40,28 @@ static constexpr T permil(T n, T m) { return (n * 1000) / m; }
 
 Uci::Uci(ostream &o) :
     tt(16 * mebibyte),
-    inputLine{std::string(1024, '\0')}, // preallocate 1024 bytes (~100 full moves)
+    inputLine{std::string(2048, '\0')}, // preallocate 2048 bytes (~200 full moves)
     out{o},
     bestmove_(sizeof("bestmove a7a8q ponder h2h1q"), '\0'),
     pid{System::getPid()}
 {
+    inputLine.clear();
     bestmove_.clear();
     ucinewgame();
 }
 
-void Uci::output(const std::string& message) const {
+void Uci::output(std::string_view message) const {
+    if (message.empty()) { return; }
+
     {
         std::lock_guard<decltype(outMutex)> lock{outMutex};
         out << message << std::endl;
     }
 
-    if (isDebugOn) { log(message); }
+    if (isDebugOn) { log('<' + std::string(message)); }
 }
 
-void Uci::log(const std::string& message) const {
+void Uci::log(std::string_view message) const {
     if (!logFile.is_open()) { return; }
 
     {
@@ -75,8 +78,27 @@ void Uci::log(const std::string& message) const {
     }
 }
 
+void Uci::error(std::string_view message) const {
+    if (message.empty()) { return; }
+
+    std::cerr << "petrel " << pid << " " << message << std::endl;
+    log('!' + std::string(message));
+
+    Output ob{this};
+    ob << "info string " << message;
+}
+
+void Uci::info(std::string_view message) const {
+    if (message.empty()) { return; }
+
+    log('*' + std::string(message));
+
+    Output ob{this};
+    ob << "info string " << message;
+}
+
 void Uci::processInput(istream& in) {
-    std::string currentLine(1024, '\0'); // preallocate 1024 bytes (~100 full moves)
+    std::string currentLine(2048, '\0'); // preallocate 2048 bytes (~200 full moves)
     while (std::getline(in, currentLine)) {
         if (isDebugOn) { log('>' + currentLine); }
 
@@ -103,7 +125,7 @@ void Uci::processInput(istream& in) {
             inputLine.clear();
             std::getline(inputLine, unparsedInput);
             if (isDebugOn) { log('>' + currentLine); }
-            log("#Unparsed input->" + unparsedInput);
+            error("unparsed input->" + unparsedInput);
         }
     }
 }
@@ -137,7 +159,7 @@ void Uci::setoption() {
 
         if (newFileName.empty() || newFileName == "<empty>") {
             if (logFile.is_open()) {
-                log("#Debug Log File set <empty>");
+                info("Debug Log File set <empty>");
                 logFile.close();
             }
             logFileName.clear();
@@ -146,14 +168,14 @@ void Uci::setoption() {
 
         if (newFileName != logFileName) {
             if (logFile.is_open()) {
-                log("#Debug Log File set \"" + newFileName + "\"");
+                info("Debug Log File set \"" + newFileName + "\"");
                 logFile.close();
                 logFileName.clear();
             }
 
             logFile.open(newFileName, std::ios::app);
             if (!logFile.is_open()) {
-                log("#Failed to open log file: " + newFileName);
+                error("failed opening Deubg Log File: " + newFileName);
                 return;
             }
             logFileName = std::move(newFileName);
@@ -167,7 +189,6 @@ void Uci::setoption() {
         setHash();
         return;
     }
-
 
     if (consume("Move Overhead")) {
         consume("value");
@@ -206,8 +227,8 @@ void Uci::debug() {
         return;
     }
 
-    if (consume("on"))  { isDebugOn = true; log("#debug on"); return; }
-    if (consume("off")) { isDebugOn = false; log("#debug off"); return; }
+    if (consume("on"))  { isDebugOn = true; info("debug on"); return; }
+    if (consume("off")) { isDebugOn = false; info("debug off"); return; }
 
     io::fail_rewind(inputLine);
     return;
@@ -264,6 +285,10 @@ void Uci::position() {
 
     mainSearchThread.waitReady();
 
+#ifdef ENABLE_ASSERT_LOGGING
+    debugPosition = inputLine.str();
+#endif
+
     if (consume("startpos")) {
         position_.setStartpos();
         repetitions.clear();
@@ -301,6 +326,10 @@ istream& UciSearchLimits::go(istream& in, Side white) {
 }
 
 void Uci::go() {
+#ifdef ENABLE_ASSERT_LOGGING
+    debugGo = inputLine.str();
+#endif
+
     newSearch();
     limits.go(inputLine, position_.sideOf(White));
     if (consume("searchmoves")) { position_.limitMoves(inputLine); }
@@ -310,7 +339,7 @@ void Uci::go() {
         bestmove();
     });
     if (!started) {
-        log("#Search not started");
+        error("Search not started");
         bestmove();
     }
     std::this_thread::yield();
