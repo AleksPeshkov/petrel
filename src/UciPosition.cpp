@@ -82,19 +82,19 @@ istream& read(istream& in, FenToBoard& board) {
 bool FenToBoard::drop(Color color, PieceType ty, Square sq) {
     //the position representaion cannot hold more then 16 total pieces per color
     if (pieceCount[color] == Pi::Size) {
-        io::log("#invalid fen: too many total pieces");
+        io::error("invalid fen: too many total pieces");
         return false;
     }
 
     //max one king per each color
     if (ty.is(King) && !pieces[color][King].empty()) {
-        io::log("#invalid fen: too many kings");
+        io::error("invalid fen: too many kings");
         return false;
     }
 
     //illegal pawn location
     if (ty.is(Pawn) && (sq.on(Rank1) || sq.on(Rank8))) {
-        io::log("#invalid fen: pawn on impossible rank");
+        io::error("invalid fen: pawn on impossible rank");
         return false;
     }
 
@@ -107,7 +107,7 @@ bool FenToBoard::dropPieces(Position& position, Color colorToMove_) {
     //each side should have one king
     for (auto color : Color::range()) {
         if (pieces[color][King].empty()) {
-            io::log("#invalid fen: king is missing");
+            io::error("invalid fen: king is missing");
             return false;
         }
     }
@@ -305,7 +305,7 @@ void UciPosition::limitMoves(istream& in) {
         Square from; Square to;
 
         if (!readMove(in, from, to) || !isLegalMove(from, to)) {
-            io::log("#invalid move");
+            io::error("invalid move");
             io::fail_pos(in, before);
             return;
         }
