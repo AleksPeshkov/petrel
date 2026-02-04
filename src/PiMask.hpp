@@ -2,8 +2,15 @@
 #define PI_MASK_HPP
 
 #include "Index.hpp"
-#include "BitSet.hpp"
-#include "BitArray128.hpp"
+#include "bitops128.hpp"
+#include "BitArray.hpp"
+
+template <>
+struct BitArrayOps<vu8x16_t> {
+    using _t = vu8x16_t;
+    using Arg = const _t&;
+    static bool equals(Arg a, Arg b) { return ::equals(a, b); }
+};
 
 class CACHE_ALIGN VectorOfAll {
     using _t = vu8x16_t;
