@@ -1,7 +1,7 @@
 #ifndef HYPERBOLA_HPP
 #define HYPERBOLA_HPP
 
-#include "BitArray128.hpp"
+#include "bitops128.hpp"
 #include "Bb.hpp"
 
 // bitreverse all 128-bits (actually only 64-bits are needed)
