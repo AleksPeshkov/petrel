@@ -15,13 +15,14 @@ TtSlot::TtSlot (const Node* n) : TtSlot{
 } {}
 
 Node::Node (const PositionMoves& p, const Uci& r) :
-    PositionMoves{p}, root{r}, parent{nullptr}, grandParent{nullptr}, ply{0},
-    alpha{MinusInfinity}, beta{PlusInfinity}, isPv{true}, pvIndex{0}
+    PositionMoves{p}, root{r}, parent{nullptr}, grandParent{nullptr}, ply{0}, pvAncestor{0_ply},
+    alpha{MinusInfinity}, beta{PlusInfinity}, pvIndex{0}
 {}
 
 Node::Node (const Node* p) :
-    PositionMoves{}, root{p->root}, parent{p}, grandParent{p->parent}, ply{p->ply + 1},
-    alpha{-p->beta}, beta{-p->alpha}, isPv(p->isPv), pvIndex{p->pvIndex+1}
+    PositionMoves{}, root{p->root}, parent{p}, grandParent{p->parent},
+    ply{p->ply + 1}, pvAncestor{p->isPv() ? ply : p->pvAncestor},
+    alpha{-p->beta}, beta{-p->alpha}, pvIndex{p->pvIndex+1}
 {
     if (grandParent) {
         killer[0] = grandParent->killer[0];
@@ -46,7 +47,7 @@ ReturnStatus Node::negamax(Node* child, Ply R) const {
     } else {
         if (beta <= childScore) {
             if (currentMove && depth > child->depth+1) {
-                if (child->isPv) {
+                if (child->isPv()) {
                     // rare case (the first move from PV with reduced depth)
                     child->alpha = -beta;
                     assert (child->beta == -alpha);
@@ -63,16 +64,14 @@ ReturnStatus Node::negamax(Node* child, Ply R) const {
         }
 
         assert (alpha < childScore && childScore < beta);
-        assert (isPv); // alpha < childScore < beta, so current window cannot be zero
+        assert (isPv()); // alpha < childScore < beta, so current window cannot be zero
         assert (currentMove); // null move in PV is not allowed
 
-        if (!child->isPv) {
+        if (!child->isPv()) {
             // Principal Variation Search (PVS) research with full window
+            child->pvAncestor = child->ply;
+            assert (child->isPv());
             child->alpha = -beta;
-
-            child->isPv = true;
-            assert (child->alpha < child->beta.minus1());
-
             assert (child->beta == -alpha);
             return negamax(child);
         }
@@ -90,7 +89,7 @@ ReturnStatus Node::negamax(Node* child, Ply R) const {
 
     // set zero window for the next sibling move search
     child->alpha = child->beta.minus1(); // can be either 1 centipawn or 1 mate distance ply
-    child->isPv = false;
+    child->pvAncestor = pvAncestor;
 
     assert (child->beta == -alpha);
     return ReturnStatus::Continue;
@@ -151,7 +150,7 @@ ReturnStatus Node::search() {
             } else {
                 ++root.tt.hits;
 
-                if (ttSlot.draft() >= depth && !isPv) {
+                if (ttSlot.draft() >= depth && !isPv()) {
                     Bound ttBound = ttSlot.bound();
                     Score ttScore = ttSlot.score(ply);
 
@@ -187,7 +186,7 @@ ReturnStatus Node::search() {
 
     if (
         !inCheck()
-        && !isPv
+        && !isPv()
         && depth <= 3
     ) {
         auto delta = (depth == 1) ? 50_cp : (depth == 2) ? 150_cp : 200_cp;
@@ -212,7 +211,7 @@ ReturnStatus Node::search() {
     // Null Move Pruning
     if (
         !inCheck()
-        && !isPv
+        && !isPv()
         && Score{MinEval} <= beta && beta <= eval
         && depth >= 2 // overhead higher then gain at very low depth
         && MY.evaluation().canNullMove() // avoid null move in late endgame
@@ -251,8 +250,8 @@ ReturnStatus Node::search() {
     // Weak Move Reduction condition: !inCheck()
     bool canR = !inCheck();
 
-    // Weak Move Pruning: !inCheck() && !isPv && depth <= 2
-    bool canP = !inCheck() && !isPv && depth <= 2;
+    // Weak Move Pruning: !inCheck() && !isPv() && depth <= 2
+    bool canP = !inCheck() && !isPv() && depth <= 2;
 
     // quiet non-pawn, non-king moves from unsafe to safe squares
     // skip king moves because they are safe anyway (unless in check)
