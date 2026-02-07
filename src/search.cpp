@@ -430,7 +430,7 @@ ReturnStatus Node::searchMoves() {
         for (PiMask pieces = MY.officers(); pieces.any(); ) {
             Pi pi = pieces.piLeastValuable(); pieces -= pi;
             for (Square to : bbMovesOf(pi) & ~OP.bbSide()) {
-                RETURN_CUTOFF (child->searchMove(pi, to, canR ? 3_ply : 2_ply));
+                RETURN_CUTOFF (child->searchMove(pi, to, canR ? 3_ply : 1_ply));
             }
         }
 
