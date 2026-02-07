@@ -243,7 +243,8 @@ ReturnStatus Node::search() {
 
     {
         // Weak Move Pruning: !inCheck() && !isPv() && depth <= 2
-        bool canP = !inCheck() && !isPv() && depth <= 2;
+        bool canP2 = !inCheck() && !isPv() && depth <= 2;
+        bool canP4 = !inCheck() && !isPv() && depth <= 4;
 
         {
             // going to search only non-captures, mask out remaining unsafe captures to avoid redundant safety checks
@@ -305,7 +306,7 @@ ReturnStatus Node::search() {
         }
 
         // king quiet moves (always safe), castling is a rook move
-        if (!canP || movesMade() == 0) { // weak move pruning
+        if (!canP2 || movesMade() == 0) { // weak move pruning
             for (Square to : bbMovesOf(Pi{TheKing})) {
                 RETURN_CUTOFF (child->searchMove(Pi{TheKing}, to, 3_ply));
             }
@@ -321,7 +322,7 @@ ReturnStatus Node::search() {
         }
 
         // unsafe (losing) non-captures (N/B, R, Q order)
-        if (!canP || movesMade() == 0) { // weak move pruning
+        if (!canP4 || movesMade() == 0) { // weak move pruning
             for (PiMask pieces = MY.officers(); pieces.any(); ) {
                 Pi pi = pieces.piLeastValuable(); pieces -= pi;
 
