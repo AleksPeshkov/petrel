@@ -75,6 +75,7 @@ protected:
 
     Ply ply; // distance from root (root is ply == 0)
     Ply depth{0}; // remaining depth to horizon (should be set before search)
+    Ply pvAncestor; // ply of nearest PV node, if pvAncestor == ply, this is PV node
 
     TtSlot* tt; // pointer to the slot in TT
     TtSlot  ttSlot;
@@ -85,7 +86,6 @@ protected:
     Score beta; // alpha-beta window upper margin
     mutable Score score{NoScore}; // best score found so far
     mutable Bound bound = FailLow; // FailLow is default unless have found Exact or FailHigh move later
-    bool isPv; // normally isPv == alpha < beta-1, cannot use constexpr as alpha may change during search
 
     mutable HistoryMove currentMove = {}; // last move made from *this into *child
     PvMoves::Index pvIndex; // start of subPV for the current ply
@@ -132,6 +132,10 @@ protected:
     }
 
     void makeMove(Square from, Square to);
+
+    constexpr bool isPv() const { return pvAncestor == ply; }
+    constexpr bool isCutNode() const { return (ply - pvAncestor) & 1; }
+    constexpr bool isAllNode() const { return !isPv() && !isCutNode(); }
 
     // current node's side to move color
     constexpr Color colorToMove() const;
