@@ -75,6 +75,7 @@ protected:
 
     Ply ply; // distance from root (root is ply == 0)
     Ply depth{0}; // remaining depth to horizon (should be set before search)
+    Ply plyPv; // ply of nearest PV node, if plyPv == ply, this is PV node
 
     TtSlot* tt; // pointer to the slot in TT
     TtSlot  ttSlot;
@@ -85,7 +86,6 @@ protected:
     Score beta; // alpha-beta window upper margin
     mutable Score score{NoScore}; // best score found so far
     mutable Bound bound = FailLow; // FailLow is default unless have found Exact or FailHigh move later
-    bool isPv; // normally isPv == alpha < beta-1, cannot use constexpr as alpha may change during search
 
     mutable HistoryMove currentMove = {}; // last move made from *this into *child
     PvMoves::Index pvIndex; // start of subPV for the current ply
@@ -129,6 +129,11 @@ protected:
     [[nodiscard]] ReturnStatus searchIfPossible(Pi pi, Square to, Ply R = 1_ply) {
         return parent->isPossibleMove(pi, to) ? searchMove(pi, to, R) : ReturnStatus::Continue;
     }
+
+    constexpr bool isRoot() const { assert (parent == nullptr || ply > 0); return parent == nullptr; } // ply == 0
+    constexpr bool isPv() const { return ply == plyPv; } // ply == plyPv
+    constexpr bool isCutNode() const { return (ply - plyPv) & 1; } // odd (ply - plyPv)
+    constexpr bool isAllNode() const { return !isPv() && !isCutNode(); } // even (plv - plyPv)
 
     // current node's side to move color
     constexpr Color colorToMove() const;
