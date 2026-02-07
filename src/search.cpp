@@ -386,10 +386,11 @@ ReturnStatus Node::searchMoves() {
                 RETURN_CUTOFF (goodNonCaptures(pi, bbMovesOf(pi) % badSquares, canR ? 2_ply : 1_ply));
             }
 
-            while (safePieces.any()) {
-                Pi pi = safePieces.piLeastValuable(); safePieces -= pi;
-
-                RETURN_CUTOFF (goodNonCaptures(pi, bbMovesOf(pi) % badSquares, canR ? 3_ply : 1_ply));
+            if (!canP1 || movesMade() == 0) { // weak move pruning
+                while (safePieces.any()) {
+                    Pi pi = safePieces.piLeastValuable(); safePieces -= pi;
+                    RETURN_CUTOFF (goodNonCaptures(pi, bbMovesOf(pi) % badSquares, canR ? 3_ply : 1_ply));
+                }
             }
         }
 
@@ -428,7 +429,6 @@ ReturnStatus Node::searchMoves() {
         // unsafe (losing) captures
         for (PiMask pieces = MY.officers(); pieces.any(); ) {
             Pi pi = pieces.piLeastValuable(); pieces -= pi;
-
             for (Square to : bbMovesOf(pi) & ~OP.bbSide()) {
                 RETURN_CUTOFF (child->searchMove(pi, to, canR ? 3_ply : 2_ply));
             }
@@ -438,7 +438,6 @@ ReturnStatus Node::searchMoves() {
         if (!canP4 || movesMade() == 0) { // weak move pruning
             for (PiMask pieces = MY.officers(); pieces.any(); ) {
                 Pi pi = pieces.piLeastValuable(); pieces -= pi;
-
                 for (Square to : bbMovesOf(pi)) {
                     RETURN_CUTOFF (child->searchMove(pi, to, canR ? 4_ply : 3_ply));
                 }
