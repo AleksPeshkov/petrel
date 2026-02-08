@@ -201,6 +201,7 @@ ReturnStatus Node::search() {
     if (parent) {
         assert (ply >= 1);
 
+/*
         // mate-distance pruning
         alpha = std::max(alpha, Score::mateLoss(ply));
         if (!(alpha < std::min(beta, Score::mateWin(Ply{ply+1})))) {
@@ -208,6 +209,7 @@ ReturnStatus Node::search() {
             assert (!currentMove);
             return ReturnStatus::BetaCutoff;
         }
+*/
 
         if (rule50().isDraw() || isRepetition() || isDrawMaterial()) {
             score = Score{DrawScore};
