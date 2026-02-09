@@ -32,7 +32,7 @@ else
 	WARNINGS += -Winline
 endif
 
-BUILD_FLAGS += -march=native -mtune=native
+BUILD_FLAGS += -march=native -mtune=native -static
 
 # === Common Flags ===
 WARNINGS += -Wuninitialized -Wcast-qual -Wshadow -Wmissing-declarations -Wstrict-aliasing=1 -Wstrict-overflow=1 -Wsign-promo
