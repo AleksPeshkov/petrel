@@ -242,9 +242,6 @@ ReturnStatus Node::search() {
     }
 
     {
-        // Weak Move Reduction condition: !inCheck()
-        bool canR = !inCheck();
-
         // Weak Move Pruning: !inCheck() && !isPv() && depth <= 2
         bool canP = !inCheck() && !isPv() && depth <= 2;
 
@@ -280,13 +277,13 @@ ReturnStatus Node::search() {
                     //TODO: try protecting moves of other pieces
                 }
 
-                RETURN_CUTOFF (goodNonCaptures(child, pi, bbMovesOf(pi) % badSquares, canR ? 2_ply : 1_ply));
+                RETURN_CUTOFF (goodNonCaptures(child, pi, bbMovesOf(pi) % badSquares, 2_ply));
             }
 
             while (safePieces.any()) {
                 Pi pi = safePieces.piLeastValuable(); safePieces -= pi;
 
-                RETURN_CUTOFF (goodNonCaptures(child, pi, bbMovesOf(pi) % badSquares, canR ? 3_ply : 1_ply));
+                RETURN_CUTOFF (goodNonCaptures(child, pi, bbMovesOf(pi) % badSquares, 3_ply));
             }
         }
 
@@ -294,7 +291,7 @@ ReturnStatus Node::search() {
         for (Square from : MY.bbPawns() & Bb{Rank7}) {
             Pi pi = MY.piAt(from);
             for (Square to : bbMovesOf(pi)) {
-                RETURN_CUTOFF (child->searchMove(pi, to, canR ? 4_ply : 1_ply));
+                RETURN_CUTOFF (child->searchMove(pi, to, 4_ply));
             }
         }
 
@@ -311,14 +308,14 @@ ReturnStatus Node::search() {
         for (Square from : MY.bbPawns() % (Bb{Rank6} | Bb{Rank7})) {
             Pi pi = MY.piAt(from);
             for (Square to : bbMovesOf(pi)) {
-                RETURN_CUTOFF (child->searchMove(pi, to, canR ? 3_ply : 1_ply));
+                RETURN_CUTOFF (child->searchMove(pi, to, 3_ply));
             }
         }
 
         // king quiet moves (always safe), castling is rook move
         if (!canP || movesMade() == 0) { // weak move pruning
             for (Square to : bbMovesOf(Pi{TheKing})) {
-                RETURN_CUTOFF (child->searchMove(Pi{TheKing}, to, canR ? 3_ply : 1_ply));
+                RETURN_CUTOFF (child->searchMove(Pi{TheKing}, to, 3_ply));
             }
         }
 
@@ -327,7 +324,7 @@ ReturnStatus Node::search() {
             Pi pi = pieces.piLeastValuable(); pieces -= pi;
 
             for (Square to : bbMovesOf(pi) & ~OP.bbSide()) {
-                RETURN_CUTOFF (child->searchMove(pi, to, canR ? 3_ply : 1_ply));
+                RETURN_CUTOFF (child->searchMove(pi, to, 3_ply));
             }
         }
 
@@ -337,7 +334,7 @@ ReturnStatus Node::search() {
                 Pi pi = pieces.piLeastValuable(); pieces -= pi;
 
                 for (Square to : bbMovesOf(pi)) {
-                    RETURN_CUTOFF (child->searchMove(pi, to, canR ? 4_ply : 1_ply));
+                    RETURN_CUTOFF (child->searchMove(pi, to, 4_ply));
                 }
             }
         }
@@ -513,7 +510,7 @@ ReturnStatus Node::searchMove(Square from, Square to, Ply R) {
     else if (grandParent) { repetitionHash = RepetitionHash{grandParent->repetitionHash, grandParent->zobrist()}; }
     else { repetitionHash = root.repetitions.repetitionHash(colorToMove()); }
 
-    return parent->negamax(this, R);
+    return parent->negamax(this, parent->inCheck() ? 1_ply : R); // check extension
 }
 
 void Node::failHigh() const {
