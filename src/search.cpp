@@ -360,12 +360,12 @@ ReturnStatus Node::goodNonCaptures(Node* child, Pi pi, Bb moves, Ply R) {
 
         if (bbAttacked().has(to)) {
             if ((OP.attackersTo(~to) & opLessValue).any()) {
-                // skip move if square defended by less valued piece
+                // square defended by less valued opponent's piece
                 continue;
             }
 
-            if ((MY.attackersTo(to) % PiMask{pi}).none()) {
-                // skip move to defended square if nobody else attacks it
+            if (!MY.bbPawnAttacks().has(to) && safeForOp(to)) {
+                // skip move to the defended square
                 continue;
             }
         }
