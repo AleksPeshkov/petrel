@@ -160,7 +160,7 @@ void UciSearchLimits::setSearchDeadline(bool extraTime) {
     deadline_ = averageTimePerMove * HardDeadline / AverageScale;
 
     //preserve more for sudden death time control
-    auto maxTimePerMove = inc > 0ms || movestogo_ == 1 ? time : time / 2;
+    auto maxTimePerMove = inc > 0ms || movestogo_ == 1 ? time * 3 / 5 - 1ms: time / 2;
     maxTimePerMove = std::max(TimeInterval{0}, maxTimePerMove - moveOverhead);
 
     // maximum thinking time
