@@ -12,23 +12,6 @@ public:
 };
 
 namespace {
-    istream& operator >> (istream& in, TimeInterval& timeInterval) {
-        unsigned long msecs;
-        if (in >> msecs) {
-            timeInterval = duration_cast<TimeInterval>(milliseconds{msecs} );
-        }
-        return in;
-    }
-
-    io::ostream& operator << (io::ostream& out, const TimeInterval& timeInterval) {
-        return out << duration_cast<milliseconds>(timeInterval).count();
-    }
-
-    template <typename nodes_type, typename duration_type>
-    constexpr nodes_type nps(nodes_type nodes, duration_type duration) {
-        return (nodes * duration_type::period::den) / (static_cast<nodes_type>(duration.count()) * duration_type::period::num);
-    }
-
     template <typename T>
     static T mebi(T bytes) { return bytes / (1024 * 1024); }
 
@@ -38,14 +21,43 @@ namespace {
 
 Uci::Uci(ostream &o) :
     root{*this},
-    inputLine{std::string(1024, '\0')}, // preallocate 1024 bytes
-    out{o}
+    inputLine{std::string(1024, '\0')}, // preallocate 1024 bytes (~100 full moves)
+    out{o},
+    bestmove_(32, '\0')
 {
+    bestmove_.clear();
     ucinewgame();
 }
 
+void Uci::output(const std::string& message) const {
+    {
+        std::lock_guard<decltype(outMutex)> lock{outMutex};
+        out << message << std::endl;
+    }
+#ifndef NDEBUG
+    log(message);
+#endif
+}
+
+void Uci::log(const std::string& message) const {
+    if (!logFile.is_open()) { return; }
+
+    {
+        std::lock_guard<decltype(logMutex)> lock{logMutex};
+        logFile << message << std::endl;
+
+        // recover if the logFile is in a bad state
+        if (!logFile) {
+            logFile.clear();
+            logFile.close();
+            logFile.open(logFileName, std::ios::app);
+            logFile << "#logFile recovered from a bad state" << std::endl;
+        }
+    }
+}
+
 void Uci::processInput(istream& in) {
-    std::string currentLine(1024, '\0'); // preallocate 1024 bytes
+    std::string currentLine(1024, '\0'); // preallocate 1024 bytes (~100 full moves)
     while (std::getline(in, currentLine)) {
 
 #ifndef NDEBUG
@@ -66,8 +78,8 @@ void Uci::processInput(istream& in) {
         else if (consume("ucinewgame")){ ucinewgame(); }
         else if (consume("uci"))       { uciok(); }
         else if (consume("perft"))     { goPerft(); }
-        else if (consume("quit"))      { break; }
-        else if (consume("exit"))      { break; }
+        else if (consume("quit"))      { stop(); break; }
+        else if (consume("exit"))      { stop(); break; }
 
         if (hasMoreInput()) {
             std::string unparsedInput;
@@ -77,11 +89,6 @@ void Uci::processInput(istream& in) {
             log(currentLine + "\n#unparsed input->" + unparsedInput);
         }
     }
-}
-
-void Uci::ucinewgame() {
-    root.newGame();
-    root.setStartpos();
 }
 
 void Uci::uciok() const {
@@ -200,12 +207,19 @@ void Uci::setHash() {
     root.setHash(quantity);
 }
 
+void Uci::ucinewgame() {
+    root.newGame();
+    root.setStartpos();
+}
+
 void Uci::position() {
     if (!hasMoreInput()) {
         Output ob{this};
         info_fen(ob);
         return;
     }
+
+    mainSearchThread.waitReady();
 
     if (consume("startpos")) { root.setStartpos(); }
     if (consume("fen")) { root.readFen(inputLine); }
@@ -215,42 +229,75 @@ void Uci::position() {
 }
 
 void Uci::go() {
-    root.limits.clear();
-    {
-        auto whiteSide = root.sideOf(White);
-        auto blackSide = root.sideOf(Black);
+    root.limits.go(inputLine, root.sideOf(White));
+    if (consume("searchmoves")) { root.limitMoves(inputLine); }
 
-        while (inputLine >> std::ws, !inputLine.eof()) {
-            if      (consume("depth"))    { inputLine >> root.limits.depth; }
-            else if (consume("nodes"))    { inputLine >> root.limits.nodes; }
-            else if (consume("movetime")) { inputLine >> root.limits.movetime; }
-            else if (consume("wtime"))    { inputLine >> root.limits.time[whiteSide]; }
-            else if (consume("btime"))    { inputLine >> root.limits.time[blackSide]; }
-            else if (consume("winc"))     { inputLine >> root.limits.inc[whiteSide]; }
-            else if (consume("binc"))     { inputLine >> root.limits.inc[blackSide]; }
-            else if (consume("movestogo")){ inputLine >> root.limits.movestogo; }
-            else if (consume("mate"))     { inputLine >> root.limits.mate; } // TODO: implement mate in n moves
-            else if (consume("ponder"))   { root.limits.ponder = true; }
-            else if (consume("infinite")) { root.limits.infinite = true; }
-            else if (consume("searchmoves")) { root.limitMoves(inputLine); }
-            else { io::fail(inputLine); return; }
-        }
-
-    }
-    root.limits.setSearchDeadline();
-
-    mainSearchThread.start([this] {
+    auto started = mainSearchThread.start([this] {
         Node{root}.searchRoot();
         bestmove();
     });
+    if (!started) {
+        log("#Search not started");
+        bestmove();
+    }
+    std::this_thread::yield();
+}
+
+void Uci::bestmove() {
+    io::ostringstream o;
+    o << "info"; nps(o) << root.pvScore << " pv" << root.pvMoves;
+    output(o.str());
+
+    o.str("");
+    o << "bestmove " << root.pvMoves[0];
+    if (root.limits.canPonder && root.pvMoves[1]) {
+        o << " ponder " << root.pvMoves[1];
+    }
+
+    std::string sBestmove{o.str()};
+    {
+        std::lock_guard<decltype(bestmoveMutex)> lock{bestmoveMutex};
+        if (root.limits.shouldDelayBestmove()) {
+            bestmove_ = sBestmove;
+            return;
+        }
+    }
+
+    output(sBestmove);
+    root.limits.clear();
+}
+
+void Uci::stop() {
+    root.limits.stop();
+
+    {
+        std::lock_guard<decltype(bestmoveMutex)> lock{bestmoveMutex};
+        if (!bestmove_.empty()) {
+            output(bestmove_);
+            bestmove_.clear();
+            root.limits.clear();
+            return;
+        }
+    }
+    std::this_thread::yield();
 }
 
 void Uci::ponderhit() {
     root.limits.ponderhit();
+
+    {
+        std::lock_guard<decltype(bestmoveMutex)> lock{bestmoveMutex};
+        if (!bestmove_.empty()) {
+            output(bestmove_);
+            bestmove_.clear();
+            root.limits.clear();
+            return;
+        }
+    }
+    std::this_thread::yield();
 }
 
 void Uci::goPerft() {
-
     Ply depth;
     inputLine >> depth;
     depth = std::min<Ply>(depth, {18}); // current Tt implementation limit
@@ -262,17 +309,18 @@ void Uci::goPerft() {
     } );
 }
 
-void Uci::readyok() const {
-    if (isStopped()) {
-        mainSearchThread.waitReady();
-    }
+void Uci::info_perft_bestmove() {
+    Output ob{this};
+    info_nps(ob);
+    ob << "bestmove 0000";
+    root.limits.clear();
+}
 
-    {
-        Output ob{this};
-        info_fen(ob) << '\n';
-        info_nps(ob);
-        ob << "readyok";
-    }
+void Uci::readyok() const {
+    Output ob{this};
+    info_fen(ob) << '\n';
+    info_nps(ob);
+    ob << "readyok";
 }
 
 ostream& Uci::nps(ostream& o) const {
@@ -282,7 +330,7 @@ ostream& Uci::nps(ostream& o) const {
 
     o << " nodes " << lastInfoNodes;
 
-    auto elapsedTime = ::elapsedSince(root.limits.searchStartTime);
+    auto elapsedTime = root.limits.elapsedSinceStart();
     if (elapsedTime >= 1ms) {
         o << " time " << elapsedTime << " nps " << ::nps(lastInfoNodes, elapsedTime);
     }
@@ -311,15 +359,6 @@ ostream& Uci::info_fen(ostream& o) const {
     return o;
 }
 
-void Uci::bestmove() const {
-    Output ob{this};
-    ob << "info"; nps(ob) << root.pvScore << " pv" << root.pvMoves << '\n';
-    ob << "bestmove " << root.pvMoves[0];
-    if (root.limits.canPonder && root.pvMoves[1]) {
-        ob << " ponder " << root.pvMoves[1];
-    }
-}
-
 void Uci::info_iteration(Ply draft) const {
     Output ob{this};
     ob << "info depth " << draft; nps(ob);
@@ -337,47 +376,5 @@ void Uci::info_perft_depth(Ply draft, node_count_t perft) const {
 
 void Uci::info_perft_currmove(int moveCount, const UciMove& currentMove, node_count_t perft) const {
     Output ob{this};
-    ob << "info currmovenumber " << moveCount << " currmove " << currentMove << " perft " << perft;
-    nps(ob);
-}
-
-void Uci::info_perft_bestmove() const {
-    Output ob{this};
-    info_nps(ob);
-    ob << "bestmove 0000";
-}
-
-void Uci::output(const std::string& message) const {
-    if (message.empty()) { return; }
-
-    {
-        std::lock_guard<decltype(mutex)> lock{mutex};
-        out << message << std::endl;
-
-#ifndef NDEBUG
-        if (logFile.is_open()) { _log(message); }
-#endif
-
-    }
-}
-
-void Uci::log(const std::string& message) const {
-    if (message.empty() || !logFile.is_open()) { return; }
-
-    {
-        std::lock_guard<decltype(mutex)> lock{mutex};
-        _log(message);
-    }
-}
-
-void Uci::_log(const std::string& message) const {
-    logFile << message << std::endl;
-
-    // recover if the logFile is in a bad state
-    if (!logFile) {
-        logFile.clear();
-        logFile.close();
-        logFile.open(logFileName, std::ios::app);
-        logFile << "#logFile recovered from a bad state" << std::endl;
-    }
+    ob << "info currmovenumber " << moveCount << " currmove " << currentMove << " perft " << perft; nps(ob);
 }

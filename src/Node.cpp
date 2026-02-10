@@ -34,21 +34,26 @@ Node::Node (Node* n) :
 {}
 
 ReturnStatus Node::searchRoot() {
-    root.newSearch();
-    root.nodeCounter = { root.limits.nodes };
-
     auto rootMovesClone = moves();
     repMask = root.repetitions.repMask(colorToMove());
     origin = root.tt.prefetch<TtSlot>(zobrist());
 
-    if (root.limits.iterationDeadlineReached()) {
+    if (root.limits.isIterationDeadline()) {
         // we have no time to search, return TT move immediately if found
         ++root.tt.reads;
         ttSlot = *origin;
         isHit = (ttSlot == zobrist());
-        if (isHit) {
+        if (!isHit) {
+            io::log("#no time, no TT record found");
+        } else {
             Move ttMove = {ttSlot};
-            if (isLegalMove(ttMove)) {
+            if (!isLegalMove(ttMove)) {
+                if (Move{ttSlot}) {
+                    io::log("#no time, illegal TT move");
+                } else {
+                    io::log("#no time, TT null move found");
+                }
+            } else {
                 if (root.limits.canPonder) {
                     Node node{this};
                     const auto child = &node;
@@ -73,6 +78,7 @@ ReturnStatus Node::searchRoot() {
                 ++root.tt.hits;
                 root.pvScore = ttSlot.score(ply);
                 root.pvMoves.set(0, uciMove(ttMove));
+                io::log("#no time, return move from TT");
                 return ReturnStatus::Stop;
             }
         }
@@ -91,11 +97,7 @@ ReturnStatus Node::searchRoot() {
 
         root.uci.info_iteration(draft);
 
-        if (root.limits.iterationDeadlineReached()) { return ReturnStatus::Stop; }
-    }
-
-    if (root.limits.infinite || root.limits.ponder) {
-        root.uci.waitStop();
+        if (root.limits.isIterationDeadline()) { return ReturnStatus::Stop; }
     }
 
     return ReturnStatus::Continue;
@@ -162,6 +164,10 @@ ReturnStatus Node::negamax(Node* child) {
         }
     }
 
+    if (ply == 0 && root.limits.isRootMoveDeadline()) {
+        return ReturnStatus::Stop;
+    }
+
     // set window for the next move search
     child->alpha = -beta;
     child->beta = -alpha;
@@ -183,7 +189,6 @@ ReturnStatus Node::updatePv() {
     if (ply == 0) {
         root.pvScore = score;
         root.uci.info_pv(draft);
-        if (root.limits.updatePvDeadlineReached()) { return ReturnStatus::Stop; }
     }
     return ReturnStatus::Continue;
 }

@@ -22,14 +22,14 @@ void NodeRoot::newIteration() {
 }
 
 ReturnStatus NodeRoot::countNode() {
-    return nodeCounter.count(root);
+    return nodeCounter.count(root.limits);
 }
 
-ReturnStatus NodeCounter::count(NodeRoot& root) {
+ReturnStatus NodeCounter::count(UciSearchLimits& limits) {
     assertOk();
 
     if (nodesQuota == 0) {
-        return refreshQuota(root);
+        return refreshQuota(limits);
     }
 
     assert (nodesQuota > 0);
@@ -39,7 +39,7 @@ ReturnStatus NodeCounter::count(NodeRoot& root) {
     return ReturnStatus::Continue;
 }
 
-ReturnStatus NodeCounter::refreshQuota(NodeRoot& root) {
+ReturnStatus NodeCounter::refreshQuota(UciSearchLimits& limits) {
     assertOk();
     assert (nodesQuota == 0);
     //nodes -= nodesQuota;
@@ -56,7 +56,7 @@ ReturnStatus NodeCounter::refreshQuota(NodeRoot& root) {
         }
     }
 
-    if (root.uci.isStopped()) {
+    if (limits.isStopped()) {
         nodesLimit = nodes;
         nodesQuota = 0;
 
@@ -64,8 +64,7 @@ ReturnStatus NodeCounter::refreshQuota(NodeRoot& root) {
         return ReturnStatus::Stop;
     }
 
-    if (root.limits.hardDeadlineReached()) {
-        root.uci.stop();
+    if (limits.isHardDeadline()) {
         nodesLimit = nodes;
         nodesQuota = 0;
 
