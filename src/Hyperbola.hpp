@@ -1,6 +1,7 @@
 #ifndef HYPERBOLA_HPP
 #define HYPERBOLA_HPP
 
+#include <type_traits>
 #include "BitArray128.hpp"
 #include "Bb.hpp"
 
@@ -23,14 +24,15 @@ constexpr vu8x16_t byteSwap(vu8x16_t v) {
 }
 
 constexpr vu64x2_t bitReverse(vu64x2_t v) {
-    #if defined(__aarch64__) || defined(_M_ARM64)
-        // Fast path: ARM64 rbit
-        alignas(16) uint64_t parts[2];
-        memcpy(parts, &v, sizeof(parts));
-        return vu64x2_t{ __rbit64(parts[1]), __rbit64(parts[0]) };
-    #else
+#ifdef __aarch64__
+    if (std::is_constant_evaluated()) {
         return byteSwap(bitSwap(v));
-    #endif
+    } else {
+        return { __builtin_arm_rbit64(v[1]), __builtin_arm_rbit64(v[0]) };
+    }
+#else
+    return byteSwap(bitSwap(v));
+#endif
 }
 
 //TRICK: Square operator~ is different
