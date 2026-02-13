@@ -142,11 +142,12 @@ void UciSearchLimits::newSearch() {
     timePool_ = UnlimitedTime;
     timeControl_ = ExactTime;
     easyMove_ = UciMove{};
+    iterLowMaterialBonus_ = 0;
 
     maxDepth_ = MaxPly;
 }
 
-void UciSearchLimits::setSearchDeadlines() {
+void UciSearchLimits::setSearchDeadlines(const Position* p) {
     if (movetime_ > 0ms) {
         timePool_ = movetime_;
         timeControl_ = ExactTime;
@@ -160,6 +161,10 @@ void UciSearchLimits::setSearchDeadlines() {
         return;
     }
 
+    // [0..6] startpos = 6, queens exchanged = 4, R vs R endgame = 1
+    int gamePhase = p ? p->gamePhase() : 4;
+    iterLowMaterialBonus_ = 4 - std::clamp(gamePhase, 1, 5);
+
     // HardMove or HardDeadline may spend more than average move time
     auto optimumTime = averageMoveTime(Side{My}) + (canPonder_ ? averageMoveTime(Side{Op}) / 2 : 0ms);
 
@@ -169,15 +174,17 @@ void UciSearchLimits::setSearchDeadlines() {
     optimumTime *= static_cast<int>(HardMove) * HardDeadline;
     optimumTime /= static_cast<int>(NormalMove) * AverageTimeScale;
 
-    // can spend 1/2 of all remaining time (including future time increments)
-    auto maximumTime = lookAheadTime(Side{My}) / 2;
+    // can spend 1/4..1/2 of all remaining time (including future time increments)
+    auto totalRatio = 6 - std::clamp(gamePhase, 2, 4); // 2..4
+    auto maximumTime = lookAheadTime(Side{My}) * totalRatio / 8;
+
     maximumTime = std::clamp(maximumTime, TimeInterval{0}, time_[Side{My}] * 63/64 - moveOverhead_);
 
     timePool_ = std::clamp(optimumTime - moveOverhead_, TimeInterval{0}, maximumTime);
     timeControl_ = EasyMove;
 }
 
-istream& UciSearchLimits::go(istream& in, Side white) {
+istream& UciSearchLimits::go(istream& in, Side white, const Position* p) {
     const Side black{~white};
     while (in >> std::ws, !in.eof()) {
         if      (io::consume(in, "depth"))    { in >> maxDepth_; }
@@ -194,7 +201,7 @@ istream& UciSearchLimits::go(istream& in, Side white) {
         else { break; }
     }
 
-    setSearchDeadlines();
+    setSearchDeadlines(p);
     return in;
 }
 
@@ -490,7 +497,7 @@ void Uci::go() {
     debugGo = inputLine.str();
 #endif
 
-    limits.go(inputLine, position_.sideOf(White));
+    limits.go(inputLine, position_.sideOf(White), &position_);
     if (consume("searchmoves")) { position_.limitMoves(inputLine); }
 
     auto started = mainSearchThread.start([this] {
