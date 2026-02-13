@@ -313,14 +313,14 @@ ReturnStatus Node::searchMoves() {
         for (Square from : MY.bbPawns()) {
             Pi pi = MY.piAt(from);
             for (Square to : bbMovesOf(pi)) {
-                RETURN_CUTOFF (child->searchMove(from, to, 3_ply));
+                RETURN_CUTOFF (child->searchMove(from, to, 4_ply));
             }
         }
 
         // king quiet moves (always safe), castling is a rook move
         if (!canP2 || movesMade() == 0) { // weak move pruning
             for (Square to : bbMovesOf(Pi{TheKing})) {
-                RETURN_CUTOFF (child->searchMove(Pi{TheKing}, to, 3_ply));
+                RETURN_CUTOFF (child->searchMove(Pi{TheKing}, to, 4_ply));
             }
         }
 
@@ -328,7 +328,7 @@ ReturnStatus Node::searchMoves() {
         for (PiMask pieces = MY.officers(); pieces.any(); ) {
             Pi pi = pieces.piLeastValuable(); pieces -= pi;
             for (Square to : bbMovesOf(pi) & ~OP.bbSide()) {
-                RETURN_CUTOFF (child->searchMove(pi, to, 3_ply));
+                RETURN_CUTOFF (child->searchMove(pi, to, 4_ply));
             }
         }
 
@@ -337,7 +337,7 @@ ReturnStatus Node::searchMoves() {
             for (PiMask pieces = MY.officers(); pieces.any(); ) {
                 Pi pi = pieces.piLeastValuable(); pieces -= pi;
                 for (Square to : bbMovesOf(pi)) {
-                    RETURN_CUTOFF (child->searchMove(pi, to, 4_ply));
+                    RETURN_CUTOFF (child->searchMove(pi, to, 6_ply));
                 }
             }
         }
