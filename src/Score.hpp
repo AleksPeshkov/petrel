@@ -135,7 +135,7 @@ public:
             unsigned knights:4; // number of knights
             unsigned pawns:4;   // number of pawns
 
-            unsigned piecesMat:8; // sum of non pawn pieces material points (pawn = 1)
+            unsigned officers:8; // sum of Q = 10, R = 5, B/N = 3 (startpos total PieceMatMax = 32)
             unsigned totalMat:8;  // sum of all pieces material points (pawn = 1)
         } s;
         u64_t v;
@@ -159,13 +159,13 @@ public:
 
         constexpr u16_t openingMat[] = { 1025, 477, 365, 337, 82, 100 }; // PeSTO piece opening values
         constexpr u16_t endgameMat[] = { 936, 512, 297, 281, 94, 100 }; // PeSTO piece endgame values
-        constexpr u8_t piecesMat[] = { 10, 5, 3, 3, 0, 0 }; // for game phase, total sum is 32
-        constexpr u8_t totalMat[]  = { 12, 6, 4, 4, 1, 0 }; // for exchange evaluations
-        constexpr u8_t queens[]    = {  1, 0, 0, 0, 0, 0 };
-        constexpr u8_t rooks[]     = {  0, 1, 0, 0, 0, 0 };
-        constexpr u8_t bishops[]   = {  0, 0, 1, 0, 0, 0 };
-        constexpr u8_t knights[]   = {  0, 0, 0, 1, 0, 0 };
-        constexpr u8_t pawns[]     = {  0, 0, 0, 0, 1, 0 };
+        constexpr u8_t officers[] = { 10, 5, 3, 3, 0, 0 }; // for game phase, total sum is 32
+        constexpr u8_t totalMat[] = { 12, 6, 4, 4, 1, 0 }; // for capture exchange evaluation
+        constexpr u8_t queens[]   = {  1, 0, 0, 0, 0, 0 };
+        constexpr u8_t rooks[]    = {  0, 1, 0, 0, 0, 0 };
+        constexpr u8_t bishops[]  = {  0, 0, 1, 0, 0, 0 };
+        constexpr u8_t knights[]  = {  0, 0, 0, 1, 0, 0 };
+        constexpr u8_t pawns[]    = {  0, 0, 0, 0, 1, 0 };
 
         constexpr i16_t openingPst[PieceType::Size][Square::Size] = {
             { // Queen
@@ -301,7 +301,7 @@ public:
 
                     queens[ty], rooks[ty], bishops[ty], knights[ty], pawns[ty],
 
-                    piecesMat[ty], totalMat[ty],
+                    officers[ty], totalMat[ty],
                 }};
             }
         }
@@ -327,7 +327,7 @@ public:
 
     // PeSTO position static evaluation
     static auto evaluate(const Evaluation& my, const Evaluation& op) {
-        return (my.v.score(my.v.s.piecesMat) - op.v.score(op.v.s.piecesMat)) / PieceSquareTable::PieceMatMax;
+        return (my.v.score(my.v.s.officers) - op.v.score((op.v.s.officers))) / PieceSquareTable::PieceMatMax;
     }
 
     void drop(PieceType ty, Square t) { to(ty, t); }
@@ -366,21 +366,14 @@ public:
         }
     }
 
-    // 10, 5, 3, 3, 0
-    constexpr int piecesMat() const {
-        return v.s.piecesMat;
-    }
-
-    // 12, 6, 4, 4, 1
-    constexpr int material() const {
-        return v.s.totalMat;
-    }
-
     // any queen, rook or pawn
     constexpr bool hasMatingPieces() const {
         return (v.s.queens | v.s.rooks | v.s.pawns) != 0;
     }
 
+    constexpr bool canNullMove() const {
+        return v.s.officers > 0;
+    }
 };
 
 #endif
