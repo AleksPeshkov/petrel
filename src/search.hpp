@@ -134,6 +134,7 @@ protected:
     }
 
     void makeMove(Square from, Square to);
+    Ply depthReductionFactor(Ply R) const;
 
     constexpr bool isPv() const { return pvAncestor == ply; }
     constexpr bool isCutNode() const { return (ply - pvAncestor) & 1; }

@@ -513,7 +513,23 @@ ReturnStatus Node::searchMove(Square from, Square to, Ply R) {
     else if (grandParent) { repetitionHash = RepetitionHash{grandParent->repetitionHash, grandParent->zobrist()}; }
     else { repetitionHash = root.repetitions.repetitionHash(colorToMove()); }
 
-    return parent->negamax(parent->inCheck() ? 1_ply : R); // check extension
+    R = parent->depthReductionFactor(R);
+    return parent->negamax(R);
+}
+
+Ply Node::depthReductionFactor(Ply R) const {
+    if (R <= 1) { return R; }
+
+    if (inCheck()) {
+        return 1_ply; // check extension
+    }
+
+    if (depth >= 2 && R >= depth) {
+        // avoid immediate standpat in QS (except for NMP)
+        return Ply{depth - 1}; // set child->depth = 1
+    }
+
+    return R;
 }
 
 void Node::failHigh() const {
