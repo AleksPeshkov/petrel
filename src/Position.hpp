@@ -104,6 +104,9 @@ public:
     // make move directly inside position itself
     void makeMove(Square, Square);
 
+    // [0..6] startpos = 6, queens exchanged = 4, R vs R endgame = 1
+    auto gamePhase() const { return Evaluation::gamePhase(MY.evaluation(), OP.evaluation()); }
+
 // initial position setup in class UciPosition
 
     bool dropValid(Side, PieceType, Square);

@@ -20,7 +20,10 @@ bool UciSearchLimits::reached() const {
 
     auto timePool = timePool_;
     if (timeControl_ != ExactTime) {
-        timePool *= static_cast<int>(timeControl_) * Deadline;
+        int deadlineRatio = Deadline;
+        if (Deadline == IterationDeadline) { deadlineRatio += iterLowMaterialBonus_; }
+
+        timePool *= static_cast<int>(timeControl_) * deadlineRatio;
         timePool /= static_cast<int>(HardMove) * HardDeadline;
     }
 

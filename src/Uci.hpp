@@ -38,6 +38,10 @@ class UciSearchLimits {
     // maximum move thinking time
     TimeInterval timePool_{UnlimitedTime};
 
+    // iteration time low material bonus -10% | 0 | +10% | 20% | 30%
+    // less pieces remain: the better BF, the less time to finish iteration needed
+    int iterLowMaterialBonus_{0};
+
     Side::arrayOf<TimeInterval> time_{ 0ms, 0ms };
     Side::arrayOf<TimeInterval> inc_{ 0ms, 0ms };
     TimeInterval movetime_{0ms};
@@ -66,7 +70,7 @@ class UciSearchLimits {
         return lookAheadTime(si) / lookAheadMoves();
     }
 
-    void setSearchDeadlines();
+    void setSearchDeadlines(const Position* = nullptr);
 
     ReturnStatus refreshQuota() const;
     bool isStopped() const { return timeout_.load(std::memory_order_seq_cst); }
@@ -110,7 +114,7 @@ public:
 
 // called from the Uci input handling thread:
 
-    istream& go(istream&, Side);
+    istream& go(istream&, Side, const Position* = nullptr);
     void stop();
     void ponderhit();
 
