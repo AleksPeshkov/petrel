@@ -366,6 +366,12 @@ public:
     constexpr bool canNullMove() const {
         return v_.s.officers > 0;
     }
+
+    // [0..6] startpos = 6, queens exchanged = 4, R vs R endgame = 1
+    static constexpr int gamePhase(Evaluation my, Evaluation op) {
+        auto phase = (my.v_.s.officers + op.v_.s.officers) / 12;
+        return std::min(phase, 6);
+    }
 };
 
 #endif
