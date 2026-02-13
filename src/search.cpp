@@ -214,7 +214,7 @@ ReturnStatus Node::search() {
         && !isPv
         && Score{MinEval} <= beta && beta <= eval
         && depth >= 2 // overhead higher then gain at very low depth
-        && MY.evaluation().piecesMat() > 0 // no null move if only pawns left (zugzwang)
+        && MY.evaluation().canNullMove() // avoid null move in late endgame
     ) {
         canBeKiller = false;
         RETURN_CUTOFF (child->searchNullMove(3 + depth/6));
