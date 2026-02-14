@@ -248,8 +248,10 @@ ReturnStatus Node::searchMoves() {
     }
 
     {
-        // Weak Move Pruning: !inCheck() && !isPv() && depth <= 2
-        bool canP = !inCheck() && !isPv() && depth <= 2;
+        // Weak Move Pruning: !inCheck() && !isPv()
+        bool canP1 = !inCheck() && !isPv() && depth <= 1;
+        bool canP2 = !inCheck() && !isPv() && depth <= 2;
+        bool canP4 = !inCheck() && !isPv() && depth <= 4;
 
         {
             // going to search only non-captures, mask out remaining unsafe captures to avoid redundant safety checks
@@ -294,9 +296,11 @@ ReturnStatus Node::searchMoves() {
             }
 
             // safe officers moves
-            while (safePieces.any()) {
-                Pi pi = safePieces.piLeastValuable(); safePieces -= pi;
-                RETURN_CUTOFF (goodNonCaptures(pi, bbMovesOf(pi) % badSquares, 3_ply));
+            if (!canP1 || movesMade() == 0) { // weak move pruning
+                while (safePieces.any()) {
+                    Pi pi = safePieces.piLeastValuable(); safePieces -= pi;
+                    RETURN_CUTOFF (goodNonCaptures(pi, bbMovesOf(pi) % badSquares, 3_ply));
+                }
             }
         }
 
@@ -306,29 +310,12 @@ ReturnStatus Node::searchMoves() {
         for (Square from : MY.bbPawns()) {
             Pi pi = MY.piAt(from);
             for (Square to : bbMovesOf(pi)) {
-                RETURN_CUTOFF (child->searchMove(pi, to, 4_ply));
-            }
-        }
-
-        // push to Rank7 extension
-        for (Square from : MY.bbPawns() & Bb{Rank6}) {
-            Pi pi = MY.piAt(from);
-            Square to{File{from}, Rank7};
-            if (bbMovesOf(pi).has(to)) {
-                RETURN_CUTOFF (child->searchMove(pi, to, 1_ply));
-            }
-        }
-
-        // pawn pushes from most Rank5 to to Rank2
-        for (Square from : MY.bbPawns() % (Bb{Rank6} | Bb{Rank7})) {
-            Pi pi = MY.piAt(from);
-            for (Square to : bbMovesOf(pi)) {
-                RETURN_CUTOFF (child->searchMove(pi, to, 3_ply));
+                RETURN_CUTOFF (child->searchMove(from, to, 3_ply));
             }
         }
 
         // king quiet moves (always safe), castling is a rook move
-        if (!canP || movesMade() == 0) { // weak move pruning
+        if (!canP2 || movesMade() == 0) { // weak move pruning
             for (Square to : bbMovesOf(Pi{TheKing})) {
                 RETURN_CUTOFF (child->searchMove(Pi{TheKing}, to, 3_ply));
             }
@@ -337,17 +324,15 @@ ReturnStatus Node::searchMoves() {
         // unsafe (losing) captures (N/B, R, Q order)
         for (PiMask pieces = MY.officers(); pieces.any(); ) {
             Pi pi = pieces.piLeastValuable(); pieces -= pi;
-
             for (Square to : bbMovesOf(pi) & ~OP.bbSide()) {
                 RETURN_CUTOFF (child->searchMove(pi, to, 3_ply));
             }
         }
 
         // unsafe (losing) non-captures (N/B, R, Q order)
-        if (!canP || movesMade() == 0) { // weak move pruning
+        if (!canP4 || movesMade() == 0) { // weak move pruning
             for (PiMask pieces = MY.officers(); pieces.any(); ) {
                 Pi pi = pieces.piLeastValuable(); pieces -= pi;
-
                 for (Square to : bbMovesOf(pi)) {
                     RETURN_CUTOFF (child->searchMove(pi, to, 4_ply));
                 }
