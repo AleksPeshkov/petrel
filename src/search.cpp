@@ -272,85 +272,89 @@ ReturnStatus Node::search() {
         RETURN_CUTOFF (child->searchIfPossible(parent->killer[2]));
     }
 
-    // Weak Move Pruning: !inCheck() && !isPv() && depth <= 2
-    bool canP = !inCheck() && !isPv() && depth <= 2_ply;
+    do {
+        // going to search only non-captures, mask out remaining unsafe captures to avoid redundant safety checks
+        //TRICK: ~ is not a negate bitwise operation but byteswap -- flip opponent's bitboard
+        Bb bbAvoid = ~(OP.bbPawnAttacks() | OP.bbSide());
+        PiMask safePieces = {}; // pieces on safe squares
 
-    // going to search only non-captures, mask out remaining unsafe captures to avoid redundant safety checks
-    //TRICK: ~ is not a negate bitwise operation but byteswap -- flip opponent's bitboard
-    Bb bbAvoid = ~(OP.bbPawnAttacks() | OP.bbSide());
-    PiMask safePieces = {}; // pieces on safe squares
+        // officers (Q, R, B/N order) moves from unsafe to safe squares
+        for (Pi pi : MY.officers()) {
+            Square from = MY.sq(pi);
 
-    // officers (Q, R, B/N order) moves from unsafe to safe squares
-    for (Pi pi : MY.officers()) {
-        Square from = MY.sq(pi);
-
-        if (!bbAttacked().has(from)) {
-            // piece is not attacked at all
-            safePieces += pi;
-            continue;
-        }
-
-        assert (OP.attackersTo(~from).any());
-
-        // attacked by more valuable attacker
-        if (OP.attackersTo(~from).none(OP.lessOrEqualValue(MY.typeOf(pi)))) {
-            if (MY.bbPawnAttacks().has(from) || safeForMe(from)) {
-                // piece is protected
+            if (!bbAttacked().has(from)) {
+                // piece is not attacked at all
                 safePieces += pi;
                 continue;
             }
-            //TODO: try protecting moves of other pieces
+
+            assert (OP.attackersTo(~from).any());
+
+            if (OP.attackersTo(~from).none(OP.lessOrEqualValue(MY.typeOf(pi)))) {
+                // attacked by more valuable attacker
+
+                if (MY.bbPawnAttacks().has(from) || safeForMe(from)) {
+                    // piece is protected
+                    safePieces += pi;
+                    continue;
+                }
+                //TODO: try protecting moves of other pieces
+            }
+
+            RETURN_CUTOFF (goodNonCaptures(pi, bbMovesOf(pi) % bbAvoid, 2_ply));
         }
 
-        RETURN_CUTOFF (goodNonCaptures(pi, bbMovesOf(pi) % bbAvoid, 2_ply));
-    }
-
-    // safe passed pawns moves
-    for (Square from : bbPassedPawns() % Bb{Rank7}) {
-        Pi pi = MY.pi(from);
-        for (Square to : bbMovesOf(pi)) {
-            if (MY.bbPawnAttacks().has(to) || !safeForOp(to)) {
-                RETURN_CUTOFF (child->searchMove(from, to, from.on(Rank6) ? 1_ply : 2_ply));
+        // safe passed pawns moves
+        for (Square from : bbPassedPawns() % Bb{Rank7}) {
+            Pi pi = MY.pi(from);
+            for (Square to : bbMovesOf(pi)) {
+                if (MY.bbPawnAttacks().has(to) || !safeForOp(to)) {
+                    RETURN_CUTOFF (child->searchMove(from, to, from.on(Rank6) ? 1_ply : 2_ply));
+                }
             }
         }
-    }
 
-    // safe officers moves
-    while (safePieces.any()) {
-        Pi pi = safePieces.piLast(); safePieces -= pi;
-        RETURN_CUTOFF (goodNonCaptures(pi, bbMovesOf(pi) % bbAvoid, 3_ply));
-    }
+        if (!inCheck() && depth <= 1_ply && (!isPv() || movesMade() > 0)) { break; }
 
-    // all remaining pawn moves
-    // losing queen promotions, all underpromotions
-    // losing passed pawns moves, all non passed pawns moves
-    for (Square from : MY.bbPawns()) {
-        Pi pi = MY.pi(from);
-        for (Square to : bbMovesOf(pi)) {
-            RETURN_CUTOFF (child->searchMove(from, to, 3_ply));
+        // safe officers moves
+        while (safePieces.any()) {
+            Pi pi = safePieces.piLast(); safePieces -= pi;
+            RETURN_CUTOFF (goodNonCaptures(pi, bbMovesOf(pi) % bbAvoid, 3_ply));
         }
-    }
 
-    // king quiet moves (always safe), castling is a rook move
-    if (!canP || movesMade() == 0) { // weak move pruning
-        Pi pi{TheKing};
-        Square from{MY.sqKing()};
-        for (Square to : bbMovesOf(pi)) {
-            RETURN_CUTOFF (child->searchMove(from, to, 3_ply));
+        if (!inCheck() && depth <= 2_ply && (!isPv() || movesMade() > 0)) { break; }
+
+        // king quiet moves (always safe), castling is a rook move
+        {
+            Pi pi{TheKing};
+            Square from{MY.sqKing()};
+            for (Square to : bbMovesOf(pi)) {
+                RETURN_CUTOFF (child->searchMove(from, to, 3_ply));
+            }
         }
-    }
 
-    // unsafe (losing) captures (N/B, R, Q order)
-    for (PiMask pieces = MY.officers(); pieces.any(); ) {
-        Pi pi = pieces.piLast(); pieces -= pi;
-        Square from{MY.sq(pi)};
-        for (Square to : bbMovesOf(pi) & ~OP.bbSide()) {
-            RETURN_CUTOFF (child->searchMove(from, to, 3_ply));
+        // all remaining pawn moves
+        // losing queen promotions, all underpromotions
+        // losing passed pawns moves, all non passed pawns moves
+        for (Square from : MY.bbPawns()) {
+            Pi pi = MY.pi(from);
+            for (Square to : bbMovesOf(pi)) {
+                RETURN_CUTOFF (child->searchMove(from, to, 3_ply));
+            }
         }
-    }
 
-    // unsafe (losing) non-captures (N/B, R, Q order)
-    if (!canP || movesMade() == 0) { // weak move pruning
+        // unsafe (losing) captures (N/B, R, Q order)
+        for (PiMask pieces = MY.officers(); pieces.any(); ) {
+            Pi pi = pieces.piLast(); pieces -= pi;
+            Square from{MY.sq(pi)};
+            for (Square to : bbMovesOf(pi) & ~OP.bbSide()) {
+                RETURN_CUTOFF (child->searchMove(from, to, 3_ply));
+            }
+        }
+
+        if (!inCheck() && depth <= 4_ply && (!isPv() || movesMade() > 0)) { break; }
+
+        // unsafe (losing) non-captures (N/B, R, Q order)
         for (PiMask pieces = MY.officers(); pieces.any(); ) {
             Pi pi = pieces.piLast(); pieces -= pi;
             Square from{MY.sq(pi)};
@@ -358,9 +362,14 @@ ReturnStatus Node::search() {
                 RETURN_CUTOFF (child->searchMove(from, to, 4_ply));
             }
         }
-    }
+    } while (false);
 
     if (bound == FailLow) {
+        if (movesMade() == 0) {
+            assert (currentMove.none());
+            score = alpha;
+            return ReturnStatus::Continue;
+        }
         // fail low, no good move found, write back previous TT move if any
         currentMove = ttMove();
         *tt = TtSlot(this);
