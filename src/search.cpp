@@ -295,19 +295,20 @@ ReturnStatus Node::search() {
         RETURN_CUTOFF (goodNonCaptures(pi, bbMovesOf(pi) % bbAvoid, canR ? 2_ply : 1_ply));
     }
 
+    // safe passed pawns moves
+    for (Square from : bbPassedPawns() % Bb{Rank7}) {
+        Pi pi = MY.pi(from);
+        for (Square to : bbMovesOf(pi)) {
+            if (MY.bbPawnAttacks().has(to) || !safeForOp(to)) {
+                RETURN_CUTOFF (child->searchMove(from, to, from.on(Rank6) ? 1_ply : canR ? 2_ply : 1_ply));
+            }
+        }
+    }
+
     // safe officers moves
     while (safePieces.any()) {
         Pi pi = safePieces.piLast(); safePieces -= pi;
         RETURN_CUTOFF (goodNonCaptures(pi, bbMovesOf(pi) % bbAvoid, canR ? 3_ply : 1_ply));
-    }
-
-    // push to Rank7 extension
-    for (Square from : MY.bbPawns() & Bb{Rank6}) {
-        Pi pi = MY.pi(from);
-        Square to{File{from}, Rank7};
-        if (bbMovesOf(pi).has(to)) {
-            RETURN_CUTOFF (child->searchMove(pi, to, 1_ply));
-        }
     }
 
     // all remaining pawn moves

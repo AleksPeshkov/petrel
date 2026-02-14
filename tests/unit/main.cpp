@@ -1,9 +1,16 @@
+#include "TestPassedPawns.hpp"
 #include "TestHyperbola.hpp"
 #include "TestHistoryMoves.hpp"
 #include "TestRepetitions.hpp"
 
+/* mocks */
+
+void io::error(std::string_view) {}
+void io::info(std::string_view) {}
+
 int main() {
     try {
+        TestPassedPawns::test();
         TestHyperbola::test();
         TestHistoryMoves::test();
         TestRepetitions::test();
