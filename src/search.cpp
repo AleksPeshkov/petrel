@@ -283,6 +283,16 @@ ReturnStatus Node::searchMoves() {
                 RETURN_CUTOFF (goodNonCaptures(pi, bbMovesOf(pi) % badSquares, 2_ply));
             }
 
+            // safe passed pawns moves
+            for (Square from : bbPassedPawns() % Bb{Rank7}) {
+                Pi pi = MY.piAt(from);
+                for (Square to : bbMovesOf(pi)) {
+                    if (MY.bbPawnAttacks().has(to) || !safeForOp(to)) {
+                        RETURN_CUTOFF (child->searchMove(from, to, from.on(Rank6) ? 1_ply : 2_ply));
+                    }
+                }
+            }
+
             // safe officers moves
             while (safePieces.any()) {
                 Pi pi = safePieces.piLeastValuable(); safePieces -= pi;
