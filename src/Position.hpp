@@ -113,7 +113,6 @@ class Position {
 
 protected:
     constexpr PositionSide& positionSide(Side side) { return positionSide_[side]; }
-    constexpr const PositionSide& positionSide(Side side) const { return positionSide_[side]; }
 
     // all occupied squares by both sides from the given side point of view
     constexpr const Bb& occupied(Side side) const { return occupied_[side]; }
@@ -170,6 +169,12 @@ public:
 
     bool dropValid(Side, PieceType, Square);
     bool afterDrop();
+
+// needed public for unit tests
+    constexpr const PositionSide& positionSide(Side side) const { return positionSide_[side]; }
+
+    // my passed pawns
+    Bb bbPassedPawns() const;
 };
 
 #endif
