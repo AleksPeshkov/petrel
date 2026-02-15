@@ -45,9 +45,9 @@ class Tt {
     constexpr uintptr_t mask(size_t align) const { return (size_-1) ^ (align-1); }
 
 public:
-    node_count_t reads = 0;
-    node_count_t writes = 0;
-    node_count_t hits = 0;
+    mutable node_count_t reads = 0;
+    mutable node_count_t writes = 0;
+    mutable node_count_t hits = 0;
 
     Tt(size_t n = minSize()) { setSize(n); }
     ~Tt() { free(); }
@@ -63,7 +63,7 @@ public:
     void setSize(size_t bytes) { allocate(bytes); }
     void newGame() { zeroFill(); }
     void newSearch() { reads = 0; writes = 0; hits = 0; }
-    void newIteration() {}
+    void newIteration() const {}
 
     constexpr void* addr(Z z, size_t align) const {
         return static_cast<void*>(static_cast<char*>(memory) + (z & mask(align)));

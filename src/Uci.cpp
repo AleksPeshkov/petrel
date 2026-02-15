@@ -22,6 +22,23 @@ void trimTrailingWhitespace(std::string& str) {
     }
 }
 
+istream& operator >> (istream& in, TimeInterval& timeInterval) {
+    int msecs;
+    if (in >> msecs) {
+        timeInterval = std::chrono::duration_cast<TimeInterval>(std::chrono::milliseconds{msecs} );
+    }
+    return in;
+}
+
+ostream& operator << (ostream& out, const TimeInterval& timeInterval) {
+    return out << std::chrono::duration_cast<std::chrono::milliseconds>(timeInterval).count();
+}
+
+template <typename nodes_type, typename duration_type>
+constexpr nodes_type nps(nodes_type nodes, duration_type duration) {
+    return (nodes * duration_type::period::den) / (static_cast<nodes_type>(duration.count()) * duration_type::period::num);
+}
+
 class Output : public io::ostringstream {
 protected:
     const Uci& uci;
@@ -49,6 +66,10 @@ UciOutput& operator << (UciOutput& out, io::czstring message) {
 
 // convert move to UCI format
 UciOutput& operator << (UciOutput& out, UciMove move) {
+    bool isWhite{out.color() == White};
+    out.flipColor();
+    out << ' ';
+
     if (!move) {
         io::info("illegal move 0000 printed");
         out << "0000";
@@ -58,7 +79,6 @@ UciOutput& operator << (UciOutput& out, UciMove move) {
     Square from{move.from()};
     Square to{move.to()};
 
-    bool isWhite{out.color() == White};
     Square uciFrom{isWhite ? from : ~from};
     Square uciTo{isWhite ? to : ~to};
 
@@ -104,11 +124,15 @@ UciOutput& operator << (UciOutput& out, UciMove move) {
     return out;
 }
 
-UciOutput& operator << (UciOutput& out, const PvMoves& pvMoves) {
-    auto moves = static_cast<const UciMove*>(pvMoves);
+UciOutput& operator << (UciOutput& out, const PrincipalVariation& pv) {
+    out << " depth " << pv.depth();
+    out << pv.score();
     out << " pv";
-    for (UciMove move; (move = *moves++); ) {
-        out << " "; out << move; out.flipColor();
+    {
+        auto moves = pv.moves();
+        for (UciMove move; (move = *moves++); ) {
+            out << move;
+        }
     }
     return out;
 }
@@ -129,6 +153,7 @@ void UciSearchLimits::newSearch() {
     nodes_ = 0;
     nodesLimit_ = NodeCountMax;
     nodesQuota_ = 0;
+    lastInfoNodes_ = 0;
 
     infinite_ = false;
     timeout_.store(false, std::memory_order_seq_cst);
@@ -146,6 +171,10 @@ void UciSearchLimits::newSearch() {
 
     maxDepth_ = MaxPly;
 }
+
+int UciSearchLimits::lookAheadMoves() const { return movestogo_ > 0 ? std::min(movestogo_, 16) : 16; }
+TimeInterval UciSearchLimits::lookAheadTime(Side si) const { return time_[si] + inc_[si] * (lookAheadMoves() - 1); }
+TimeInterval UciSearchLimits::averageMoveTime(Side si) const { return lookAheadTime(si) / lookAheadMoves(); }
 
 void UciSearchLimits::setSearchDeadlines(const Position* p) {
     if (movetime_ > 0ms) {
@@ -217,6 +246,17 @@ void UciSearchLimits::ponderhit() {
     pondering_.store(false, std::memory_order_release);
 }
 
+ostream& UciSearchLimits::info_nps(ostream& out) const {
+    lastInfoNodes_ = getNodes();
+    out << "info nodes " << lastInfoNodes_;
+
+    auto elapsedTime = elapsedSinceStart();
+    if (elapsedTime >= 1ms) {
+        out << " time " << elapsedTime << " nps " << ::nps(lastInfoNodes_, elapsedTime);
+    }
+    return out;
+}
+
 Uci::Uci(ostream &o) :
     tt(16 * mebibyte),
     inputLine{std::string(2048, '\0')}, // preallocate 2048 bytes (~200 full moves)
@@ -227,6 +267,31 @@ Uci::Uci(ostream &o) :
     inputLine.clear();
     bestmove_.clear();
     ucinewgame();
+}
+
+void Uci::newGame() {
+    limits.newGame();
+    tt.newGame();
+    counterMove.clear();
+    followMove.clear();
+}
+
+void Uci::newSearch() {
+    {
+        std::lock_guard<std::mutex> lock{bestmoveMutex};
+        if (!bestmove_.empty()) {
+            log("#New search started, but bestmove is not empty: " + bestmove_);
+            bestmove_.clear();
+        }
+    }
+    limits.newSearch();
+    tt.newSearch();
+    pv.clear();
+    rootBestMoves = {};
+}
+
+void Uci::newIteration() const {
+    tt.newIteration();
 }
 
 void Uci::output(std::string_view message) const {
@@ -538,38 +603,21 @@ void Uci::ponderhit() {
     std::this_thread::yield();
 }
 
-// update TT with PV (in case it have been overwritten)
-void Uci::refreshTtPv(Ply depth) const {
-    Position pos{position_};
-    Score score = pvScore;
-    Ply ply = 0_ply;
-
-    const UciMove* moves = pvMoves;
-    for (UciMove move; (move = *moves++);) {
-        auto o = tt.addr<TtSlot>(pos.zobrist());
-        *o = TtSlot{pos.zobrist(), score, ply, ExactScore, depth, move.from(), move.to(), false};
-        ++tt.writes;
-
-        //we cannot use makeZobrist() because of en passant legality validation
-        pos.makeMove(move.from(), move.to());
-        score = -score;
-        depth = Ply{depth-1};
-        ply = Ply{ply+1};
+void Uci::info_pv() const {
+    // avoid printing identical info lines
+    if (limits.hasNewNodes()) {
+        UciOutput ob{this};
+        limits.info_nps(ob); ob << pv;
     }
 }
 
 void Uci::info_bestmove() const {
-    // avoid printing identical info lines
-    if (lastInfoNodes != limits.getNodes()) {
-        UciOutput o{this};
-        o << "info"; nps(o); o << pvScore; o << pvMoves;
-        // flushed by destructor
-    }
+    info_pv();
 
     UciOutput ob{this};
-    ob << "bestmove "; ob << pvMoves[0];
-    if (limits.canPonder_ && pvMoves[1]) {
-        ob << " ponder "; ob.flipColor(); ob << pvMoves[1];
+    ob << "bestmove" << pv.move(0_ply);
+    if (limits.canPonder_ && pv.move(1_ply)) {
+        ob << " ponder" << pv.move(1_ply);
     }
 
     if (!limits.shouldDelayBestmove()) { return; } // bestmove flushed by destructor
@@ -584,46 +632,20 @@ void Uci::info_bestmove() const {
     log("#Bestmove output delayed: " + bestmove_);
 }
 
-void Uci::info_readyok() const {
-    Output ob{this};
-#ifndef NDEBUG
-    info_fen(ob) << '\n';
-#endif
-    info_nps(ob);
-    ob << "readyok";
-}
-
 ostream& Uci::info_fen(ostream& o) const {
     o << "info" << position_.evaluate() << " fen " << position_;
     return o;
 }
 
-void Uci::info_pv(Ply depth) const {
-    UciOutput ob{this};
-    ob << "info depth " << depth; nps(ob); ob << pvScore; ob << pvMoves;
-}
-
-ostream& Uci::nps(ostream& o) const {
-    // avoid printing identical nps info in a row
-    if (lastInfoNodes == limits.getNodes()) { return o; }
-    lastInfoNodes = limits.getNodes();
-
-    o << " nodes " << lastInfoNodes;
-
-    auto elapsedTime = limits.elapsedSinceStart();
-    if (elapsedTime >= 1ms) {
-        o << " time " << elapsedTime << " nps " << ::nps(lastInfoNodes, elapsedTime);
+void Uci::info_readyok() const {
+    Output ob{this};
+#ifndef NDEBUG
+    info_fen(ob) << '\n';
+#endif
+    if (limits.hasNewNodes()) {
+        limits.info_nps(ob) << '\n';
     }
-
-    return o;
-}
-
-ostream& Uci::info_nps(ostream& o) const {
-    if (limits.getNodes() == 0) { lastInfoNodes = 0; return o; }
-    if (lastInfoNodes == limits.getNodes()) { return o; }
-
-    o << "info"; nps(o) << '\n';
-    return o;
+    ob << "readyok";
 }
 
 void Uci::goPerft() {
@@ -641,18 +663,20 @@ void Uci::goPerft() {
 
 void Uci::info_perft_bestmove() const {
     Output ob{this};
-    info_nps(ob);
+    if (limits.hasNewNodes()) {
+        limits.info_nps(ob) << '\n';
+    }
     ob << "bestmove 0000";
 }
 
 void Uci::info_perft_depth(Ply depth, node_count_t perft) const {
     Output ob{this};
-    ob << "info depth " << depth << " perft " << perft; nps(ob);
+    ob << "info depth " << depth << " perft " << perft;
 }
 
 void Uci::info_perft_currmove(int moveCount, UciMove currentMove, node_count_t perft) const {
     UciOutput ob{this};
-    ob << "info currmovenumber " << moveCount << " currmove "; ob << currentMove << " perft " << perft; nps(ob);
+    limits.info_nps(ob); ob << " currmovenumber " << moveCount << " currmove"; ob << currentMove << " perft " << perft;
 }
 
 void Uci::bench() {

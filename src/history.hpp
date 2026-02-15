@@ -2,6 +2,7 @@
 #define HISTORY_HPP
 
 #include "Index.hpp"
+#include "Score.hpp"
 #include "Zobrist.hpp"
 
 /**
@@ -66,32 +67,43 @@ public:
 };
 
 // triangular array
-class CACHE_ALIGN PvMoves {
+class CACHE_ALIGN PrincipalVariation {
     static constexpr auto triangularArraySize = (Ply::Last+1) * (Ply::Last+2) / 2;
 public:
     using Index = ::Index<triangularArraySize>;
-    Index::arrayOf<UciMove> pv;
+    Index::arrayOf<UciMove> moves_;
+
+    Ply   depth_{0}; // last root PV update iteration depth
+    Score score_{NoScore}; // last root PV update score
 
 public:
-    PvMoves () { clear(); }
+    PrincipalVariation () { clear(); }
 
-    void clear() { std::memset(&pv, 0, sizeof(pv)); }
+    void clear() {
+        std::memset(&moves_, 0, sizeof(moves_));
+        depth_ = 0_ply;
+        score_ = Score{NoScore};
+    }
 
-    void clearPly(Index i) { pv[i] = UciMove{}; }
+    void  set(Ply depth, Score score) { depth_ = depth; score_ = score; }
+    Ply   depth() const { return depth_; }
+    Score score() const { return score_; }
 
+    void  clear(Index i) { moves_[i] = UciMove{}; }
     Index set(Index parent, UciMove move, Index child) {
-        pv[parent] = move;
+        moves_[parent] = move;
         assert (parent < child);
 
         auto from = static_cast<Index::_t>(child);
         auto to = static_cast<Index::_t>(parent) + 1;
-        while ((pv[Index{to++}] = pv[Index{from++}])) {}
+        while ((moves_[Index{to++}] = moves_[Index{from++}])) {}
 
-        pv[Index{to}] = UciMove{};
+        moves_[Index{to}] = UciMove{};
         return Index{to}; // new child index
     }
 
-    operator const UciMove* () const { return &pv[Index{0}]; }
+    const UciMove* moves() const { return &moves_[Index{0}]; }
+    UciMove move(Ply ply) const { return moves_[Index{ply}]; }
 };
 
 // https://www.talkchess.com/forum/viewtopic.php?p=554664#p554664

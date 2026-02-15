@@ -2,9 +2,9 @@
 #define UCI_HPP
 
 #include <atomic>
+#include <chrono>
 #include <fstream>
 #include <mutex>
-#include "chrono.hpp"
 #include "history.hpp"
 #include "io.hpp"
 #include "Index.hpp"
@@ -12,13 +12,33 @@
 #include "Tt.hpp"
 #include "UciPosition.hpp"
 
+using namespace std::chrono_literals;
+
+using clock_type = std::chrono::steady_clock;
+using TimePoint = clock_type::time_point;
+using TimeInterval = clock_type::duration;
+
+inline TimePoint timeNow() { return clock_type::now(); }
+
+// ::timeNow() - start
+inline TimeInterval elapsedSince(TimePoint start) { return ::timeNow() - start; }
+
 class UciSearchLimits {
+    // IterationDeadline = ~1/2, HardDeadline = ~3x of averageMoveTime
+    enum deadline_t { IterationDeadline = 11, AverageTimeScale = 20, HardDeadline = 64 };
+
+    // EasyMove = 3/5, HardMove = 8/5 (Fibonacci numbers)
+    enum move_control_t { ExactTime = 0, EasyMove = 3, NormalMove = 5, HardMove = 8 };
+
     constexpr static TimeInterval UnlimitedTime{TimeInterval::max()};
     constexpr static node_count_t NodeCountMax{std::numeric_limits<node_count_t>::max()};
     constexpr static int QuotaLimit{1000};
 
     mutable node_count_t nodes_{0}; // (0 <= nodes_ && nodes_ <= nodesLimit_)
     mutable node_count_t nodesLimit_{NodeCountMax}; // search limit
+
+    // avoid output duplicate 'info nps'
+    mutable node_count_t lastInfoNodes_ = 0;
 
     // number of remaining nodes before slow checking for search stop
     // (0 <= nodesQuota_ && nodesQuota_ <= QuotaLimit)
@@ -49,81 +69,49 @@ class UciSearchLimits {
 
     Ply maxDepth_{MaxPly};
 
-    // the first move after ucinewgame will spend more thinking time
-    bool isNewGame_{true};
+    mutable move_control_t timeControl_{ExactTime}; // ExactTime = 0, EasyMove = 3, NormalMove = 5, HardMove = 8
+    mutable UciMove easyMove_{}; // previous root best move (for EasyMove / NormalMove / HardMove strategy)
+    bool isNewGame_{true}; // the first move after ucinewgame will spend more thinking time
 
-    constexpr void assertNodesOk() const;
+    void assertNodesOk() const;
 
-    // time allocation strategy
-    static constexpr int LookAheadMoves = 16;
-
-    constexpr int lookAheadMoves() const {
-        return movestogo_ > 0 ? std::min(movestogo_, LookAheadMoves) : LookAheadMoves;
-    }
-
-    // unify sudden death, increment and cyclic time controls
-    constexpr TimeInterval lookAheadTime(Side si) const {
-        return time_[si] + inc_[si] * (lookAheadMoves() - 1);
-    }
-
-    constexpr TimeInterval averageMoveTime(Side si) const {
-        return lookAheadTime(si) / lookAheadMoves();
-    }
-
+// unify sudden death, increment and cyclic time controls
+    int lookAheadMoves() const;
+    TimeInterval lookAheadTime(Side) const;
+    TimeInterval averageMoveTime(Side) const;
     void setSearchDeadlines(const Position* = nullptr);
+
+    template <deadline_t Deadline> bool reachedTime() const;
+    TimeInterval elapsedSinceStart() const { return ::elapsedSince(searchStartTime_); }
 
     ReturnStatus refreshQuota() const;
     bool isStopped() const { return timeout_.load(std::memory_order_seq_cst); }
 
-    // IterationDeadline = ~1/2, HardDeadline = ~3x of averageMoveTime
-    enum deadline_t { IterationDeadline = 11, AverageTimeScale = 20, HardDeadline = 64 };
-    template <deadline_t Deadline> bool reached() const;
-
-    // EasyMove = 3/5, HardMove = 8/5 (Fibonacci numbers)
-    enum move_control_t { ExactTime = 0, EasyMove = 3, NormalMove = 5, HardMove = 8 };
-
-    // ExactTime = 0, EasyMove = 3, NormalMove = 5, HardMove = 8
-    mutable move_control_t timeControl_{ExactTime};
-
-    // determine EasyMove / NormalMove / HardMove
-    mutable UciMove easyMove_{}; // prvious root best move
-
 public:
 // UCI configurable options
-
     constexpr static TimeInterval MoveOverheadDefault{200us};
     TimeInterval moveOverhead_{MoveOverheadDefault};
     bool canPonder_{false};
 
-    void newGame() { isNewGame_ = true; newSearch(); }
-
-    // start search timer, clear all limits except canPonder_, moveOverhead_ and isNewGame_
-    void newSearch();
-
-    TimeInterval elapsedSinceStart() const { return ::elapsedSince(searchStartTime_); }
-
-    // ponder || infinite
-    bool shouldDelayBestmove() const {
-        return pondering_.load(std::memory_order_release) || infinite_;
-    }
-
-    // exact number of visited nodes
-    constexpr node_count_t getNodes() const { return nodes_ - nodesQuota_; }
-
-    constexpr Ply maxDepth() const { return maxDepth_; }
-
 // called from the Uci input handling thread:
-
+    void newGame() { isNewGame_ = true; newSearch(); }
+    void newSearch(); // start search timer, clear all limits except canPonder_, moveOverhead_ and isNewGame_
     istream& go(istream&, Side, const Position* = nullptr);
     void stop();
     void ponderhit();
 
-// defined and used in search.cpp:
+    // ponder || infinite
+    bool shouldDelayBestmove() const { return pondering_.load(std::memory_order_release) || infinite_; }
 
-    bool hardDeadlineReached() const { return reached<HardDeadline>(); }
-    bool iterationDeadlineReached() const { return reached<IterationDeadline>(); }
+    constexpr node_count_t getNodes() const { return nodes_ - nodesQuota_; } // exact number of searched nodes
+    bool hasNewNodes() const { return lastInfoNodes_ != getNodes(); }
+    ostream& info_nps(ostream&) const;
 
-    ReturnStatus countNode() const;
+// used in search.cpp:
+    ReturnStatus countNode() const; // checks for search stop reasons
+    constexpr Ply maxDepth() const { return maxDepth_; }
+    bool hardDeadlineReached() const { return reachedTime<HardDeadline>(); }
+    bool iterationDeadlineReached() const { return reachedTime<IterationDeadline>(); }
     void updateMoveComplexity(UciMove bestMove) const;
 };
 
@@ -133,16 +121,12 @@ public:
     UciPosition position_; // result of parsing 'position' command
     UciSearchLimits limits; // result of parsing 'go' command
     Repetitions repetitions;
-
-    mutable HistoryMoves<4> counterMove;
-    mutable HistoryMoves<4> followMove;
-
-    mutable PvMoves pvMoves;
-    mutable Score pvScore{NoScore};
-
-    mutable Tt tt; // main transposition table
+    Tt tt; // main transposition table
 
     mutable std::array<UciMove, 6> rootBestMoves;
+    mutable PrincipalVariation pv;
+    mutable HistoryMoves<4> counterMove;
+    mutable HistoryMoves<4> followMove;
 
 private:
     Thread mainSearchThread;
@@ -165,9 +149,6 @@ private:
     mutable std::mutex bestmoveMutex;
 
     // avoid race conditions betweeen Uci output and main search thread output
-
-    // avoid printing identical 'info nps' lines in a row
-    mutable node_count_t lastInfoNodes = 0;
 
     std::string logFileName; // no log by default
     mutable std::ofstream logFile;
@@ -202,8 +183,6 @@ private:
     void goPerft();
     void bench();
 
-    ostream& nps(ostream&) const;
-    ostream& info_nps(ostream&) const;
     ostream& info_fen(ostream&) const;
 
     void sendDelayedBestMove() const;
@@ -234,35 +213,11 @@ public:
 
     void bench(std::string& goLimits);
 
-    void newGame() {
-        limits.newGame();
-        tt.newGame();
-        counterMove.clear();
-        followMove.clear();
-    }
+    void newGame();
+    void newSearch();
+    void newIteration() const;
 
-    void newSearch() {
-        {
-            std::lock_guard<std::mutex> lock{bestmoveMutex};
-            if (!bestmove_.empty()) {
-                log("#New search started, but bestmove is not empty: " + bestmove_);
-                bestmove_.clear();
-            }
-        }
-        limits.newSearch();
-        tt.newSearch();
-        pvMoves.clear();
-        pvScore = Score{NoScore};
-        rootBestMoves = {};
-    }
-
-    void newIteration() const {
-        tt.newIteration();
-    }
-
-    void refreshTtPv(Ply depth) const;
-
-    void info_pv(Ply) const;
+    void info_pv() const;
 
     void info_perft_depth(Ply, node_count_t) const;
     void info_perft_currmove(int moveCount, UciMove currentMove, node_count_t) const;

@@ -3,7 +3,7 @@
 
 #define RETURN_CUTOFF(visitor) { ReturnStatus status = visitor; if (status != ReturnStatus::Continue) { return status; }} ((void)0)
 
-constexpr void UciSearchLimits::assertNodesOk() const {
+void UciSearchLimits::assertNodesOk() const {
     assert (0 <= nodesQuota_);
     assert (nodesQuota_ < QuotaLimit);
     //assert (0 <= nodes);
@@ -12,7 +12,7 @@ constexpr void UciSearchLimits::assertNodesOk() const {
 }
 
 template <UciSearchLimits::deadline_t Deadline>
-bool UciSearchLimits::reached() const {
+bool UciSearchLimits::reachedTime() const {
     if (isStopped()) { return true; }
     if (nodes_ == 0) { return false; } // skip checking before search even started
     if (Deadline != HardDeadline && timeControl_ == ExactTime) { return false; }
@@ -171,7 +171,7 @@ ReturnStatus Node::negamax(Ply R) const {
         score = childScore;
         alpha = childScore;
         child->beta = -alpha;
-        child->pvIndex = root.pvMoves.set(pvIndex, uciMove(currentMove.from(), currentMove.to()), child->pvIndex);
+        child->pvIndex = root.pv.set(pvIndex, uciMove(currentMove.from(), currentMove.to()), child->pvIndex);
         RETURN_IF_STOP (updatePv());
     }
 
@@ -587,7 +587,7 @@ ReturnStatus Node::searchNullMove(Ply R) {
 void Node::makeMove(Square from, Square to) {
     Position::makeMove(parent, from, to);
     tt = root.tt.prefetch<TtSlot>(zobrist());
-    root.pvMoves.clearPly(pvIndex);
+    root.pv.clear(pvIndex);
 }
 
 ReturnStatus Node::searchMove(Pi pi, Square to, Ply R) {
@@ -639,12 +639,12 @@ ReturnStatus Node::updatePv() const {
     }
 
     if (ply == 0) {
-        const auto& bestMove = root.pvMoves[0];
+        const auto& bestMove = root.pv.move(0_ply);
         root.limits.updateMoveComplexity(bestMove);
         ::insert_unique(root.rootBestMoves, bestMove);
 
-        root.pvScore = score;
-        root.info_pv(depth);
+        root.pv.set(depth, score);
+        root.info_pv();
 
         // good place to check as there are no wasted search nodes
         // and HardDeadline just possibly changed
@@ -728,6 +728,33 @@ bool Node::isRepetition() const {
     return root.repetitions.has(colorToMove(), z);
 }
 
+namespace {
+    // update TT with latest PV (in case it have been overwritten)
+    void refreshTtPv(const Position& p, const PrincipalVariation& pv, const Tt& tt) {
+        // clone position
+        Position pos{p};
+
+        Ply   ply   = 0_ply;
+        Ply   depth = pv.depth();
+        Score score = pv.score();
+        auto  pmoves = pv.moves();
+
+        for (UciMove move; (move = *pmoves++);) {
+            auto o = tt.addr<TtSlot>(pos.zobrist());
+            *o = TtSlot{pos.zobrist(), score, ply, ExactScore, depth, move.from(), move.to(), false};
+            ++tt.writes;
+
+            //we cannot use makeZobrist() because of en passant legality validation
+            pos.makeMove(move.from(), move.to());
+            score = -score;
+            depth = Ply{depth-1};
+            ply = Ply{ply+1};
+
+            if (depth == 0) { break; }
+        }
+    }
+}
+
 ReturnStatus Node::searchRoot() {
     auto rootMovesClone = moves();
     repetitionHash = root.repetitions.repetitionHash(colorToMove());
@@ -736,7 +763,7 @@ ReturnStatus Node::searchRoot() {
 
     auto moveCount = rootMovesClone.popcount();
     if (moveCount == 0) {
-        root.pvScore = inCheck() ? Score::mateLoss(0_ply) : Score{DrawScore};
+        root.pv.set(0_ply, inCheck() ? Score::mateLoss(0_ply) : Score{DrawScore});
         return ReturnStatus::Continue;
     } else if (moveCount == 1) {
         // minimal search to get score and ponder move
@@ -751,7 +778,7 @@ ReturnStatus Node::searchRoot() {
         auto returnStatus = search();
 
         root.newIteration();
-        root.refreshTtPv(depth);
+        ::refreshTtPv(*this, root.pv, root.tt);
 
         RETURN_IF_STOP (returnStatus);
 

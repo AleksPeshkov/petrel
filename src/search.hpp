@@ -89,7 +89,7 @@ protected:
     mutable Bound bound = FailLow; // FailLow is default unless have found Exact or FailHigh move later
 
     mutable HistoryMove currentMove = {}; // last move made from *this into *child
-    PvMoves::Index pvIndex; // start of subPV for the current ply
+    PrincipalVariation::Index pvIndex; // start of subPV for the current ply
 
     // Killer heuristic
     using KillerIndex = ::Index<3>;
