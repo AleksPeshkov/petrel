@@ -44,19 +44,20 @@ ReturnStatus Node::negamax(Ply R) const {
             score = childScore;
         }
     } else {
-        if (beta <= childScore) {
-            if (currentMove && depth > child->depth+1) {
-                if (child->isPv()) {
-                    // rare case (the first move from PV with reduced depth)
-                    child->alpha = -beta;
-                    assert (child->beta == -alpha);
-                } else {
-                    assert (child->alpha == child->beta.minus1());
-                }
-                // full depth research (unless it was a null move search or leaf node)
-                return negamax();
+        if (currentMove && depth > child->depth+1) {
+            if (child->isPv()) {
+                // rare case (the first move from PV with reduced depth)
+                // TODO: IID instead
+                child->alpha = -beta;
+                assert (child->beta == -alpha);
+            } else {
+                assert (child->alpha == child->beta.minus1());
             }
+            // full depth research (unless it was a null move search or leaf node)
+            return negamax();
+        }
 
+        if (beta <= childScore) {
             score = childScore;
             failHigh();
             return ReturnStatus::BetaCutoff;
