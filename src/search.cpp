@@ -2,99 +2,6 @@
 #include "Uci.hpp"
 
 #define RETURN_CUTOFF(visitor) { ReturnStatus status = visitor; if (status != ReturnStatus::Continue) { return status; }} ((void)0)
-
-void UciSearchLimits::assertNodesOk() const {
-    assert (0 <= nodesQuota_);
-    assert (nodesQuota_ < QuotaLimit);
-    //assert (0 <= nodes);
-    assert (nodes_ <= nodesLimit_);
-    assert (static_cast<decltype(nodesLimit_)>(nodesQuota_) <= nodes_);
-}
-
-template <UciSearchLimits::deadline_t Deadline>
-bool UciSearchLimits::reachedTime() const {
-    if (isStopped()) { return true; }
-    if (nodes_ == 0) { return false; } // skip checking before search even started
-    if (Deadline != HardDeadline && timeControl_ == ExactTime) { return false; }
-    if (timePool_ == UnlimitedTime || pondering_.load(std::memory_order_acquire)) { return false; }
-
-    auto timePool = timePool_;
-    if (timeControl_ != ExactTime) {
-        int deadlineRatio = Deadline;
-        if (Deadline == IterationDeadline) { deadlineRatio += iterLowMaterialBonus_; }
-
-        timePool *= static_cast<int>(timeControl_) * deadlineRatio;
-        timePool /= static_cast<int>(HardMove) * HardDeadline;
-    }
-
-    bool isDeadlineReached = timePool < elapsedSinceStart();
-    if (isDeadlineReached) {
-        nodesLimit_ = nodes_;
-        nodesQuota_ = 0;
-        assertNodesOk();
-        timeout_.store(true, std::memory_order_seq_cst);
-    }
-    return isDeadlineReached;
-}
-
-ReturnStatus UciSearchLimits::refreshQuota() const {
-    assertNodesOk();
-    nodes_ -= nodesQuota_;
-
-    auto nodesRemaining = nodesLimit_ - nodes_;
-    if (nodesRemaining >= QuotaLimit) {
-        nodesQuota_ = QuotaLimit;
-    }
-    else {
-        nodesQuota_ = static_cast<decltype(nodesQuota_)>(nodesRemaining);
-        if (nodesQuota_ == 0) {
-            assertNodesOk();
-            return ReturnStatus::Stop;
-        }
-    }
-
-    if (hardDeadlineReached()) {
-        return ReturnStatus::Stop;
-    }
-
-    assert (0 < nodesQuota_ && nodesQuota_ <= QuotaLimit);
-    nodes_ += nodesQuota_;
-    --nodesQuota_; //count current node
-
-    assertNodesOk();
-    return ReturnStatus::Continue;
-}
-
-ReturnStatus UciSearchLimits::countNode() const {
-    assertNodesOk();
-
-    if (nodesQuota_ == 0 || isStopped()) {
-        return refreshQuota();
-    }
-
-    assert (nodesQuota_ > 0);
-    --nodesQuota_;
-
-    assertNodesOk();
-    return ReturnStatus::Continue;
-}
-
-void UciSearchLimits::updateMoveComplexity(UciMove bestMove) const {
-    if (timeControl_ == ExactTime) { return; }
-
-    if (!easyMove_) {
-        // Easy Move: root best move never changed
-        easyMove_ = bestMove;
-    } else if (easyMove_ != bestMove) {
-        easyMove_ = bestMove;
-        // Hard Move: root best move just have changed
-        timeControl_ = HardMove;
-    } else if (timeControl_ == HardMove) {
-        // Normal Move: root best move have not changed during last two iterations
-        timeControl_ = NormalMove;
-    }
-}
-
 TtSlot::TtSlot (const Node* n) : TtSlot{
     n->zobrist(),
     n->score,
@@ -767,7 +674,7 @@ ReturnStatus Node::searchRoot() {
         return ReturnStatus::Continue;
     } else if (moveCount == 1) {
         // minimal search to get score and ponder move
-        maxDepth = root.limits.canPonder_ ? 2_ply : 1_ply;
+        maxDepth = root.limits.canPonder() ? 2_ply : 1_ply;
     }
 
     for (depth = 1_ply; depth <= maxDepth; ++depth) {
