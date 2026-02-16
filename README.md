@@ -2,9 +2,9 @@
 
 Petrel is a conventional alpha-beta search engine, but its implementation details set it apart from others.
 
-Petrel 2.2 is rated 2775 Elo on the [Ultimate Bullet Classical](https://https://e4e6.com/) list.
+Petrel 3.3.1 rated `3303` Elo on the [CCRL 40/15](https://computerchess.org.uk/ccrl/4040/cgi/engine_details.cgi?print=Details&each_game=0&eng=Petrel%203.3.1%2064-bit). Petrel 3.2 rated `3332` Elo on the [CCRL Blitz](https://computerchess.org.uk/ccrl/404/cgi/engine_details.cgi?eng=Petrel%203.2%2064-bit) lists.
 
-Petrel 2.1 is rated around 2600 Elo on the [CCRL Blitz](https://computerchess.org.uk/ccrl/404/cgi/engine_details.cgi?print=Details&each_game=1&eng=Petrel%202.1%2064-bit#Petrel_2_1_64-bit) and the [40/15](https://computerchess.org.uk/ccrl/4040/cgi/engine_details.cgi?print=Details&each_game=0&eng=Petrel%202.1%2064-bit#Petrel_2_1_64-bit) lists.
+Petrel 2.2 rated `2775` Elo on the [Ultimate Bullet Classical](https://e4e6.com/) list.
 
 ## Features
 
