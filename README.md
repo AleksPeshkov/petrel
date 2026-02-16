@@ -1,10 +1,11 @@
 # Petrel is UCI Chess Engine
 
-Petrel is a conventional alpha-beta search engine, but its implementation details set it apart from others.
+Petrel is a conventional alpha-beta search engine, but some implementation details set it apart from others.
+Petrel's design goal is to be other engine's robust sparring partner particularly at very short (subsecond per game) time controls.
 
-Petrel 2.2 is rated 2775 Elo on the [Ultimate Bullet Classical](https://https://e4e6.com/) list.
+Petrel 3.4 rated `3380` Elo on the [CCRL Blitz](https://computerchess.org.uk/ccrl/404/cgi/engine_details.cgi?eng=Petrel%203.4%2064-bit) list; `3331` Elo on the [CCRL 40/15](https://computerchess.org.uk/ccrl/4040/cgi/engine_details.cgi?print=Details&each_game=0&eng=Petrel%203.4%2064-bit).
 
-Petrel 2.1 is rated around 2600 Elo on the [CCRL Blitz](https://computerchess.org.uk/ccrl/404/cgi/engine_details.cgi?print=Details&each_game=1&eng=Petrel%202.1%2064-bit#Petrel_2_1_64-bit) and the [40/15](https://computerchess.org.uk/ccrl/4040/cgi/engine_details.cgi?print=Details&each_game=0&eng=Petrel%202.1%2064-bit#Petrel_2_1_64-bit) lists.
+Petrel 2.2 rated `2775` Elo on the [Ultimate Bullet Classical](https://e4e6.com/) list.
 
 ## Features
 
@@ -21,7 +22,7 @@ Petrel 2.1 is rated around 2600 Elo on the [CCRL Blitz](https://computerchess.or
 ```
 option name EvalFile type string default <empty>
 option name Debug Log File type string default <empty>
-option name Hash type spin min 2 max 16384 default 2
+option name Hash type spin min 2 max 16384 default 16
 option name Move Overhead type spin min 0 max 10000 default 0
 option name Ponder type check default false
 option name UCI_Chess960 type check default false
