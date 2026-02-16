@@ -35,6 +35,8 @@ Overloaded operators:
 
 Abbreviations in the code:
 
+* `Bb bb`: BitBoard – a well-known 64-bit bitset representing squares on the chessboard.
+* Variables of type `Bb` and functions that return `Bb` often have `bb` prefix, example: `Bb bb = bbPawns()`
 * `Side side`: `{My, Op}` – side to move and opposite side.
 * `Color color`: `{White, Black}` – rarely used, but required for correct output of internal moves in standard chess notation.
 * `PieceType ty`: `{Queen = 0, Rook = 1, Bishop = 2, Knight = 3, Pawn = 4, King = 5}` – type of possible chess piece.
@@ -47,8 +49,6 @@ Abbreviations in the code:
 * `PiSquare`: stores locations of active pieces or the `0xFF` NoSquare tag.
 * `PiType`: each piece type is represented as a separate bit, enabling quick grouping by criteria.
 * `PiTrait`: castling and en passant statuses, plus temporary information like currently checking pieces.
-* `Bb bb`: BitBoard – a well-known 64-bit bitset representing squares on the chessboard.
-* Variables of type `Bb` and functions that return `Bb` often have `bb` prefix, example: `Bb bb = bbPawns()`
 * `PiBbMatrix`: matrix of Pi × Bb (128 bytes), used for storing and updating piece attack information and generating moves from attacks.
 
 Move Encoding
