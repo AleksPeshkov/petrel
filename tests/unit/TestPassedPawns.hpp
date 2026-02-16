@@ -4,6 +4,7 @@
 #include "UciPosition.hpp"
 
 Nnue nnue;
+void Nnue::setEmbeddedEval() {}
 
 constexpr InBetween inBetween;
 constexpr AttacksFrom attacksFrom;

@@ -13,6 +13,10 @@ RM := rm -rf
 MKDIR := mkdir -p
 CLS := clear
 
+NNUE ?= net/quantised.bin
+NNUE_STAMP := $(BUILD_DIR)/$(notdir $(NNUE)).stamp
+CHECKSUM ?= sha1sum
+
 # === Tag Files for Build Type ===
 TAG_TEST  := $(BUILD_DIR)/tag_test
 TAG_DEBUG := $(BUILD_DIR)/tag_debug
@@ -125,6 +129,15 @@ $(TARGET): $(OBJECTS)
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp
 	$(CXX) -c -o $@ $< -MMD -MP $(CXXFLAGS)
+
+$(BUILD_DIR)/main.o: $(SRC_DIR)/main.cpp $(NNUE_STAMP)
+
+$(NNUE_STAMP): $(BUILD_DIR)
+	@prev=$$(cat $(NNUE_STAMP) 2>/dev/null || echo ''); \
+	curr=$$($(CHECKSUM) $(NNUE) | cut -d' ' -f1); \
+	if [ "$$curr" != "$$prev" ]; then \
+		echo "$$curr" > $(NNUE_STAMP); \
+	fi
 
 $(BUILD_DIR): Makefile
 	@$(RM) $@
