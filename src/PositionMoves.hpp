@@ -29,7 +29,7 @@ class PositionMoves : public Position {
 
 protected:
     void setMoves(const PiBbMatrix& moves) { moves_ = moves; movesMade_ = 0; }
-    void clearMove(Square from, Square to) const { moves_.clear(MY.pieceAt(from), to); ++movesMade_; }
+    void clearMove(Square from, Square to) const { moves_.clear(MY.pi(from), to); ++movesMade_; }
 
     void makeMoveNoZobrist(const PositionMoves* parent, Square from, Square to);
 
@@ -47,7 +47,7 @@ public:
 
     // move is legal and not yet made
     bool isPossibleMove(Square from, Square to) const {
-        return MY.has(from) && isPossibleMove(MY.pieceAt(from), to);
+        return MY.has(from) && isPossibleMove(MY.pi(from), to);
     }
 
     // move is legal and not yet made
