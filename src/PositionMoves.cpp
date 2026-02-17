@@ -7,10 +7,10 @@ void PositionMoves::generateEnPassantMoves() {
     assert (MY.hasEnPassant());
     assert (OP.hasEnPassant());
 
-    File epFile = OP.enPassantFile();
-    assert (MY.enPassantPawns() <= ( MY.pawns() & MY.attackersTo(Square{epFile, Rank6}) ));
+    File file = OP.fileEnPassant();
+    assert (MY.enPassantPawns() <= ( MY.pawns() & MY.attackersTo(Square{file, Rank6}) ));
 
-    moves_[Rank{Rank5}] |= PiRank(epFile) & PiRank{MY.enPassantPawns()};
+    moves_[Rank{Rank5}] |= PiRank(file) & PiRank{MY.enPassantPawns()};
 }
 
 template <Side::_t My>
@@ -26,16 +26,16 @@ void PositionMoves::populateUnderpromotions() {
 template <Side::_t My>
 void PositionMoves::generateLegalKingMoves() {
     //TRICK: our attacks do not hide under attacked king shadow
-    Bb kingMoves = ::attacksFrom(PieceType{King}, MY.kingSquare()) % (MY.bbSide() | bbAttacked());
+    Bb kingMoves = ::attacksFrom(PieceType{King}, MY.sqKing()) % (MY.bbSide() | bbAttacked());
     moves_.set(Pi{TheKing}, kingMoves);
 }
 
 template <Side::_t My>
 void PositionMoves::generateCastlingMoves() {
     for (Pi pi : MY.castlingRooks()) {
-        if ( ::castlingRules.isLegal(MY.kingSquare(), MY.squareOf(pi), OCCUPIED, bbAttacked()) ) {
+        if ( ::castlingRules.isLegal(MY.sqKing(), MY.sq(pi), OCCUPIED, bbAttacked()) ) {
             //castling encoded as the rook moves over the own king square
-            moves_.add(pi, MY.kingSquare());
+            moves_.add(pi, MY.sqKing());
         }
     }
 }
@@ -43,7 +43,7 @@ void PositionMoves::generateCastlingMoves() {
 template <Side::_t My>
 void PositionMoves::generatePawnMoves() {
     for (Pi pi : MY.pawns()) {
-        Square from{ MY.squareOf(pi) };
+        Square from{ MY.sq(pi) };
 
         Rank rankTo{ Rank{from}.forward() };
         BitRank fileTo{ File{from} };
@@ -76,13 +76,13 @@ void PositionMoves::correctCheckEvasionsByPawns(Bb checkLine, Square checkFrom) 
     for (Square from : affectedPawns) {
         Bb bb = (Bb{from.rankForward()} & checkLine) + (::attacksFrom(PieceType{Pawn}, from) & Bb{checkFrom});
         Rank rankTo = Rank{from}.forward();
-        moves_.set(MY.pieceAt(from), rankTo, bb[rankTo]);
+        moves_.set(MY.pi(from), rankTo, bb[rankTo]);
     }
 
     //pawns double push over check line
     Bb pawnJumpEvasions = MY.bbPawns() & Bb{Rank2} & (checkLine << 16u) % (OCCUPIED << 8u);
     for (Square from : pawnJumpEvasions) {
-        moves_.add(MY.pieceAt(from), Rank{Rank4}, File{from});
+        moves_.add(MY.pi(from), Rank{Rank4}, File{from});
     }
 }
 
@@ -92,17 +92,17 @@ void PositionMoves::excludePinnedMoves(PiMask opPinners) {
     constexpr Side::_t Op{~My};
 
     for (Pi pinner : opPinners) {
-        Square pinFrom{~OP.squareOf(pinner)};
+        Square pinFrom{~OP.sq(pinner)};
 
-        assert (::attacksFrom(OP.typeOf(pinner), pinFrom).has(MY.kingSquare()));
+        assert (::attacksFrom(OP.typeOf(pinner), pinFrom).has(MY.sqKing()));
 
-        const Bb& pinLine = ::inBetween(MY.kingSquare(), pinFrom);
+        const Bb& pinLine = ::inBetween(MY.sqKing(), pinFrom);
         Bb piecesOnPinLine = pinLine & OCCUPIED;
         assert (piecesOnPinLine.any());
 
         if (piecesOnPinLine.isSingleton() && (piecesOnPinLine & MY.bbSide()).any()) {
             //we discovered a true pinned piece
-            Pi pinned = MY.pieceAt(piecesOnPinLine.index());
+            Pi pinned = MY.pi(piecesOnPinLine.index());
 
             //exclude all pinned piece moves except those over the pin line
             moves_.filter(pinned, pinLine + Bb{pinFrom});
@@ -118,10 +118,10 @@ void PositionMoves::generateCheckEvasions() {
 
     if (checkers.isSingleton()) {
         //single checker case
-        Pi checker = checkers.index();
-        Square checkFrom{~OP.squareOf(checker)};
+        Pi checker = checkers.pi();
+        Square checkFrom{~OP.sq(checker)};
 
-        const Bb& checkLine = ::inBetween(MY.kingSquare(), checkFrom);
+        const Bb& checkLine = ::inBetween(MY.sqKing(), checkFrom);
 
         //general case: check evasion moves of all pieces
         moves_ = MY.attacks() & (checkLine + Bb{checkFrom});
@@ -149,8 +149,8 @@ void PositionMoves::generateMoves() {
     constexpr Side::_t Op{~My};
     bbAttacked_ = ~OP.attacks().gather();
 
-    inCheck_ = bbAttacked().has(MY.kingSquare());
-    assert (OP.checkers().any() == bbAttacked().has(MY.kingSquare()));
+    inCheck_ = bbAttacked().has(MY.sqKing());
+    assert (OP.checkers().any() == bbAttacked().has(MY.sqKing()));
 
     if (inCheck_) {
         generateCheckEvasions<My>();

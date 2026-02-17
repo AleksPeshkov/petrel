@@ -51,30 +51,32 @@ public:
     constexpr const Evaluation& evaluation() const { return evaluation_; }
 
     bool has(Square sq) const { assert (bbSide_.has(sq) == squares.has(sq)); return bbSide_.has(sq); }
-    Square squareOf(Pi pi) const { assertOk(pi); return squares.squareOf(pi); }
-    Square kingSquare() const { return squareOf(Pi{TheKing}); }
+    Square sq(Pi pi) const { assertOk(pi); return squares.sq(pi); }
 
-    // mask of all pieces of the given side
+    // sq(TheKing)
+    Square sqKing() const { return sq(Pi{TheKing}); }
+
+    // all onboard pieces of the given side
     PiMask pieces() const { assert (squares.pieces() == types.pieces()); return squares.pieces(); }
 
-    // Queens, Rooks, Bishops
+    // Q, R, B
     PiMask sliders() const { return types.sliders(); }
 
-    // Queens, Rooks, Bishops, Knights
+    // Q, R, B, N
     PiMask officers() const { return types.officers(); }
 
-    // King, Queens, Rooks, Bishops, Knights
+    // K, Q, R, B, N
     PiMask nonPawns() const { return types.nonPawns(); }
 
-    // Queens, Rooks, Bishops, Knights, Pawns
+    // Q, R, B, N, P
     PiMask nonKing() const { return types.nonKing(); }
 
-    Pi pieceAt(Square sq) const { assert (has(sq)); Pi pi = squares.pieceAt(sq); assertOk(pi); return pi; }
+    Pi pi(Square sq) const { assert (has(sq)); Pi pi = squares.pi(sq); assertOk(pi); return pi; }
     PiMask piecesOn(Rank::_t rank) const { Rank{rank}.assertOk(); return squares.piecesOn(rank); }
 
     PiMask piecesOfType(PieceType ty) const { return types.piecesOfType(ty); }
     PieceType typeOf(Pi pi) const { assertOk(pi); return types.typeOf(pi); }
-    PieceType typeAt(Square sq) const { return typeOf(pieceAt(sq)); }
+    PieceType typeAt(Square sq) const { return typeOf(pi(sq)); }
 
     PiMask pawns() const { return types.piecesOfType(Pawn); }
     bool isPawn(Pi pi) const { assertOk(pi); return types.isPawn(pi); }
@@ -87,13 +89,13 @@ public:
 
     PiMask castlingRooks() const { return traits.castlingRooks(); }
     bool isCastling(Pi pi) const { assertOk(pi); return traits.isCastling(pi); }
-    bool isCastling(Square sq) const { return isCastling(pieceAt(sq)); }
+    bool isCastling(Square sq) const { return isCastling(pi(sq)); }
 
     PiMask enPassantPawns() const { return traits.enPassantPawns(); }
     bool isEnPassant(Pi pi) const { return traits.isEnPassant(pi); }
     bool hasEnPassant() const { return enPassantPawns().any(); }
-    Square enPassantSquare() const { Square ep = squareOf(traits.getEnPassant()); assert (ep.on(Rank4)); return ep; }
-    File enPassantFile() const { return File{enPassantSquare()}; }
+    Square sqEnPassant() const { Square ep{sq(traits.piEnPassant())}; assert (ep.on(Rank4)); return ep; }
+    File fileEnPassant() const { return File{sqEnPassant()}; }
 
     PiMask pinners() const { return traits.pinners(); }
     bool isPinned(Bb) const;
@@ -106,7 +108,6 @@ public:
     // is pawn and pawn is on the 7th rank
     bool isPromotable(Pi pi) const { assertOk(pi); return traits.isPromotable(pi); }
 
-    Bb attacksOf(Pi pi) const { assertOk(pi); return attacks_[pi]; }
     PiMask attackersTo(Square sq) const { return attacks_[sq]; }
     PiMask affectedBy(Square sq) const { return attackersTo(sq); }
     PiMask affectedBy(Square a, Square b) const { return affectedBy(a) | affectedBy(b); }
@@ -120,7 +121,7 @@ public:
     void movePawn(Pi, Square, Square);
     void moveKing(Square, Square);
     void castle(Square kingFrom, Square kingTo, Pi rook, Square rookFrom, Square rookTo);
-    Pi promote(Pi, Square, PromoType, Square);
+    Pi piPromoted(Pi, Square, PromoType, Square);
     void capture(Square);
 
     void setEnPassantVictim(Pi);

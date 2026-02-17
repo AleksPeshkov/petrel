@@ -41,7 +41,7 @@ class PieceSet : public BitSet<PieceSet, Pi> {
 public:
     using Base::Base;
 
-    constexpr Pi vacantMostValuable() const {
+    constexpr Pi piFirstVacant() const {
         for (Pi pi : range<Pi>()) {
             if (!has(pi)) {
                 return pi;
@@ -70,7 +70,7 @@ public:
         return  Pi{static_cast<Index::_t>(::msb(v) >> 2)};
     }
 
-    constexpr Pi vacantMostValuable() const {
+    constexpr Pi piFirstVacant() const {
         for (auto pi : range<Pi>()) {
             if (!has(pi)) {
                 return pi;
@@ -147,13 +147,13 @@ public:
     constexpr bool isSingleton() const { return PieceSet{*this}.isSingleton(); }
 
     // get the singleton piece index
-    constexpr Pi index() const { return PieceSet{*this}.index(); }
+    constexpr Pi pi() const { return PieceSet{*this}.index(); }
 
     // most valuable piece in the first (lowest) set bit
-    constexpr Pi mostValuable() const { return PieceSet{*this}.first(); }
+    constexpr Pi piFirst() const { return PieceSet{*this}.first(); }
 
     // least valuable pieces in the last (highest) set bit
-    constexpr Pi leastValuable() const { return PieceSet{*this}.last(); }
+    constexpr Pi piLast() const { return PieceSet{*this}.last(); }
 
     constexpr int popcount() const { return PieceSet{*this}.popcount(); }
 
@@ -213,7 +213,7 @@ public:
         }
     }
 
-    constexpr bool isOk(Pi pi) const { return !isEmpty(pi) && pieceAt(square[pi]) == pi; }
+    constexpr bool isOk(Pi pi) const { return !isEmpty(pi) && this->pi(square[pi]) == pi; }
 
     #ifdef NDEBUG
         constexpr void assertOk(Pi) const {}
@@ -227,8 +227,8 @@ public:
 
     void castle(Square kingTo, Pi theRook, Square rookTo) {
         assert (TheKing != theRook);
-        assert (squareOf(Pi{TheKing}).on(Rank1));
-        assert (squareOf(theRook).on(Rank1));
+        assert (sq(Pi{TheKing}).on(Rank1));
+        assert (sq(theRook).on(Rank1));
         assert (kingTo.is(G1) || kingTo.is(C1));
         assert (rookTo.is(F1) || rookTo.is(D1));
 
@@ -241,10 +241,10 @@ public:
     }
 
     constexpr bool isEmpty(Pi pi) const { return square[pi] == NoSq; }
-    constexpr Square squareOf(Pi pi) const { assertOk(pi); return Square{square[pi]}; }
+    constexpr Square sq(Pi pi) const { assertOk(pi); return Square{square[pi]}; }
 
     constexpr bool has(_t sq) const { return piecesAt(sq).any(); }
-    constexpr Pi pieceAt(_t sq) const { assert (has(sq)); return piecesAt(sq).index(); }
+    constexpr Pi pi(_t sq) const { assert (has(sq)); return piecesAt(sq).pi(); }
 
     constexpr PiMask pieces() const { return PiMask::notEquals(vu8x16, ::all(NoSq)); }
     constexpr PiMask piecesAt(_t sq) const { return PiMask::equals(vu8x16, vector(sq)); }
@@ -410,7 +410,7 @@ public:
     constexpr void clearCastlings() { clear(Castlings); }
 
     constexpr PiMask enPassantPawns() const { return any(EnPassants); }
-    constexpr Pi getEnPassant() const { Pi pi = enPassantPawns().index(); return pi; }
+    constexpr Pi piEnPassant() const { Pi pi = enPassantPawns().pi(); return pi; }
     constexpr bool isEnPassant(Pi pi) const { return has(pi, EnPassants); }
     constexpr void setEnPassant(Pi pi) { add(pi, EnPassants); }
     constexpr void clearEnPassant(Pi pi) { assert (isEnPassant(pi)); clear(pi, EnPassants); }
@@ -491,7 +491,7 @@ public:
         // find index of pi in the shuffled vector
         PiMask mask = PiMask::equals(vu8x16, ::vectorOfAll[pi]);
         // shuffle selected pi to the first position
-        vu8x16 = ::shufflevector(vu8x16, std::bit_cast<vu8x16_t>(shuffleToFront[mask.index()]));
+        vu8x16 = ::shufflevector(vu8x16, std::bit_cast<vu8x16_t>(shuffleToFront[mask.pi()]));
         assertOk();
         return *this;
     }

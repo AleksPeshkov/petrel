@@ -181,12 +181,12 @@ class CastlingToFen {
 
             switch (chessVariant) {
                 case Chess960:
-                    castlingSymbol = File{positionSide.squareOf(pi)}.to_char();
+                    castlingSymbol = File{positionSide.sq(pi)}.to_char();
                     break;
 
                 case Orthodox:
                 default:
-                    castlingSymbol = CastlingRules::castlingSide(positionSide.kingSquare(), positionSide.squareOf(pi)).to_char();
+                    castlingSymbol = CastlingRules::castlingSide(positionSide.sqKing(), positionSide.sq(pi)).to_char();
                     break;
             }
 
@@ -222,7 +222,7 @@ public:
     friend ostream& operator << (ostream& out, const EnPassantToFen& enPassant) {
         if (!enPassant.op.hasEnPassant()) { return out << '-'; }
 
-        return out << Square{enPassant.op.enPassantFile(), enPassant.enPassantRank};
+        return out << Square{enPassant.op.fileEnPassant(), enPassant.enPassantRank};
     }
 };
 
@@ -248,7 +248,7 @@ istream& UciPosition::readMove(istream& in, Square& from, Square& to) const {
     if (colorToMove_.is(Black)) { from.flip(); to.flip(); }
 
     if (!MY.has(from)) { return io::fail_pos(in, before); }
-    Pi pi = MY.pieceAt(from);
+    Pi pi = MY.pi(from);
 
     //convert special moves (castling, promotion, ep) to the internal move format
     if (MY.isPawn(pi)) {
@@ -260,7 +260,7 @@ istream& UciPosition::readMove(istream& in, Square& from, Square& to) const {
             return in;
         }
 
-        if (from.on(Rank5) && OP.hasEnPassant() && OP.enPassantFile().is(File{to})) {
+        if (from.on(Rank5) && OP.hasEnPassant() && OP.fileEnPassant().is(File{to})) {
             to = Square{File{to}, Rank5};
             return in;
         }
@@ -310,7 +310,7 @@ void UciPosition::limitMoves(istream& in) {
             return;
         }
 
-        Pi pi = MY.pieceAt(from);
+        Pi pi = MY.pi(from);
         if (!movesMatrix.has(pi, to)) {
             movesMatrix.add(pi, to);
             ++n;
@@ -404,7 +404,7 @@ bool UciPosition::setEnPassant(File file) {
     Square to{file, Rank4};
     if (!OP.has(to)) { return false; }
 
-    Pi victim = OP.pieceAt(to);
+    Pi victim = OP.pi(to);
     if (!OP.isPawn(victim)) { return false; }
 
     if (OCCUPIED.has(~Square{file, Rank3})) { return false; }
