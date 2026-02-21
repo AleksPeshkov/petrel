@@ -329,7 +329,7 @@ ReturnStatus Node::search() {
             Pi pi{TheKing};
             Square from{MY.sqKing()};
             for (Square to : bbMovesOf(pi)) {
-                RETURN_CUTOFF (child->searchMove(from, to, 3_ply));
+                RETURN_CUTOFF (child->searchMove(from, to, 4_ply));
             }
         }
 
@@ -339,7 +339,7 @@ ReturnStatus Node::search() {
         for (Square from : MY.bbPawns()) {
             Pi pi = MY.pi(from);
             for (Square to : bbMovesOf(pi)) {
-                RETURN_CUTOFF (child->searchMove(from, to, 3_ply));
+                RETURN_CUTOFF (child->searchMove(from, to, 4_ply));
             }
         }
 
@@ -348,7 +348,7 @@ ReturnStatus Node::search() {
             Pi pi = pieces.piLast(); pieces -= pi;
             Square from{MY.sq(pi)};
             for (Square to : bbMovesOf(pi) & ~OP.bbSide()) {
-                RETURN_CUTOFF (child->searchMove(from, to, 3_ply));
+                RETURN_CUTOFF (child->searchMove(from, to, 4_ply));
             }
         }
 
@@ -359,7 +359,7 @@ ReturnStatus Node::search() {
             Pi pi = pieces.piLast(); pieces -= pi;
             Square from{MY.sq(pi)};
             for (Square to : bbMovesOf(pi)) {
-                RETURN_CUTOFF (child->searchMove(from, to, 4_ply));
+                RETURN_CUTOFF (child->searchMove(from, to, 5_ply));
             }
         }
     } while (false);
@@ -532,7 +532,20 @@ ReturnStatus Node::searchMove(Square from, Square to, Ply R) {
     else if (grandParent) { repHash = RepHash{grandParent->repHash, grandParent->z()}; }
     else { repHash = root.repetitions.repHash(colorToMove()); }
 
-    return parent->negamax(parent->inCheck() ? 1_ply : R); // check extension
+    R = parent->adjustDepthR(R);
+    return parent->negamax(R);
+}
+
+Ply Node::adjustDepthR(Ply R) const {
+    if (R <= 1_ply) { return R; }
+
+    if (inCheck()) {
+        return 1_ply; // check extension
+    }
+
+    if (depth <= 8_ply && R >= 4_ply) { R = R - 1_ply; }
+
+    return R;
 }
 
 void Node::failHigh() const {
