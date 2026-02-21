@@ -131,6 +131,7 @@ protected:
     constexpr bool isCutNode() const { return (ply - plyPv).v() & 1; } // odd (ply - plyPv)
     constexpr bool isAllNode() const { return !isPv() && !isCutNode(); } // even (plv - plyPv)
     constexpr Ply depthR() const { assert (!isRoot()); return parent->depth - depth; } // parent->depth - depth
+    Ply adjustDepthR(Ply) const;
 
     // current node's side to move color
     constexpr Color colorToMove() const;
