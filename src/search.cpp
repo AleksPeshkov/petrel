@@ -235,7 +235,7 @@ ReturnStatus Node::search() {
         && MY.material().canNullMove() // avoid null move in late endgame
     ) {
         canBeKiller = false;
-        RETURN_CUTOFF (child->searchNullMove(3_ply + (depth-2_ply)/4));
+        RETURN_CUTOFF (child->searchNullMove(4_ply + (depth-2_ply)/4));
     }
 
     if (ttHit && ttSlot.hasMove()) {
