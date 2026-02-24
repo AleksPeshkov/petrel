@@ -160,7 +160,7 @@ protected:
 
 public:
     // https://www.chessprogramming.org/PeSTO%27s_Evaluation_Function
-    constexpr PieceSquareTable () {
+    consteval PieceSquareTable () {
         static_assert (sizeof(element_type) == sizeof(u64_t));
 
         constexpr u16_t openingMat[] = { 1025, 477, 365, 337, 82, 100 }; // PeSTO piece opening values
@@ -316,7 +316,7 @@ public:
     constexpr const element_type& operator() (PieceType ty, Square sq) const { return pst[ty][sq]; }
 };
 
-extern const PieceSquareTable pieceSquareTable;
+extern constinit PieceSquareTable pieceSquareTable;
 
 class Evaluation {
 public:

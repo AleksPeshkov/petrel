@@ -100,7 +100,7 @@ void PositionMoves::excludePinnedMoves(PiMask opPinners) {
         Bb piecesOnPinLine = pinLine & OCCUPIED;
         assert (piecesOnPinLine.any());
 
-        if (piecesOnPinLine.isSingleton() && (piecesOnPinLine & MY.bbSide()).any()) {
+        if (piecesOnPinLine.isSingleton() && piecesOnPinLine.any(MY.bbSide())) {
             //we discovered a true pinned piece
             Pi pinned = MY.pi(piecesOnPinLine.index());
 
