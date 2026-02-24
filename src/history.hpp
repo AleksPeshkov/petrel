@@ -49,19 +49,19 @@ public:
 
 private:
     using _t = Color::arrayOf<HistoryMove::HistoryIndex::arrayOf<Slot>>;
-    _t v;
+    _t v_;
 
 public:
     void clear() {
-        std::memset(&v, HistoryMove::None, sizeof(v));
+        std::memset(&v_, HistoryMove::None, sizeof(v_));
     }
 
     constexpr const HistoryMove& get(Index i, Color color, HistoryMove slot) const {
-        return v[color][slot][i];
+        return v_[color][slot][i];
     }
 
     constexpr void set(Color color, HistoryMove slot, HistoryMove historyMove) {
-        insert_unique(v[color][slot], historyMove);
+        insert_unique(v_[color][slot], historyMove);
     }
 };
 
@@ -95,23 +95,23 @@ public:
 };
 
 // https://www.talkchess.com/forum/viewtopic.php?p=554664#p554664
-class RepetitionHash {
+class RepHash {
     using _t = u64_t;
     _t v{0};
 
     static constexpr _t hash(Z z) { return ::singleton<_t>(z & 077); }
 public:
-    constexpr RepetitionHash () : v{0} {}
-    constexpr RepetitionHash (const RepetitionHash& m, Z z) : v{m.v | hash(z)} {}
+    constexpr RepHash () : v{0} {}
+    constexpr RepHash (const RepHash& m, Z z) : v{m.v | hash(z)} {}
     constexpr bool has(Z z) const { return (v & hash(z)) != 0; }
 };
 
-class RepetitionsSide {
+class RepSide {
     struct RepIndex; STRUCT_INDEX (RepIndex, 50);
 
     struct RepEntry {
         Z z;
-        RepetitionHash hash;
+        RepHash hash;
     };
 
     static constexpr RepIndex Last{RepIndex::Last};
@@ -123,7 +123,7 @@ class RepetitionsSide {
     static constexpr int prev(int i) { return i > 0 ? i-1 : Last.v(); }
 
 public:
-    constexpr RepetitionsSide () { reps[last].hash = {}; }
+    constexpr RepSide () { reps[last].hash = {}; }
 
     constexpr void clear() {
         last = Last;
@@ -131,7 +131,7 @@ public:
     }
 
     constexpr void push(Z z) {
-        auto prevHash{(count == 0) ? RepetitionHash{} : RepetitionHash{reps[last].hash, reps[last].z}};
+        auto prevHash{(count == 0) ? RepHash{} : RepHash{reps[last].hash, reps[last].z}};
         last = RepIndex{last < Last ? last.v()+1 : 0};
         reps[last].z = z;
         reps[last].hash = prevHash;
@@ -181,7 +181,7 @@ public:
             continue;
         }
 
-        RepetitionHash hash{};
+        RepHash hash{};
 
         // push back in reversed order, creating correct hash
         for (int d = duplicateCount-1; d >= 0; --d) {
@@ -210,8 +210,8 @@ public:
         }
     }
 
-    constexpr RepetitionHash repetitionHash() const {
-        return (count == 0) ?  RepetitionHash{} : RepetitionHash{reps[RepIndex{0}].hash, reps[RepIndex{0}].z};
+    constexpr RepHash repHash() const {
+        return (count == 0) ?  RepHash{} : RepHash{reps[RepIndex{0}].hash, reps[RepIndex{0}].z};
     }
 
     // used for unit testing
@@ -219,33 +219,33 @@ public:
 };
 
 class Repetitions {
-    Color::arrayOf<RepetitionsSide> v;
+    Color::arrayOf<RepSide> v_;
 
 public:
     void clear() {
-        for (auto c : range<Color>()) {
-            v[c].clear();
+        for (auto& repSide : v_) {
+            repSide.clear();
         }
     }
 
     void push(Color color, Z z) {
-        return v[color].push(z);
+        return v_[color].push(z);
     }
 
     void normalize(Color color) {
         // the very last position is search root and should be removed from history
-        v[color].dropLast();
-        for (auto c : range<Color>()) {
-            v[c].normalize();
+        v_[color].dropLast();
+        for (auto& repSide : v_) {
+            repSide.normalize();
         }
     }
 
     bool has(Color color, Z z) const {
-        return v[color].has(z);
+        return v_[color].has(z);
     }
 
-    RepetitionHash repetitionHash(Color color) const {
-        return v[color].repetitionHash();
+    RepHash repHash(Color color) const {
+        return v_[color].repHash();
     }
 };
 

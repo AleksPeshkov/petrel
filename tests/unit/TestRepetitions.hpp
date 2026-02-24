@@ -1,22 +1,22 @@
 #include "history.hpp"
 
 void test_repetition_mask() {
-    RepetitionHash m1;
+    RepHash m1;
     assert (!m1.has(Z{1}) && "False positive");
 
-    RepetitionHash m2{m1, Z{1}};
+    RepHash m2{m1, Z{1}};
     assert (m2.has(Z{1}) && "False negative");
     assert (!m2.has(Z{2}) && "False positive");
     assert (!m2.has(Z{3}) && "False positive");
 
-    RepetitionHash m3{m2, Z{2}};
+    RepHash m3{m2, Z{2}};
     assert (m3.has(Z{1}) && "False negative");
     assert (m3.has(Z{2}) && "False negative");
     assert (!m3.has(Z{3}) && "False positive");
 }
 
 void test_no_repetition() {
-    RepetitionsSide reps;
+    RepSide reps;
 
     reps.push(Z{1});
     reps.push(Z{2});
@@ -31,7 +31,7 @@ void test_no_repetition() {
 }
 
 void test_basic_repetition() {
-    RepetitionsSide reps;
+    RepSide reps;
     assert (reps.size() == 0 && "Invalid count of repetitions");
 
     reps.push(Z{1});
@@ -50,7 +50,7 @@ void test_basic_repetition() {
 }
 
 void test_multiple_repetitions() {
-    RepetitionsSide reps;
+    RepSide reps;
 
     reps.push(Z{1});
     reps.push(Z{65});
@@ -70,7 +70,7 @@ void test_multiple_repetitions() {
 }
 
 void test_edge_cases() {
-    RepetitionsSide reps;
+    RepSide reps;
 
     // Zero entries
     assert (!reps.has(Z{1}) && "Invalid repetition detected");

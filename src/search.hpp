@@ -26,7 +26,7 @@ class TtSlot {
     };
     static constexpr u64_t HashMask = U64(0xffff'ffff'ffff'ffff) << TotalShift;
 
-    _t v;
+    _t v_;
 
 public:
     TtSlot (Z z = Z{0},
@@ -37,7 +37,7 @@ public:
         Square from = Square{static_cast<Square::_t>(0)},
         Square to = Square{static_cast<Square::_t>(0)},
         bool canBeKiller = false
-    ) : v{
+    ) : v_{
         (z & HashMask)
         | (static_cast<_t>(score.toTt(ply)) << ScoreShift)
         | (static_cast<_t>(bound) << BoundShift)
@@ -48,17 +48,17 @@ public:
     } { static_assert (sizeof(TtSlot) == sizeof(u64_t)); }
 
     TtSlot (const Node* node);
-    bool operator == (Z z) const { return (v & HashMask) == (z & HashMask); }
+    bool operator == (Z z) const { return (v_ & HashMask) == (z & HashMask); }
 
     bool hasMove() const { return !(from().v() == 0 && to().v() == 0); }
-    Square from() const { return Square{static_cast<Square::_t>(v >> FromShift & Square::Mask)}; }
-    Square to() const { return Square{static_cast<Square::_t>(v >> ToShift & Square::Mask)}; }
+    Square from() const { return Square{static_cast<Square::_t>(v_ >> FromShift & Square::Mask)}; }
+    Square to() const { return Square{static_cast<Square::_t>(v_ >> ToShift & Square::Mask)}; }
 
-    Bound bound() const { return static_cast<Bound>(v >> BoundShift & 0b11); }
-    Ply draft() const { return Ply{static_cast<Ply::_t>(v >> DraftShift & Ply::Mask)}; }
-    bool canBeKiller() const { return v >> KillerShift & 1; }
+    Bound bound() const { return static_cast<Bound>(v_ >> BoundShift & 0b11); }
+    Ply draft() const { return Ply{static_cast<Ply::_t>(v_ >> DraftShift & Ply::Mask)}; }
+    bool canBeKiller() const { return v_ >> KillerShift & 1; }
 
-    Score score(Ply ply) const { return Score::fromTt(v >> ScoreShift & Score::Mask, ply); }
+    Score score(Ply ply) const { return Score::fromTt(v_ >> ScoreShift & Score::Mask, ply); }
 };
 
 class Uci;
@@ -72,7 +72,7 @@ protected:
     const Node* const grandParent; // previous side to move node (ply-2) or nullptr
     Node* child = nullptr; // child node to make moves into, created in search()
 
-    RepetitionHash repetitionHash; // mini-hash of all previous reversible positions zobrist keys
+    RepHash repHash; // mini-hash of all previous reversible positions zobrist keys
 
     Ply ply; // distance from root (root is ply == 0)
     Ply depth{0}; // remaining depth to horizon (should be set before search)
