@@ -5,41 +5,53 @@
 #include "BitSet.hpp"
 
 /**
- * a bit for each chessboard square of a rank
+ * a bit for each square of a chessboard rank
  */
 class BitRank : public BitSet<BitRank, File, u8_t> {
+    using Base = BitSet<BitRank, File, u8_t>;
+    friend class BitArray<BitRank, u8_t>;
 public:
-    using BitSet::BitSet;
+    constexpr BitRank () : Base{} {}
+    constexpr explicit BitRank (_t v) : Base{v} {}
+    constexpr explicit BitRank (File file) : Base{file} {}
 };
 
 /**
  * BitBoard type: a bit for each chessboard square
  */
 class Bb : public BitSet<Bb, Square, u64_t> {
+    using Base = BitSet<Bb, Square, u64_t>;
+    using Base::v_;
+
+    friend class BitArray<Bb, u64_t>;
+
     //declared to catch type cast bugs
     Bb (int) = delete;
 
 public:
-    constexpr Bb () : BitSet() {}
-    constexpr explicit Bb (_t bb) : BitSet{bb} {}
+    using typename Base::_t;
 
-    constexpr explicit Bb (Square::_t sq) : BitSet(Square{sq}) {}
+    constexpr Bb () : Base{} {}
+    constexpr explicit Bb (_t bb) : Base{bb} {}
+    constexpr explicit Bb (Square sq) : Base{sq} {}
+
+    constexpr explicit Bb (Square::_t sq) : Bb{Square{sq}} {}
     constexpr explicit Bb (File::_t f) : Bb{U64(0x0101'0101'0101'0101) << f} {}
     constexpr explicit Bb (Rank::_t r) : Bb{U64(0xff) << 8*r} {}
 
-    constexpr Bb operator ~ () const { return Bb{::byteswap(v)}; }
+    constexpr Bb operator ~ () const { return Bb{::byteswap(v_)}; }
 
     void move(Square from, Square to) { assert (from != to); *this -= Bb{from}; *this += Bb{to}; }
 
-    constexpr BitRank operator[] (Rank r) const { return BitRank{small_cast<BitRank::_t>(v >> 8*r)}; }
+    constexpr BitRank operator[] (Rank r) const { return BitRank{small_cast<BitRank::_t>(v_ >> 8*r)}; }
 
     constexpr Bb pawnAttacks() const { return (*this % Bb{FileA} >> 9u) | (*this % Bb{FileH} >> 7u); }
 
     // bidirectional signed rank shift
-    constexpr Bb shiftRank(signed r) { return Bb{ r >= 0 ? (v << 8*r) : (v >> -8*r) }; }
+    constexpr Bb shiftRank(signed r) { return Bb{ r >= 0 ? (v_ << 8*r) : (v_ >> -8*r) }; }
 
-    constexpr friend Bb operator << (Bb bb, unsigned offset) { return Bb{static_cast<_t>(bb) << offset}; }
-    constexpr friend Bb operator >> (Bb bb, unsigned offset) { return Bb{static_cast<_t>(bb) >> offset}; }
+    constexpr friend Bb operator << (Bb bb, unsigned offset) { return Bb{bb.v_ << offset}; }
+    constexpr friend Bb operator >> (Bb bb, unsigned offset) { return Bb{bb.v_ >> offset}; }
 
     friend ostream& operator << (ostream& out, Bb bb) {
         out << "    a b c d e f g h\n";
@@ -97,7 +109,7 @@ class CACHE_ALIGN InBetween {
     }
 
 public:
-    constexpr InBetween () {
+    consteval InBetween () {
         for (auto from : range<Square>()) {
             for (auto to : range<Square>()) {
                 Bb result{};
@@ -133,7 +145,7 @@ extern const InBetween inBetween;
 class CACHE_ALIGN AttacksFrom {
     PieceType::arrayOf< Square::arrayOf<Bb> > attack;
 public:
-    constexpr AttacksFrom () {
+    consteval AttacksFrom () {
         for (auto sq: range<Square>()) {
             attack[PieceType{Rook}][sq]   = sq.file() + sq.rank();
             attack[PieceType{Bishop}][sq] = sq.diagonal() + sq.antidiag();
@@ -154,7 +166,7 @@ public:
     constexpr const Bb& operator() (PieceType ty, Square sq) const { return attack[ty][sq]; }
 };
 
-extern const AttacksFrom attacksFrom;
+extern constinit AttacksFrom attacksFrom;
 
 class CastlingRules {
     struct Rules {
@@ -167,7 +179,7 @@ class CastlingRules {
     static constexpr Bb exBetween(Square king, Square rook) { return ::inBetween(king, rook) | Bb{rook}; }
 
 public:
-    constexpr CastlingRules () {
+    consteval CastlingRules () {
         for (auto kingFile : range<File>()) {
             for (auto rookFile : range<File>()) {
                 Square king{kingFile, Rank1};
@@ -198,7 +210,8 @@ public:
         assert (king.on(Rank1));
         assert (rook.on(Rank1));
         assert (king != rook);
-        return (occupied & castlingRules[File{king}][File{rook}].unimpeded).none() && (attacked & castlingRules[File{king}][File{rook}].unattacked).none();
+        return castlingRules[File{king}][File{rook}].unimpeded.none(occupied)
+            && castlingRules[File{king}][File{rook}].unattacked.none(attacked);
     }
 
     static constexpr CastlingSide castlingSide(Square king, Square rook) {
@@ -215,6 +228,6 @@ public:
 
 };
 
-extern const CastlingRules castlingRules;
+extern constinit CastlingRules castlingRules;
 
 #endif

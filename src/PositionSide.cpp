@@ -238,7 +238,7 @@ void PositionSide::updateSliders(PiMask affectedSliders, Bb occupiedBb) {
 }
 
 void PositionSide::updateSlidersCheckers(PiMask affectedSliders, Bb occupiedBb) {
-    assert ((traits.checkers() & types.sliders()).none());
+    assert (types.sliders().none(traits.checkers()));
     assert (affectedSliders.any());
 
     //TRICK: attacks calculated without opponent's king for implicit out of check king moves generation
@@ -284,7 +284,7 @@ bool PositionSide::isPinned(Bb occupied) const {
     for (Pi pinner : pinners()) {
         Bb pinLine = ::inBetween(opKing, sq(pinner));
         assert (pinLine.any());
-        if ((pinLine & occupied).none()) {
+        if (pinLine.none(occupied)) {
             return true;
         }
     }

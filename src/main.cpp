@@ -9,13 +9,13 @@
 * Startup constant initialization
 */
 constexpr InBetween inBetween; // 32k 64*64*8, used by constexpr CastlingRules
-constexpr HyperbolaDir hyperbolaDir; // 4k 64*4*16
-constexpr HyperbolaSq hyperbolaSq; // 1k 64*16
-constexpr AttacksFrom attacksFrom; // 3k 6*64*8
+constinit HyperbolaDir hyperbolaDir; // 4k 64*4*16
+constinit HyperbolaSq hyperbolaSq; // 1k 64*16
+constinit AttacksFrom attacksFrom; // 3k 6*64*8
 constexpr VectorOfAll vectorOfAll; // 4k 256*16
-constexpr PieceSquareTable pieceSquareTable; // 3k 6*64*8
+constinit PieceSquareTable pieceSquareTable; // 3k 6*64*8
 constexpr PiSingle piSingle; // 256
-constexpr CastlingRules castlingRules; // 128
+constinit CastlingRules castlingRules; // 128
 
 // global Uci instance
 Uci The_uci(std::cout);

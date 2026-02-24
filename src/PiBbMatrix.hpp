@@ -72,26 +72,20 @@ public:
 
     //bitboard of the given piece
     constexpr Bb operator[] (Pi pi) const {
-        union {
-            Bb::_t bb;
-            Rank::arrayOf<BitRank::_t> br;
-        };
+        Rank::arrayOf<BitRank> br;
         for (auto rank : range<Rank>()) {
             br[rank] = matrix[rank][pi];
         }
-        return Bb{bb};
+        return Bb{std::bit_cast<Bb::_t>(br)};
     }
 
     //bitboard of squares affected by all pieces
     constexpr Bb gather() const {
-        union {
-            Bb::_t bb;
-            Rank::arrayOf<BitRank::_t> br;
-        };
+        Rank::arrayOf<BitRank> br;
         for (auto rank : range<Rank>()) {
             br[rank] = matrix[rank].gather();
         }
-        return Bb{bb};
+        return Bb{std::bit_cast<Bb::_t>(br)};
     }
 
     void filter(Pi pi, Bb bb) {
@@ -133,7 +127,7 @@ public:
     constexpr int popcount() const {
         int sum = 0;
         for (auto rank : range<Rank>()) {
-            sum += ::popcount(matrix[rank]);
+            sum += ::popcount(matrix[rank].v());
         }
         return sum;
     }
