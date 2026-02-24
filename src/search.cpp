@@ -271,7 +271,7 @@ ReturnStatus Node::search() {
         assert (OP.attackersTo(~from).any());
 
         // attacked by more valuable attacker
-        if ((OP.attackersTo(~from) & OP.lessOrEqualValue(MY.typeOf(pi))).none()) {
+        if (OP.attackersTo(~from).none(OP.lessOrEqualValue(MY.typeOf(pi)))) {
             if (MY.bbPawnAttacks().has(from)) {
                 // square defended by a pawn
                 safePieces += pi;

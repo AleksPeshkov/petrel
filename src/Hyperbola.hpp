@@ -35,13 +35,17 @@ constexpr vu64x2_t bitReverse(vu64x2_t v) {
 #endif
 }
 
+constexpr vu64x2_t vu64x2(Bb a, Bb b) {
+    return vu64x2_t{ a.v(), b.v() };
+}
+
 //TRICK: Square operator~ is different
 constexpr Square reverse(Square sq) { return Square{ ~File{sq}, ~Rank{sq} }; }
 
 struct CACHE_ALIGN HyperbolaSq : Square::arrayOf<vu64x2_t> {
     constexpr HyperbolaSq () {
         for (auto sq : range<Square>()) {
-            (*this)[sq] = vu64x2_t{ Bb{sq}, Bb{::reverse(sq)} };
+            (*this)[sq] = vu64x2(Bb{sq}, Bb{::reverse(sq)});
         }
     }
 };
@@ -52,7 +56,7 @@ struct CACHE_ALIGN HyperbolaDir : Square::arrayOf<Direction::arrayOf<vu64x2_t>> 
         for (auto sq : range<Square>()) {
             Square rsq{::reverse(sq)};
             for (auto dir : range<Direction>()) {
-                (*this)[sq][dir] = vu64x2_t{sq.line(dir), rsq.line(dir)};
+                (*this)[sq][dir] = vu64x2(sq.line(dir), rsq.line(dir));
             }
         }
     }
@@ -71,7 +75,7 @@ class alignas(32) Hyperbola {
 
 public:
     // hyperbola({bb1, 0}) == {bb ^ bitreverse64(0), 0 ^ bitreverse64(bb)} == {bb, bitreverse64(bb)}
-    explicit Hyperbola (Bb bb) : occupied{ hyperbola(vu64x2_t{bb, 0}) } {}
+    explicit Hyperbola (Bb bb) : occupied{ hyperbola(vu64x2(bb, Bb{})) } {}
 
     constexpr Bb attack(SliderType ty, Square from) const {
         const auto& sq = hyperbolaSq[from];

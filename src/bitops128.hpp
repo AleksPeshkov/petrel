@@ -41,8 +41,8 @@ constexpr int popcount(vu64x2_t v) {
     return popcount(::u64(v, 0)) + popcount(::u64(v, 1));
 }
 
-template <typename vector_type>
-constexpr vector_type shufflevector(vector_type vector, vector_type mask) {
+template <typename value_type>
+constexpr value_type shufflevector(value_type vector, value_type mask) {
 #if __clang__
     return __builtin_shufflevector(vector, mask);
 #else

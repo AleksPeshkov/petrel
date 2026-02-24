@@ -15,17 +15,17 @@ struct BitArrayOps<vu8x16_t> {
 class CACHE_ALIGN VectorOfAll {
     using _t = vu8x16_t;
     using Index0x100 = Index<0x100>;
-    Index0x100::arrayOf<_t> v;
+    Index0x100::arrayOf<_t> v_;
 
 public:
     constexpr VectorOfAll () {
         for (auto i : range<Index0x100>()) {
-            v[i] = ::all(i);
+            v_[i] = ::all(i);
         }
     }
 
-    constexpr const _t& operator[] (u8_t i) const { return v[Index0x100{i}]; }
-    constexpr const _t& operator[] (Pi pi) const { return v[Index0x100{pi}]; }
+    constexpr const _t& operator[] (u8_t i) const { return v_[Index0x100{i}]; }
+    constexpr const _t& operator[] (Pi pi) const { return v_[Index0x100{pi}]; }
 };
 
 extern const VectorOfAll vectorOfAll;
@@ -38,8 +38,12 @@ extern const VectorOfAll vectorOfAll;
 
 class PieceSet : public BitSet<PieceSet, Pi> {
     using Base = BitSet<PieceSet, Pi>;
+    friend class BitArray<PieceSet>;
+    using Base::v_;
 public:
-    using Base::Base;
+    constexpr PieceSet () : Base{} {}
+    constexpr explicit PieceSet (_t v) : Base{v} {}
+    constexpr explicit PieceSet (Pi pi) : Base{pi} {}
 
     constexpr Pi piFirstVacant() const {
         for (Pi pi : range<Pi>()) {
@@ -62,12 +66,12 @@ public:
 
     // get the first (lowest) bit set
     constexpr Pi first() const {
-        return Pi{static_cast<Index::_t>(::lsb(v) >> 2)};
+        return Pi{static_cast<Index::_t>(::lsb(v_) >> 2)};
     }
 
     // get the last (highest) bit set
     constexpr Pi last() const {
-        return  Pi{static_cast<Index::_t>(::msb(v) >> 2)};
+        return  Pi{static_cast<Index::_t>(::msb(v_) >> 2)};
     }
 
     constexpr Pi piFirstVacant() const {
@@ -90,28 +94,31 @@ consteval Pi::arrayOf<vu8x16_t> make_pi_single_array() {
 
 class PiSingle {
     using _t = vu8x16_t;
-    Pi::arrayOf<_t> v;
+    Pi::arrayOf<_t> v_;
 
 public:
     constexpr PiSingle() {
         for (auto pi : range<Pi>()) {
             std::array<uint8_t, 16> vec = {}; // zero
             vec[static_cast<int>(pi)] = 0xff;
-            v[pi] = std::bit_cast<vu8x16_t>(vec);
+            v_[pi] = std::bit_cast<vu8x16_t>(vec);
         }
     }
 
-    constexpr const _t& operator[] (Pi pi) const { return v[pi]; }
+    constexpr const _t& operator[] (Pi pi) const { return v_[pi]; }
 };
 
 extern const PiSingle piSingle;
 
 ///piece vector of boolean values: false (0) or true (0xff)
 class PiMask : public BitArray<PiMask, vu8x16_t> {
-public:
     using Base = BitArray<PiMask, vu8x16_t>;
+    friend class BitArray<PiMask, vu8x16_t>;
+
+    using Base::v_;
+
+public:
     using typename Base::_t;
-    using Base::v;
     using Base::any;
 
     constexpr static _t zero() { return ::all(0); }
@@ -125,10 +132,10 @@ public:
     static constexpr PiMask any(_t a) { return notEquals(a, zero()); }
     static constexpr PiMask all() { return PiMask{::all(0xff)}; }
 
-    constexpr operator const _t& () const { return v; }
+    constexpr operator const _t& () const { return v_; }
 
     // check if either 0 or 0xff bytes are set
-    bool isOk() const { return ::equals(v, v != zero()); }
+    bool isOk() const { return ::equals(v_, v_ != zero()); }
 
     // assert if either 0 or 0xff bytes are set
     constexpr void assertOk() const { assert (isOk()); }
@@ -136,14 +143,15 @@ public:
     explicit operator PieceSet() const {
         assertOk();
         #ifndef NEON_VECTOR
-            return PieceSet{static_cast<PieceSet::_t>(::mask(v))};
+            return PieceSet{static_cast<PieceSet::_t>(::mask(v_))};
         #else
-            return PieceSet{::mask4(v)};
+            return PieceSet{::mask4(v_)};
         #endif
     }
 
     constexpr bool has(Pi pi) const { return PieceSet{*this}.has(pi); }
     constexpr bool none() const { return PieceSet{*this}.none(); }
+    constexpr bool none(PiMask mask) const { return PieceSet{*this}.none(PieceSet{mask}); }
     constexpr bool isSingleton() const { return PieceSet{*this}.isSingleton(); }
 
     // get the singleton piece index
@@ -161,7 +169,7 @@ public:
     constexpr PieceSet end() const { return PieceSet{}; }
 
     friend ostream& operator << (ostream& out, PiMask mask) {
-        return out << PieceSet{mask};
+        return out << std::hex << PieceSet{mask}.v();
     }
 };
 
@@ -171,26 +179,26 @@ class PiRank : public BitArray<PiRank, vu8x16_t> {
 public:
     using Base::Base;
     constexpr explicit PiRank () : Base{::all(0)} {}
-    constexpr explicit PiRank (BitRank br) : Base{::vectorOfAll[br]} {}
+    constexpr explicit PiRank (BitRank br) : Base{::vectorOfAll[br.v()]} {}
     constexpr explicit PiRank (File f) : PiRank{BitRank{f}} {}
     constexpr PiRank (PiMask m) : Base{m} {}
 
     BitRank gather() const {
-        u8_t r  = v[0] | v[1] | v[2] | v[3] | v[4] | v[5] | v[6] | v[7]
-            | v[8] | v[9] | v[10] | v[11] | v[12] | v[13] | v[14] | v[15];
+        u8_t r  = v_[0] | v_[1] | v_[2] | v_[3] | v_[4] | v_[5] | v_[6] | v_[7]
+            | v_[8] | v_[9] | v_[10] | v_[11] | v_[12] | v_[13] | v_[14] | v_[15];
         return BitRank{r};
     }
 
     constexpr BitRank operator [] (Pi pi) const {
-        return BitRank{ ::u8(v, pi) };
+        return BitRank{ ::u8(v_, pi) };
     }
 
     PiMask operator [] (File file) const {
-        _t file_vector = PiRank{file};
-        return PiMask{ (v & file_vector) == file_vector };
+        _t file_vector = PiRank{file}.v();
+        return PiMask{ (v_ & file_vector) == file_vector };
     }
 
-    constexpr void clear() { v = ::all(0); }
+    constexpr void clear() { v_ = ::all(0); }
 };
 
 class PiSquare {
