@@ -11,18 +11,18 @@ public:
     enum {AgeBits = 3, AgeMask = (1u << AgeBits)-1};
 
 private:
-    _t v;
+    _t v_;
 
 public:
-    constexpr HashAge () : v(1) {}
-    constexpr operator const _t& () { return v; }
+    constexpr HashAge () : v_(1) {}
+    constexpr operator const _t& () { return v_; }
 
     void nextAge() {
         //there are "AgeMask" ages, not "1 << AgeBits", because of:
         //1) we want to break 4*n ply transposition pattern
         //2) make sure that initally clear entry is never hidden
-        auto a = (v + 1) & AgeMask;
-        v = a ? a : 1;
+        auto a = (v_ + 1) & AgeMask;
+        v_ = a ? a : 1;
     }
 
 };
@@ -47,22 +47,22 @@ public:
     using _t = vu64x2_t;
 
 private:
-    std::array<_t, 4> v;
+    std::array<_t, 4> v_;
 
 public:
-    constexpr HashBucket() : v{{{0,0}, {0,0}, {0,0}, {0,0}}} {}
-    constexpr const _t& operator[] (int i) const { return v[i]; }
+    constexpr HashBucket() : v_{{{0,0}, {0,0}, {0,0}, {0,0}}} {}
+    constexpr const _t& operator[] (int i) const { return v_[i]; }
 
     constexpr HashBucket& operator = (const HashBucket& a) {
-        v[0] = a[0];
-        v[1] = a[1];
-        v[2] = a[2];
-        v[3] = a[3];
+        v_[0] = a[0];
+        v_[1] = a[1];
+        v_[2] = a[2];
+        v_[3] = a[3];
         return *this;
     }
 
     constexpr void set(int i, _t m) {
-        v[i] = m;
+        v_[i] = m;
     }
 
 };
@@ -152,7 +152,7 @@ union BucketUnion {
     struct {
         std::array<PerftRecordSmall, 4> d;
         std::array<PerftRecord, 2> b;
-    } v;
+    } u;
     HashBucket m;
 };
 
@@ -160,42 +160,42 @@ node_count_t TtPerft::get(Z z, Ply d) {
     ++reads;
 
     auto origin = addr<BucketUnion>(z);
-    auto u = *origin;
+    auto o = *origin;
 
-    if (u.v.d[0].isKeyMatch(z, d)) {
+    if (o.u.d[0].isKeyMatch(z, d)) {
         ++hits;
-        return u.v.d[0].getNodes();
+        return o.u.d[0].getNodes();
     }
 
-    if (u.v.d[1].isKeyMatch(z, d)) {
+    if (o.u.d[1].isKeyMatch(z, d)) {
         ++hits;
-        return u.v.d[1].getNodes();
+        return o.u.d[1].getNodes();
     }
 
-    if (u.v.d[2].isKeyMatch(z, d)) {
+    if (o.u.d[2].isKeyMatch(z, d)) {
         ++hits;
-        return u.v.d[2].getNodes();
+        return o.u.d[2].getNodes();
     }
 
-    if (u.v.d[3].isKeyMatch(z, d)) {
+    if (o.u.d[3].isKeyMatch(z, d)) {
         ++hits;
-        return u.v.d[3].getNodes();
+        return o.u.d[3].getNodes();
     }
 
-    if (u.v.b[0].isKeyMatch(z, d)) {
+    if (o.u.b[0].isKeyMatch(z, d)) {
         ++hits;
-        auto n = u.v.b[0].getNodes();
-        if (d >= u.v.b[1].getDepth()) {
-            u.v.b[0].setAge(hashAge);
-            origin->m.set(3, u.m[2]);
-            origin->m.set(2, u.m[3]);
+        auto n = o.u.b[0].getNodes();
+        if (d >= o.u.b[1].getDepth()) {
+            o.u.b[0].setAge(hashAge);
+            origin->m.set(3, o.m[2]);
+            origin->m.set(2, o.m[3]);
         }
         return n;
     }
 
-    if (u.v.b[1].isKeyMatch(z, d)) {
+    if (o.u.b[1].isKeyMatch(z, d)) {
         ++hits;
-        auto n = u.v.b[1].getNodes();
+        auto n = o.u.b[1].getNodes();
         return n;
     }
 
@@ -208,55 +208,55 @@ void TtPerft::set(Z z, Ply d, node_count_t n) {
     auto origin = addr<BucketUnion>(z);
     auto u = *origin;
 
-    auto b0d = u.v.b[0].getDepth();
+    auto b0d = u.u.b[0].getDepth();
 
-    if (u.v.b[0].isAgeMatch(hashAge) && d < b0d && n <= std::numeric_limits<u32_t>::max() && d.v() <= 0xf) {
+    if (u.u.b[0].isAgeMatch(hashAge) && d < b0d && n <= std::numeric_limits<u32_t>::max() && d.v() <= 0xf) {
         //deep slots are occupied, update only short slot if possible
 
         if (d == 0_ply) {
-            u.v.d[0].set(z, d, n);
+            u.u.d[0].set(z, d, n);
             origin->m.set(0, u.m[0]);
             return;
         }
 
         if (d == 1_ply) {
-            u.v.d[0] = u.v.d[1];
-            u.v.d[1].set(z, d, n);
+            u.u.d[0] = u.u.d[1];
+            u.u.d[1].set(z, d, n);
             origin->m.set(0, u.m[0]);
             return;
         }
 
-        u.v.d[0] = u.v.d[1];
-        u.v.d[1] = u.v.d[2];
+        u.u.d[0] = u.u.d[1];
+        u.u.d[1] = u.u.d[2];
         origin->m.set(0, u.m[0]);
 
-        if (d >= u.v.d[3].getDepth()) {
-            u.v.d[2] = u.v.d[3];
-            u.v.d[3].set(z, d, n);
+        if (d >= u.u.d[3].getDepth()) {
+            u.u.d[2] = u.u.d[3];
+            u.u.d[3].set(z, d, n);
             origin->m.set(1, u.m[1]);
             return;
         }
 
-        u.v.d[2].set(z, d, n);
+        u.u.d[2].set(z, d, n);
         origin->m.set(1, u.m[1]);
         return;
     }
 
-    if (b0d <= 4_ply && u.v.b[0].getNodes() <= std::numeric_limits<u32_t>::max()) {
+    if (b0d <= 4_ply && u.u.b[0].getNodes() <= std::numeric_limits<u32_t>::max()) {
         //the shallowest deep slot would be overwritten anyway
         //so we move it into the short slot if possible
 
-        u.v.d[0] = u.v.d[1];
-        u.v.d[1] = u.v.d[2];
-        u.v.d[2] = u.v.d[3];
-        u.v.d[3].set(u.v.b[0].getKey(), b0d, u.v.b[0].getNodes());
+        u.u.d[0] = u.u.d[1];
+        u.u.d[1] = u.u.d[2];
+        u.u.d[2] = u.u.d[3];
+        u.u.d[3].set(u.u.b[0].getKey(), b0d, u.u.b[0].getNodes());
         origin->m.set(0, u.m[0]);
         origin->m.set(1, u.m[1]);
     }
 
-    u.v.b[0].set(z, d, n, hashAge);
+    u.u.b[0].set(z, d, n, hashAge);
 
-    if (u.v.b[1].isAgeMatch(hashAge) && d < u.v.b[1].getDepth()) {
+    if (u.u.b[1].isAgeMatch(hashAge) && d < u.u.b[1].getDepth()) {
         //move current data in the middle slot
         origin->m.set(2, u.m[2]);
         return;

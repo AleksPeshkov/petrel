@@ -134,10 +134,10 @@ public:
             unsigned officers:8; // sum of Q = 10, R = 5, B/N = 3 (startpos total PieceMatMax = 32)
             unsigned totalMat:8;  // sum of all pieces material points (pawn = 1)
         } s;
-        u64_t v;
+        u64_t v_;
 
-        constexpr auto& operator += (const element_type& o) { v += o.v; return *this; }
-        constexpr auto& operator -= (const element_type& o) { v -= o.v; return *this; }
+        constexpr auto& operator += (const element_type& o) { v_ += o.v_; return *this; }
+        constexpr auto& operator -= (const element_type& o) { v_ -= o.v_; return *this; }
 
         constexpr int score(int material) const {
             auto stage = std::min(material, PieceMatMax);
@@ -313,17 +313,17 @@ public:
     using _t = PieceSquareTable::element_type;
 
 private:
-    _t v;
+    _t v_;
 
-    constexpr void from(PieceType ty, Square sq) { v -= pieceSquareTable(ty, sq); }
-    constexpr void to(PieceType ty, Square sq) { v += pieceSquareTable(ty, sq); }
+    constexpr void from(PieceType ty, Square sq) { v_ -= pieceSquareTable(ty, sq); }
+    constexpr void to(PieceType ty, Square sq) { v_ += pieceSquareTable(ty, sq); }
 
 public:
-    constexpr Evaluation () : v{} {}
+    constexpr Evaluation () : v_{} {}
 
     // PeSTO position static evaluation
     static auto evaluate(const Evaluation& my, const Evaluation& op) {
-        return (my.v.score(my.v.s.officers) - op.v.score((op.v.s.officers))) / PieceSquareTable::PieceMatMax;
+        return (my.v_.score(my.v_.s.officers) - op.v_.score((op.v_.s.officers))) / PieceSquareTable::PieceMatMax;
     }
 
     void drop(PieceType ty, Square t) { to(ty, t); }
@@ -347,15 +347,15 @@ public:
     constexpr int count(NonKingType::_t ty) const {
         switch (ty) {
             case Queen:
-                return v.s.queens;
+                return v_.s.queens;
             case Rook:
-                return v.s.rooks;
+                return v_.s.rooks;
             case Bishop:
-                return v.s.bishops;
+                return v_.s.bishops;
             case Knight:
-                return v.s.knights;
+                return v_.s.knights;
             case Pawn:
-                return v.s.pawns;
+                return v_.s.pawns;
             default:
                 assert (false);
                 return 0;
@@ -364,11 +364,11 @@ public:
 
     // any queen, rook or pawn
     constexpr bool hasMatingPieces() const {
-        return (v.s.queens | v.s.rooks | v.s.pawns) != 0;
+        return (v_.s.queens | v_.s.rooks | v_.s.pawns) != 0;
     }
 
     constexpr bool canNullMove() const {
-        return v.s.officers > 0;
+        return v_.s.officers > 0;
     }
 };
 

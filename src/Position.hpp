@@ -24,7 +24,8 @@ public:
     constexpr void next() { v_ = v_ < Draw ? v_ + 1 : Draw; }
     constexpr bool isDraw() const { return v_ == Draw; }
 
-    friend constexpr bool operator < (Rule50 rule50, Ply ply) { return rule50.v_ < ply.v(); }
+    friend constexpr bool operator == (Rule50 rule50, Ply ply) { return rule50.v_ == ply.v(); }
+    friend constexpr bool operator <  (Rule50 rule50, Ply ply) { return rule50.v_ < ply.v(); }
 
     friend ostream& operator << (ostream& out, Rule50 rule50) { return out << rule50.v_; }
 
