@@ -17,23 +17,23 @@ using vu64x2_t = u64_t __attribute__((vector_size(16)));
 
 #endif
 
-constexpr u8_t u8(const vu8x16_t& v, int i) {
+constexpr u8_t u8(const vu8x16_t& vec, int i) {
     union {
-        vu8x16_t v;
+        vu8x16_t vu8x16;
         u8_t u8[16];
     } u;
-    u.v = v;
+    u.vu8x16 = vec;
     return u.u8[i];
 }
 
 constexpr vu8x16_t all(u8_t i) { return vu8x16_t{ i,i,i,i, i,i,i,i, i,i,i,i, i,i,i,i }; }
 
-constexpr u64_t u64(vu64x2_t v, int i = 0) {
+constexpr u64_t u64(vu64x2_t vec, int i = 0) {
     union {
-        vu64x2_t v;
+        vu64x2_t vu64x2;
         u64_t u64[2];
     } u;
-    u.v = v;
+    u.vu64x2 = vec;
     return u.u64[i];
 }
 
