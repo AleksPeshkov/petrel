@@ -337,21 +337,21 @@ public:
     }
 
     void drop(PieceType ty, Square t) { to(ty, t); }
-    void capture(NonKingType ty, Square f) { from(PieceType{ty}, f); }
+    void capture(NonKingType ty, Square f) { from(ty, f); }
     void move(PieceType ty, Square f, Square t) { assert (f != t); from(ty, f); to(ty, t); }
 
     void promote(Square f, Square t, PromoType ty) {
         assert (f.on(Rank7) && t.on(Rank8));
-        from(PieceType{Pawn}, f);
-        to(PieceType{ty}, t);
+        from(Pawn, f);
+        to(ty, t);
     }
 
     void castle(Square kingFrom, Square kingTo, Square rookFrom, Square rookTo) {
         assert (kingFrom != rookFrom);
         assert (kingTo != rookTo);
 
-        from(PieceType{King}, kingFrom); from(PieceType{Rook}, rookFrom);
-        to(PieceType{Rook}, rookTo); to(PieceType{King}, kingTo);
+        from(King, kingFrom); from(Rook, rookFrom);
+        to(Rook, rookTo); to(King, kingTo);
     }
 
     constexpr int count(NonKingType::_t ty) const {

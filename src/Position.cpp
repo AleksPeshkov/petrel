@@ -94,8 +94,8 @@ void Position::makeMove(Square from, Square to) {
             to = Square{File{to}, Rank6};
 
             if constexpr (Z) {
-                zobrist_.move(PieceType{Pawn}, from, to);
-                zobrist_.op(NonKingType{Pawn}, ~ep);
+                zobrist_.move(Pawn, from, to);
+                zobrist_.opCapture(NonKingType{Pawn}, ~ep);
             }
             MY.movePawn(pi, from, to);
             OP.capture(~ep); // also clears en passant victim
@@ -125,7 +125,7 @@ void Position::makeMove(Square from, Square to) {
             if (OP.has(~to)) {
                 if constexpr (Z) {
                     if (OP.isCastling(~to)) { zobrist_.opCastling(~to); } // captured the rook with castling right
-                    zobrist_.op(NonKingType{OP.typeAt(~to)}, ~to);
+                    zobrist_.opCapture(NonKingType{OP.typeAt(~to)}, ~to); // also clears en passant victim (if any) (P
                 }
                 OP.capture(~to);
 
@@ -138,14 +138,14 @@ void Position::makeMove(Square from, Square to) {
         }
 
         if constexpr (Z) {
-            zobrist_.move(PieceType{Pawn}, from, to);
+            zobrist_.move(Pawn, from, to);
         }
         MY.movePawn(pi, from, to);
 
         // possible en passant capture and capture with promotion already treated
         if (OP.has(~to)) {
             if constexpr (Z) {
-                zobrist_.op(NonKingType{OP.typeAt(~to)}, ~to);
+                zobrist_.opCapture(NonKingType{OP.typeAt(~to)}, ~to);
             }
             OP.capture(~to);
 
@@ -168,7 +168,7 @@ void Position::makeMove(Square from, Square to) {
     if (MY.sqKing().is(from)) {
         if constexpr (Z) {
             for (Pi rook : MY.castlingRooks()) { zobrist_.castling(MY.sq(rook)); }
-            zobrist_.move(PieceType{King}, from, to);
+            zobrist_.move(King, from, to);
         }
         MY.moveKing(from, to);
         OP.setOpKing(~to);
@@ -177,7 +177,7 @@ void Position::makeMove(Square from, Square to) {
             rule50_.clear();
             if constexpr (Z) {
                 if (OP.isCastling(~to)) { zobrist_.opCastling(~to); } // captured the rook with castling right
-                zobrist_.op(NonKingType{OP.typeAt(~to)}, ~to);
+                zobrist_.opCapture(NonKingType{OP.typeAt(~to)}, ~to);
             }
             OP.capture(~to);
 
@@ -222,7 +222,7 @@ void Position::makeMove(Square from, Square to) {
         rule50_.clear();
         if constexpr (Z) {
             if (OP.isCastling(~to)) { zobrist_.opCastling(~to); } // captured the rook with castling right
-            zobrist_.op(NonKingType{OP.typeAt(~to)}, ~to);
+            zobrist_.opCapture(NonKingType{OP.typeAt(~to)}, ~to);
         }
         OP.capture(~to);
 
@@ -273,7 +273,7 @@ void Position::setLegalEnPassant(Pi victim, Square to) {
     Square ep{File{to}, Rank3};
 
     // check if there are any pawns to capture ep victim
-    Bb killers = ~OP.bbPawns() & ::attacksFrom(PieceType{Pawn}, ep);
+    Bb killers = ~OP.bbPawns() & ::attacksFrom(Pawn, ep);
     if (killers.none()) { return; }
 
     // discovered check
@@ -354,8 +354,8 @@ Zobrist Position::createZobrist(Square from, Square to) const {
 
         // en passant capture
         if (ty.is(Pawn) && from.on(Rank5) && to.on(Rank5)) {
-            mz.move(PieceType{Pawn}, from, Square{File{to}, Rank6});
-            oz(PieceType{Pawn}, ~to);
+            mz.move(Pawn, from, Square{File{to}, Rank6});
+            oz(Pawn, ~to);
             goto zobrist;
         }
     }
@@ -375,7 +375,7 @@ Zobrist Position::createZobrist(Square from, Square to) const {
             File file{from};
             Square ep{file, Rank3};
 
-            Bb killers = ~OP.bbPawns() & ::attacksFrom(PieceType{Pawn}, ep);
+            Bb killers = ~OP.bbPawns() & ::attacksFrom(Pawn, ep);
             if (killers.any() && !MY.isPinned(OCCUPIED - Bb{from} + Bb{ep})) {
                 for (Square killer : killers) {
                     assert (killer.on(Rank4));

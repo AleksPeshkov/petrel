@@ -62,7 +62,7 @@ void PositionSide::capture(Square from) {
     NonKingType ty{typeOf(pi)};
     assert (!ty.is(King));
 
-    assertOk(pi, PieceType{ty}, from);
+    assertOk(pi, ty, from);
 
     bbSide_ -= Bb{from};
     if (ty.is(Pawn)) {
@@ -96,7 +96,7 @@ void PositionSide::move(Pi pi, Square from, Square to) {
 
     if (ty.is(Knight)) {
         assert (traits.isEmpty(pi)); //nothing to clear or already cleared
-        setLeaperAttack(pi, PieceType{Knight}, to);
+        setLeaperAttack(pi, Knight, to);
     }
     else {
         traits.clear(pi);
@@ -107,28 +107,28 @@ void PositionSide::move(Pi pi, Square from, Square to) {
 }
 
 void PositionSide::moveKing(Square from, Square to) {
-    move(Pi{TheKing}, PieceType{King}, from, to);
+    move(Pi{TheKing}, King, from, to);
     updateMovedKing(to);
 }
 
 void PositionSide::movePawn(Pi pi, Square from, Square to) {
-    move(pi, PieceType{Pawn}, from, to);
+    move(pi, Pawn, from, to);
     bbPawns_.move(from, to);
     bbPawnAttacks_ = bbPawns_.pawnAttacks();
 
     assert (traits.isEmpty(pi));
     if (to.on(Rank7)) { traits.setPromotable(pi); }
 
-    setLeaperAttack(pi, PieceType{Pawn}, to);
+    setLeaperAttack(pi, Pawn, to);
 
-    assertOk(pi, PieceType{Pawn}, to);
+    assertOk(pi, Pawn, to);
 }
 
 Pi PositionSide::piPromoted(Pi pawn, Square from, PromoType ty, Square to) {
     assert (from.on(Rank7));
     assert (to.on(Rank8));
     assert (traits.isPromotable(pawn));
-    assertOk(pawn, PieceType{Pawn}, from);
+    assertOk(pawn, Pawn, from);
 
     bbSide_.move(from, to);
     evaluation_.promote(from, to, ty);
@@ -147,32 +147,32 @@ Pi PositionSide::piPromoted(Pi pawn, Square from, PromoType ty, Square to) {
     assert (promo <= pawn);
 
     squares.drop(promo, to);
-    types.drop(promo, static_cast<PieceType::_t>(ty));
+    types.drop(promo, ty);
 
     if (ty.is(Knight)) {
-        setLeaperAttack(promo, PieceType{Knight}, to);
+        setLeaperAttack(promo, Knight, to);
     }
     else {
         setPinner(promo, SliderType{ty}, to);
     }
 
-    assertOk(promo, PieceType{ty}, to);
+    assertOk(promo, ty, to);
     return promo;
 }
 
 void PositionSide::updateMovedKing(Square to) {
     //king move cannot check
     assert (traits.isEmpty(Pi{TheKing}));
-    assert (!::attacksFrom(PieceType{King}, to).has(opKing));
-    attacks_.set(Pi{TheKing}, ::attacksFrom(PieceType{King}, to));
+    assert (!::attacksFrom(King, to).has(opKing));
+    attacks_.set(Pi{TheKing}, ::attacksFrom(King, to));
     traits.clearCastlings();
 
-    assertOk(Pi{TheKing}, PieceType{King}, to);
+    assertOk(Pi{TheKing}, King, to);
 }
 
 void PositionSide::castle(Square kingFrom, Square kingTo, Pi rook, Square rookFrom, Square rookTo) {
-    assertOk(Pi{TheKing}, PieceType{King}, kingFrom);
-    assertOk(rook, PieceType{Rook}, rookFrom);
+    assertOk(Pi{TheKing}, King, kingFrom);
+    assertOk(rook, Rook, rookFrom);
 
     //possible overlap in Chess960
     squares.castle(kingTo, rook, rookTo);
@@ -187,7 +187,7 @@ void PositionSide::castle(Square kingFrom, Square kingTo, Pi rook, Square rookFr
     setPinner(rook, SliderType{Rook}, rookTo);
 
     updateMovedKing(kingTo);
-    assertOk(rook, PieceType{Rook}, rookTo);
+    assertOk(rook, Rook, rookTo);
 }
 
 void PositionSide::setLeaperAttack(Pi pi, PieceType ty, Square sq) {
@@ -205,7 +205,7 @@ void PositionSide::setPinner(Pi pi, SliderType ty, Square sq) {
     assert (::isSlider(ty));
     assert (!traits.isPinner(pi));
 
-    if (::attacksFrom(PieceType{ty}, sq).has(opKing) && ::inBetween(opKing, sq).any()) {
+    if (::attacksFrom(ty, sq).has(opKing) && ::inBetween(opKing, sq).any()) {
         traits.setPinner(pi);
     }
 }
@@ -326,7 +326,7 @@ bool PositionSide::setValidCastling(CastlingSide castlingSide) {
     }
 
     Square sqOuter{sqKing()};
-    for (Pi rook : piecesOfType(PieceType{Rook}) & piecesOn(Rank1)) {
+    for (Pi rook : piecesOfType(Rook) & piecesOn(Rank1)) {
         if (CastlingRules::castlingSide(sqOuter, sq(rook)).is(castlingSide)) {
             sqOuter = sq(rook);
         }
