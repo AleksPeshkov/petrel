@@ -53,7 +53,7 @@ private:
 
 public:
     void clear() {
-        std::memset(&v, 0, sizeof(v)); //TRICK: Move{} == int16_t{0}
+        std::memset(&v, HistoryMove::None, sizeof(v));
     }
 
     constexpr const HistoryMove& get(Index i, Color color, HistoryMove slot) const {
@@ -85,7 +85,7 @@ public:
 
         auto from = child.v();
         auto to = parent.v() + 1;
-        while ((pv[Index{to++}] = pv[Index{from++}])) {}
+        while ((pv[Index{to++}] = pv[Index{from++}]).any()) {}
 
         pv[Index{to}] = UciMove{};
         return Index{to}; // new child index
