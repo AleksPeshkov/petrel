@@ -50,9 +50,14 @@ public:
         return MY.has(from) && isPossibleMove(MY.pi(from), to);
     }
 
+    bool isPseudoLegal(HistoryMove move) const {
+        if (move.none() || !MY.has(move.from())) { return false; }
+        return move.historyType() == MY.typeAt(move.from());
+    }
+
     // move is legal and not yet made
     bool isPossibleMove(HistoryMove move) const {
-        return move && isPossibleMove(move.from(), move.to()) && move.historyType() == MY.typeAt(move.from());
+        return move.any() && isPossibleMove(move.from(), move.to()) && move.historyType() == MY.typeAt(move.from());
     }
 
     // non capture nor promotion move
