@@ -39,7 +39,7 @@ istream& read(istream& in, FenToBoard& board) {
             Color color{std::isupper(c) ? White : Black};
             c = static_cast<io::char_type>(std::tolower(c));
 
-            PieceType ty;
+            PieceType ty{Queen};
             if (!ty.from_char(c) || !board.drop(color, ty, Square{file, rank})) {
                 return io::fail_char(in);
             }

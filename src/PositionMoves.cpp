@@ -26,7 +26,7 @@ void PositionMoves::populateUnderpromotions() {
 template <Side::_t My>
 void PositionMoves::generateLegalKingMoves() {
     //TRICK: our attacks do not hide under attacked king shadow
-    Bb kingMoves = ::attacksFrom(PieceType{King}, MY.sqKing()) % (MY.bbSide() | bbAttacked());
+    Bb kingMoves = ::attacksFrom(King, MY.sqKing()) % (MY.bbSide() | bbAttacked());
     moves_.set(Pi{TheKing}, kingMoves);
 }
 
@@ -74,7 +74,7 @@ void PositionMoves::correctCheckEvasionsByPawns(Bb checkLine, Square checkFrom) 
 
     Bb affectedPawns = MY.bbPawns() & (potentialBlockers | pawnDiagonalMoves);
     for (Square from : affectedPawns) {
-        Bb bb = (Bb{from.rankForward()} & checkLine) + (::attacksFrom(PieceType{Pawn}, from) & Bb{checkFrom});
+        Bb bb = (Bb{from.rankForward()} & checkLine) + (::attacksFrom(Pawn, from) & Bb{checkFrom});
         Rank rankTo = Rank{from}.forward();
         moves_.set(MY.pi(from), rankTo, bb[rankTo]);
     }

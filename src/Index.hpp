@@ -328,7 +328,14 @@ template <> struct CharMap<piece_type_t> { static constexpr io::czstring The_str
 using SliderType = Index<3, piece_type_t>;    // Queen, Rook, Bishop
 using PromoType = IndexChar<4, piece_type_t>; // Queen, Rook, Bishop, Knight
 using NonKingType = Index<5, piece_type_t>;   // Queen, Rook, Bishop, Knight, Pawn
-using PieceType = IndexChar<6, piece_type_t>; // Queen, Rook, Bishop, Knight, Pawn, King
+
+ // Queen, Rook, Bishop, Knight, Pawn, King
+struct PieceType : IndexChar<6, piece_type_t> {
+    constexpr PieceType (PieceType::_t ty) : IndexChar{ty} {}
+    constexpr PieceType (SliderType ty) : IndexChar{ty} {}
+    constexpr PieceType (PromoType ty) : IndexChar{ty} {}
+    constexpr PieceType (NonKingType ty) : IndexChar{ty} {}
+};
 
 constexpr bool isSlider(piece_type_t ty) { return ty < Knight; } // Queen, Rook, Bishop
 constexpr bool isLeaper(piece_type_t ty) { return ty >= Knight; } // Knight, Pawn, King
