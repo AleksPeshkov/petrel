@@ -412,17 +412,19 @@ class HistoryMove {
     _t v_;
 
 public:
+    static constexpr _t None{0};
     static constexpr int Size = HistoryType::Size * Square::Size * Square::Size;
     struct HistoryIndex; STRUCT_INDEX (HistoryIndex, Size);
 
     // null move
-    constexpr HistoryMove() : v_{0} {}
+    constexpr HistoryMove() : v_{None} {}
 
     constexpr HistoryMove (PieceType ty, Square from, Square to)
         : v_ {static_cast<_t>((::historyType(ty).v() << Shift::Type) + (from.v() << Shift::From) + (to.v() << Shift::To))}
     {}
 
-    constexpr operator bool () const { return v_; }
+    constexpr bool none() const { return v_ == None; }
+    constexpr bool any() const { return !none(); }
 
     constexpr operator HistoryIndex () const { return HistoryIndex{v_}; }
 
@@ -450,14 +452,17 @@ class UciMove {
     _t v_;
 
 public:
+    static constexpr _t NoMove{0};
+
     // null move
-    constexpr UciMove() : v_{0} {}
+    constexpr UciMove() : v_{NoMove} {}
 
     constexpr UciMove (Square from, Square to, bool special)
         : v_ {static_cast<_t>((special << Shift::Special) + (from.v() << Shift::From) + (to.v() << Shift::To))}
     {}
 
-    constexpr operator bool () const { return v_; }
+    constexpr bool none() const { return v_ == NoMove; }
+    constexpr bool any() const { return !none(); }
 
     constexpr bool isSpecial() const { return v_ >> Shift::Special & 1; }
 

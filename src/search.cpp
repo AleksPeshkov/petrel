@@ -49,7 +49,7 @@ ReturnStatus Node::negamax(Ply R) const {
         auto realR = depth - child->depth;
 
         if (beta <= childScore) {
-            if (currentMove && realR >= 2_ply) {
+            if (currentMove.any() && realR >= 2_ply) {
                 if (child->isPv()) {
                     // rare case (the first move from PV with reduced depth)
                     child->alpha = -beta;
@@ -68,7 +68,7 @@ ReturnStatus Node::negamax(Ply R) const {
 
         assert (alpha < childScore && childScore < beta);
         assert (isPv()); // alpha < childScore < beta, so current window cannot be zero
-        assert (currentMove); // null move in PV is not allowed
+        assert (currentMove.any()); // null move in PV is not allowed
 
         if (!child->isPv()) {
             // Principal Variation Search (PVS) research with full window
@@ -108,13 +108,13 @@ ReturnStatus Node::search() {
     if (moves().none()) {
         // checkmate or stalemate
         score = inCheck() ? Score::mateLoss(ply) : Score{DrawScore};
-        assert (!currentMove);
+        assert (currentMove.none());
         return ReturnStatus::Continue;
     }
     if (ply == MaxPly) {
         // no room to search deeper
         score = evaluate();
-        assert (!currentMove);
+        assert (currentMove.none());
         return ReturnStatus::Continue;
     }
 
@@ -123,13 +123,13 @@ ReturnStatus Node::search() {
         alpha = std::max(alpha, Score::mateLoss(ply));
         if (!(alpha < std::min(beta, Score::mateWin(ply + 1_ply)))) {
             score = alpha;
-            assert (!currentMove);
+            assert (currentMove.none());
             return ReturnStatus::Cutoff;
         }
 
         if (rule50().isDraw() || isRepetition() || isDrawMaterial()) {
             score = Score{DrawScore};
-            assert (!currentMove);
+            assert (currentMove.none());
             return ReturnStatus::Continue;
         }
 
@@ -161,7 +161,7 @@ ReturnStatus Node::search() {
                         || ((ttBound & FailLow) && ttScore <= alpha)
                     ) {
                         score = ttScore;
-                        assert (!currentMove);
+                        assert (currentMove.none());
                         if (ttSlot.hasMove()) {
                             assert (isPossibleMove(from, to));
                             canBeKiller = ttSlot.canBeKiller();
@@ -188,7 +188,7 @@ ReturnStatus Node::search() {
         return quiescence();
     }
 
-    assert (!currentMove);
+    assert (currentMove.none());
 
     if (
         !inCheck()
@@ -199,7 +199,7 @@ ReturnStatus Node::search() {
         if (Score{MinEval} <= beta && beta <= eval-delta) {
             // Static Null Move Pruning (Reverse Futility Pruning)
             score = eval;
-            assert (!currentMove);
+            assert (currentMove.none());
             return ReturnStatus::Cutoff;
         } else {
             delta = (depth == 1_ply) ? 50_cp : (depth == 2_ply) ? 250_cp : 350_cp;
@@ -385,7 +385,7 @@ ReturnStatus Node::quiescence() {
     // stand pat
     score = eval;
     if (beta <= score) {
-        assert (!currentMove);
+        assert (currentMove.none());
         return ReturnStatus::Cutoff;
     }
     if (alpha < score) {
@@ -455,10 +455,10 @@ ReturnStatus Node::goodCaptures(PiMask victims) {
 // Counter move heuristic: refutation of the last opponent's move
 ReturnStatus Node::counterMove() {
     assert (parent);
-    if (parent->currentMove) {
+    if (parent->currentMove.any()) {
         for (auto i : range<decltype(root.counterMove)::Index>()) {
             auto move = root.counterMove.get(i, parent->colorToMove(), parent->currentMove);
-            if (!move) { break; }
+            if (move.none()) { break; }
             if (isPossibleMove(move)) {
                 return child->searchMove(move);
             }
@@ -469,10 +469,10 @@ ReturnStatus Node::counterMove() {
 
 // Follow up move heuristic: continue the idea of our last made move
 ReturnStatus Node::followMove() {
-    if (grandParent && grandParent->currentMove) {
+    if (grandParent && grandParent->currentMove.any()) {
         for (auto i : range<decltype(root.followMove)::Index>()) {
             auto move = root.followMove.get(i, grandParent->colorToMove(), grandParent->currentMove);
-            if (!move) { break; }
+            if (move.none()) { break; }
             if (isPossibleMove(move)) {
                 return child->searchMove(move);
             }
@@ -515,7 +515,7 @@ ReturnStatus Node::searchMove(Square from, Square to, Ply R) {
 
 void Node::failHigh() const {
     // currentMove is null (after NMP), write back previous TT move instead
-    if (!currentMove) {
+    if (currentMove.none()) {
         currentMove = ttMove();
     }
 
@@ -548,7 +548,7 @@ void Node::updatePv() const {
 }
 
 void Node::updateHistory(HistoryMove historyMove) const {
-    assert (historyMove);
+    assert (historyMove.any());
     if (!parent) { return; }
 
     insert_unique(parent->killer, historyMove);
@@ -556,11 +556,11 @@ void Node::updateHistory(HistoryMove historyMove) const {
         insert_unique<2>(parent->grandParent->killer, historyMove);
     }
 
-    if (parent->currentMove) {
+    if (parent->currentMove.any()) {
         root.counterMove.set(parent->colorToMove(), parent->currentMove, historyMove);
     }
 
-    if (grandParent && grandParent->currentMove) {
+    if (grandParent && grandParent->currentMove.any()) {
         root.followMove.set(grandParent->colorToMove(), grandParent->currentMove, historyMove);
     }
 }

@@ -49,7 +49,7 @@ UciOutput& operator << (UciOutput& out, io::czstring message) {
 
 // convert move to UCI format
 UciOutput& operator << (UciOutput& out, UciMove move) {
-    if (!move) {
+    if (move.none()) {
         io::info("illegal move 0000 printed");
         out << "0000";
         return out;
@@ -107,7 +107,7 @@ UciOutput& operator << (UciOutput& out, UciMove move) {
 UciOutput& operator << (UciOutput& out, const PvMoves& pvMoves) {
     auto moves = static_cast<const UciMove*>(pvMoves);
     out << " pv";
-    for (UciMove move; (move = *moves++); ) {
+    for (UciMove move; (move = *moves++).any(); ) {
         out << " "; out << move; out.flipColor();
     }
     return out;
@@ -471,7 +471,7 @@ void Uci::refreshTtPv(Ply depth) const {
     Ply ply = 0_ply;
 
     const UciMove* moves = pvMoves;
-    for (UciMove move; (move = *moves++);) {
+    for (UciMove move; (move = *moves++).any();) {
         auto o = tt.addr<TtSlot>(pos.zobrist());
         *o = TtSlot{pos.zobrist(), score, ply, ExactScore, depth, move.from(), move.to(), false};
         ++tt.writes;
@@ -494,7 +494,7 @@ void Uci::info_bestmove() const {
 
     UciOutput ob{this};
     ob << "bestmove "; ob << pvMoves[0];
-    if (limits.canPonder && pvMoves[1]) {
+    if (limits.canPonder && pvMoves[1].any()) {
         ob << " ponder "; ob.flipColor(); ob << pvMoves[1];
     }
 
