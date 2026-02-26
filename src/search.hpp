@@ -115,9 +115,7 @@ protected:
     [[nodiscard]] ReturnStatus counterMove();
     [[nodiscard]] ReturnStatus followMove();
 
-    [[nodiscard]] ReturnStatus searchMove(Pi, Square, Ply R = 1_ply);
     [[nodiscard]] ReturnStatus searchMove(Square, Square, Ply R = 1_ply);
-    [[nodiscard]] ReturnStatus searchMove(HistoryMove move, Ply R = 1_ply) { return searchMove(move.from(), move.to(), R); }
     [[nodiscard]] ReturnStatus searchNullMove(Ply R);
 
     [[nodiscard]] ReturnStatus searchIfPossible(Square from, Square to, Ply R = 1_ply) {
@@ -125,11 +123,7 @@ protected:
     }
 
     [[nodiscard]] ReturnStatus searchIfPossible(HistoryMove move, Ply R = 1_ply) {
-        return parent->isPossibleMove(move) ? searchMove(move, R) : ReturnStatus::Continue;
-    }
-
-    [[nodiscard]] ReturnStatus searchIfPossible(Pi pi, Square to, Ply R = 1_ply) {
-        return parent->isPossibleMove(pi, to) ? searchMove(pi, to, R) : ReturnStatus::Continue;
+        return parent->isPossibleMove(move) ? searchMove(move.from(), move.to(), R) : ReturnStatus::Continue;
     }
 
     constexpr bool isRoot() const { assert (parent == nullptr || ply > 0_ply); return parent == nullptr; } // ply == 0
