@@ -42,11 +42,8 @@ public:
     constexpr const MovesNumber& movesMade() const { return movesMade_; }
 
     // move is legal and not yet made
-    bool isPossibleMove(Pi pi, Square to) const { return moves_.has(pi, to); }
-
-    // move is legal and not yet made
     bool isPossibleMove(Square from, Square to) const {
-        return MY.has(from) && isPossibleMove(MY.pi(from), to);
+        return MY.has(from) && moves_.has(MY.pi(from), to);
     }
 
     bool isPseudoLegal(HistoryMove move) const {
@@ -56,7 +53,7 @@ public:
 
     // move is legal and not yet made
     bool isPossibleMove(HistoryMove move) const {
-        return move.any() && isPossibleMove(move.from(), move.to()) && move.historyType() == MY.typeAt(move.from());
+        return isPseudoLegal(move) && isPossibleMove(move.from(), move.to());
     }
 
     // non capture nor promotion move

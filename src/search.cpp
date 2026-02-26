@@ -246,9 +246,6 @@ ReturnStatus Node::search() {
         RETURN_CUTOFF (child->searchIfPossible(parent->killer[2]));
     }
 
-    // Weak Move Reduction condition: !inCheck()
-    bool canR = !inCheck();
-
     // Weak Move Pruning: !inCheck() && !isPv() && depth <= 2
     bool canP = !inCheck() && !isPv() && depth <= 2_ply;
 
@@ -279,13 +276,13 @@ ReturnStatus Node::search() {
             //TODO: try protecting moves of other pieces
         }
 
-        RETURN_CUTOFF (goodNonCaptures(pi, bbMovesOf(pi) % bbAvoid, canR ? 2_ply : 1_ply));
+        RETURN_CUTOFF (goodNonCaptures(pi, bbMovesOf(pi) % bbAvoid, 2_ply));
     }
 
     // safe officers moves
     while (safePieces.any()) {
         Pi pi = safePieces.piLast(); safePieces -= pi;
-        RETURN_CUTOFF (goodNonCaptures(pi, bbMovesOf(pi) % bbAvoid, canR ? 3_ply : 1_ply));
+        RETURN_CUTOFF (goodNonCaptures(pi, bbMovesOf(pi) % bbAvoid, 3_ply));
     }
 
     // push to Rank7 extension
@@ -293,7 +290,7 @@ ReturnStatus Node::search() {
         Pi pi = MY.pi(from);
         Square to{File{from}, Rank7};
         if (bbMovesOf(pi).has(to)) {
-            RETURN_CUTOFF (child->searchMove(pi, to, 1_ply));
+            RETURN_CUTOFF (child->searchMove(from, to, 1_ply));
         }
     }
 
@@ -303,23 +300,25 @@ ReturnStatus Node::search() {
     for (Square from : MY.bbPawns()) {
         Pi pi = MY.pi(from);
         for (Square to : bbMovesOf(pi)) {
-            RETURN_CUTOFF (child->searchMove(pi, to, canR ? 3_ply : 1_ply));
+            RETURN_CUTOFF (child->searchMove(from, to, 3_ply));
         }
     }
 
     // king quiet moves (always safe), castling is a rook move
     if (!canP || movesMade() == 0) { // weak move pruning
-        for (Square to : bbMovesOf(Pi{TheKing})) {
-            RETURN_CUTOFF (child->searchMove(Pi{TheKing}, to, canR ? 3_ply : 1_ply));
+        Pi pi{TheKing};
+        Square from{MY.sqKing()};
+        for (Square to : bbMovesOf(pi)) {
+            RETURN_CUTOFF (child->searchMove(from, to, 3_ply));
         }
     }
 
     // unsafe (losing) captures (N/B, R, Q order)
     for (PiMask pieces = MY.officers(); pieces.any(); ) {
         Pi pi = pieces.piLast(); pieces -= pi;
-
+        Square from{MY.sq(pi)};
         for (Square to : bbMovesOf(pi) & ~OP.bbSide()) {
-            RETURN_CUTOFF (child->searchMove(pi, to, canR ? 3_ply : 1_ply));
+            RETURN_CUTOFF (child->searchMove(from, to, 3_ply));
         }
     }
 
@@ -327,9 +326,9 @@ ReturnStatus Node::search() {
     if (!canP || movesMade() == 0) { // weak move pruning
         for (PiMask pieces = MY.officers(); pieces.any(); ) {
             Pi pi = pieces.piLast(); pieces -= pi;
-
+            Square from{MY.sq(pi)};
             for (Square to : bbMovesOf(pi)) {
-                RETURN_CUTOFF (child->searchMove(pi, to, canR ? 4_ply : 1_ply));
+                RETURN_CUTOFF (child->searchMove(from, to, 4_ply));
             }
         }
     }
@@ -347,7 +346,7 @@ ReturnStatus Node::goodNonCaptures(Pi pi, Bb moves, Ply R) {
     PieceType ty = MY.typeOf(pi);
     assert (!ty.is(Pawn));
     PiMask opLessValue = OP.lessValue(ty);
-
+    Square from{MY.sq(pi)};
     for (Square to : moves) {
         assert (!OP.bbPawnAttacks().has(~to));
         assert (isNonCapture(pi, to));
@@ -364,7 +363,7 @@ ReturnStatus Node::goodNonCaptures(Pi pi, Bb moves, Ply R) {
             }
         }
 
-        RETURN_CUTOFF (child->searchMove(pi, to, R));
+        RETURN_CUTOFF (child->searchMove(from, to, R));
     }
 
     return ReturnStatus::Continue;
@@ -402,10 +401,11 @@ ReturnStatus Node::goodCaptures(PiMask victims) {
     // queen promotion moves, with and without capture
     for (Pi pi : MY.promotables()) {
         Bb queenPromos = bbMovesOf(pi) & Bb{Rank8}; // filter out underpromotions
+        Square from{MY.sq(pi)};
         for (Square to : queenPromos) {
             if (!safeForOp(to) || OP.bbSide().has(~to)) {
                 // move to safe square or always good promotion with capture
-                RETURN_CUTOFF (child->searchMove(pi, to));
+                RETURN_CUTOFF (child->searchMove(from, to));
             }
         }
     }
@@ -434,8 +434,8 @@ ReturnStatus Node::goodCaptures(PiMask victims) {
         while (attackers.any()) {
             // LVA (least valuable attacker) order
             Pi pi = attackers.piLast(); attackers -= pi;
-
-            RETURN_CUTOFF (child->searchMove(pi, to));
+            Square from{MY.sq(pi)};
+            RETURN_CUTOFF (child->searchMove(from, to));
         }
     }
 
@@ -450,7 +450,7 @@ ReturnStatus Node::counterMove() {
             auto move = root.counterMove.get(i, parent->colorToMove(), parent->currentMove);
             if (move.none()) { break; }
             if (isPossibleMove(move)) {
-                return child->searchMove(move);
+                return child->searchMove(move.from(), move.to());
             }
         }
     }
@@ -464,7 +464,7 @@ ReturnStatus Node::followMove() {
             auto move = root.followMove.get(i, grandParent->colorToMove(), grandParent->currentMove);
             if (move.none()) { break; }
             if (isPossibleMove(move)) {
-                return child->searchMove(move);
+                return child->searchMove(move.from(), move.to());
             }
         }
     }
@@ -483,10 +483,6 @@ ReturnStatus Node::searchNullMove(Ply R) {
     return parent->negamax(R);
 }
 
-ReturnStatus Node::searchMove(Pi pi, Square to, Ply R) {
-    return searchMove(parent->MY.sq(pi), to, R);
-}
-
 ReturnStatus Node::searchMove(Square from, Square to, Ply R) {
     RETURN_IF_STOP (root.limits.countNode());
 
@@ -500,7 +496,7 @@ ReturnStatus Node::searchMove(Square from, Square to, Ply R) {
     else if (grandParent) { repHash = RepHash{grandParent->repHash, grandParent->z()}; }
     else { repHash = root.repetitions.repHash(colorToMove()); }
 
-    return parent->negamax(R);
+    return parent->negamax(parent->inCheck() ? 1_ply : R); // check extension
 }
 
 void Node::failHigh() const {
@@ -552,7 +548,7 @@ ReturnStatus Node::updatePv() const {
 }
 
 void Node::updateHistory(HistoryMove historyMove) const {
-    assert (historyMove.any());
+    assert (isPseudoLegal(historyMove));
     if (!parent) { return; }
 
     insert_unique(parent->killer, historyMove);
