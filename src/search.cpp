@@ -48,29 +48,30 @@ ReturnStatus Node::negamax(Ply R) const {
         // do not use R param as real reduction can be adjusted later
         auto childR = child->depthR();
 
-        if (beta <= childScore) {
-            if (currentMove.any() && childR >= 2_ply) {
-                if (child->isPv()) {
-                    // rare case (the first move from PV with reduced depth)
-                    child->alpha = -beta;
-                    assert (child->beta == -alpha);
-                } else {
-                    assert (child->alpha == child->beta.minus1());
-                }
-                // full depth research (unless it was a null move search or leaf node)
-                return negamax();
+        if (currentMove.any() && childR >= 2_ply) {
+            if (child->isPv()) {
+                // rare case (the first move from PV with reduced depth)
+                child->alpha = -beta;
+                assert (child->beta == -alpha);
+            } else {
+                assert (child->alpha == child->beta.minus1());
             }
+            // full depth research (unless it was a null move search or leaf node)
+            return negamax();
+        }
 
+        if (beta <= childScore) {
             score = childScore;
             failHigh();
             return ReturnStatus::Cutoff;
         }
 
+        assert (childR <= 1_ply);
         assert (alpha < childScore && childScore < beta);
         assert (isPv()); // alpha < childScore < beta, so current window cannot be zero
         assert (currentMove.any()); // null move in PV is not allowed
 
-        if (!child->isPv() || childR >= 2_ply) {
+        if (!child->isPv()) {
             child->plyPv = child->ply;
             assert (child->isPv());
             child->alpha = -beta;
@@ -79,7 +80,6 @@ ReturnStatus Node::negamax(Ply R) const {
             return negamax();
         }
 
-        assert (childR <= 1_ply);
         score = childScore;
         alpha = childScore;
         child->beta = -alpha;
