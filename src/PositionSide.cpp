@@ -49,6 +49,49 @@ void PositionSide::finalSetup(PositionSide& MY, PositionSide& OP) {
     OP.setLeaperAttacks();
 }
 
+int PositionSide::countAttackersTo(Square sq0, Bb occupied) const {
+    auto attackers = attackersTo(sq0);
+
+    int result = attackers.popcount();
+    if (result == 0) { return result; }
+
+    auto sliders1 = sliders() & attackers; // primary slider attackers
+    if (sliders1.none()) { return result; }
+
+    auto sliders2 = sliders() % attackers; // secondary slider attackers
+    if (sliders2.none()) { return result; }
+
+    for (auto pi2 : sliders2) {
+        Square sq2{sq(pi2)};
+        if (!::attacksFrom(typeOf(pi2), sq0).has(sq2)) {
+            sliders2 -= pi2;
+        }
+    }
+    if (sliders2.none()) { return result; }
+
+    for (auto pi1 : sliders1) {
+        Square sq1{sq(pi1)};
+
+        Bb candidates{};
+        for (auto pi2 : sliders2) {
+            Square sq2{sq(pi2)};
+            if (::inBetween(sq0, sq2).has(sq1)) {
+                candidates += Bb{sq2};
+                sliders2 -= pi2;
+            }
+        }
+
+        // triple battery possible
+        for (auto sq2 : candidates) {
+            if ((::inBetween(sq2, sq1) & (occupied - candidates)).none()) {
+                ++result;
+            }
+        }
+    }
+
+    return result;
+}
+
 void PositionSide::setLeaperAttacks() {
     assert (traits.checkers().none());
 

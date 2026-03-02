@@ -113,6 +113,9 @@ public:
     PiMask affectedBy(Square a, Square b) const { return affectedBy(a) | affectedBy(b); }
     PiMask affectedBy(Square a, Square b, Square c) const { return affectedBy(a) | affectedBy(b) | affectedBy(c); }
 
+    // total number of attackers including X-ray
+    int countAttackersTo(Square, Bb) const;
+
 //friend class Position;
     static void swap(PositionSide&, PositionSide&);
 

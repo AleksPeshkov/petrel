@@ -255,7 +255,7 @@ void Position::updateSliderAttacks(PiMask myAffected, PiMask opAffected) {
 
     opAffected &= OP.sliders();
     if (opAffected.any()) {
-        OP.updateSliders(opAffected, occupied(Side{Op}));
+        OP.updateSliders(opAffected, OP_OCCUPIED);
     }
 }
 
