@@ -423,11 +423,10 @@ ReturnStatus Node::goodCaptures(PiMask victims) {
         // 2) attackers does not outnumber defenders (not precise, but effective condition)
         // then prune captures by more valuable attackers
         // the rest uncertain captures considered good enough to seek in QS
-        //TODO: check for X-Ray attackers and defenders
+        //TODO: check for pinned attackers and defenders
         //TODO: check if bad capture makes discovered check
         //TODO: check if defending pawn is pinned and cannot recapture
         //TODO: try killer heuristics for uncertain and bad captures
-        //TODO: try more complex and precise SEE
         if (OP.bbPawnAttacks().has(~to) || !safeForMe(to)) {
             attackers &= MY.lessOrEqualValue(OP.typeOf(victim));
         }

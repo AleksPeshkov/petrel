@@ -13,6 +13,8 @@
 // all occupied squares by both sides from the current side point of view
 #define OCCUPIED occupied(Side{My})
 
+#define OP_OCCUPIED occupied(Side{Op})
+
 // number of halfmoves without capture or pawn move
 class Rule50 {
     int v_;
@@ -116,11 +118,19 @@ protected:
     // all occupied squares by both sides from the given side point of view
     constexpr const Bb& occupied(Side side) const { return occupied_[side]; }
 
-    // myAttackers.count() > opAttackers.count()
-    constexpr bool safeForMe(Square sq) const { return MY.attackersTo(sq).popcount() > OP.attackersTo(~sq).popcount(); }
+    // myAttackers > opAttackers
+    constexpr bool safeForMe(Square sq) const {
+        int myAttackers = MY.countAttackersTo(sq, OCCUPIED);
+        int opAttackers = OP.countAttackersTo(~sq, OP_OCCUPIED);
+        return myAttackers > opAttackers;
+    }
 
-    // opAttackers.count() > myAttackers.count()
-    constexpr bool safeForOp(Square sq) const { return OP.attackersTo(~sq).popcount() > MY.attackersTo(sq).popcount(); }
+    // opAttackers > myAttackers
+    constexpr bool safeForOp(Square sq) const {
+        int myAttackers = MY.countAttackersTo(sq, OCCUPIED);
+        int opAttackers = OP.countAttackersTo(~sq, OP_OCCUPIED);
+        return opAttackers > myAttackers;
+    }
 
     // update the zobrist hash of incoming move
     void makeZobrist(const Position* parent, Square from, Square to) { zobrist_ = parent->createZobrist(from, to); }
