@@ -145,9 +145,9 @@ void UciSearchLimits::setSearchDeadlines(const Position* p) {
 
     auto maximumTime = lookAheadTime(Side{My});
 
-    // can spend 1/4..1/2 of all remaining time (including future time increments)
+    // can spend 2/8..4/4 of all remaining time (including future time increments)
     maximumTime *= 6 - std::clamp(gamePhase, 2, 4); // 2..4
-    maximumTime /= 8;
+    maximumTime /= 4 + (lookAheadMoves()+2)/4; // 4..8
 
     maximumTime = std::clamp(maximumTime, TimeInterval{0}, time_[Side{My}] * 63/64 - moveOverhead_);
 
