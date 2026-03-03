@@ -638,8 +638,6 @@ ReturnStatus Node::searchRoot() {
 
         RETURN_IF_STOP (returnStatus);
 
-        root.info_iteration(depth);
-
         if (root.limits.reached<IterationDeadline>()) { return ReturnStatus::Stop; }
     }
 
