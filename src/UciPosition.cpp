@@ -4,6 +4,18 @@
 
 namespace {
 
+istream& operator >> (istream& in, Square& sq) {
+    auto before = in.tellg();
+
+    File file; Rank rank;
+    in >> file >> rank;
+
+    if (!in) { return io::fail_pos(in, before); }
+
+    sq = Square{file, rank};
+    return in;
+}
+
 /** Setup a chess position from a FEN string with chess legality validation */
 class FenToBoard {
     struct SquareImportance {
@@ -50,7 +62,7 @@ istream& read(istream& in, FenToBoard& board) {
 
         if ('1' <= c && c <= '8' && rank.isOk() && file.isOk()) {
             //convert digit symbol to offset and skip blank squares
-            auto  f = file + (c - '0');
+            auto  f = file.v() + (c - '0');
             if (f > static_cast<int>(File::Size)) {
                 return io::fail_char(in);
             }
@@ -151,7 +163,7 @@ public:
 
                 if (board.whitePieces.has(sq)) {
                     if (emptySqCount != 0) { out << emptySqCount; emptySqCount = 0; }
-                    out << static_cast<io::char_type>(std::toupper( board.whitePieces.typeAt(sq).to_char() ));
+                    out << static_cast<io::char_type>(std::toupper( PieceType{board.whitePieces.typeAt(sq)}.to_char() ));
                     continue;
                 }
 
@@ -165,7 +177,7 @@ public:
             }
 
             if (emptySqCount != 0) { out << emptySqCount; }
-            if (rank != Rank1) { out << '/'; }
+            if (!rank.is(Rank1)) { out << '/'; }
         }
 
         return out;
@@ -179,7 +191,7 @@ class CastlingToFen {
         for (Pi pi : positionSide.castlingRooks()) {
             io::char_type castlingSymbol;
 
-            switch (chessVariant) {
+            switch (chessVariant.v()) {
                 case Chess960:
                     castlingSymbol = File{positionSide.sq(pi)}.to_char();
                     break;
@@ -380,7 +392,7 @@ istream& UciPosition::readCastling(istream& in) {
     for (io::char_type c; in.get(c) && !std::isblank(c); ) {
         if (std::isalpha(c)) {
             Color color{std::isupper(c) ? White : Black};
-            Side side = sideOf(color);
+            Side side = sideOf(color.v());
 
             c = static_cast<io::char_type>(std::tolower(c));
 

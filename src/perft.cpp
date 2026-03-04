@@ -83,8 +83,8 @@ public:
     }
 
     constexpr static u32_t makeKey(Z::_t z, Ply d) {
-        assert (d == (d & 0xf));
-        return ((static_cast<decltype(key)>(z >> 32) | 0xf) ^ 0xf) | (d & 0xf);
+        assert (d.v() == (d.v() & 0xf));
+        return ((static_cast<decltype(key)>(z >> 32) | 0xf) ^ 0xf) | (d.v() & 0xf);
     }
 
     constexpr bool isKeyMatch(Z::_t z, Ply d) const {
@@ -113,7 +113,7 @@ class PerftRecord {
 
     static constexpr node_count_t createNodes(node_count_t n, Ply d, HashAge::_t age) {
         //assert (n == (n & ~NodesMask));
-        return (n & ~NodesMask) | (static_cast<decltype(nodes)>(age) << AgeShift) | (static_cast<decltype(nodes)>(d) << DepthShift);
+        return (n & ~NodesMask) | (static_cast<decltype(nodes)>(age) << AgeShift) | (static_cast<decltype(nodes)>(d.v()) << DepthShift);
     }
 
 public:
@@ -210,16 +210,16 @@ void TtPerft::set(Z z, Ply d, node_count_t n) {
 
     auto b0d = u.v.b[0].getDepth();
 
-    if (u.v.b[0].isAgeMatch(hashAge) && d < b0d && n <= std::numeric_limits<u32_t>::max() && d <= 0xf) {
+    if (u.v.b[0].isAgeMatch(hashAge) && d < b0d && n <= std::numeric_limits<u32_t>::max() && d.v() <= 0xf) {
         //deep slots are occupied, update only short slot if possible
 
-        if (d == 0) {
+        if (d == 0_ply) {
             u.v.d[0].set(z, d, n);
             origin->m.set(0, u.m[0]);
             return;
         }
 
-        if (d == 1) {
+        if (d == 1_ply) {
             u.v.d[0] = u.v.d[1];
             u.v.d[1].set(z, d, n);
             origin->m.set(0, u.m[0]);
@@ -242,7 +242,7 @@ void TtPerft::set(Z z, Ply d, node_count_t n) {
         return;
     }
 
-    if (b0d <= 4 && u.v.b[0].getNodes() <= std::numeric_limits<u32_t>::max()) {
+    if (b0d <= 4_ply && u.v.b[0].getNodes() <= std::numeric_limits<u32_t>::max()) {
         //the shallowest deep slot would be overwritten anyway
         //so we move it into the short slot if possible
 
@@ -307,7 +307,7 @@ ReturnStatus NodePerft::visit() {
 }
 
 ReturnStatus NodePerft::visitMove(Square from, Square to) {
-    switch (depth) {
+    switch (depth.v()) {
         case 0:
             perft = 1;
             break;
@@ -319,19 +319,19 @@ ReturnStatus NodePerft::visitMove(Square from, Square to) {
             break;
 
         default: {
-            assert (depth >= 2);
+            assert (depth >= 2_ply);
             makeZobrist(parent, from, to);
             root.tt.prefetch(zobrist(), 64);
 
             RETURN_IF_STOP (root.limits.countNode());
             makeMoveNoZobrist(parent, from, to);
 
-            perft = static_cast<TtPerft&>(root.tt).get(zobrist(), Ply{depth-2});
+            perft = static_cast<TtPerft&>(root.tt).get(zobrist(), depth - 2_ply);
 
             if (perft == NodeCountNone) {
                 perft = 0;
                 RETURN_IF_STOP(visit());
-                static_cast<TtPerft&>(root.tt).set(zobrist(), Ply{depth-2}, perft);
+                static_cast<TtPerft&>(root.tt).set(zobrist(), depth - 2_ply, perft);
             }
         }
     }

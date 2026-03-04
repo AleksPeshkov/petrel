@@ -17,12 +17,11 @@ public:
 
 private:
     using Self = self_type;
-    using Arg = Self;
-    using Ops = BitArrayOps<_t>;
-
 #define SELF static_cast<Self&>(*this)
 #define CONST_SELF static_cast<const Self&>(*this)
+    using Arg = Self;
 
+    using Ops = BitArrayOps<_t>;
 protected:
     _t v_; // _t v_
     constexpr BitArray () : v_{} {}
@@ -39,19 +38,19 @@ public:
     constexpr Self& operator += (Arg b) { assert (none(b)); return SELF ^= b; }
     constexpr Self& operator -= (Arg b) { assert (CONST_SELF >= b); return SELF ^= b; }
 
-    constexpr friend Self operator &  (Arg a, Arg b) { return Self{a} &= b; }
-    constexpr friend Self operator |  (Arg a, Arg b) { return Self{a} |= b; }
-    constexpr friend Self operator ^  (Arg a, Arg b) { return Self{a} ^= b; }
-    constexpr friend Self operator +  (Arg a, Arg b) { return Self{a} += b; }
-    constexpr friend Self operator -  (Arg a, Arg b) { return Self{a} -= b; }
-    constexpr friend Self operator %  (Arg a, Arg b) { return Self{a} %= b; }
+    friend constexpr Self operator &  (Arg a, Arg b) { return Self{a} &= b; }
+    friend constexpr Self operator |  (Arg a, Arg b) { return Self{a} |= b; }
+    friend constexpr Self operator ^  (Arg a, Arg b) { return Self{a} ^= b; }
+    friend constexpr Self operator +  (Arg a, Arg b) { return Self{a} += b; }
+    friend constexpr Self operator -  (Arg a, Arg b) { return Self{a} -= b; }
+    friend constexpr Self operator %  (Arg a, Arg b) { return Self{a} %= b; }
 
-    constexpr friend bool operator == (Arg a, Arg b) { return Ops::equals(a.v_, b.v_); }
-    constexpr friend bool operator <= (Arg a, Arg b) { return (a & b) == a; }
-    constexpr friend bool operator >= (Arg a, Arg b) { return b <= a; }
-    constexpr friend bool operator != (Arg a, Arg b) { return !(a == b); }
-    constexpr friend bool operator <  (Arg a, Arg b) { return !(a >= b); }
-    constexpr friend bool operator >  (Arg a, Arg b) { return b < a; }
+    friend constexpr bool operator == (Arg a, Arg b) { return Ops::equals(a.v_, b.v_); }
+    friend constexpr bool operator <  (Arg a, Arg b) { return !((a & b) == b); }
+    friend constexpr bool operator != (Arg a, Arg b) { return !(a == b); }
+    friend constexpr bool operator >  (Arg a, Arg b) { return b < a; }
+    friend constexpr bool operator <= (Arg a, Arg b) { return !(b < a); }
+    friend constexpr bool operator >= (Arg a, Arg b) { return !(a < b); }
 
     constexpr bool none() const { return CONST_SELF == Self{}; }
     constexpr bool none(Arg b) const { return (CONST_SELF & b).none(); }
