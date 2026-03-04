@@ -41,16 +41,16 @@ public:
         (z & HashMask)
         | (static_cast<_t>(score.toTt(ply)) << ScoreShift)
         | (static_cast<_t>(bound) << BoundShift)
-        | (static_cast<_t>(from) << FromShift)
-        | (static_cast<_t>(to) << ToShift)
-        | (static_cast<_t>(draft) << DraftShift)
+        | (static_cast<_t>(from.v()) << FromShift)
+        | (static_cast<_t>(to.v()) << ToShift)
+        | (static_cast<_t>(draft.v()) << DraftShift)
         | (static_cast<_t>(canBeKiller) << KillerShift)
     } { static_assert (sizeof(TtSlot) == sizeof(u64_t)); }
 
     TtSlot (const Node* node);
     bool operator == (Z z) const { return (v & HashMask) == (z & HashMask); }
 
-    bool hasMove() const { return !(from() == 0 && to() == 0); }
+    bool hasMove() const { return !(from().v() == 0 && to().v() == 0); }
     Square from() const { return Square{static_cast<Square::_t>(v >> FromShift & Square::Mask)}; }
     Square to() const { return Square{static_cast<Square::_t>(v >> ToShift & Square::Mask)}; }
 
@@ -131,9 +131,9 @@ protected:
         return parent->isPossibleMove(pi, to) ? searchMove(pi, to, R) : ReturnStatus::Continue;
     }
 
-    constexpr bool isRoot() const { assert (parent == nullptr || ply > 0); return parent == nullptr; } // ply == 0
+    constexpr bool isRoot() const { assert (parent == nullptr || ply > 0_ply); return parent == nullptr; } // ply == 0
     constexpr bool isPv() const { return ply == plyPv; } // ply == plyPv
-    constexpr bool isCutNode() const { return (ply - plyPv) & 1; } // odd (ply - plyPv)
+    constexpr bool isCutNode() const { return (ply - plyPv).v() & 1; } // odd (ply - plyPv)
     constexpr bool isAllNode() const { return !isPv() && !isCutNode(); } // even (plv - plyPv)
 
     // current node's side to move color

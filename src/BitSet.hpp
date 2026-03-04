@@ -19,14 +19,14 @@ protected:
     using Base::v_;
     constexpr BitSet () : Base{} {}
     constexpr explicit BitSet (_t v) : Base{v} {}
-    constexpr explicit BitSet (Index i) : BitSet{::singleton<_t>(static_cast<Index::_t>(i))} {}
+    constexpr explicit BitSet (Index i) : BitSet{::singleton<_t>(i.v())} {}
 
 public:
     // clear the first (lowest) set bit
     constexpr _t clearFirst() const { return ::clearFirst(v_); }
 
     // check if the index bit is set
-    constexpr bool has(Index::_t i) const {
+    constexpr bool has(Index i) const {
         return CONST_SELF.any(self_type{Index{i}});
     }
 

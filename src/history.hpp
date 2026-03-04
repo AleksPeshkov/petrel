@@ -44,11 +44,11 @@ template<int _Size>
 class CACHE_ALIGN HistoryMoves {
 public:
     static constexpr int Size = _Size;
-    using Index = ::Index<Size>;
+    struct Index; STRUCT_INDEX (Index, Size);
     using Slot = Index:: template arrayOf<HistoryMove>;
 
 private:
-    using _t = Color::arrayOf<HistoryMove::Index::arrayOf<Slot>>;
+    using _t = Color::arrayOf<HistoryMove::HistoryIndex::arrayOf<Slot>>;
     _t v;
 
 public:
@@ -56,8 +56,8 @@ public:
         std::memset(&v, 0, sizeof(v)); //TRICK: Move{} == int16_t{0}
     }
 
-    constexpr const HistoryMove& get(int i, Color color, HistoryMove slot) const {
-        return v[color][slot][Index{i}];
+    constexpr const HistoryMove& get(Index i, Color color, HistoryMove slot) const {
+        return v[color][slot][i];
     }
 
     constexpr void set(Color color, HistoryMove slot, HistoryMove historyMove) {
@@ -69,7 +69,7 @@ public:
 class CACHE_ALIGN PvMoves {
     static constexpr auto triangularArraySize = (Ply::Last+1) * (Ply::Last+2) / 2;
 public:
-    using Index = ::Index<triangularArraySize>;
+    struct Index; STRUCT_INDEX (Index, triangularArraySize);
     Index::arrayOf<UciMove> pv;
 
 public:
@@ -83,8 +83,8 @@ public:
         pv[parent] = move;
         assert (parent < child);
 
-        auto from = static_cast<Index::_t>(child);
-        auto to = static_cast<Index::_t>(parent) + 1;
+        auto from = child.v();
+        auto to = parent.v() + 1;
         while ((pv[Index{to++}] = pv[Index{from++}])) {}
 
         pv[Index{to}] = UciMove{};
@@ -107,20 +107,20 @@ public:
 };
 
 class RepetitionsSide {
-    using RepIndex = Index<50>;
+    struct RepIndex; STRUCT_INDEX (RepIndex, 50);
 
     struct RepEntry {
         Z z;
         RepetitionHash hash;
     };
 
-    constexpr static RepIndex Last{RepIndex::Last};
+    static constexpr RepIndex Last{RepIndex::Last};
 
-    std::array<RepEntry, RepIndex::Size> reps;
+    RepIndex::arrayOf<RepEntry> reps;
     int count = 0; // number of entries
     RepIndex last{RepIndex::Last}; // last added entry index
 
-    static constexpr int prev(int i) { return i > 0 ? i-1 : Last; }
+    static constexpr int prev(int i) { return i > 0 ? i-1 : Last.v(); }
 
 public:
     constexpr RepetitionsSide () { reps[last].hash = {}; }
@@ -132,7 +132,7 @@ public:
 
     constexpr void push(Z z) {
         auto prevHash{(count == 0) ? RepetitionHash{} : RepetitionHash{reps[last].hash, reps[last].z}};
-        last = RepIndex{last < Last ? last+1 : 0};
+        last = RepIndex{last < Last ? last.v()+1 : 0};
         reps[last].z = z;
         reps[last].hash = prevHash;
         count = count < RepIndex::Size ? count+1 : count;
@@ -140,7 +140,7 @@ public:
 
     constexpr void dropLast() {
         if (count == 0) { assert (false); return; }
-        last  = last > 0 ? RepIndex{last-1} : Last;
+        last  = last.v() > 0 ? RepIndex{last.v()-1} : Last;
         count = count-1;
     }
 
@@ -149,8 +149,8 @@ public:
         int duplicateCount = 0;
 
         // find duplicates
-        for (int c = 0, i = last; c < count; ++c, i = prev(i)) {
-            auto z = reps[i].z;
+        for (int c = 0, i = last.v(); c < count; ++c, i = prev(i)) {
+            auto z = reps[RepIndex{i}].z;
 
             for (int d = 0; d < duplicateCount; ++d) {
                 // already found
@@ -162,13 +162,13 @@ public:
                 // i and i-1 cannot be repetitions
                 int j = prev(i); j = prev(j);
                 for (int cc = c+2; cc < count; ++cc) {
-                    if (z == reps[j].z) {
+                    if (z == reps[RepIndex{j}].z) {
                         // found
                         duplicates[duplicateCount++] = z;
                         break;
                     }
 
-                    if (!reps[j].hash.has(z)) {
+                    if (!reps[RepIndex{j}].hash.has(z)) {
                         // not found
                         break;
                     }
@@ -186,8 +186,8 @@ public:
         // push back in reversed order, creating correct hash
         for (int d = duplicateCount-1; d >= 0; --d) {
             auto z = duplicates[d];
-            reps[d].z = z;
-            reps[d].hash = hash;
+            reps[RepIndex{d}].z = z;
+            reps[RepIndex{d}].hash = hash;
             hash = {hash, z};
         }
 
@@ -211,7 +211,7 @@ public:
     }
 
     constexpr RepetitionHash repetitionHash() const {
-        return (count == 0) ?  RepetitionHash{} : RepetitionHash{reps[0].hash, reps[0].z};
+        return (count == 0) ?  RepetitionHash{} : RepetitionHash{reps[RepIndex{0}].hash, reps[RepIndex{0}].z};
     }
 
     // used for unit testing

@@ -14,18 +14,18 @@ struct BitArrayOps<vu8x16_t> {
 
 class CACHE_ALIGN VectorOfAll {
     using _t = vu8x16_t;
-    using Index0x100 = Index<0x100>;
-    Index0x100::arrayOf<_t> v_;
+    struct Index; STRUCT_INDEX (Index, 0x100);
+    Index::arrayOf<_t> v_;
 
 public:
     constexpr VectorOfAll () {
-        for (auto i : range<Index0x100>()) {
-            v_[i] = ::all(i);
+        for (auto i : range<Index>()) {
+            v_[i] = ::all(i.v());
         }
     }
 
-    constexpr const _t& operator[] (u8_t i) const { return v_[Index0x100{i}]; }
-    constexpr const _t& operator[] (Pi pi) const { return v_[Index0x100{pi}]; }
+    constexpr const _t& operator[] (u8_t i) const { return v_[Index{i}]; }
+    constexpr const _t& operator[] (Pi pi) const { return v_[Index{pi.v()}]; }
 };
 
 extern const VectorOfAll vectorOfAll;
@@ -100,7 +100,7 @@ public:
     constexpr PiSingle() {
         for (auto pi : range<Pi>()) {
             std::array<uint8_t, 16> vec = {}; // zero
-            vec[static_cast<int>(pi)] = 0xff;
+            vec[static_cast<int>(pi.v())] = 0xff;
             v_[pi] = std::bit_cast<vu8x16_t>(vec);
         }
     }
@@ -132,7 +132,7 @@ public:
     static constexpr PiMask any(_t a) { return notEquals(a, zero()); }
     static constexpr PiMask all() { return PiMask{::all(0xff)}; }
 
-    constexpr operator const _t& () const { return v_; }
+    constexpr _t v() const { return v_; } // _t v() const { return v_; }
 
     // check if either 0 or 0xff bytes are set
     bool isOk() const { return ::equals(v_, v_ != zero()); }
@@ -181,7 +181,7 @@ public:
     constexpr explicit PiRank () : Base{::all(0)} {}
     constexpr explicit PiRank (BitRank br) : Base{::vectorOfAll[br.v()]} {}
     constexpr explicit PiRank (File f) : PiRank{BitRank{f}} {}
-    constexpr PiRank (PiMask m) : Base{m} {}
+    constexpr PiRank (PiMask m) : Base{m.v()} {}
 
     BitRank gather() const {
         u8_t r  = v_[0] | v_[1] | v_[2] | v_[3] | v_[4] | v_[5] | v_[6] | v_[7]
@@ -190,7 +190,7 @@ public:
     }
 
     constexpr BitRank operator [] (Pi pi) const {
-        return BitRank{ ::u8(v_, pi) };
+        return BitRank{ ::u8(v_, pi.v()) };
     }
 
     PiMask operator [] (File file) const {
@@ -203,7 +203,7 @@ public:
 
 class PiSquare {
     using _t = Square::_t;
-    constexpr static _t NoSq = static_cast<_t>(0xff); // captured piece
+    constexpr static _t None = Square::None; // captured piece
 
     // defined to make debugging clear
     union {
@@ -212,16 +212,17 @@ class PiSquare {
     };
 
     constexpr void set(Pi pi, _t sq) { square[pi] = sq; }
+    constexpr void set(Pi pi, Square sq) { square[pi] = sq.v(); }
     constexpr vu8x16_t vector(_t e) const { return ::vectorOfAll[e]; }
 
 public:
     constexpr PiSquare () {
         for (auto pi : range<Pi>()) {
-            square[pi] = NoSq;
+            square[pi] = None;
         }
     }
 
-    constexpr bool isOk(Pi pi) const { return !isEmpty(pi) && this->pi(square[pi]) == pi; }
+    constexpr bool isOk(Pi pi) const { return !none(pi) && this->pi(square[pi]) == pi; }
 
     #ifdef NDEBUG
         constexpr void assertOk(Pi) const {}
@@ -229,12 +230,12 @@ public:
         constexpr void assertOk(Pi pi) const { assert (isOk(pi)); }
     #endif
 
-    void drop(Pi pi, Square sq) { assert (isEmpty(pi)); assert (!has(sq)); set(pi, sq); }
-    void clear(Pi pi) { assertOk(pi); square[pi] = NoSq; }
+    void drop(Pi pi, Square sq) { assert (none(pi)); assert (!has(sq)); set(pi, sq); }
+    void clear(Pi pi) { assertOk(pi); square[pi] = None; }
     void move(Pi pi, Square sq) { assertOk(pi); assert (!has(sq)); set(pi, sq); }
 
     void castle(Square kingTo, Pi theRook, Square rookTo) {
-        assert (TheKing != theRook);
+        assert (!theRook.is(TheKing));
         assert (sq(Pi{TheKing}).on(Rank1));
         assert (sq(theRook).on(Rank1));
         assert (kingTo.is(G1) || kingTo.is(C1));
@@ -248,19 +249,21 @@ public:
         assertOk(theRook);
     }
 
-    constexpr bool isEmpty(Pi pi) const { return square[pi] == NoSq; }
+    constexpr bool none(Pi pi) const { return square[pi] == None; }
     constexpr Square sq(Pi pi) const { assertOk(pi); return Square{square[pi]}; }
 
     constexpr bool has(_t sq) const { return piecesAt(sq).any(); }
+    constexpr bool has(Square sq) const { return has(sq.v()); }
     constexpr Pi pi(_t sq) const { assert (has(sq)); return piecesAt(sq).pi(); }
+    constexpr Pi pi(Square sq) const { return pi(sq.v()); }
 
-    constexpr PiMask pieces() const { return PiMask::notEquals(vu8x16, ::all(NoSq)); }
+    constexpr PiMask pieces() const { return PiMask::notEquals(vu8x16, ::all(None)); }
     constexpr PiMask piecesAt(_t sq) const { return PiMask::equals(vu8x16, vector(sq)); }
 
     constexpr PiMask piecesOn(Rank::_t rank) const {
         return PiMask::equals(
-            vu8x16 & vector(static_cast<_t>(NoSq ^ static_cast<_t>(File::Mask))),
-            vector(Square{static_cast<File::_t>(0), rank})
+            vu8x16 & vector(static_cast<_t>(None ^ static_cast<_t>(File::Mask))),
+            vector(Square{static_cast<File::_t>(0), rank}.v())
         );
     }
 };
@@ -311,6 +314,7 @@ class PiType {
     };
 
     constexpr element_type element(PieceType::_t ty) const { return static_cast<element_type>(::singleton<u8_t>(ty)); }
+    constexpr element_type element(PieceType ty) const { return element(ty.v()); }
     constexpr vu8x16_t vector(element_type e) const { return ::vectorOfAll[static_cast<u8_t>(e)]; }
     constexpr vu8x16_t vector(PieceType::_t ty) const { return vector(element(ty)); }
 
@@ -325,7 +329,7 @@ public:
         }
     }
 
-    constexpr bool isOk(Pi pi) const { return !isEmpty(pi) && ::isSingleton(static_cast<u8_t>(type[pi])); }
+    constexpr bool isOk(Pi pi) const { return !none(pi) && ::isSingleton(static_cast<u8_t>(type[pi])); }
 
     #ifdef NDEBUG
         constexpr void assertOk(Pi) const {}
@@ -333,11 +337,11 @@ public:
         constexpr void assertOk(Pi pi) const { assert (isOk(pi)); }
     #endif
 
-    void drop(Pi pi, PieceType::_t ty) { assert (isEmpty(pi)); assert (pi != TheKing || ty == King); type[pi] = element(ty); }
-    void clear(Pi pi) { assertOk(pi); assert (pi != TheKing); assert (!is(pi, King)); type[pi] = None; }
+    void drop(Pi pi, PieceType ty) { assert (none(pi)); assert (!pi.is(TheKing) || ty.is(King)); type[pi] = element(ty); }
+    void clear(Pi pi) { assertOk(pi); assert (!pi.is(TheKing)); assert (!is(pi, King)); type[pi] = None; }
     void promote(Pi pi, PromoType::_t ty) { assert (isPawn(pi)); type[pi] = element(ty); }
 
-    constexpr bool isEmpty(Pi pi) const { return type[pi] == None; }
+    constexpr bool none(Pi pi) const { return type[pi] == None; }
     constexpr bool isPawn(Pi pi) const { return is(pi, Pawn); }
     constexpr bool isRook(Pi pi) const { return is(pi, Rook); }
     constexpr bool isSlider(Pi pi) const { assertOk(pi); return has(pi, Sliders); }
@@ -345,6 +349,7 @@ public:
 
     constexpr PiMask pieces() const { return PiMask::any(vu8x16); }
     constexpr PiMask piecesOfType(PieceType::_t ty) const { assert (!PieceType{ty}.is(King)); return any(element(ty)); }
+    constexpr PiMask piecesOfType(PieceType ty) const { return piecesOfType(ty.v()); }
 
     // Queens, Rooks, Bishops
     constexpr PiMask sliders() const { return any(Sliders); }
@@ -370,7 +375,7 @@ public:
 
 class PiTrait {
     enum trait_t : u8_t {
-        Empty       = 0,
+        None        = 0,
         Checkers    = ::singleton<u8_t>(0), // any piece actually attacking enemy king
         Pinners     = ::singleton<u8_t>(1), // potential pinner: sliding piece that can attack the enemy king square on empty board
         Castlings   = ::singleton<u8_t>(2), // rook with castling rights
@@ -405,12 +410,12 @@ class PiTrait {
 public:
     constexpr PiTrait () {
         for (auto pi : range<Pi>()) {
-            trait[pi] = Empty;
+            trait[pi] = None;
         }
     }
 
-    constexpr void clear(Pi pi) { trait[pi] = Empty; }
-    constexpr bool isEmpty(Pi pi) const { return trait[pi] == Empty; }
+    constexpr void clear(Pi pi) { trait[pi] = None; }
+    constexpr bool none(Pi pi) const { return trait[pi] == None; }
 
     constexpr PiMask castlingRooks() const { return any(Castlings); }
     constexpr bool isCastling(Pi pi) const { return has(pi, Castlings); }
@@ -461,7 +466,7 @@ public:
         {15,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14},
     }} {}
 
-    constexpr const vu8x16_t& operator [] (Pi pi) const { return shuffle[pi]; }
+    constexpr const vu8x16_t& operator [] (Pi pi) const { return shuffle[pi.v()]; }
 };
 
 class PiOrder {
@@ -490,7 +495,7 @@ public:
     constexpr PiOrder () : vu8x16{ordered} { assertOk(); }
 
     constexpr PiMask operator () (PiMask pieces) const {
-        return PiMask{::shufflevector(static_cast<vu8x16_t>(pieces), vu8x16)};
+        return PiMask{::shufflevector(pieces.v(), vu8x16)};
     }
 
     constexpr const Pi& operator[] (Pi pi) const { return order[pi]; }
@@ -508,8 +513,6 @@ public:
 class PiOrdered {
     PiOrder order; // vector of piece indices
     PieceSet mask; // shuffled PiMask bitset
-
-    constexpr explicit operator const PieceSet& () const { return mask; }
 
 public:
     constexpr PiOrdered (PiMask pieces, PiOrder o) : order{o}, mask{order(pieces)} {}

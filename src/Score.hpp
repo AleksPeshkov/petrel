@@ -47,8 +47,8 @@ public:
     constexpr Score operator - () const { assertOk(); return Score{static_cast<_t>(-v)}; }
     constexpr friend Score operator + (Score s, Score d) { s.assertEval(); return Score::clampEval(s.v + d.v); }
     constexpr friend Score operator - (Score s, Score d) { s.assertEval(); return Score::clampEval(s.v - d.v); }
-    constexpr friend Score operator + (Score s, Ply p) { s.assertMate(); Score r{static_cast<_t>(s.v + p)}; r.assertMate(); return r; }
-    constexpr friend Score operator - (Score s, Ply p) { s.assertMate(); Score r{static_cast<_t>(s.v - p)}; r.assertMate(); return r; }
+    constexpr friend Score operator + (Score s, Ply p) { s.assertMate(); Score r{static_cast<_t>(s.v + p.v())}; r.assertMate(); return r; }
+    constexpr friend Score operator - (Score s, Ply p) { s.assertMate(); Score r{static_cast<_t>(s.v - p.v())}; r.assertMate(); return r; }
 
     constexpr void assertOk() const { assert (MateLoss <= v && v <= MateWin); }
     constexpr bool isEval() const { assertOk(); return MinEval <= v && v <= MaxEval; }
@@ -302,12 +302,12 @@ public:
         for (auto ty : range<PieceType>()) {
             for (auto sq : range<Square>()) {
                 pst[ty][sq] = {{
-                    static_cast<u16_t>(openingMat[ty] + openingPst[ty][sq]),
-                    static_cast<u16_t>(endgameMat[ty] + endgamePst[ty][sq]),
+                    static_cast<u16_t>(openingMat[ty.v()] + openingPst[ty.v()][sq.v()]),
+                    static_cast<u16_t>(endgameMat[ty.v()] + endgamePst[ty.v()][sq.v()]),
 
-                    queens[ty], rooks[ty], bishops[ty], knights[ty], pawns[ty],
+                    queens[ty.v()], rooks[ty.v()], bishops[ty.v()], knights[ty.v()], pawns[ty.v()],
 
-                    officers[ty], totalMat[ty],
+                    officers[ty.v()], totalMat[ty.v()],
                 }};
             }
         }
