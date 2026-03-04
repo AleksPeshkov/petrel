@@ -152,8 +152,10 @@ protected:
 public:
     void assertOk() const {
         assert (alpha < beta);
-        //assert (score < beta || bound == FailHigh);
-        assert (alpha <= score || bound == FailLow);
+        if (score.any()) {
+            assert (score < beta || bound == FailHigh);
+            assert (alpha <= score || bound == FailLow);
+        }
         assert (Score{MateLoss} <= alpha);
         assert (beta <= Score{MateWin});
     }

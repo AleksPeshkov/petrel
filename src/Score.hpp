@@ -35,68 +35,58 @@ enum score_enum : i16_t {
 // position evaluation score, fits in 14 bits
 class Score {
     using _t = score_enum;
-    _t v;
+    using Arg = Score;
+    _t v_;
 public:
     static constexpr int Mask = singleton(ScoreBitSize) - 1;
 
-    explicit constexpr Score (_t e) : v{e} {}
+    constexpr explicit Score (_t e) : v_{e} {}
     friend constexpr Score operator""_cp(unsigned long long);
-    constexpr static Score clampEval(int e) { return Score{static_cast<Score::_t>( std::clamp<int>(e, MinEval, MaxEval) )}; }
 
-    constexpr Score minus1() const { return Score{static_cast<_t>(v-1)}; }
-    constexpr Score operator - () const { assertOk(); return Score{static_cast<_t>(-v)}; }
-    constexpr friend Score operator + (Score s, Score d) { s.assertEval(); return Score::clampEval(s.v + d.v); }
-    constexpr friend Score operator - (Score s, Score d) { s.assertEval(); return Score::clampEval(s.v - d.v); }
-    constexpr friend Score operator + (Score s, Ply p) { s.assertMate(); Score r{static_cast<_t>(s.v + p.v())}; r.assertMate(); return r; }
-    constexpr friend Score operator - (Score s, Ply p) { s.assertMate(); Score r{static_cast<_t>(s.v - p.v())}; r.assertMate(); return r; }
+    static constexpr Score clampEval(int e)  { return Score{static_cast<Score::_t>( std::clamp<int>(e, MinEval, MaxEval) )}; }
+    static constexpr Score mateLoss(Ply ply) { return Score{MateLoss} + ply; } // MateLoss + ply
+    static constexpr Score mateWin(Ply ply)  { return Score{MateWin} - ply; } // MateWin - ply
 
-    constexpr void assertOk() const { assert (MateLoss <= v && v <= MateWin); }
-    constexpr bool isEval() const { assertOk(); return MinEval <= v && v <= MaxEval; }
+    constexpr bool none() const { return v_ == NoScore; }
+    constexpr bool any() const { return !none(); }
+    constexpr void assertOk() const { assert (MateLoss <= v_); assert (v_ <= MateWin); }
+    constexpr bool isEval() const { assertOk(); return MinEval <= v_ && v_ <= MaxEval; }
     constexpr void assertEval() const { assert (isEval()); }
     constexpr void assertMate() const { assert (!isEval()); }
 
-    friend constexpr auto operator <=> (Score, Score) = default;
+    constexpr Score minus1() const { assertOk(); Score r{static_cast<_t>(v_ - 1)}; r.assertOk(); return r; }
+    constexpr Score operator - () const { assertOk(); return Score{static_cast<_t>(-v_)}; }
+    friend constexpr Score operator + (Arg a, Arg b) { a.assertEval(); b.assertEval(); return Score::clampEval(a.v_ + b.v_); }
+    friend constexpr Score operator - (Arg a, Arg b) { a.assertEval(); b.assertEval(); return Score::clampEval(a.v_ - b.v_); }
+    friend constexpr Score operator + (Arg a, Ply p) { a.assertMate(); Score r{static_cast<_t>(a.v_ + p.v())}; r.assertMate(); return r; }
+    friend constexpr Score operator - (Arg a, Ply p) { a.assertMate(); Score r{static_cast<_t>(a.v_ - p.v())}; r.assertMate(); return r; }
 
-    // MateLoss + ply
-    static constexpr Score mateLoss(Ply ply) { return Score{MateLoss} + ply; }
-
-    // MateWin - ply
-    static constexpr Score mateWin(Ply ply) { return -Score::mateLoss(ply); }
+    friend constexpr bool operator == (Arg a, Arg b) { a.assertOk(); b.assertOk(); return a.v_ == b.v_; }
+    friend constexpr bool operator <  (Arg a, Arg b) { a.assertOk(); b.assertOk(); return a.v_ < b.v_; }
+    friend constexpr bool operator >  (Arg a, Arg b) { return b < a; }
+    friend constexpr bool operator != (Arg a, Arg b) { return !(a == b); }
+    friend constexpr bool operator <= (Arg a, Arg b) { return !(a > b); }
+    friend constexpr bool operator >= (Arg a, Arg b) { return !(a < b); }
 
     constexpr unsigned toTt(Ply ply) const {
-        Score score{v};
+        Score score{v_};
+        if (score.v_ == NoScore) { return 0; }
 
-        if (score.v == NoScore) {
-            return 0;
-        }
-
-        if (score.v < MinEval) {
-            score = score - ply;
-        }
-        else if (MaxEval < score.v) {
-            score = score + ply;
-        }
-        else {
-            score.assertEval();
-        }
+        if (score.v_ < MinEval) { score = score - ply; }
+        else if (MaxEval < score.v_) { score = score + ply; }
+        else { score.assertEval(); }
 
         // convert signed to unsigned
-        return static_cast<unsigned>(score.v - NoScore);
+        return static_cast<unsigned>(score.v_ - NoScore);
     }
 
     static constexpr Score fromTt(unsigned n, Ply ply) {
         // convert unsigned to signed
         Score score{static_cast<_t>(static_cast<int>(n) + NoScore)};
 
-        if (score.v < MinEval) {
-            score.assertMate(); score = score + ply; score.assertMate();
-        }
-        else if (MaxEval < score.v) {
-            score.assertMate(); score = score - ply; score.assertMate();
-        }
-        else {
-            score.assertEval();
-        }
+        if (score.v_ < MinEval) { score = score + ply; }
+        else if (MaxEval < score.v_) { score = score - ply; }
+        else { score.assertEval(); }
 
         return score;
     }
@@ -104,22 +94,22 @@ public:
     friend ostream& operator << (ostream& out, Score score) {
         out << " score ";
 
-        if (score == Score{NoScore}) {
+        if (score.v_ == NoScore) {
             return out << "none";
         }
 
         score.assertOk();
 
-        if (score.v < MinEval) {
-            return out << "mate " << (MateLoss - score.v) / 2;
+        if (score.v_ < MinEval) {
+            return out << "mate " << (MateLoss - score.v_) / 2;
         }
 
-        if (MaxEval < score.v) {
-            return out << "mate " << (MateWin - score.v + 1) / 2;
+        if (MaxEval < score.v_) {
+            return out << "mate " << (MateWin - score.v_ + 1) / 2;
         }
 
         score.assertEval();
-        return out << "cp " << static_cast<signed>(score.v);
+        return out << "cp " << static_cast<signed>(score.v_);
     }
 };
 
