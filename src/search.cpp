@@ -41,7 +41,7 @@ ReturnStatus Node::negamax(Ply R) const {
     auto childScore = -child->score;
 
     if (childScore <= alpha) {
-        if (score < childScore) {
+        if (score.none() || score < childScore) {
             score = childScore;
         }
     } else {
