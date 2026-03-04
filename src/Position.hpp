@@ -15,22 +15,22 @@
 
 // number of halfmoves without capture or pawn move
 class Rule50 {
-    int v;
+    int v_;
     static constexpr int Draw = 100;
 
 public:
-    constexpr Rule50() : v{0} {}
-    constexpr void clear() { v = 0; }
-    constexpr void next() { v = v < Draw ? v + 1 : Draw; }
-    constexpr bool isDraw() const { return v == Draw; }
+    constexpr Rule50() : v_{0} {}
+    constexpr void clear() { v_ = 0; }
+    constexpr void next() { v_ = v_ < Draw ? v_ + 1 : Draw; }
+    constexpr bool isDraw() const { return v_ == Draw; }
 
-    friend constexpr bool operator < (Rule50 rule50, Ply ply) { return rule50.v < ply; }
+    friend constexpr bool operator < (Rule50 rule50, Ply ply) { return rule50.v_ < ply.v(); }
 
-    friend ostream& operator << (ostream& out, Rule50 rule50) { return out << rule50.v; }
+    friend ostream& operator << (ostream& out, Rule50 rule50) { return out << rule50.v_; }
 
     friend istream& operator >> (istream& in, Rule50& rule50) {
-        in >> rule50.v;
-        if (in) { assert (0 <= rule50.v && rule50.v <= 100); }
+        in >> rule50.v_;
+        if (in) { assert (0 <= rule50.v_ && rule50.v_ <= 100); }
         return in;
     }
 };

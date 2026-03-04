@@ -58,7 +58,7 @@ UciOutput& operator << (UciOutput& out, UciMove move) {
     Square from{move.from()};
     Square to{move.to()};
 
-    bool isWhite{out.color() == White};
+    bool isWhite{out.color().is(White)};
     Square uciFrom{isWhite ? from : ~from};
     Square uciTo{isWhite ? to : ~to};
 
@@ -87,9 +87,9 @@ UciOutput& operator << (UciOutput& out, UciMove move) {
     if (from.on(Rank1)) {
         //castling move internally encoded as the rook captures the king
 
-        if (out.chessVariant() == Orthodox) {
-            if (from.on(FileA)) { out << uciTo << Square{FileC, Rank{uciFrom}}; return out; }
-            if (from.on(FileH)) { out << uciTo << Square{FileG, Rank{uciFrom}}; return out; }
+        if (out.chessVariant().is(Orthodox)) {
+            if (from.on(FileA)) { out << uciTo << Square{File{FileC}, Rank{uciFrom}}; return out; }
+            if (from.on(FileH)) { out << uciTo << Square{File{FileG}, Rank{uciFrom}}; return out; }
         }
 
         // Chess960:
@@ -479,8 +479,8 @@ void Uci::refreshTtPv(Ply depth) const {
         //we cannot use makeZobrist() because of en passant legality validation
         pos.makeMove(move.from(), move.to());
         score = -score;
-        depth = Ply{depth-1};
-        ply = Ply{ply+1};
+        depth = depth - 1_ply;
+        ply = ply + 1_ply;
     }
 }
 

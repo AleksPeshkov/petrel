@@ -21,8 +21,8 @@ Node::Node (const PositionMoves& p, const Uci& r) :
 
 Node::Node (const Node* p) :
     PositionMoves{}, root{p->root}, parent{p}, grandParent{p->parent},
-    ply{p->ply + 1}, plyPv{p->isPv() ? ply : p->plyPv},
-    alpha{-p->beta}, beta{-p->alpha}, pvIndex{p->pvIndex+1}
+    ply{p->ply + 1_ply}, plyPv{p->isPv() ? ply : p->plyPv},
+    alpha{-p->beta}, beta{-p->alpha}, pvIndex{p->pvIndex.v()+1}
 {
     if (grandParent) {
         killer[0] = grandParent->killer[0];
@@ -32,7 +32,7 @@ Node::Node (const Node* p) :
 
 ReturnStatus Node::negamax(Ply R) const {
     assert (child);
-    child->depth = Ply{depth - R}; //TRICK: Ply >= 0
+    child->depth = depth - R; //TRICK: Ply >= 0
     /* assert (child->depth >= 0); */
     child->generateMoves();
     RETURN_IF_STOP (child->search());
@@ -49,7 +49,7 @@ ReturnStatus Node::negamax(Ply R) const {
         auto realR = depth - child->depth;
 
         if (beta <= childScore) {
-            if (currentMove && realR >= 2) {
+            if (currentMove && realR >= 2_ply) {
                 if (child->isPv()) {
                     // rare case (the first move from PV with reduced depth)
                     child->alpha = -beta;
@@ -87,7 +87,7 @@ ReturnStatus Node::negamax(Ply R) const {
         updatePv();
     }
 
-    if (ply == 0 && depth > 1 && root.limits.reached<RootMoveDeadline>()) {
+    if (ply == 0_ply && depth > 1_ply && root.limits.reached<RootMoveDeadline>()) {
         return ReturnStatus::Stop;
     }
 
@@ -121,7 +121,7 @@ ReturnStatus Node::search() {
     if (!isRoot()) {
         // mate-distance pruning
         alpha = std::max(alpha, Score::mateLoss(ply));
-        if (!(alpha < std::min(beta, Score::mateWin(Ply{ply+1})))) {
+        if (!(alpha < std::min(beta, Score::mateWin(ply + 1_ply)))) {
             score = alpha;
             assert (!currentMove);
             return ReturnStatus::Cutoff;
@@ -135,11 +135,11 @@ ReturnStatus Node::search() {
 
         if (inCheck()) {
             // check extension
-            depth = Ply{depth+1};
+            depth = depth + 1_ply;
         }
     }
 
-    if (depth > 0) {
+    if (depth > 0_ply) {
         ++root.tt.reads;
         ttSlot = *tt;
         isHit = (ttSlot == zobrist());
@@ -183,8 +183,8 @@ ReturnStatus Node::search() {
 
     eval = evaluate();
 
-    if (depth <= 0 && !inCheck()) {
-        assert (depth == 0);
+    if (depth <= 0_ply && !inCheck()) {
+        assert (depth == 0_ply);
         return quiescence();
     }
 
@@ -193,16 +193,16 @@ ReturnStatus Node::search() {
     if (
         !inCheck()
         && !isPv()
-        && depth <= 3
+        && depth <= 3_ply
     ) {
-        auto delta = (depth == 1) ? 50_cp : (depth == 2) ? 150_cp : 200_cp;
+        auto delta = (depth == 1_ply) ? 50_cp : (depth == 2_ply) ? 150_cp : 200_cp;
         if (Score{MinEval} <= beta && beta <= eval-delta) {
             // Static Null Move Pruning (Reverse Futility Pruning)
             score = eval;
             assert (!currentMove);
             return ReturnStatus::Cutoff;
         } else {
-            delta = (depth == 1) ? 50_cp : (depth == 2) ? 250_cp : 350_cp;
+            delta = (depth == 1_ply) ? 50_cp : (depth == 2_ply) ? 250_cp : 350_cp;
             if (eval+delta < alpha && alpha <= Score{MaxEval}) {
                 // Razoring
                 return quiescence();
@@ -215,11 +215,11 @@ ReturnStatus Node::search() {
         !inCheck()
         && !isPv()
         && Score{MinEval} <= beta && beta <= eval
-        && depth >= 2 // overhead higher then gain at very low depth
+        && depth >= 2_ply // overhead higher then gain at very low depth
         && MY.evaluation().canNullMove() // avoid null move in late endgame
     ) {
         canBeKiller = false;
-        RETURN_CUTOFF (child->searchNullMove(Ply{3 + depth/6}));
+        RETURN_CUTOFF (child->searchNullMove(3_ply + depth/6));
     }
 
     if (isHit && ttSlot.hasMove()) {
@@ -253,7 +253,7 @@ ReturnStatus Node::search() {
     bool canR = !inCheck();
 
     // Weak Move Pruning: !inCheck() && !isPv() && depth <= 2
-    bool canP = !inCheck() && !isPv() && depth <= 2;
+    bool canP = !inCheck() && !isPv() && depth <= 2_ply;
 
     // quiet non-pawn, non-king moves from unsafe to safe squares
     // skip king moves because they are safe anyway (unless in check)
@@ -519,7 +519,7 @@ void Node::failHigh() const {
         currentMove = ttMove();
     }
 
-    if (depth > 0) {
+    if (depth > 0_ply) {
         bound = FailHigh;
         *tt = TtSlot{this};
         ++root.tt.writes;
@@ -531,7 +531,7 @@ void Node::failHigh() const {
 }
 
 void Node::updatePv() const {
-    if (depth > 0) {
+    if (depth > 0_ply) {
         bound = ExactScore;
         *tt = TtSlot{this};
         ++root.tt.writes;
@@ -541,7 +541,7 @@ void Node::updatePv() const {
         updateHistory(currentMove);
     }
 
-    if (ply == 0) {
+    if (ply == 0_ply) {
         root.pvScore = score;
         root.info_pv(depth);
     }

@@ -8,22 +8,22 @@ public:
     using _t = u64_t;
 
 protected:
-    _t v;
+    _t v_;
 
-    constexpr Z& operator ^= (Z b) { v ^= b.v; return *this; }
+    constexpr Z& operator ^= (Z b) { v_ ^= b.v_; return *this; }
     constexpr friend Z operator ^ (Z a, Z b) { return Z{a} ^= b; }
 
 public:
-    explicit constexpr Z(_t n = 0) : v{n} {}
-    constexpr operator const _t& () const { return v; }
+    explicit constexpr Z(_t n = 0) : v_{n} {}
+    constexpr operator const _t& () const { return v_; }
 
-    constexpr friend bool operator == (Z a, Z b) { return a.v == b.v; }
+    constexpr friend bool operator == (Z a, Z b) { return a.v_ == b.v_; }
 
     friend ostream& operator << (ostream& out, Z z) {
         auto flags = out.flags();
 
         out << " [" << std::hex << std::setw(16) << std::setfill('0') << "]";
-        out << z.v;
+        out << z.v_;
 
         out.flags(flags);
         return out;
@@ -45,34 +45,34 @@ class Zobrist : public Z {
     };
 
     enum zobrist_index_t { Castling = 6, EnPassant = 7 };
-    struct Index : ::Index<8> {
-        using Base = ::Index<8>;
+    struct Index : ::Index<Index, 8> {
+        using Base = ::Index<Index, 8>;
         constexpr Index (PieceType::_t ty) : Base{ty} {}
         constexpr Index (zobrist_index_t ty) : Base{ty} {}
-        constexpr Index (PieceType ty) : Base{ty} {}
-        constexpr Index (NonKingType ty) : Base{ty} {}
-        constexpr Index (PromoType ty) : Base{ty} {}
+        constexpr Index (PieceType ty) : Base{ty.v()} {}
+        constexpr Index (NonKingType ty) : Base{ty.v()} {}
+        constexpr Index (PromoType ty) : Base{ty.v()} {}
     };
 
     constexpr static Index::arrayOf<_t> zKey{
         ZQueen, ZRook, ZBishop, ZKnight, ZPawn, ZKing, ZCastling, ZEnPassant
     };
 
-    constexpr static _t r(_t z, Square sq) { return ::rotateleft(z, sq); }
+    constexpr static _t r(_t z, Square sq) { return ::rotateleft(z, sq.v()); }
     constexpr static _t z(Index ty, Square sq) { return r(zKey[ty], sq); }
     constexpr static _t flip(_t z) { return ::byteswap(z); }
 
-    constexpr void my(Index ty, Square sq) { v ^= z(ty, sq); }
-    constexpr void op(Index ty, Square sq) { v ^= flip(z(ty, sq)); }
+    constexpr void my(Index ty, Square sq) { v_ ^= z(ty, sq); }
+    constexpr void op(Index ty, Square sq) { v_ ^= flip(z(ty, sq)); }
 
 public:
     using Z::Z;
-    constexpr Zobrist (Zobrist my, Zobrist op) : Z{my.v ^ flip(op)} {
+    constexpr Zobrist (Zobrist my, Zobrist op) : Z{my.v_ ^ flip(op)} {
         static_assert (z(EnPassant, Square{A4}) == z(Pawn, Square{A8}));
         static_assert (z(EnPassant, Square{B4}) == z(Pawn, Square{B8}));
     }
 
-    constexpr Zobrist& flip() { v = ::byteswap(v); return *this; }
+    constexpr Zobrist& flip() { v_ = ::byteswap(v_); return *this; }
 
     void operator () (PieceType ty, Square sq) { my(ty, sq); }
     void castling(Square sq)  { assert (sq.on(Rank1)); my(Castling, sq); }

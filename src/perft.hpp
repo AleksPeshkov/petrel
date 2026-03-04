@@ -12,7 +12,7 @@ class NodePerft : public PositionMoves {
     node_count_t perft = 0;
     Ply depth;
 
-    NodePerft (NodePerft* n) : parent{n}, root{n->root}, depth{n->depth-1} {}
+    NodePerft (NodePerft* n) : parent{n}, root{n->root}, depth{n->depth - 1_ply} {}
     ReturnStatus visit();
     ReturnStatus visitMove(Square from, Square to);
 

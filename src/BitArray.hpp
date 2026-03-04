@@ -17,12 +17,11 @@ public:
 
 private:
     using Self = self_type;
-    using Arg = Self;
-    using Ops = BitArrayOps<_t>;
-
 #define SELF static_cast<Self&>(*this)
 #define CONST_SELF static_cast<const Self&>(*this)
+    using Arg = Self;
 
+    using Ops = BitArrayOps<_t>;
 protected:
     _t v_; // _t v_
     constexpr BitArray () : v_{} {}

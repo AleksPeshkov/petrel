@@ -81,16 +81,16 @@ public:
         const auto& sq = hyperbolaSq[from];
 
         // branchless computation
-        Direction dir{ ty == Bishop ? DiagonalDir : FileDir };
+        Direction dir{ ty.is(Bishop) ? DiagonalDir : FileDir };
 
         const auto& d0 = hyperbolaDir[from][dir];
-        const auto& d1 = hyperbolaDir[from][Direction{static_cast<Direction::_t>(dir+1)}];
+        const auto& d1 = hyperbolaDir[from][Direction{static_cast<Direction::_t>(dir.v()+1)}];
 
         // bishop attacks for Bishops, rooks attacks for Rooks and Queens
         auto result = ((occupied & d0) - sq) & d0;
         result     |= ((occupied & d1) - sq) & d1;
 
-        if (ty == Queen) {
+        if (ty.is(Queen)) {
             // plus bishop attacks for Queens
             const auto& d = hyperbolaDir[from][Direction{DiagonalDir}];
             const auto& a = hyperbolaDir[from][Direction{AntidiagDir}];
