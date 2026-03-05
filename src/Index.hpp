@@ -305,12 +305,12 @@ public:
 
 // defined in Bb.hpp
 
-    constexpr Bb operator() (signed fileOffset, signed rankOffset) const;
-    constexpr Bb rank() const;
-    constexpr Bb file() const;
-    constexpr Bb diagonal() const;
-    constexpr Bb antidiag() const;
-    constexpr Bb line(Direction) const;
+    constexpr Bb bb(signed fileOffset, signed rankOffset) const; // BitBoard of the square + offset (or empty if not on board)
+    constexpr Bb bbRank() const; // BitBoard of the rank of the square (excluding the square itself)
+    constexpr Bb bbFile() const; // BitBoard of the file of the square (excluding the square itself)
+    constexpr Bb bbDiagonal() const; // BitBoard of the diagonal of the square (excluding the square itself)
+    constexpr Bb bbAntidiag() const; // BitBoard of the antidiagonal of the square (excluding the square itself)
+    constexpr Bb bbDirection(Direction) const; // BitBoard of the direction of the square (excluding the square itself)
 
     friend ostream& operator << (ostream& out, Square sq) { return out << File{sq} << Rank{sq}; }
 };
