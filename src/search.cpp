@@ -127,56 +127,77 @@ ReturnStatus Node::search() {
             assert (currentMove.none());
             return ReturnStatus::Continue;
         }
+    }
 
-        if (inCheck()) {
+    if (!inCheck()) {
+        eval = evaluate();
+    } else {
+        eval = Score{NoScore};
+        if (!isRoot()) {
             // check extension
             depth = depth + 1_ply;
         }
     }
 
-    if (depth > 0_ply) {
+    do {
+        if (depth == 0_ply) { break; }
+
         ++root.tt.reads;
         ttSlot = *tt;
+
         ttHit = (ttSlot == z());
-        if (ttHit) {
-            Square from = ttSlot.from();
-            Square to = ttSlot.to();
-            if (ttSlot.hasMove() && !isPossibleMove(from, to)) {
-                ttHit = false;
+        if (!ttHit) { break; }
+
+        bool ttHasMove = ttSlot.hasMove();
+        Square ttFrom = ttSlot.from();
+        Square ttTo = ttSlot.to();
+        if (ttHasMove && !isPossibleMove(ttFrom, ttTo)) {
+            ttHit = false;
+            break;
+        }
+
+        ++root.tt.hits;
+        Bound ttBound = ttSlot.bound();
+        Score ttScore = ttSlot.score(ply);
+
+        if (!isPv()
+            && ttSlot.draft() >= depth
+            && (ttBound == ExactScore
+                || ((ttBound == FailHigh) && beta <= ttScore)
+                || ((ttBound == FailLow) && ttScore <= alpha)
+            )
+        ) {
+            score = ttScore;
+            bound = ttBound;
+            if (ttHasMove) {
+                assert (isPossibleMove(ttFrom, ttTo));
+                canBeKiller = ttSlot.canBeKiller();
+                currentMove = HistoryMove{MY.typeAt(ttFrom), ttFrom, ttTo};
             } else {
-                ++root.tt.hits;
+                canBeKiller = false;
+                assert (currentMove.none());
+            }
+            return ReturnStatus::Cutoff;
+        }
 
-                if (ttSlot.draft() >= depth && !isPv()) {
-                    Bound ttBound = ttSlot.bound();
-                    Score ttScore = ttSlot.score(ply);
-
-                    //TODO: refresh TT record if age is old
-                    if (
-                        ((ttBound & FailHigh) && beta <= ttScore)
-                        || ((ttBound & FailLow) && ttScore <= alpha)
-                    ) {
-                        score = ttScore;
-                        assert (currentMove.none());
-                        if (ttSlot.hasMove()) {
-                            assert (isPossibleMove(from, to));
-                            canBeKiller = ttSlot.canBeKiller();
-                            currentMove = HistoryMove{MY.typeAt(from), from, to};
-                        }
-                        return beta <= score ? ReturnStatus::Cutoff : ReturnStatus::Continue;
-                    }
-                }
+        if (!inCheck() && ttScore.isEval()) {
+            if (ttBound == ExactScore
+                || (ttBound == FailHigh && eval <= ttScore)
+                || (ttBound == FailLow && ttScore <= eval)
+            ) {
+                eval = ttScore;
+                break;
             }
         }
-    }
+    } while(false);
 
+    assert ((inCheck() && eval.none()) || (!inCheck() && eval.isEval()));
 // search all moves:
 
     // prepare empty child node to make moves into
     //TRICK: dangling child pointer is dangerous, but it can be useful during debug
     Node node{this};
     this->child = &node;
-
-    eval = evaluate();
 
     if (depth <= 0_ply && !inCheck()) {
         assert (depth == 0_ply);
