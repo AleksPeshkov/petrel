@@ -5,18 +5,6 @@
 #include "BitSet.hpp"
 
 /**
- * a bit for each square of a chessboard rank
- */
-class BitRank : public BitSet<BitRank, File, u8_t> {
-    using Base = BitSet<BitRank, File, u8_t>;
-    friend class BitArray<BitRank, u8_t>;
-public:
-    constexpr BitRank () : Base{} {}
-    constexpr explicit BitRank (_t v) : Base{v} {}
-    constexpr explicit BitRank (File file) : Base{file} {}
-};
-
-/**
  * BitBoard type: a bit for each chessboard square
  */
 class Bb : public BitSet<Bb, Square, u64_t> {
@@ -33,8 +21,8 @@ public:
 
     constexpr Bb () : Base{} {}
     constexpr explicit Bb (_t bb) : Base{bb} {}
-    constexpr explicit Bb (Square sq) : Base{sq} {}
 
+    constexpr explicit Bb (Square sq) : Base{sq} {}
     constexpr explicit Bb (Square::_t sq) : Bb{Square{sq}} {}
     constexpr explicit Bb (File::_t file) : Bb{U64(0x0101'0101'0101'0101) << file} {}
     constexpr explicit Bb (Rank::_t rank) : Bb{U64(0xff) << 8*rank} {}
@@ -44,8 +32,6 @@ public:
     constexpr Bb operator ~ () const { return Bb{::byteswap(v_)}; }
 
     void move(Square from, Square to) { assert (from != to); *this -= Bb{from}; *this += Bb{to}; }
-
-    constexpr BitRank operator[] (Rank r) const { return BitRank{small_cast<BitRank::_t>(v_ >> 8*r.v())}; }
 
     constexpr Bb pawnAttacks() const { return (*this % Bb{FileA} >> 9u) | (*this % Bb{FileH} >> 7u); }
 
@@ -70,27 +56,26 @@ public:
     }
 };
 
-constexpr Bb Square::rank() const { return Bb{Rank{*this}} - Bb{*this}; }
-constexpr Bb Square::file() const { return Bb{File{*this}} - Bb{*this}; }
-constexpr Bb Square::diagonal() const {
+constexpr Bb Square::bbRank() const { return Bb{Rank{*this}} - Bb{*this}; }
+constexpr Bb Square::bbFile() const { return Bb{File{*this}} - Bb{*this}; }
+constexpr Bb Square::bbDiagonal() const {
     return Bb{U64(0x0102'0408'1020'4080)}.shiftRank(static_cast<signed>(Rank{*this}.v()) + File{*this}.v() - 7) - Bb{*this};
 }
-constexpr Bb Square::antidiag() const {
+constexpr Bb Square::bbAntidiag() const {
     return Bb{U64(0x8040'2010'0804'0201)}.shiftRank(static_cast<signed>(Rank{*this}.v()) - File{*this}.v()) - Bb{*this};
 }
 
-constexpr Bb Square::line(Direction dir) const {
+constexpr Bb Square::bbDirection(Direction dir) const {
     switch (dir.v()) {
-        case FileDir:     return file();
-        case RankDir:     return rank();
-        case DiagonalDir: return diagonal();
-        case AntidiagDir: return antidiag();
-        default: return {};
+        case FileDir:     return bbFile();
+        case RankDir:     return bbRank();
+        case DiagonalDir: return bbDiagonal();
+        case AntidiagDir: return bbAntidiag();
     }
 }
 
-// https://www.chessprogramming.org/0x88
-constexpr Bb Square::operator() (signed df, signed dr) const {
+constexpr Bb Square::bb(signed df, signed dr) const {
+    // https://www.chessprogramming.org/0x88
     auto sq0x88 = v_ + (v_ & 070) + df + 16*dr;
 
     if (sq0x88 & 0x88) {
@@ -99,6 +84,18 @@ constexpr Bb Square::operator() (signed df, signed dr) const {
 
     return Bb{ static_cast<Square::_t>((sq0x88 + (sq0x88 & 7)) >> 1) };
 }
+
+/**
+ * a bit for each square of a chessboard rank
+ */
+class BitRank : public BitArray<BitRank, u8_t> {
+    using Base = BitArray<BitRank, u8_t>;
+public:
+    constexpr BitRank () : Base{} {}
+    constexpr explicit BitRank (_t v) : Base{v} {}
+    constexpr explicit BitRank (File file) : Base{static_cast<_t>(1 << file.v())} {}
+    constexpr BitRank (Bb bb, Rank rank) : Base{small_cast<_t>(bb.v() >> 8*rank.v())} {}
+};
 
 // line (file, rank, diagonal) in between two squares (excluding both ends) or 0 (32k)
 class CACHE_ALIGN InBetween {
@@ -117,18 +114,18 @@ public:
                 Bb result{};
 
                 if (File{from} == File{to}) {
-                    result = areaInBetween(from, to) & from.file();
+                    result = areaInBetween(from, to) & from.bbFile();
                 }
                 else if (Rank{from} == Rank{to}) {
-                    result = areaInBetween(from, to) & from.rank();
+                    result = areaInBetween(from, to) & from.bbRank();
                 }
                 else if (static_cast<int>(File{from}.v()) + static_cast<int>(Rank{from}.v())
                     == static_cast<int>(File{to}.v()) + static_cast<int>(Rank{to}.v())) {
-                    result = areaInBetween(from, to) & from.diagonal();
+                    result = areaInBetween(from, to) & from.bbDiagonal();
                 }
                 else if (static_cast<int>(File{from}.v()) - static_cast<int>(Rank{from}.v())
                     == static_cast<int>(File{to}.v()) - static_cast<int>(Rank{to}.v())) {
-                    result = areaInBetween(from, to) & from.antidiag();
+                    result = areaInBetween(from, to) & from.bbAntidiag();
                 }
 
                 inBetween[from][to] = result;
@@ -149,19 +146,19 @@ class CACHE_ALIGN AttacksFrom {
 public:
     constexpr AttacksFrom () {
         for (auto sq: range<Square>()) {
-            attack[PieceType{Rook}][sq]   = sq.file() + sq.rank();
-            attack[PieceType{Bishop}][sq] = sq.diagonal() + sq.antidiag();
+            attack[PieceType{Rook}][sq]   = sq.bbFile() + sq.bbRank();
+            attack[PieceType{Bishop}][sq] = sq.bbDiagonal() + sq.bbAntidiag();
             attack[PieceType{Queen}][sq]  = attack[PieceType{Rook}][sq] + attack[PieceType{Bishop}][sq];
 
-            attack[PieceType{Pawn}][sq] = sq(-1, Rank3 - Rank2) + sq(+1, Rank3 - Rank2);
+            attack[PieceType{Pawn}][sq] = sq.bb(-1, Rank3 - Rank2) + sq.bb(+1, Rank3 - Rank2);
 
             attack[PieceType{Knight}][sq] =
-                sq(+2, +1) + sq(+2, -1) + sq(+1, +2) + sq(+1, -2) +
-                sq(-2, -1) + sq(-2, +1) + sq(-1, -2) + sq(-1, +2);
+                sq.bb(+2, +1) + sq.bb(+2, -1) + sq.bb(+1, +2) + sq.bb(+1, -2) +
+                sq.bb(-2, -1) + sq.bb(-2, +1) + sq.bb(-1, -2) + sq.bb(-1, +2);
 
             attack[PieceType{King}][sq] =
-                sq(+1, +1) + sq(+1, 0) + sq(0, +1) + sq(+1, -1) +
-                sq(-1, -1) + sq(-1, 0) + sq(0, -1) + sq(-1, +1);
+                sq.bb(+1, +1) + sq.bb(+1, 0) + sq.bb(0, +1) + sq.bb(+1, -1) +
+                sq.bb(-1, -1) + sq.bb(-1, 0) + sq.bb(0, -1) + sq.bb(-1, +1);
         }
     }
 

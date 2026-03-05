@@ -49,15 +49,15 @@ void PositionMoves::generatePawnMoves() {
         BitRank fileTo{ File{from} };
 
         //push to free square
-        fileTo %= OCCUPIED[rankTo];
+        fileTo %= BitRank{OCCUPIED, rankTo};
 
         //double push
-        if ((rankTo.is(Rank3)) && (fileTo % OCCUPIED[Rank{Rank4}]).any()) {
+        if ((rankTo.is(Rank3)) && (fileTo % BitRank{OCCUPIED, Rank{Rank4}}).any()) {
             moves_.set(pi, Rank{Rank4}, fileTo);
         }
 
         //remove "captures" of free squares from default generated moves
-        fileTo += moves_[rankTo][pi] & OCCUPIED[rankTo];
+        fileTo += moves_[rankTo][pi] & BitRank{OCCUPIED, rankTo};
 
         moves_.set(pi, rankTo, fileTo);
     }
@@ -76,7 +76,7 @@ void PositionMoves::correctCheckEvasionsByPawns(Bb checkLine, Square checkFrom) 
     for (Square from : affectedPawns) {
         Bb bb = (Bb{from.rankForward()} & checkLine) + (::attacksFrom(Pawn, from) & Bb{checkFrom});
         Rank rankTo = Rank{from}.forward();
-        moves_.set(MY.pi(from), rankTo, bb[rankTo]);
+        moves_.set(MY.pi(from), rankTo, BitRank{bb, rankTo});
     }
 
     //pawns double push over check line

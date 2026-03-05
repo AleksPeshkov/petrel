@@ -56,7 +56,7 @@ struct CACHE_ALIGN HyperbolaDir : Square::arrayOf<Direction::arrayOf<vu64x2_t>> 
         for (auto sq : range<Square>()) {
             Square rsq{::reverse(sq)};
             for (auto dir : range<Direction>()) {
-                (*this)[sq][dir] = vu64x2(sq.line(dir), rsq.line(dir));
+                (*this)[sq][dir] = vu64x2(sq.bbDirection(dir), rsq.bbDirection(dir));
             }
         }
     }

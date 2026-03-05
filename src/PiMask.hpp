@@ -182,6 +182,7 @@ public:
     constexpr explicit PiRank (BitRank br) : Base{::vectorOfAll[br.v()]} {}
     constexpr explicit PiRank (File f) : PiRank{BitRank{f}} {}
     constexpr PiRank (PiMask m) : Base{m.v()} {}
+    constexpr PiRank(Bb bb, Rank rank) : PiRank{BitRank{bb, rank}} {}
 
     BitRank gather() const {
         u8_t r  = v_[0] | v_[1] | v_[2] | v_[3] | v_[4] | v_[5] | v_[6] | v_[7]
