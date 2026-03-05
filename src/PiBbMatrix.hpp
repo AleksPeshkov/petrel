@@ -41,7 +41,7 @@ public:
 
     constexpr void set(Pi pi, Bb bb) {
         for (auto rank : range<Rank>()) {
-            set(pi, rank, bb[rank]);
+            set(pi, rank, BitRank{bb, rank});
         }
     }
 
@@ -91,28 +91,28 @@ public:
     void filter(Pi pi, Bb bb) {
         PiMask exceptPi{ PiMask::all() ^ PiMask{pi} };
         for (auto rank : range<Rank>()) {
-            matrix[rank] &= PiRank{bb[rank]} | exceptPi;
+            matrix[rank] &= PiRank{bb, rank} | exceptPi;
         }
     }
 
     constexpr friend PiBbMatrix operator % (const PiBbMatrix& from, Bb bb) {
         PiBbMatrix result;
         for (auto rank : range<Rank>()) {
-            result.matrix[rank] = from.matrix[rank] % PiRank{bb[rank]};
+            result.matrix[rank] = from.matrix[rank] % PiRank{bb, rank};
         }
         return result;
     }
 
     constexpr void operator &= (Bb bb) {
         for (auto rank : range<Rank>()) {
-            matrix[rank] &= PiRank{bb[rank]};
+            matrix[rank] &= PiRank{bb, rank};
         }
     }
 
     constexpr friend PiBbMatrix operator & (const PiBbMatrix& from, Bb bb) {
         PiBbMatrix result;
         for (auto rank : range<Rank>()) {
-            result.matrix[rank] = from.matrix[rank] & PiRank{bb[rank]};
+            result.matrix[rank] = from.matrix[rank] & PiRank{bb, rank};
         }
         return result;
     }
