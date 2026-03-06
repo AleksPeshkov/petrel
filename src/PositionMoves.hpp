@@ -32,9 +32,9 @@ protected:
 
     void makeMoveNoZobrist(const PositionMoves* parent, Square from, Square to);
 
+public:
     void generateMoves();
 
-public:
     // not yet made set of legal moves
     constexpr const PiBbMatrix& moves() const { return moves_; }
 
