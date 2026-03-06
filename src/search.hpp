@@ -81,20 +81,20 @@ protected:
 
     TtSlot* tt; // pointer to the slot in TT
     TtSlot  ttSlot;
-    bool isHit = false; // this node found in TT
+    bool ttHit{false}; // this node found in TT
     Score eval{NoScore}; // static evaluation of the current position
 
     mutable Score alpha; // alpha-beta window lower margin
     Score beta; // alpha-beta window upper margin
     mutable Score score{NoScore}; // best score found so far
-    mutable Bound bound = FailLow; // FailLow is default unless have found Exact or FailHigh move later
+    mutable Bound bound{FailLow}; // FailLow is default unless have found Exact or FailHigh move later
 
     mutable HistoryMove currentMove = {}; // last move made from *this into *child
     PrincipalVariation::Index pvIndex; // start of subPV for the current ply
 
     // Killer heuristic
     mutable std::array<HistoryMove, 3> killer = {};
-    bool canBeKiller = false;  // good captures and check evasions should not waste killer slots
+    bool canBeKiller{false};  // good captures and check evasions should not waste killer slots
 
     Node (const Node* parent); // prepare empty child node
 
@@ -136,6 +136,7 @@ protected:
     constexpr bool isPv() const { return ply == plyPv; } // ply == plyPv
     constexpr bool isCutNode() const { return (ply - plyPv).v() & 1; } // odd (ply - plyPv)
     constexpr bool isAllNode() const { return !isPv() && !isCutNode(); } // even (plv - plyPv)
+    constexpr Ply depthR() const { assert (!isRoot()); return parent->depth - depth; } // parent->depth - depth
 
     // current node's side to move color
     constexpr Color colorToMove() const;
@@ -144,7 +145,7 @@ protected:
     bool isRepetition() const;
 
     HistoryMove ttMove() const {
-        return isHit && ttSlot.from() != ttSlot.to() && MY.has(ttSlot.from())
+        return ttHit && ttSlot.from() != ttSlot.to() && MY.has(ttSlot.from())
             ? HistoryMove{MY.typeAt(ttSlot.from()), ttSlot.from(), ttSlot.to()}
             : HistoryMove{}
         ;
