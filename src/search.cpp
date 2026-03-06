@@ -545,6 +545,11 @@ Ply Node::adjustDepthR(Ply R) const {
 
     if (depth <= 8_ply && R >= 4_ply) { R = R - 1_ply; }
 
+    if (2_ply <= depth && depth <= R) {
+        // avoid immediate standpat in QS (except for NMP)
+        return depth - 1_ply; // set child->depth = 1
+    }
+
     return R;
 }
 
