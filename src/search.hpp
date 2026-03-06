@@ -51,15 +51,17 @@ public:
     TtSlot (const Node* node);
     constexpr bool operator == (Z z) const { return (v_ & HashMask) == (z.v() & HashMask); }
 
-    bool hasMove() const { return !(from().v() == 0 && to().v() == 0); }
-    Square from() const { return Square{static_cast<Square::_t>(v_ >> FromShift & Square::Mask)}; }
-    Square to() const { return Square{static_cast<Square::_t>(v_ >> ToShift & Square::Mask)}; }
+    constexpr bool hasMove() const { return !(from().v() == 0 && to().v() == 0); }
+    constexpr Square from() const { return Square{static_cast<Square::_t>(v_ >> FromShift & Square::Mask)}; }
+    constexpr Square to() const { return Square{static_cast<Square::_t>(v_ >> ToShift & Square::Mask)}; }
 
-    Bound bound() const { return static_cast<Bound>(v_ >> BoundShift & 0b11); }
-    Ply draft() const { return Ply{static_cast<Ply::_t>(v_ >> DraftShift & Ply::Mask)}; }
-    bool canBeKiller() const { return v_ >> KillerShift & 1; }
+    constexpr Bound bound() const { return static_cast<Bound>(v_ >> BoundShift & 0b11); }
+    constexpr Ply draft() const { return Ply{static_cast<Ply::_t>(v_ >> DraftShift & Ply::Mask)}; }
+    constexpr bool canBeKiller() const { return v_ >> KillerShift & 1; }
 
-    Score score(Ply ply) const { return Score::fromTt(v_ >> ScoreShift & Score::Mask, ply); }
+    constexpr bool hasScore() const { return v_ >> ScoreShift & Score::Mask; }
+
+    constexpr Score score(Ply ply) const { return Score::fromTt(v_ >> ScoreShift & Score::Mask, ply); }
 };
 
 class Uci;

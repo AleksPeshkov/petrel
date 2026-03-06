@@ -148,6 +148,11 @@ ReturnStatus Node::search() {
         ttHit = (ttSlot == z());
         if (!ttHit) { break; }
 
+        if (!ttSlot.hasScore()) {
+            ttHit = false;
+            break;
+        }
+
         bool ttHasMove = ttSlot.hasMove();
         Square ttFrom = ttSlot.from();
         Square ttTo = ttSlot.to();
