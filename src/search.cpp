@@ -46,10 +46,10 @@ ReturnStatus Node::negamax(Ply R) const {
         }
     } else {
         // do not use R param as real reduction can be adjusted later
-        auto realR = depth - child->depth;
+        auto childR = child->depthR();
 
         if (beta <= childScore) {
-            if (currentMove.any() && realR >= 2_ply) {
+            if (currentMove.any() && childR >= 2_ply) {
                 if (child->isPv()) {
                     // rare case (the first move from PV with reduced depth)
                     child->alpha = -beta;
@@ -70,8 +70,7 @@ ReturnStatus Node::negamax(Ply R) const {
         assert (isPv()); // alpha < childScore < beta, so current window cannot be zero
         assert (currentMove.any()); // null move in PV is not allowed
 
-        if (!child->isPv()) {
-            // Principal Variation Search (PVS) research with full window
+        if (!child->isPv() || childR >= 2_ply) {
             child->plyPv = child->ply;
             assert (child->isPv());
             child->alpha = -beta;
@@ -80,6 +79,7 @@ ReturnStatus Node::negamax(Ply R) const {
             return negamax();
         }
 
+        assert (childR <= 1_ply);
         score = childScore;
         alpha = childScore;
         child->beta = -alpha;
@@ -95,8 +95,8 @@ ReturnStatus Node::negamax(Ply R) const {
 }
 
 ReturnStatus Node::search() {
-    score = Score{NoScore};
     currentMove = {};
+    score = Score{NoScore};
     bound = FailLow;
     assertOk();
 
@@ -137,12 +137,12 @@ ReturnStatus Node::search() {
     if (depth > 0_ply) {
         ++root.tt.reads;
         ttSlot = *tt;
-        isHit = (ttSlot == z());
-        if (isHit) {
+        ttHit = (ttSlot == z());
+        if (ttHit) {
             Square from = ttSlot.from();
             Square to = ttSlot.to();
             if (ttSlot.hasMove() && !isPossibleMove(from, to)) {
-                isHit = false;
+                ttHit = false;
             } else {
                 ++root.tt.hits;
 
@@ -217,7 +217,7 @@ ReturnStatus Node::search() {
         RETURN_CUTOFF (child->searchNullMove(3_ply + depth/6));
     }
 
-    if (isHit && ttSlot.hasMove()) {
+    if (ttHit && ttSlot.hasMove()) {
         canBeKiller = ttSlot.canBeKiller();
         RETURN_CUTOFF (child->searchMove(ttSlot.from(), ttSlot.to()));
     }
