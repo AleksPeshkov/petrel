@@ -2,6 +2,7 @@
 #define HISTORY_HPP
 
 #include "Index.hpp"
+#include "Score.hpp"
 
 /**
  * Inserts or moves `value` to position `Pos` in the array, preserving uniqueness.
@@ -64,33 +65,45 @@ public:
     }
 };
 
-// triangular array
-class CACHE_ALIGN PvMoves {
+class CACHE_ALIGN PrincipalVariation {
     static constexpr auto triangularArraySize = (Ply::Last+1) * (Ply::Last+2) / 2;
 public:
     struct Index; STRUCT_INDEX (Index, triangularArraySize);
-    Index::arrayOf<UciMove> pv;
+    Index::arrayOf<UciMove> moves_;
+
+    Ply   depth_{0}; // last root PV update iteration depth
+    Score score_{NoScore}; // last root PV update score
 
 public:
-    PvMoves () { clear(); }
+    PrincipalVariation () { clear(); }
 
-    void clear() { std::memset(&pv, 0, sizeof(pv)); }
-
-    void clearPly(Index i) { pv[i] = UciMove{}; }
-
-    Index set(Index parent, UciMove move, Index child) {
-        pv[parent] = move;
-        assert (parent < child);
-
-        auto from = child.v();
-        auto to = parent.v() + 1;
-        while ((pv[Index{to++}] = pv[Index{from++}]).any()) {}
-
-        pv[Index{to}] = UciMove{};
-        return Index{to}; // new child index
+    void clear() {
+        std::memset(&moves_, 0, sizeof(moves_));
+        depth_ = 0_ply;
+        score_ = Score{NoScore};
     }
 
-    operator const UciMove* () const { return &pv[Index{0}]; }
+    void  set(Ply depth, Score score) { depth_ = depth; score_ = score; }
+    Ply   depth() const { return depth_; }
+    Score score() const { return score_; }
+
+    void clear(Index i) { moves_[i] = UciMove{}; }
+
+    // set PV as child move plus child PV, update child PV index
+    void set(Index parent, UciMove move, Index* child) {
+        auto from = (*child).v();
+        auto to   = parent.v();
+        assert (to < from);
+
+        moves_[Index{to++}] = move;
+        // copies null move terminated move list (including last null)
+        while ((moves_[Index{to++}] = moves_[Index{from++}]).any()) {}
+
+        *child = Index{to};
+    }
+
+    const UciMove* moves() const { return &moves_[Index{0}]; }
+    UciMove move(Ply ply) const { return moves_[Index{ply.v()}]; }
 };
 
 // https://www.talkchess.com/forum/viewtopic.php?p=554664#p554664
