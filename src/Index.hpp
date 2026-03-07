@@ -100,10 +100,6 @@ public:
 
     friend constexpr bool operator == (Arg a, Arg b) { return a.v_ == b.v_; }
     friend constexpr bool operator <  (Arg a, Arg b) { return a.v_ < b.v_; }
-    friend constexpr bool operator != (Arg a, Arg b) { return !(a == b); }
-    friend constexpr bool operator >  (Arg a, Arg b) { return b < a; }
-    friend constexpr bool operator <= (Arg a, Arg b) { return !(a > b); }
-    friend constexpr bool operator >= (Arg a, Arg b) { return !(a < b); }
 
 #undef SELF
 #undef CONST_SELF
