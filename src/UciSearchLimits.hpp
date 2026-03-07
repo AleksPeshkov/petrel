@@ -39,7 +39,7 @@ class UciSearchLimits {
     mutable node_count_t nodesLimit_{NodeCountMax}; // search limit
 
     // avoid output duplicate 'info nps'
-    mutable node_count_t lastInfoNodes_ = 0;
+    mutable node_count_t lastInfoNodes_{NodeCountMax};
 
     // number of remaining nodes before slow checking for search stop
     // (0 <= nodesQuota_ && nodesQuota_ <= QuotaLimit)
@@ -108,6 +108,7 @@ public:
     constexpr bool canPonder() const { return canPonder_; }
     constexpr node_count_t getNodes() const { return nodes_ - nodesQuota_; } // exact number of searched nodes
     constexpr bool hasNewNodes() const { return lastInfoNodes_ != getNodes(); }
+    ostream& nps(ostream&) const;
     ostream& info_nps(ostream&) const;
 
 // used in search.cpp:
