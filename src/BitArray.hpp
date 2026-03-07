@@ -47,10 +47,6 @@ public:
 
     friend constexpr bool operator == (Arg a, Arg b) { return Ops::equals(a.v_, b.v_); }
     friend constexpr bool operator <  (Arg a, Arg b) { return !((a & b) == b); }
-    friend constexpr bool operator != (Arg a, Arg b) { return !(a == b); }
-    friend constexpr bool operator >  (Arg a, Arg b) { return b < a; }
-    friend constexpr bool operator <= (Arg a, Arg b) { return !(b < a); }
-    friend constexpr bool operator >= (Arg a, Arg b) { return !(a < b); }
 
     constexpr bool none() const { return CONST_SELF == Self{}; }
     constexpr bool none(Arg b) const { return (CONST_SELF & b).none(); }
