@@ -99,11 +99,7 @@ public:
     constexpr Self operator ~ () const { return Self{v_}.flip(); }
 
     constexpr friend bool operator == (Arg a, Arg b) { return a.v_ == b.v_; }
-    constexpr friend bool operator != (Arg a, Arg b) { return !(a == b); }
     constexpr friend bool operator <  (Arg a, Arg b) { return a.v_ < b.v_; }
-    constexpr friend bool operator >  (Arg a, Arg b) { return b < a; }
-    constexpr friend bool operator <= (Arg a, Arg b) { return !(a > b); }
-    constexpr friend bool operator >= (Arg a, Arg b) { return !(a < b); }
 
 #undef SELF
 #undef CONST_SELF

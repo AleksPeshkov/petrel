@@ -63,10 +63,6 @@ public:
 
     constexpr friend bool operator == (Arg a, Arg b) { a.assertOk(); b.assertOk(); return a.v_ == b.v_; }
     constexpr friend bool operator <  (Arg a, Arg b) { a.assertOk(); b.assertOk(); return a.v_ < b.v_; }
-    constexpr friend bool operator >  (Arg a, Arg b) { return b < a; }
-    constexpr friend bool operator != (Arg a, Arg b) { return !(a == b); }
-    constexpr friend bool operator <= (Arg a, Arg b) { return !(a > b); }
-    constexpr friend bool operator >= (Arg a, Arg b) { return !(a < b); }
 
     constexpr unsigned toTt(Ply ply) const {
         Score score{v_};
