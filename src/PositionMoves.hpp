@@ -3,7 +3,6 @@
 
 #include "Position.hpp"
 #include "PiBbMatrix.hpp"
-#include "Zobrist.hpp"
 
 #define RETURN_IF_STOP(visitor) { if (visitor == ReturnStatus::Stop) { return ReturnStatus::Stop; } } ((void)0)
 

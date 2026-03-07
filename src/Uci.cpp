@@ -383,13 +383,13 @@ void Uci::position() {
     if (consume("startpos")) {
         position_.setStartpos();
         repetitions.clear();
-        repetitions.push(colorToMove(), position_.zobrist());
+        repetitions.push(colorToMove(), position_.z());
     }
 
     if (consume("fen")) {
         position_.readFen(inputLine);
         repetitions.clear();
-        repetitions.push(colorToMove(), position_.zobrist());
+        repetitions.push(colorToMove(), position_.z());
     }
 
     consume("moves");
@@ -472,8 +472,8 @@ void Uci::refreshTtPv(Ply depth) const {
 
     const UciMove* moves = pvMoves;
     for (UciMove move; (move = *moves++).any();) {
-        auto o = tt.addr<TtSlot>(pos.zobrist());
-        *o = TtSlot{pos.zobrist(), score, ply, ExactScore, depth, move.from(), move.to(), false};
+        auto o = tt.addr<TtSlot>(pos.z());
+        *o = TtSlot{pos.z(), score, ply, ExactScore, depth, move.from(), move.to(), false};
         ++tt.writes;
 
         //we cannot use makeZobrist() because of en passant legality validation
