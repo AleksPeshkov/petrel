@@ -2,7 +2,6 @@
 #define HISTORY_HPP
 
 #include "Index.hpp"
-#include "Zobrist.hpp"
 
 /**
  * Inserts or moves `value` to position `Pos` in the array, preserving uniqueness.
@@ -99,7 +98,7 @@ class RepHash {
     using _t = u64_t;
     _t v{0};
 
-    static constexpr _t hash(Z z) { return ::singleton<_t>(z & 077); }
+    static constexpr _t hash(Z z) { return ::singleton<_t>(z.v() & 077); }
 public:
     constexpr RepHash () : v{0} {}
     constexpr RepHash (const RepHash& m, Z z) : v{m.v | hash(z)} {}

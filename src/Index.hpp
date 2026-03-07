@@ -473,4 +473,62 @@ public:
 
 static_assert (sizeof(UciMove) == sizeof(u16_t));
 
+class Z {
+public:
+    using _t = u64_t;
+
+    enum zobrist_index_t { Castling = 6, EnPassant = 7 };
+    struct Index : ::Index<Index, 8> {
+        using Base = ::Index<Index, 8>;
+        constexpr Index (PieceType::_t ty) : Base{ty} {}
+        constexpr Index (zobrist_index_t ty) : Base{ty} {}
+        constexpr Index (PieceType ty) : Base{ty.v()} {}
+        constexpr Index (NonKingType ty) : Base{ty.v()} {}
+        constexpr Index (PromoType ty) : Base{ty.v()} {}
+    };
+
+private:
+    _t v_;
+    constexpr explicit Z(_t n) : v_{n} {}
+
+    //hand picked set of de Bruijn numbers
+    enum : _t {
+        ZQueen  = U64(0x0218'a392'cd5d'3dbf),
+        ZRook   = U64(0x0245'30de'cb9f'8ead),
+        ZBishop = U64(0x02b9'1efc'4b53'a1b3),
+        ZKnight = U64(0x02dc'61d5'ecfc'9a51),
+        ZPawn   = U64(0x031f'af09'dcda'2ca9),
+        ZKing   = U64(0x0352'138a'fdd1'e65b),
+        ZCastling = ZRook ^ ZPawn, // rook with castling right encoded as pawn on rank1
+        ZEnPassant = ::rotateleft(ZPawn, A4), // A4 => A8, en passant pawn encoded as pawn on rank8
+        // ZExtra  = U64(0x03ac'4dfb'4854'6797), // reserved
+    };
+
+    static constexpr _t zKey[] = {
+        ZQueen, ZRook, ZBishop, ZKnight, ZPawn, ZKing, ZCastling, ZEnPassant
+    };
+
+public:
+    constexpr Z () : v_{0} {}
+    constexpr Z(Index ty, Square sq) : v_{::rotateleft(zKey[ty.v()], sq.v())} {}
+    constexpr _t v() const { return v_; }
+
+    [[nodiscard]] constexpr Z operator ~ () const { return Z{::byteswap(v_)}; }
+    [[nodiscard]] constexpr friend Z operator ^ (Z a, Z b) { return Z{a.v_ ^ b.v_}; }
+    [[nodiscard]] constexpr friend bool operator == (Z a, Z b) { return a.v_ == b.v_; }
+
+    friend ostream& operator << (ostream& out, Z z) {
+        auto flags = out.flags();
+
+        out << " [" << std::hex << std::setw(16) << std::setfill('0') << "]";
+        out << z.v_;
+
+        out.flags(flags);
+        return out;
+    }
+};
+
+static_assert (Z{Z::EnPassant, Square{A4}} == Z{Pawn, Square{A8}});
+static_assert (Z{Z::EnPassant, Square{B4}} == Z{Pawn, Square{B8}});
+
 #endif

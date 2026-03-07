@@ -4,7 +4,7 @@
 #define RETURN_CUTOFF(visitor) { ReturnStatus status = visitor; if (status != ReturnStatus::Continue) { return status; }} ((void)0)
 
 TtSlot::TtSlot (const Node* n) : TtSlot{
-    n->zobrist(),
+    n->z(),
     n->score,
     n->ply,
     n->bound,
@@ -142,7 +142,7 @@ ReturnStatus Node::search() {
     if (depth > 0_ply) {
         ++root.tt.reads;
         ttSlot = *tt;
-        isHit = (ttSlot == zobrist());
+        isHit = (ttSlot == z());
         if (isHit) {
             Square from = ttSlot.from();
             Square to = ttSlot.to();
@@ -487,7 +487,7 @@ ReturnStatus Node::searchNullMove(Ply R) {
     parent->currentMove = {};
     makeNullMove(parent);
 
-    tt = root.tt.prefetch<TtSlot>(zobrist());
+    tt = root.tt.prefetch<TtSlot>(z());
     repHash = {};
 
     return parent->negamax(R);
@@ -503,11 +503,11 @@ ReturnStatus Node::searchMove(Square from, Square to, Ply R) {
     parent->clearMove(from, to);
     parent->currentMove = HistoryMove{parent->MY.typeAt(from), from, to};
     makeMove(parent, from, to);
-    tt = root.tt.prefetch<TtSlot>(zobrist());
+    tt = root.tt.prefetch<TtSlot>(z());
     root.pvMoves.clearPly(pvIndex);
 
     if (rule50() < 2_ply) { repHash = {}; }
-    else if (grandParent) { repHash = RepHash{grandParent->repHash, grandParent->zobrist()}; }
+    else if (grandParent) { repHash = RepHash{grandParent->repHash, grandParent->z()}; }
     else { repHash = root.repetitions.repHash(colorToMove()); }
 
     return parent->negamax(R);
@@ -604,21 +604,19 @@ bool Node::isDrawMaterial() const {
 bool Node::isRepetition() const {
     if (rule50() < 4_ply) { return false; }
 
-    auto& z = zobrist();
-
     if (grandParent) {
         auto next = grandParent;
         while ((next = next->grandParent)) {
-            if (next->zobrist() == z) {
+            if (next->z() == z()) {
                 return true;
             }
-            if (!next->repHash.has(z)) {
+            if (!next->repHash.has(z())) {
                 return false;
             }
         }
     }
 
-    return root.repetitions.has(colorToMove(), z);
+    return root.repetitions.has(colorToMove(), z());
 }
 
 ReturnStatus Node::searchRoot() {
@@ -626,7 +624,7 @@ ReturnStatus Node::searchRoot() {
     repHash = root.repetitions.repHash(colorToMove());
 
     for (depth = 1_ply; depth <= root.limits.depth; ++depth) {
-        tt = root.tt.prefetch<TtSlot>(zobrist());
+        tt = root.tt.prefetch<TtSlot>(z());
         setMoves(rootMovesClone);
         alpha = Score{MateLoss};
         beta = Score{MateWin};

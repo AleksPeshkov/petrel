@@ -339,7 +339,7 @@ void UciPosition::limitMoves(istream& in) {
 }
 
 void UciPosition::playMoves(istream& in, Repetitions& repetitions) {
-    repetitions.push(colorToMove_, zobrist());
+    repetitions.push(colorToMove_, z());
 
     while (in >> std::ws && !in.eof()) {
         auto before = in.tellg();
@@ -356,7 +356,7 @@ void UciPosition::playMoves(istream& in, Repetitions& repetitions) {
         colorToMove_.flip();
 
         if (rule50() == 0_ply) { repetitions.clear(); }
-        repetitions.push(colorToMove_, zobrist());
+        repetitions.push(colorToMove_, z());
 
         if (colorToMove_.is(White)) { ++fullMoveNumber; }
     }
