@@ -57,7 +57,7 @@ void PositionMoves::generatePawnMoves() {
         }
 
         //remove "captures" of free squares from default generated moves
-        fileTo += moves_[rankTo][pi] & BitRank{OCCUPIED, rankTo};
+        fileTo += moves_[rankTo].bitRank(pi) & BitRank{OCCUPIED, rankTo};
 
         moves_.set(pi, rankTo, fileTo);
     }
@@ -82,7 +82,7 @@ void PositionMoves::correctCheckEvasionsByPawns(Bb checkLine, Square checkFrom) 
     //pawns double push over check line
     Bb pawnJumpEvasions = MY.bbPawns() & Bb{Rank2} & (checkLine << 16u) % (OCCUPIED << 8u);
     for (Square from : pawnJumpEvasions) {
-        moves_.add(MY.pi(from), Rank{Rank4}, File{from});
+        moves_.add(MY.pi(from), File{from}, Rank{Rank4});
     }
 }
 
@@ -147,7 +147,7 @@ void PositionMoves::generateCheckEvasions() {
 template <Side::_t My>
 void PositionMoves::generateMoves() {
     constexpr Side::_t Op{~My};
-    bbAttacked_ = ~OP.attacks().gather();
+    bbAttacked_ = ~OP.attacks().bb();
 
     inCheck_ = bbAttacked().has(MY.sqKing());
     assert (OP.checkers().any() == bbAttacked().has(MY.sqKing()));

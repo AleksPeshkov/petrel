@@ -100,7 +100,7 @@ public:
     PiMask pinners() const { return traits.pinners(); }
     bool isPinned(Bb) const;
 
-    PiMask checkers() const { assert (traits.checkers() == attacks_[opKing]); return traits.checkers(); }
+    PiMask checkers() const { assert (traits.checkers() == attacks_.piMask(opKing)); return traits.checkers(); }
 
     // pawns on the 7th rank
     PiMask promotables() const { return traits.promotables(); }
@@ -108,7 +108,7 @@ public:
     // is pawn and pawn is on the 7th rank
     bool isPromotable(Pi pi) const { assertOk(pi); return traits.isPromotable(pi); }
 
-    PiMask attackersTo(Square sq) const { return attacks_[sq]; }
+    PiMask attackersTo(Square sq) const { return attacks_.piMask(sq); }
     PiMask affectedBy(Square sq) const { return attackersTo(sq); }
     PiMask affectedBy(Square a, Square b) const { return affectedBy(a) | affectedBy(b); }
     PiMask affectedBy(Square a, Square b, Square c) const { return affectedBy(a) | affectedBy(b) | affectedBy(c); }

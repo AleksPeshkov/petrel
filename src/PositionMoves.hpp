@@ -70,10 +70,10 @@ public:
     constexpr const bool& inCheck() const { return inCheck_; }
 
     // not yet made legal moves of the target piece
-    constexpr Bb bbMovesOf(Pi pi) const { return moves_[pi]; }
+    constexpr Bb bbMovesOf(Pi pi) const { return moves_.bb(pi); }
 
     // pieces that have a not yet made legal move to the target square
-    PiMask canMoveTo(Square sq) const { return moves_[sq]; }
+    PiMask canMoveTo(Square sq) const { return moves_.piMask(sq); }
 };
 
 #endif

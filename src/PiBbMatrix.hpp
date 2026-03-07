@@ -4,39 +4,60 @@
 #include "Bb.hpp"
 #include "PiMask.hpp"
 
-/// array of 8 PiRank
-class PiBbMatrix {
-    Rank::arrayOf<PiRank> matrix;
+class PiRank : public BitArray<PiRank, vu8x16_t> {
+    using Base = BitArray<PiRank, vu8x16_t>;
 
 public:
-    constexpr PiBbMatrix () = default;
+    using Base::Base;
+    constexpr PiRank () : Base{::all(0)} {}
+    constexpr explicit PiRank (BitRank br) : Base{::vectorOfAll[br.v()]} {}
+    constexpr explicit PiRank (PiMask m) : Base{m.v()} {}
+    constexpr explicit PiRank (File file) : PiRank{BitRank{file}} {}
+    constexpr explicit PiRank (Pi pi) : PiRank{PiMask{pi}} {}
+    constexpr PiRank(Bb bb, Rank rank) : PiRank{BitRank{bb, rank}} {}
+    constexpr PiRank(Pi pi, File file) : PiRank{PiRank{file} & PiRank{pi}} {}
+    constexpr PiRank(Pi pi, BitRank br) : PiRank{PiRank{br} & PiRank{pi}} {}
 
-    constexpr friend void swap(PiBbMatrix& a, PiBbMatrix& b) {
-        for (auto rank : range<Rank>()) {
-            using std::swap;
-            swap(a.matrix[rank], b.matrix[rank]);
-        }
+    BitRank bb() const {
+        u8_t r  = v_[0] | v_[1] | v_[2] | v_[3] | v_[4] | v_[5] | v_[6] | v_[7]
+            | v_[8] | v_[9] | v_[10] | v_[11] | v_[12] | v_[13] | v_[14] | v_[15];
+        return BitRank{r};
     }
 
+    constexpr BitRank bitRank(Pi pi) const {
+        return BitRank{ ::u8(v_, pi.v()) };
+    }
+
+    PiMask piMask(File file) const {
+        _t file_vector = PiRank{file}.v();
+        return PiMask{ (v_ & file_vector) == file_vector };
+    }
+};
+
+/// array of 8 PiRank
+class PiBbMatrix {
+    Rank::arrayOf<PiRank> v_;
+
+public:
     constexpr void clear() {
-        for (auto rank : range<Rank>()) {
-            matrix[rank].clear();
+        for (auto& piRank : v_) {
+            piRank.clear();
         }
     }
 
     constexpr void clear(Pi pi, Square sq) {
-        matrix[Rank{sq}] -= PiRank{File{sq}} & PiMask{pi};
+        v_[Rank{sq}] -= PiRank{pi, File{sq}};
     }
 
     constexpr void clear(Pi pi) {
-        for (auto rank : range<Rank>()) {
-            matrix[rank] %= PiMask{pi};
+        for (auto& piRank : v_) {
+            piRank %= PiRank{pi};
         }
     }
 
     constexpr void set(Pi pi, Rank rank, BitRank br) {
         //_mm_blendv_epi8
-        matrix[rank] = (matrix[rank] % PiMask{pi}) + (PiRank{br} & PiMask{pi});
+        v_[rank] = (v_[rank] % PiRank{pi}) + PiRank{pi, br};
     }
 
     constexpr void set(Pi pi, Bb bb) {
@@ -45,89 +66,89 @@ public:
         }
     }
 
-    constexpr void add(Pi pi, Rank rank, File file) {
-        matrix[rank] += PiRank{file} & PiMask{pi};
+    constexpr void add(Pi pi, File file, Rank rank) {
+        v_[rank] += PiRank{pi, file};
     }
 
     constexpr void add(Pi pi, Square sq) {
-        add(pi, Rank{sq}, File{sq});
+        add(pi, File{sq}, Rank{sq});
     }
 
     constexpr bool has(Pi pi, Square sq) const {
-        return (matrix[Rank{sq}] & PiRank{File{sq}} & PiMask{pi}).any();
+        return (v_[Rank{sq}] & PiRank{pi, File{sq}}).any();
     }
 
     constexpr const PiRank& operator[] (Rank rank) const {
-        return matrix[rank];
+        return v_[rank];
     }
 
     constexpr PiRank& operator[] (Rank rank) {
-        return matrix[rank];
+        return v_[rank];
     }
 
-    //pieces affecting the given square
-    PiMask operator[] (Square sq) const {
-        return matrix[Rank{sq}][File{sq}];
+    // pieces affecting the given square
+    PiMask piMask(Square sq) const {
+        return v_[Rank{sq}].piMask(File{sq});
     }
 
-    //bitboard of the given piece
-    constexpr Bb operator[] (Pi pi) const {
+    // bitboard of the given piece
+    constexpr Bb bb(Pi pi) const {
         Rank::arrayOf<BitRank> br;
         for (auto rank : range<Rank>()) {
-            br[rank] = matrix[rank][pi];
+            br[rank] = v_[rank].bitRank(pi);
         }
         return Bb{std::bit_cast<Bb::_t>(br)};
     }
 
-    //bitboard of squares affected by all pieces
-    constexpr Bb gather() const {
+    // bitboard of squares affected by all pieces
+    constexpr Bb bb() const {
         Rank::arrayOf<BitRank> br;
         for (auto rank : range<Rank>()) {
-            br[rank] = matrix[rank].gather();
+            br[rank] = v_[rank].bb();
         }
         return Bb{std::bit_cast<Bb::_t>(br)};
     }
 
     void filter(Pi pi, Bb bb) {
-        PiMask exceptPi{ PiMask::all() ^ PiMask{pi} };
+        PiRank exceptPi{ PiRank{BitRank{0xff}} ^ PiRank{pi} };
         for (auto rank : range<Rank>()) {
-            matrix[rank] &= PiRank{bb, rank} | exceptPi;
+            v_[rank] &= PiRank{bb, rank} | exceptPi;
         }
     }
 
-    constexpr friend PiBbMatrix operator % (const PiBbMatrix& from, Bb bb) {
+    friend constexpr PiBbMatrix operator % (const PiBbMatrix& from, Bb bb) {
         PiBbMatrix result;
         for (auto rank : range<Rank>()) {
-            result.matrix[rank] = from.matrix[rank] % PiRank{bb, rank};
+            result.v_[rank] = from.v_[rank] % PiRank{bb, rank};
         }
         return result;
     }
 
     constexpr void operator &= (Bb bb) {
         for (auto rank : range<Rank>()) {
-            matrix[rank] &= PiRank{bb, rank};
+            v_[rank] &= PiRank{bb, rank};
         }
     }
 
-    constexpr friend PiBbMatrix operator & (const PiBbMatrix& from, Bb bb) {
+    friend constexpr PiBbMatrix operator & (const PiBbMatrix& from, Bb bb) {
         PiBbMatrix result;
         for (auto rank : range<Rank>()) {
-            result.matrix[rank] = from.matrix[rank] & PiRank{bb, rank};
+            result.v_[rank] = from.v_[rank] & PiRank{bb, rank};
         }
         return result;
     }
 
     constexpr bool none() const {
-        for (auto rank : range<Rank>()) {
-            if (matrix[rank].any()) { return false; }
+        for (auto piRank : v_) {
+            if (piRank.any()) { return false; }
         }
         return true;
     }
 
     constexpr int popcount() const {
         int sum = 0;
-        for (auto rank : range<Rank>()) {
-            sum += ::popcount(matrix[rank].v());
+        for (auto piRank : v_) {
+            sum += ::popcount(piRank.v());
         }
         return sum;
     }

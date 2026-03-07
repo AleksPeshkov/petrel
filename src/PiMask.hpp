@@ -18,7 +18,7 @@ class CACHE_ALIGN VectorOfAll {
     Index::arrayOf<_t> v_;
 
 public:
-    constexpr VectorOfAll () {
+    consteval VectorOfAll () {
         for (auto i : range<Index>()) {
             v_[i] = ::all(i.v());
         }
@@ -61,8 +61,8 @@ public:
 class PieceSet : public BitSet<PieceSet, Pi, u64_t> {
     using Base = BitSet<PieceSet, Pi, u64_t>;
 public:
-    explicit constexpr PieceSet (_t n = 0) : Base{n & U64(0x8888'8888'8888'8888)} {}
-    explicit constexpr PieceSet (Pi pi) : Base{::singleton<u64_t>((pi << 2) + 3)} {}
+    constexpr explicit PieceSet (_t n = 0) : Base{n & U64(0x8888'8888'8888'8888)} {}
+    constexpr explicit PieceSet (Pi pi) : Base{::singleton<u64_t>((pi << 2) + 3)} {}
 
     // get the first (lowest) bit set
     constexpr Pi first() const {
@@ -87,17 +87,12 @@ public:
 
 #endif // NEON_VECTOR
 
-consteval Pi::arrayOf<vu8x16_t> make_pi_single_array() {
-    Pi::arrayOf<vu8x16_t> arr;
-    return arr;
-}
-
 class PiSingle {
     using _t = vu8x16_t;
     Pi::arrayOf<_t> v_;
 
 public:
-    constexpr PiSingle() {
+    consteval PiSingle() {
         for (auto pi : range<Pi>()) {
             std::array<uint8_t, 16> vec = {}; // zero
             vec[static_cast<int>(pi.v())] = 0xff;
@@ -121,11 +116,11 @@ public:
     using typename Base::_t;
     using Base::any;
 
-    constexpr static _t zero() { return ::all(0); }
+    static constexpr _t zero() { return ::all(0); }
 
     constexpr PiMask () : Base{zero()} {}
     constexpr PiMask (Pi pi) : Base( ::piSingle[pi] ) {}
-    explicit constexpr PiMask (_t a) : Base{a} { assertOk(); }
+    constexpr explicit PiMask (_t a) : Base{a} { assertOk(); }
 
     static constexpr PiMask equals(_t a, _t b) { return PiMask{a == b}; }
     static constexpr PiMask notEquals(_t a, _t b) { return PiMask{a != b}; }
@@ -173,38 +168,9 @@ public:
     }
 };
 
-class PiRank : public BitArray<PiRank, vu8x16_t> {
-    using Base = BitArray<PiRank, vu8x16_t>;
-
-public:
-    using Base::Base;
-    constexpr explicit PiRank () : Base{::all(0)} {}
-    constexpr explicit PiRank (BitRank br) : Base{::vectorOfAll[br.v()]} {}
-    constexpr explicit PiRank (File f) : PiRank{BitRank{f}} {}
-    constexpr PiRank (PiMask m) : Base{m.v()} {}
-    constexpr PiRank(Bb bb, Rank rank) : PiRank{BitRank{bb, rank}} {}
-
-    BitRank gather() const {
-        u8_t r  = v_[0] | v_[1] | v_[2] | v_[3] | v_[4] | v_[5] | v_[6] | v_[7]
-            | v_[8] | v_[9] | v_[10] | v_[11] | v_[12] | v_[13] | v_[14] | v_[15];
-        return BitRank{r};
-    }
-
-    constexpr BitRank operator [] (Pi pi) const {
-        return BitRank{ ::u8(v_, pi.v()) };
-    }
-
-    PiMask operator [] (File file) const {
-        _t file_vector = PiRank{file}.v();
-        return PiMask{ (v_ & file_vector) == file_vector };
-    }
-
-    constexpr void clear() { v_ = ::all(0); }
-};
-
 class PiSquare {
     using _t = Square::_t;
-    constexpr static _t None = Square::None; // captured piece
+    static constexpr _t None = Square::None; // captured piece
 
     // defined to make debugging clear
     union {
@@ -467,7 +433,7 @@ public:
         {15,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14},
     }} {}
 
-    constexpr const vu8x16_t& operator [] (Pi pi) const { return shuffle[pi.v()]; }
+    constexpr const vu8x16_t& operator[] (Pi pi) const { return shuffle[pi.v()]; }
 };
 
 class PiOrder {
@@ -518,7 +484,7 @@ class PiOrdered {
 public:
     constexpr PiOrdered (PiMask pieces, PiOrder o) : order{o}, mask{order(pieces)} {}
 
-    constexpr friend bool operator == (const PiOrdered& a, const PieceSet& b) { return a.mask == b; }
+    friend constexpr bool operator == (const PiOrdered& a, const PieceSet& b) { return a.mask == b; }
 
     constexpr Pi operator * () const { return order[*mask]; }
     constexpr PiOrdered& operator ++ () { ++mask; return *this; }
