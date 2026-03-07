@@ -10,6 +10,8 @@
 #include "UciPosition.hpp"
 #include "UciSearchLimits.hpp"
 
+class UciOutput;
+
 /// Handling input and output of UCI (Universal Chess Interface)
 class Uci {
 public:
@@ -78,7 +80,11 @@ private:
     void goPerft();
     void bench();
 
+    // log messages to the logFile named by logFileName
+    void log(std::string_view) const;
+
     ostream& info_fen(ostream&) const;
+    UciOutput& info_pv(UciOutput&) const;
 
     void sendDelayedBestMove() const;
     void info_readyok() const;
@@ -91,17 +97,14 @@ public:
     // process UCI input commands
     void processInput(istream&);
 
-    // output to out stream and if isDebugOn to log file
+    // output to cout and (if isDebugOn) to log file
     void output(std::string_view) const;
 
-    // output to cerr, uci info string, log file
+    // output to cerr and log file
     void error(std::string_view) const;
 
-    // output to uci info string, log file
+    // output to log file
     void info(std::string_view) const;
-
-    // log messages to the logFile named by logFileName
-    void log(std::string_view) const;
 
     constexpr ChessVariant chessVariant() const { return position_.chessVariant(); }
     constexpr Color colorToMove(Ply ply = 0_ply) const { return position_.colorToMove(ply); }
