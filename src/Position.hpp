@@ -2,7 +2,7 @@
 #define POSITION_HPP
 
 #include "PositionSide.hpp"
-#include "Zobrist.hpp"
+#include "Score.hpp"
 
 // side to move
 #define MY positionSide(Side{My})
@@ -33,6 +33,56 @@ public:
         in >> rule50.v_;
         if (in) { assert (0 <= rule50.v_ && rule50.v_ <= 100); }
         return in;
+    }
+};
+
+class Zobrist {
+    Z v_;
+
+    constexpr void my(Z::Index ty, Square sq) { v_ = v_ ^ Z{ty, sq}; }
+    constexpr void op(Z::Index ty, Square sq) { v_ = v_ ^ ~Z{ty, sq}; }
+
+public:
+    constexpr Zobrist () : v_{} {}
+    constexpr explicit Zobrist (Z z) : v_{z} {}
+    constexpr Zobrist (Zobrist my, Zobrist op) : v_{my.v_ ^ ~op.v_} {}
+
+    constexpr Z v() const { return v_; }
+
+    constexpr Zobrist& flip() { v_ = ~v_; return *this; }
+
+    void operator () (PieceType ty, Square sq) { my(ty, sq); }
+    void castling(Square sq)  { assert (sq.on(Rank1)); my(Z::Castling, sq); }
+    void enPassant(Square sq) { assert (sq.on(Rank4)); my(Z::EnPassant, sq); }
+
+    void opCapture(NonKingType ty, Square sq) { op(ty, sq); }
+    void opCastling(Square sq)  { assert (sq.on(Rank1)); op(Z::Castling, sq); }
+    void opEnPassant(Square sq) { assert (sq.on(Rank4)); op(Z::EnPassant, sq); }
+
+    void move(PieceType ty, Square from, Square to) {
+        assert (from != to);
+        my(ty, from);
+        my(ty, to);
+    }
+
+    void promote(Square from, PromoType ty, Square to) {
+        assert (from.on(Rank7));
+        assert (to.on(Rank8));
+        my(Pawn, from);
+        my(ty, to);
+    }
+
+    void castle(Square kingFrom, Square kingTo, Square rookFrom, Square rookTo) {
+        assert (kingFrom.on(Rank1));
+        assert (kingTo.on(Rank1));
+        assert (rookFrom.on(Rank1));
+        assert (rookTo.on(Rank1));
+        assert (kingFrom != rookFrom);
+        assert (kingTo != rookTo);
+        my(King, kingFrom);
+        my(King, kingTo);
+        my(Rook, rookFrom);
+        my(Rook, rookTo);
     }
 };
 
@@ -89,7 +139,7 @@ protected:
 
 public:
     // position hash
-    constexpr const Zobrist& zobrist() const { return zobrist_; }
+    constexpr Z z() const { return zobrist_.v(); }
 
     // position static evaluation
     Score evaluate() const;

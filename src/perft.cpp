@@ -72,12 +72,12 @@ class PerftRecordSmall {
     u32_t perft;
 
 public:
-    static constexpr u32_t makeKey(Z::_t z, Ply d) {
+    static constexpr u32_t makeKey(Z z, Ply d) {
         assert (d.v() == (d.v() & 0xf));
-        return ((static_cast<decltype(key)>(z >> 32) | 0xf) ^ 0xf) | (d.v() & 0xf);
+        return ((static_cast<decltype(key)>(z.v() >> 32) | 0xf) ^ 0xf) | (d.v() & 0xf);
     }
 
-    constexpr void set(Z::_t z, Ply d, node_count_t n) {
+    constexpr void set(Z z, Ply d, node_count_t n) {
         assert (small_cast<decltype(perft)>(n) == n);
         perft = static_cast<decltype(perft)>(n);
 
@@ -87,7 +87,7 @@ public:
         assert (getDepth() == d);
     }
 
-    constexpr bool isKeyMatch(Z::_t z, Ply d) const {
+    constexpr bool isKeyMatch(Z z, Ply d) const {
         return key == makeKey(z, d);
     }
 
@@ -102,7 +102,7 @@ public:
 };
 
 class PerftRecord {
-    Z::_t key;
+    Z key;
     node_count_t nodes;
 
     enum { DepthBits = 6, DepthShift = 64 - DepthBits, AgeShift = DepthShift - HashAge::AgeBits };
@@ -117,15 +117,15 @@ class PerftRecord {
     }
 
 public:
-    constexpr bool isKeyMatch(Z::_t z, Ply d) const {
-        return (getKey() == z) && (getDepth() == d);
+    constexpr bool isKeyMatch(Z z, Ply d) const {
+        return (key == z) && (getDepth() == d);
     }
 
     constexpr bool isAgeMatch(HashAge::_t age) const {
         return ((nodes & AgeMask) >> AgeShift) == static_cast<decltype(nodes)>(age);
     }
 
-    constexpr const Z::_t& getKey() const {
+    constexpr const Z getKey() const {
         return key;
     }
 
@@ -137,7 +137,7 @@ public:
         return nodes & ~NodesMask;
     }
 
-    constexpr void set(Z::_t z, Ply d, node_count_t n, HashAge::_t age) {
+    constexpr void set(Z z, Ply d, node_count_t n, HashAge::_t age) {
         key = z;
         nodes = createNodes(n, d, age);
     }
@@ -321,17 +321,17 @@ ReturnStatus NodePerft::visitMove(Square from, Square to) {
         default: {
             assert (depth >= 2_ply);
             makeZobrist(parent, from, to);
-            root.tt.prefetch(zobrist(), 64);
+            root.tt.prefetch(z(), 64);
 
             RETURN_IF_STOP (root.limits.countNode());
             makeMoveNoZobrist(parent, from, to);
 
-            perft = static_cast<TtPerft&>(root.tt).get(zobrist(), depth - 2_ply);
+            perft = static_cast<TtPerft&>(root.tt).get(z(), depth - 2_ply);
 
             if (perft == NodeCountNone) {
                 perft = 0;
                 RETURN_IF_STOP(visit());
-                static_cast<TtPerft&>(root.tt).set(zobrist(), depth - 2_ply, perft);
+                static_cast<TtPerft&>(root.tt).set(z(), depth - 2_ply, perft);
             }
         }
     }

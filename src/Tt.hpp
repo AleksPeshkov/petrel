@@ -2,7 +2,7 @@
 #define TT_HPP
 
 #include "System.hpp"
-#include "Zobrist.hpp"
+#include "Index.hpp"
 
 class Tt {
     void* memory = nullptr;
@@ -66,7 +66,7 @@ public:
     void newIteration() {}
 
     constexpr void* addr(Z z, size_t align) const {
-        return static_cast<void*>(static_cast<char*>(memory) + (z & mask(align)));
+        return static_cast<void*>(static_cast<char*>(memory) + (z.v() & mask(align)));
     }
 
     template <typename T>

@@ -14,7 +14,6 @@ enum Bound : u8_t { NoBound,
 
 // 8 byte, always replace slot, so no age field, only one score, depth and bound flags
 class TtSlot {
-    using _t = u64_t;
     enum {
         ScoreShift = 0,
         BoundShift = ScoreShift + 14,
@@ -23,13 +22,15 @@ class TtSlot {
         DraftShift = FromShift + 6,
         KillerShift = DraftShift + 6,
         TotalShift = KillerShift + 1, // total size of all data fields
+        ZobristBits = 64 - TotalShift, // size of zobrist bitfield
     };
-    static constexpr u64_t HashMask = U64(0xffff'ffff'ffff'ffff) << TotalShift;
 
+    using _t = u64_t;
     _t v_;
+    static constexpr _t HashMask{ U64(0xffff'ffff'ffff'ffff) << (64 - ZobristBits) };
 
 public:
-    TtSlot (Z z = Z{0},
+    constexpr TtSlot (Z z = {},
         Score score = Score{NoScore},
         Ply ply = 0_ply,
         Bound bound = NoBound,
@@ -38,7 +39,7 @@ public:
         Square to = Square{static_cast<Square::_t>(0)},
         bool canBeKiller = false
     ) : v_{
-        (z & HashMask)
+        (z.v() & HashMask)
         | (static_cast<_t>(score.toTt(ply)) << ScoreShift)
         | (static_cast<_t>(bound) << BoundShift)
         | (static_cast<_t>(from.v()) << FromShift)
@@ -48,7 +49,7 @@ public:
     } { static_assert (sizeof(TtSlot) == sizeof(u64_t)); }
 
     TtSlot (const Node* node);
-    bool operator == (Z z) const { return (v_ & HashMask) == (z & HashMask); }
+    constexpr bool operator == (Z z) const { return (v_ & HashMask) == (z.v() & HashMask); }
 
     bool hasMove() const { return !(from().v() == 0 && to().v() == 0); }
     Square from() const { return Square{static_cast<Square::_t>(v_ >> FromShift & Square::Mask)}; }

@@ -11,7 +11,7 @@ void Position::makeMove(Square from, Square to) {
     // the position just swapped its sides, so we make the move for the Op
     makeMove<Op>(from, to);
     zobrist_.flip();
-    //assert (zobrist() == generateZobrist()); // true, but slow to compute
+    //assert (z() == generateZobrist().v()); // true, but slow to compute
 }
 
 void Position::makeNullMove(const Position* parent) {
@@ -35,7 +35,7 @@ void Position::makeNullMove(const Position* parent) {
     }
 
     zobrist_.flip();
-    //assert (zobrist() == generateZobrist()); // true, but slow to compute
+    //assert (z() == generateZobrist().v()); // true, but slow to compute
 }
 
 void Position::makeMove(const Position* parent, Square from, Square to) {
@@ -50,8 +50,8 @@ void Position::makeMove(const Position* parent, Square from, Square to) {
     makeMove<Op>(from, to);
     zobrist_.flip();
 
-    //assert (zobrist() == parent->createZobrist(from, to)); // true, but slow to compute
-    //assert (zobrist() == generateZobrist()); // true, but slow to compute
+    //assert (z() == parent->createZobrist(from, to).v()); // true, but slow to compute
+    //assert (z() == generateZobrist().v()); // true, but slow to compute
 }
 
 void Position::makeMoveNoZobrist(const Position* parent, Square from, Square to) {
@@ -64,7 +64,7 @@ void Position::makeMoveNoZobrist(const Position* parent, Square from, Square to)
     // current position flipped its sides relative to parent, so we make the move inplace for the Op
     makeMove<Op, NoZobrist>(from, to);
 
-    //assert (zobrist() == Zobrist{} || zobrist() == generateZobrist()); // true, but slow to compute
+    //assert (z() == Z{} || z() == generateZobrist().v()); // true, but slow to compute
 }
 
 template <Side::_t My, Position::UpdateZobrist Z>
@@ -322,7 +322,7 @@ bool Position::isSpecialMove(Square from, Square to) const {
 
 template <Side::_t My>
 Zobrist Position::generateZobrist() const {
-    Zobrist z{0};
+    Zobrist z{};
 
     for (Pi pi : MY.pieces()) { z(MY.typeOf(pi), MY.sq(pi));}
     for (Pi rook : MY.castlingRooks()) { z.castling(MY.sq(rook)); }
@@ -344,7 +344,7 @@ Zobrist Position::createZobrist(Square from, Square to) const {
     Zobrist mz{zobrist_};
 
     // opponent side pieces hash
-    Zobrist oz{0};
+    Zobrist oz{};
 
     Pi pi = MY.pi(from);
     PieceType ty = MY.typeOf(pi);
