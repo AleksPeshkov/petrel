@@ -11,7 +11,7 @@ void UciSearchLimits::newSearch() {
     nodes_ = 0;
     nodesLimit_ = NodeCountMax;
     nodesQuota_ = 0;
-    lastInfoNodes_ = 0;
+    lastInfoNodes_ = NodeCountMax;
 
     time_ = {{ 0ms, 0ms }};
     inc_ = {{ 0ms, 0ms }};
@@ -217,13 +217,20 @@ ostream& UciSearchLimits::uciok(ostream& out) const {
     return out;
 }
 
-ostream& UciSearchLimits::info_nps(ostream& out) const {
+ostream& UciSearchLimits::nps(ostream& out) const {
     lastInfoNodes_ = getNodes();
-    out << "info nodes " << lastInfoNodes_;
+    out << " nodes " << lastInfoNodes_;
 
     auto elapsedTime = elapsedSinceStart();
     if (elapsedTime >= 1ms) {
         out << " time " << elapsedTime << " nps " << ::nps(lastInfoNodes_, elapsedTime);
+    }
+    return out;
+}
+
+ostream& UciSearchLimits::info_nps(ostream& out) const {
+    if (hasNewNodes()) {
+        out << "info"; nps(out) << '\n';
     }
     return out;
 }

@@ -4,6 +4,27 @@
 #include "System.hpp"
 #include "Uci.hpp"
 
+// std::ostringstream output buffer, flushed on destruction
+class Output : public io::ostringstream {
+protected:
+    const Uci& uci;
+public:
+    Output (const Uci* u) : io::ostringstream{}, uci{*u} {}
+    io::ostringstream& flush() { uci.output(str()); str(""); return *this; }
+    ~Output () { flush(); }
+};
+
+// std::ostringstream UciMove capable output buffer, flushed on destruction
+class UciOutput : public Output {
+    Color colorToMove;
+public:
+    UciOutput(const Uci* u) : Output{u}, colorToMove{uci.colorToMove()} {}
+    ChessVariant chessVariant() const { return uci.chessVariant(); }
+    Color color() const { return colorToMove; }
+    Color flipColor() { return Color{colorToMove.flip()}; }
+    void resetRootColor() { colorToMove = uci.colorToMove(); }
+};
+
 namespace { // anonymous namespace
 
 void trimTrailingWhitespace(std::string& str) {
@@ -21,26 +42,6 @@ void trimTrailingWhitespace(std::string& str) {
         str.clear();
     }
 }
-
-class Output : public io::ostringstream {
-protected:
-    const Uci& uci;
-public:
-    Output (const Uci* u) : io::ostringstream{}, uci{*u} {}
-    ~Output () { uci.output(str()); }
-};
-
-class UciOutput : public Output {
-    Color colorToMove;
-
-public:
-    UciOutput(const Uci* u) : Output(u), colorToMove(uci.colorToMove()) {}
-
-    Color color() const { return colorToMove; }
-    Color flipColor() { return Color{colorToMove.flip()}; }
-
-    ChessVariant chessVariant() const { return uci.chessVariant(); }
-};
 
 // typesafe operator<< chaining
 UciOutput& operator << (UciOutput& out, io::czstring message) {
@@ -108,14 +109,16 @@ UciOutput& operator << (UciOutput& out, UciMove move) {
 }
 
 UciOutput& operator << (UciOutput& out, const PrincipalVariation& pv) {
-    out << " depth " << pv.depth();
     out << pv.score();
-    out << " pv";
+    auto moves = pv.moves();
+    if (moves->none()) { return out; } // empty PV (no legal moves at root)
+
     {
-        auto moves = pv.moves();
+        out << " pv";
         for (UciMove move; (move = *moves++).any(); ) {
             out << move;
         }
+        out.resetRootColor();
     }
     return out;
 }
@@ -204,18 +207,12 @@ void Uci::error(std::string_view message) const {
 
     std::cerr << "petrel " << pid << " " << message << std::endl;
     log('!' + std::string(message));
-
-    Output ob{this};
-    ob << "info string " << message;
 }
 
 void Uci::info(std::string_view message) const {
     if (message.empty()) { return; }
 
     log('*' + std::string(message));
-
-    Output ob{this};
-    ob << "info string " << message;
 }
 
 void Uci::processInput(istream& in) {
@@ -424,16 +421,18 @@ void Uci::go() {
         Node{position_, *this}.searchRoot();
         info_bestmove();
     });
-    if (!started) {
-        if (bestmove_.empty()) {
-            error("search not started, send bestmove 0000");
-            info_bestmove();
-        } else {
-            error("search not started, bestmove not empty:" + bestmove_);
-            sendDelayedBestMove();
-        }
+    if (started) {
+        std::this_thread::yield();
+        return;
     }
-    std::this_thread::yield();
+
+    if (bestmove_.empty()) {
+        error("search not started, send bestmove 0000");
+        info_bestmove();
+    } else {
+        error("search not started, bestmove not empty:" + bestmove_);
+        sendDelayedBestMove();
+    }
 }
 
 void Uci::sendDelayedBestMove() const {
@@ -443,8 +442,10 @@ void Uci::sendDelayedBestMove() const {
         bestmove = std::exchange(bestmove_, "");
     }
 
-    if (!bestmove.empty() && isDebugOn) { log("*sending delayed bestmove: " + bestmove); }
-    output(bestmove); // usually empty
+    if (!bestmove.empty()) {
+        if (isDebugOn) { info("sending delayed bestmove: " + bestmove); }
+        output(bestmove); // usually empty
+    }
 }
 
 void Uci::stop() {
@@ -460,32 +461,41 @@ void Uci::ponderhit() {
 }
 
 void Uci::info_pv() const {
-    // avoid printing identical info lines
-    if (limits.hasNewNodes()) {
-        UciOutput ob{this};
-        limits.info_nps(ob); ob << pv;
-    }
+    UciOutput ob{this};
+    info_pv(ob);
+}
+
+UciOutput& Uci::info_pv(UciOutput& ob) const {
+    ob << "info depth " << pv.depth();
+    limits.nps(ob);
+    ob << pv;
+    return ob;
 }
 
 void Uci::info_bestmove() const {
-    info_pv();
-
     UciOutput ob{this};
+    auto delayed = limits.shouldDelayBestmove();
+
+    if (limits.hasNewNodes()) {
+        info_pv(ob);
+        if (delayed) { ob.flush(); } else { ob << '\n'; }
+    }
+
     ob << "bestmove" << pv.move(0_ply);
     if (limits.canPonder() && pv.move(1_ply).any()) {
         ob << " ponder" << pv.move(1_ply);
     }
 
-    if (!limits.shouldDelayBestmove()) { return; } // bestmove flushed by destructor
-
-    {
-        std::lock_guard<decltype(bestmoveMutex)> lock{bestmoveMutex};
-        if (!bestmove_.empty()) { error("old bestmove ignored: " + bestmove_); }
-        bestmove_ = std::move(ob).str();
-        // will be sent later by 'stop' or 'ponderhit'
+    if (delayed) {
+        {
+            std::lock_guard<decltype(bestmoveMutex)> lock{bestmoveMutex};
+            if (!bestmove_.empty()) { error("old bestmove ignored: " + bestmove_); }
+            bestmove_ = std::move(ob).str();
+            // will be sent later by 'stop' or 'ponderhit'
+        }
+        ob.str("");
+        if (isDebugOn) { info("*bestmove output delayed: " + bestmove_); }
     }
-    ob.str("");
-    if (isDebugOn) { log("*bestmove output delayed: " + bestmove_); }
 }
 
 ostream& Uci::info_fen(ostream& o) const {
@@ -498,9 +508,7 @@ void Uci::info_readyok() const {
 #ifndef NDEBUG
     info_fen(ob) << '\n';
 #endif
-    if (limits.hasNewNodes()) {
-        limits.info_nps(ob) << '\n';
-    }
+    limits.info_nps(ob);
     ob << "readyok";
 }
 
@@ -519,9 +527,7 @@ void Uci::goPerft() {
 
 void Uci::info_perft_bestmove() const {
     Output ob{this};
-    if (limits.hasNewNodes()) {
-        limits.info_nps(ob) << '\n';
-    }
+    limits.info_nps(ob);
     ob << "bestmove 0000";
 }
 
@@ -532,7 +538,10 @@ void Uci::info_perft_depth(Ply depth, node_count_t perft) const {
 
 void Uci::info_perft_currmove(int moveCount, UciMove currentMove, node_count_t perft) const {
     UciOutput ob{this};
-    limits.info_nps(ob); ob << " currmovenumber " << moveCount << " currmove"; ob << currentMove << " perft " << perft;
+    ob << "info currmovenumber " << moveCount;
+    limits.nps(ob);
+    ob << " currmove" << currentMove;
+    ob << " perft " << perft;
 }
 
 void Uci::bench() {
