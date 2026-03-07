@@ -173,35 +173,6 @@ public:
     }
 };
 
-class PiRank : public BitArray<PiRank, vu8x16_t> {
-    using Base = BitArray<PiRank, vu8x16_t>;
-
-public:
-    using Base::Base;
-    constexpr explicit PiRank () : Base{::all(0)} {}
-    constexpr explicit PiRank (BitRank br) : Base{::vectorOfAll[br.v()]} {}
-    constexpr explicit PiRank (File f) : PiRank{BitRank{f}} {}
-    constexpr PiRank (PiMask m) : Base{m.v()} {}
-    constexpr PiRank(Bb bb, Rank rank) : PiRank{BitRank{bb, rank}} {}
-
-    BitRank gather() const {
-        u8_t r  = v_[0] | v_[1] | v_[2] | v_[3] | v_[4] | v_[5] | v_[6] | v_[7]
-            | v_[8] | v_[9] | v_[10] | v_[11] | v_[12] | v_[13] | v_[14] | v_[15];
-        return BitRank{r};
-    }
-
-    constexpr BitRank operator [] (Pi pi) const {
-        return BitRank{ ::u8(v_, pi.v()) };
-    }
-
-    PiMask operator [] (File file) const {
-        _t file_vector = PiRank{file}.v();
-        return PiMask{ (v_ & file_vector) == file_vector };
-    }
-
-    constexpr void clear() { v_ = ::all(0); }
-};
-
 class PiSquare {
     using _t = Square::_t;
     constexpr static _t None = Square::None; // captured piece
@@ -467,7 +438,7 @@ public:
         {15,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14},
     }} {}
 
-    constexpr const vu8x16_t& operator [] (Pi pi) const { return shuffle[pi.v()]; }
+    constexpr const vu8x16_t& operator[] (Pi pi) const { return shuffle[pi.v()]; }
 };
 
 class PiOrder {

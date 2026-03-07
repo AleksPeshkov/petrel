@@ -29,6 +29,7 @@ protected:
 
 public:
     constexpr _t v() const { return v_; } // _t v() const { return v_; }
+    constexpr void clear() { *this = Self{}; }
 
     constexpr Self& operator &= (Arg b) { v_ &= b.v_; return SELF; }
     constexpr Self& operator |= (Arg b) { v_ |= b.v_; return SELF; }
