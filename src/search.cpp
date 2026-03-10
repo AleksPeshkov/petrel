@@ -319,6 +319,11 @@ ReturnStatus Node::search() {
 
         if (!inCheck() && depth <= 1_ply && (!isPv() || movesMade() > 0)) { break; }
 
+        // LMR
+        if (movesMade() >= 5) {
+            baseR = baseR + 1_ply;
+        }
+
         // safe officers moves
         while (safePieces.any()) {
             Pi pi = safePieces.piLast(); safePieces -= pi;
