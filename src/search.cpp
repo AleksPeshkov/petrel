@@ -254,6 +254,14 @@ ReturnStatus Node::search() {
     canBeKiller = false;
     RETURN_CUTOFF (goodCaptures(OP.nonKing()));
     canBeKiller = !inCheck();
+    baseR = 0_ply;
+
+    if (!inCheck() && !isRoot()) {
+        // no good captures -> quiet position -> reduce more
+        if (movesMade() == 0 || (movesMade() == 1 && ttHit && ttSlot.canBeKiller())) {
+            baseR = baseR + 1_ply;
+        }
+    }
 
     if (parent && !inCheck()) {
         RETURN_CUTOFF (child->searchIfPossible(parent->killer[0]));
@@ -537,6 +545,8 @@ Ply Node::adjustDepthR(Ply R) const {
     if (inCheck()) {
         return 1_ply; // check extension
     }
+
+    R = R + baseR;
 
     if (depth <= 8_ply && R >= 4_ply) { R = R - 1_ply; }
 
