@@ -127,8 +127,13 @@ ReturnStatus Node::search() {
             assert (currentMove.none());
             return ReturnStatus::Continue;
         }
+    }
 
-        if (inCheck()) {
+    if (!inCheck()) {
+        eval = evaluate();
+    } else {
+        eval = Score{NoScore};
+        if (!isRoot()) {
             // check extension
             depth = depth + 1_ply;
         }
@@ -175,16 +180,24 @@ ReturnStatus Node::search() {
             return ReturnStatus::Cutoff;
         }
 
+        if (!inCheck() && ttScore.isEval()) {
+            if (ttBound == ExactScore
+                || (ttBound == FailHigh && eval <= ttScore)
+                || (ttBound == FailLow && ttScore <= eval)
+            ) {
+                eval = ttScore;
+                break;
+            }
+        }
     } while(false);
 
+    assert ((inCheck() && eval.none()) || (!inCheck() && eval.isEval()));
 // search all moves:
 
     // prepare empty child node to make moves into
     //TRICK: dangling child pointer is dangerous, but it can be useful during debug
     Node node{this};
     this->child = &node;
-
-    eval = evaluate();
 
     if (depth <= 0_ply && !inCheck()) {
         assert (depth == 0_ply);
