@@ -95,6 +95,7 @@ protected:
 
     Ply ply; // distance from root (root is ply == 0)
     Ply depth{0}; // remaining depth to horizon (should be set before search)
+    Ply baseR{0}; // base R (depth reduction) of quiet moves
 
     TtSlot* tt; // pointer to the slot in TT
     TtSlot  ttSlot;

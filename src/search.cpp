@@ -116,6 +116,7 @@ ReturnStatus Node::search() {
     bestMove = {};
     score = Score{NoScore};
     bound = FailLow;
+    baseR = 0_ply;
     assertOk();
 
     if (moves().none()) {
@@ -336,6 +337,11 @@ ReturnStatus Node::search() {
         RETURN_CUTOFF (goodPawnsMovesTo(~(OP.bbSide() - OP.bbPawns()), 2_ply));
 
         if (depth <= 1_ply && !inCheck() && movesMade() >= 2) { break; }
+
+        // LMR
+        if (depth >= 6_ply && movesMade() >= 5) {
+            baseR = baseR + 1_ply;
+        }
 
         // safe officers moves
         while (safePieces.any()) {
@@ -605,6 +611,8 @@ ReturnStatus Node::searchMove(HistoryMove move, Ply R) {
 Ply Node::adjustDepthR(Ply R) const {
     if (R <= 1_ply) { return R; }
     if (inCheck()) { return 1_ply; }
+
+    R = R + baseR;
 
     // depth adaptive reduction
     if (depth <= 8_ply && R >= 4_ply) { R = R - 1_ply; }
