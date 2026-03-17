@@ -309,8 +309,6 @@ ReturnStatus Node::search() {
             }
         }
 
-        if (!inCheck() && depth <= 1_ply && (!isPv() || movesMade() > 0)) { break; }
-
         // safe pawns pushes attacking non-pawns
         //TODO: double push attacks
         Bb pawnsThreatsFrom = ((OP.bbSide() - OP.bbPawns()).pawnAttacks() % OP_OCCUPIED) >> 8;
