@@ -305,10 +305,28 @@ ReturnStatus Node::search() {
         }
     }
 
+    // safe pawns pushes attacking non-pawns
+    //TODO: double push attacks
+    Bb pawnsThreatsFrom = ((OP.bbSide() - OP.bbPawns()).pawnAttacks() % OP_OCCUPIED) >> 8;
+    Bb potentialAttackers = MY.bbPawns() & ~pawnsThreatsFrom;
+    for (Square from : potentialAttackers) {
+        Square to{File{from}, Rank{from}.forward()};
+        if (!bbMovesOf(MY.pi(from)).has(to)) { continue; }
+        if (safeForOp(to)) { continue; }
+        RETURN_CUTOFF (child->searchMove(from, to, canR ? 2_ply : 1_ply));
+    }
+
     // safe officers moves
     while (safePieces.any()) {
         Pi pi = safePieces.piLast(); safePieces -= pi;
         RETURN_CUTOFF (goodNonCaptures(pi, bbMovesOf(pi) % bbAvoid, canR ? 3_ply : 1_ply));
+    }
+
+    // king quiet moves (always safe), castling is a rook move
+    if (!canP || movesMade() == 0) { // weak move pruning
+        for (Square to : bbMovesOf(Pi{TheKing})) {
+            RETURN_CUTOFF (child->searchMove(Pi{TheKing}, to, canR ? 3_ply : 1_ply));
+        }
     }
 
     // all remaining pawn moves
@@ -318,13 +336,6 @@ ReturnStatus Node::search() {
         Pi pi = MY.pi(from);
         for (Square to : bbMovesOf(pi)) {
             RETURN_CUTOFF (child->searchMove(pi, to, canR ? 3_ply : 1_ply));
-        }
-    }
-
-    // king quiet moves (always safe), castling is a rook move
-    if (!canP || movesMade() == 0) { // weak move pruning
-        for (Square to : bbMovesOf(Pi{TheKing})) {
-            RETURN_CUTOFF (child->searchMove(Pi{TheKing}, to, canR ? 3_ply : 1_ply));
         }
     }
 
