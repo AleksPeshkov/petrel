@@ -22,8 +22,8 @@ TAG_TEST  := $(BUILD_DIR)/tag_test
 TAG_DEBUG := $(BUILD_DIR)/tag_debug
 
 # === Common Flags ===
-BUILD_FLAGS := -march=native -mtune=native
-#BUILD_FLAGS := -march=x86-64-v3 -mtune=znver3 -static
+#BUILD_FLAGS := -march=native -mtune=native
+BUILD_FLAGS := -march=x86-64-v3 -mtune=znver3 -static
 CXXFLAGS := -std=c++20 -fno-exceptions -fno-rtti
 WARNINGS := -Wall -Wpedantic -Wextra
 WARNINGS += -Wuninitialized -Wcast-qual -Wshadow -Wmissing-declarations -Wstrict-aliasing=1 -Wstrict-overflow=1 -Wsign-promo
