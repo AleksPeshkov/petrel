@@ -115,7 +115,7 @@ ReturnStatus Node::search() {
 
     if (!isRoot()) {
         // mate-distance pruning
-        alpha = std::max(alpha, Score::mateLoss(ply));
+        alpha = std::max(alpha, Score::mateLoss(ply + 1_ply));
         if (!(alpha < std::min(beta, Score::mateWin(ply + 1_ply)))) {
             score = alpha;
             assert (currentMove.none());
