@@ -1,8 +1,52 @@
 #ifndef BB_HPP
 #define BB_HPP
 
+#include "BitArray.hpp"
 #include "Index.hpp"
-#include "BitSet.hpp"
+
+template <class self_type, class index_type, typename value_type = unsigned>
+class BitSet : public BitArray<self_type, value_type> {
+    using Base = BitArray<self_type, value_type>;
+    friend class BitArray<self_type, value_type>;
+    using T = self_type;
+
+public:
+    using typename Base::_t;
+    using Index = index_type;
+
+protected:
+    using Base::v_;
+    constexpr BitSet () : Base{} {}
+    constexpr explicit BitSet (_t v) : Base{v} {}
+    constexpr explicit BitSet (Index i) : BitSet{::singleton<_t>(i.v())} {}
+
+public:
+    // clear the first (lowest) set bit
+    constexpr _t clearFirst() const { return ::clearFirst(v_); }
+
+    // check if the index bit is set
+    constexpr bool has(Index i) const { return static_cast<const T&>(*this).any(T{Index{i}}); }
+
+    // one and only one bit set
+    constexpr bool isSingleton() const { assert (static_cast<const T&>(*this).any()); return clearFirst() == 0; }
+
+    // get the first (lowest) bit set
+    constexpr Index first() const { return Index{static_cast<Index::_t>(::lsb(v_))}; }
+
+    // get the last (highest) bit set
+    constexpr Index last() const { return  Index{static_cast<Index::_t>(::msb(v_))}; }
+
+    // get the singleton bit set
+    constexpr Index index() const { assert (isSingleton()); return operator* (); }
+
+    constexpr int popcount() const { return ::popcount(v_); }
+
+    //support for range-based for loop
+    constexpr Index operator*() const { return static_cast<const T&>(*this).first(); }
+    constexpr T& operator++() { *this = T{clearFirst()}; return static_cast<T&>(*this); }
+    constexpr const T& begin() const { return static_cast<const T&>(*this); }
+    constexpr T end() const { return T{}; }
+};
 
 /**
  * BitBoard type: a bit for each chessboard square
@@ -123,7 +167,7 @@ public:
         }
     }
 
-    constexpr const Bb& operator() (Square from, Square to) const { return inBetween[from][to]; }
+    constexpr Bb operator() (Square from, Square to) const { return inBetween[from][to]; }
 
 };
 
@@ -152,7 +196,7 @@ public:
         }
     }
 
-    constexpr const Bb& operator() (PieceType ty, Square sq) const { return attack[ty][sq]; }
+    constexpr Bb operator() (PieceType ty, Square sq) const { return attack[ty][sq]; }
 };
 
 extern constinit AttacksFrom attacksFrom;

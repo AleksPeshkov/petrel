@@ -15,7 +15,7 @@ private:
 
 public:
     constexpr HashAge () : v_(1) {}
-    constexpr operator const _t& () { return v_; }
+    constexpr operator _t () { return v_; }
 
     void nextAge() {
         //there are "AgeMask" ages, not "1 << AgeBits", because of:
@@ -30,7 +30,7 @@ public:
 class TtPerft : public Tt {
 public:
     HashAge hashAge;
-    const HashAge& getAge() const { return hashAge; }
+    HashAge getAge() const { return hashAge; }
     void nextAge() { hashAge.nextAge(); }
 
     void newGame() { Tt::newGame(); hashAge = {}; }
@@ -49,7 +49,7 @@ private:
 
 public:
     constexpr HashBucket() : v_{{{0,0}, {0,0}, {0,0}, {0,0}}} {}
-    constexpr const _t& operator[] (int i) const { return v_[i]; }
+    constexpr _t operator[] (int i) const { return v_[i]; }
 
     constexpr HashBucket& operator = (const HashBucket& a) {
         v_[0] = a[0];
@@ -123,7 +123,7 @@ public:
         return ((nodes & AgeMask) >> AgeShift) == static_cast<decltype(nodes)>(age);
     }
 
-    constexpr const Z getKey() const {
+    constexpr Z getKey() const {
         return key;
     }
 

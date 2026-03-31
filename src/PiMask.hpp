@@ -66,8 +66,7 @@ constexpr bool equals(vu8x16_t a, vu8x16_t b) {
 
 template <>
 struct BitArrayOps<vu8x16_t> {
-    using _t = vu8x16_t;
-    using Arg = const _t&;
+    using Arg = vu8x16_t;
     static bool equals(Arg a, Arg b) { return ::equals(a, b); }
 };
 
@@ -83,8 +82,8 @@ public:
         }
     }
 
-    constexpr const _t& operator[] (u8_t i) const { return v_[Index{i}]; }
-    constexpr const _t& operator[] (Pi pi) const { return v_[Index{pi.v()}]; }
+    constexpr _t operator[] (u8_t i) const { return v_[Index{i}]; }
+    constexpr _t operator[] (Pi pi) const { return v_[Index{pi.v()}]; }
 };
 
 extern const VectorOfAll vectorOfAll;
@@ -153,12 +152,12 @@ public:
     consteval PiSingle() {
         for (auto pi : range<Pi>()) {
             std::array<uint8_t, 16> vec = {}; // zero
-            vec[static_cast<int>(pi.v())] = 0xff;
+            vec[pi.v()] = 0xff;
             v_[pi] = std::bit_cast<vu8x16_t>(vec);
         }
     }
 
-    constexpr const _t& operator[] (Pi pi) const { return v_[pi]; }
+    constexpr _t operator[] (Pi pi) const { return v_[pi]; }
 };
 
 extern const PiSingle piSingle;
@@ -477,7 +476,7 @@ public:
         {15,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14},
     }} {}
 
-    constexpr const vu8x16_t& operator[] (Pi pi) const { return shuffle[pi.v()]; }
+    constexpr vu8x16_t operator[] (Pi pi) const { return shuffle[pi.v()]; }
 };
 
 class PiOrder {
@@ -509,7 +508,7 @@ public:
         return PiMask{::shufflevector(pieces.v(), vu8x16)};
     }
 
-    constexpr const Pi& operator[] (Pi pi) const { return order[pi]; }
+    constexpr Pi operator[] (Pi pi) const { return order[pi]; }
 
     PiOrder& forward(Pi pi) {
         // find index of pi in the shuffled vector
@@ -528,7 +527,7 @@ class PiOrdered {
 public:
     constexpr PiOrdered (PiMask pieces, PiOrder o) : order{o}, mask{order(pieces)} {}
 
-    friend constexpr bool operator == (const PiOrdered& a, const PieceSet& b) { return a.mask == b; }
+    friend constexpr bool operator == (PiOrdered a, PieceSet b) { return a.mask == b; }
 
     constexpr Pi operator * () const { return order[*mask]; }
     constexpr PiOrdered& operator ++ () { ++mask; return *this; }

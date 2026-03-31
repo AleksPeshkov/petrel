@@ -77,13 +77,13 @@ public:
     explicit Hyperbola (Bb bb) : occupied{ hyperbola(vu64x2(bb, Bb{})) } {}
 
     constexpr Bb attack(SliderType ty, Square from) const {
-        const auto& sq = hyperbolaSq[from];
+        auto sq = hyperbolaSq[from];
 
         // branchless computation
         Direction dir{ ty.is(Bishop) ? DiagonalDir : FileDir };
 
-        const auto& d0 = hyperbolaDir[from][dir];
-        const auto& d1 = hyperbolaDir[from][Direction{static_cast<Direction::_t>(dir.v()+1)}];
+        auto d0 = hyperbolaDir[from][dir];
+        auto d1 = hyperbolaDir[from][Direction{static_cast<Direction::_t>(dir.v()+1)}];
 
         // bishop attacks for Bishops, rooks attacks for Rooks and Queens
         auto result = ((occupied & d0) - sq) & d0;
@@ -91,8 +91,8 @@ public:
 
         if (ty.is(Queen)) {
             // plus bishop attacks for Queens
-            const auto& d = hyperbolaDir[from][Direction{DiagonalDir}];
-            const auto& a = hyperbolaDir[from][Direction{AntidiagDir}];
+            auto d = hyperbolaDir[from][Direction{DiagonalDir}];
+            auto a = hyperbolaDir[from][Direction{AntidiagDir}];
             result |= ((occupied & d) - sq) & d;
             result |= ((occupied & a) - sq) & a;
         }
