@@ -376,7 +376,7 @@ ReturnStatus Node::search() {
         }
         // fail low, no good move found, write back previous TT move if any
         currentMove = ttMove();
-        *tt = TtSlot(this);
+        *tt = TtSlot{this};
         ++root.tt.writes;
     }
     return ReturnStatus::Continue;
