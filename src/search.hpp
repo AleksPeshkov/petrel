@@ -14,7 +14,7 @@ enum Bound : u8_t { NoBound,
 
 // 8 byte, always replace slot, so no age field, only one score, depth and bound flags
 class TtSlot {
-    enum {
+    enum shift_t {
         ScoreShift = 0,
         BoundShift = ScoreShift + 14,
         ToShift = BoundShift + 2,
@@ -29,6 +29,11 @@ class TtSlot {
     _t v_;
     static constexpr _t HashMask{ U64(0xffff'ffff'ffff'ffff) << (64 - ZobristBits) };
 
+    static constexpr _t v(_t field, shift_t shift) { return field << shift; }
+
+    template <typename T = int>
+    constexpr T get(shift_t shift, T mask) const { return static_cast<T>((v_ >> shift) & mask); }
+
 public:
     constexpr TtSlot (Z z = {},
         Score score = Score{NoScore},
@@ -40,26 +45,25 @@ public:
         bool canBeKiller = false
     ) : v_{
         (z.v() & HashMask)
-        | (static_cast<_t>(score.toTt(ply)) << ScoreShift)
-        | (static_cast<_t>(bound) << BoundShift)
-        | (static_cast<_t>(from.v()) << FromShift)
-        | (static_cast<_t>(to.v()) << ToShift)
-        | (static_cast<_t>(draft.v()) << DraftShift)
-        | (static_cast<_t>(canBeKiller) << KillerShift)
+        | v(score.toTt(ply), ScoreShift)
+        | v(bound, BoundShift)
+        | v(draft.v(), DraftShift)
+        | v(from.v(), FromShift)
+        | v(to.v(), ToShift)
+        | v(canBeKiller, KillerShift)
     } { static_assert (sizeof(TtSlot) == sizeof(u64_t)); }
 
     TtSlot (const Node* node);
     constexpr bool operator == (Z z) const { return (v_ & HashMask) == (z.v() & HashMask); }
 
+    Score score(Ply ply) const { return Score::fromTt(get(ScoreShift, Score::Mask), ply); }
+    Bound bound() const { return get<Bound>(BoundShift, BoundMask); }
+    Ply draft() const { return Ply{get<Ply::_t>(DraftShift, Ply::Mask)}; }
+
     bool hasMove() const { return !(from().v() == 0 && to().v() == 0); }
-    Square from() const { return Square{static_cast<Square::_t>(v_ >> FromShift & Square::Mask)}; }
-    Square to() const { return Square{static_cast<Square::_t>(v_ >> ToShift & Square::Mask)}; }
-
-    Bound bound() const { return static_cast<Bound>(v_ >> BoundShift & 0b11); }
-    Ply draft() const { return Ply{static_cast<Ply::_t>(v_ >> DraftShift & Ply::Mask)}; }
-    bool canBeKiller() const { return v_ >> KillerShift & 1; }
-
-    Score score(Ply ply) const { return Score::fromTt(v_ >> ScoreShift & Score::Mask, ply); }
+    Square from() const { return Square{get<Square::_t>(FromShift, Square::Mask)}; }
+    Square to() const { return Square{get<Square::_t>(ToShift, Square::Mask)}; }
+    bool canBeKiller() const { return get(KillerShift, 1); }
 };
 
 class Uci;
