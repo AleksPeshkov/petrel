@@ -56,7 +56,7 @@ public:
         std::memset(&v_, HistoryMove::None, sizeof(v_));
     }
 
-    constexpr const HistoryMove& get(Index i, Color color, HistoryMove slot) const {
+    constexpr HistoryMove get(Index i, Color color, HistoryMove slot) const {
         return v_[color][slot][i];
     }
 
@@ -114,7 +114,7 @@ class RepHash {
     static constexpr _t hash(Z z) { return ::singleton<_t>(z.v() & 077); }
 public:
     constexpr RepHash () : v{0} {}
-    constexpr RepHash (const RepHash& m, Z z) : v{m.v | hash(z)} {}
+    constexpr RepHash (RepHash m, Z z) : v{m.v | hash(z)} {}
     constexpr bool has(Z z) const { return (v & hash(z)) != 0; }
 };
 

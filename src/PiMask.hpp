@@ -38,7 +38,6 @@ extern const VectorOfAll vectorOfAll;
 
 class PieceSet : public BitSet<PieceSet, Pi> {
     using Base = BitSet<PieceSet, Pi>;
-    friend class BitArray<PieceSet>;
     using Base::v_;
 public:
     constexpr PieceSet () : Base{} {}
@@ -95,7 +94,7 @@ public:
     consteval PiSingle() {
         for (auto pi : range<Pi>()) {
             std::array<uint8_t, 16> vec = {}; // zero
-            vec[static_cast<int>(pi.v())] = 0xff;
+            vec[pi.v()] = 0xff;
             v_[pi] = std::bit_cast<vu8x16_t>(vec);
         }
     }
@@ -108,22 +107,20 @@ extern const PiSingle piSingle;
 ///piece vector of boolean values: false (0) or true (0xff)
 class PiMask : public BitArray<PiMask, vu8x16_t> {
     using Base = BitArray<PiMask, vu8x16_t>;
-    friend class BitArray<PiMask, vu8x16_t>;
-
-    using Base::v_;
-
-public:
     using typename Base::_t;
-    using Base::any;
+    using Base::v_;
 
     static constexpr _t zero() { return ::all(0); }
 
+public:
     constexpr PiMask () : Base{zero()} {}
     constexpr PiMask (Pi pi) : Base( ::piSingle[pi] ) {}
     constexpr explicit PiMask (_t a) : Base{a} { assertOk(); }
 
     static constexpr PiMask equals(_t a, _t b) { return PiMask{a == b}; }
     static constexpr PiMask notEquals(_t a, _t b) { return PiMask{a != b}; }
+
+    using Base::any;
     static constexpr PiMask any(_t a) { return notEquals(a, zero()); }
     static constexpr PiMask all() { return PiMask{::all(0xff)}; }
 
@@ -465,7 +462,7 @@ public:
         return PiMask{::shufflevector(pieces.v(), vu8x16)};
     }
 
-    constexpr const Pi& operator[] (Pi pi) const { return order[pi]; }
+    constexpr Pi operator[] (Pi pi) const { return order[pi]; }
 
     PiOrder& forward(Pi pi) {
         // find index of pi in the shuffled vector
@@ -484,7 +481,7 @@ class PiOrdered {
 public:
     constexpr PiOrdered (PiMask pieces, PiOrder o) : order{o}, mask{order(pieces)} {}
 
-    friend constexpr bool operator == (const PiOrdered& a, const PieceSet& b) { return a.mask == b; }
+    friend constexpr bool operator == (PiOrdered a, PieceSet b) { return a.mask == b; }
 
     constexpr Pi operator * () const { return order[*mask]; }
     constexpr PiOrdered& operator ++ () { ++mask; return *this; }

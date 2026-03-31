@@ -32,7 +32,7 @@ class TtPerft : public Tt {
 
 public:
     HashAge hashAge;
-    const HashAge& getAge() const { return hashAge; }
+    HashAge getAge() const { return hashAge; }
     void nextAge() { hashAge.nextAge(); }
 
     void newGame() { Base::newGame(); hashAge = {}; }
@@ -125,7 +125,7 @@ public:
         return ((nodes & AgeMask) >> AgeShift) == static_cast<decltype(nodes)>(age);
     }
 
-    constexpr const Z getKey() const {
+    constexpr Z getKey() const {
         return key;
     }
 

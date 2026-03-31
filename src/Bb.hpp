@@ -11,8 +11,6 @@ class Bb : public BitSet<Bb, Square, u64_t> {
     using Base = BitSet<Bb, Square, u64_t>;
     using Base::v_;
 
-    friend class BitArray<Bb, u64_t>;
-
     //declared to catch type cast bugs
     Bb (int) = delete;
 
@@ -133,7 +131,7 @@ public:
         }
     }
 
-    constexpr const Bb& operator() (Square from, Square to) const { return inBetween[from][to]; }
+    constexpr Bb operator() (Square from, Square to) const { return inBetween[from][to]; }
 
 };
 
@@ -162,7 +160,7 @@ public:
         }
     }
 
-    constexpr const Bb& operator() (PieceType ty, Square sq) const { return attack[ty][sq]; }
+    constexpr Bb operator() (PieceType ty, Square sq) const { return attack[ty][sq]; }
 };
 
 extern constinit AttacksFrom attacksFrom;

@@ -4,12 +4,10 @@
 #include "bitops.hpp"
 #include "BitArray.hpp"
 
-#define SELF static_cast<self_type&>(*this)
-#define CONST_SELF static_cast<const self_type&>(*this)
-
 template <class self_type, class index_type, typename value_type = unsigned>
 class BitSet : public BitArray<self_type, value_type> {
     using Base = BitArray<self_type, value_type>;
+    using T = self_type;
 
 public:
     using typename Base::_t;
@@ -27,12 +25,12 @@ public:
 
     // check if the index bit is set
     constexpr bool has(Index i) const {
-        return CONST_SELF.any(self_type{Index{i}});
+        return static_cast<const T&>(*this).any(self_type{Index{i}});
     }
 
     // one and only one bit set
     constexpr bool isSingleton() const {
-        assert (CONST_SELF.any());
+        assert (static_cast<const T&>(*this).any());
         return clearFirst() == 0;
     }
 
@@ -57,13 +55,10 @@ public:
     }
 
     //support for range-based for loop
-    constexpr Index operator*() const { return CONST_SELF.first(); }
-    constexpr self_type& operator++() { *this = self_type{clearFirst()}; return SELF; }
-    constexpr auto begin() const { return CONST_SELF; }
+    constexpr Index operator*() const { return static_cast<const T&>(*this).first(); }
+    constexpr self_type& operator++() { *this = self_type{clearFirst()}; return static_cast<self_type&>(*this); }
+    constexpr auto begin() const { return static_cast<const T&>(*this); }
     constexpr auto end() const { return self_type{}; }
 };
-
-#undef SELF
-#undef CONST_SELF
 
 #endif

@@ -584,7 +584,7 @@ ReturnStatus Node::updatePv() const {
     }
 
     if (ply == 0_ply) {
-        const auto& bestMove = root.pv.move(0_ply);
+        auto bestMove = root.pv.move(0_ply);
         root.limits.updateMoveComplexity(bestMove);
         ::insert_unique(root.rootBestMoves, bestMove);
 
@@ -623,8 +623,8 @@ constexpr Color Node::colorToMove() const { return root.colorToMove(ply); }
 
 // insufficient mate material
 bool Node::isDrawMaterial() const {
-    auto& my = MY.material();
-    auto& op = OP.material();
+    auto my = MY.material();
+    auto op = OP.material();
 
     if (my.hasMatingPieces() || op.hasMatingPieces()) { return false; }
 
