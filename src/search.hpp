@@ -49,7 +49,7 @@ public:
     } { static_assert (sizeof(TtSlot) == sizeof(u64_t)); }
 
     TtSlot (const Node* node);
-    constexpr bool operator == (Z z) const { return (v_ & HashMask) == (z.v() & HashMask); }
+    constexpr bool operator == (Z z) const { return (v_ & HashMask) == (z.v() & HashMask) && v_ != 0; }
 
     bool hasMove() const { return !(from().v() == 0 && to().v() == 0); }
     Square from() const { return Square{static_cast<Square::_t>(v_ >> FromShift & Square::Mask)}; }
