@@ -48,7 +48,7 @@ public:
         bool canBeKiller
     ) : v_{
         (z.v() & HashMask)
-        | v(score.toTt(ply), ScoreShift)
+        | v(score.tt(ply), ScoreShift)
         | v(bound, BoundShift)
         | v(draft.v(), DraftShift)
         | v(from.v(), FromShift)
@@ -59,7 +59,7 @@ public:
     TtSlot (const Node* node);
     constexpr bool operator == (Z z) const { return (v_ & HashMask) == (z.v() & HashMask) && v_ != 0; }
 
-    Score score(Ply ply) const { return Score::fromTt(get(ScoreShift, Score::Mask), ply); }
+    Score score(Ply ply) const { return Score::tt(get(ScoreShift, Score::Mask), ply); }
     Bound bound() const { return get<Bound>(BoundShift, BoundMask); }
     Ply draft() const { return Ply{get<Ply::_t>(DraftShift, Ply::Mask)}; }
 

@@ -40,51 +40,94 @@ class Score {
 public:
     static constexpr int Mask = singleton(ScoreBitSize) - 1;
 
+    constexpr Score () : v_{NoScore} {}
     constexpr explicit Score (_t e) : v_{e} {}
     friend constexpr Score operator""_cp(unsigned long long);
 
-    static constexpr Score clampEval(int e)  { return Score{static_cast<Score::_t>( std::clamp<int>(e, MinEval, MaxEval) )}; }
-    static constexpr Score mateLoss(Ply ply) { return Score{MateLoss} + ply; } // MateLoss + ply
-    static constexpr Score mateWin(Ply ply)  { return Score{MateWin} - ply; } // MateWin - ply
+    constexpr _t v() const { return v_; }
 
-    constexpr bool none() const { return v_ == NoScore; }
-    constexpr bool any() const { return !none(); }
-    constexpr void assertOk() const { assert (MateLoss <= v_); assert (v_ <= MateWin); }
-    constexpr bool isEval() const { assertOk(); return MinEval <= v_ && v_ <= MaxEval; }
-    constexpr void assertEval() const { assert (isEval()); }
-    constexpr void assertMate() const { assert (!isEval()); }
+    static constexpr Score clampEval(int e)  { return Score{static_cast<_t>( std::clamp<int>(e, MinEval, MaxEval) )}; }
+    static constexpr Score mateLoss(Ply ply) { return Score{static_cast<_t>(MateLoss + ply.v())}; } // MateLoss + ply
+    static constexpr Score mateWin(Ply ply)  { return Score{static_cast<_t>(MateWin - ply.v())}; } // MateWin - ply
 
-    constexpr Score minus1() const { assertOk(); Score r{static_cast<_t>(v_ - 1)}; r.assertOk(); return r; }
-    constexpr Score operator - () const { assertOk(); return Score{static_cast<_t>(-v_)}; }
-    friend constexpr Score operator + (Arg a, Arg b) { a.assertEval(); b.assertEval(); return Score::clampEval(a.v_ + b.v_); }
-    friend constexpr Score operator - (Arg a, Arg b) { a.assertEval(); b.assertEval(); return Score::clampEval(a.v_ - b.v_); }
-    friend constexpr Score operator + (Arg a, Ply p) { a.assertMate(); Score r{static_cast<_t>(a.v_ + p.v())}; r.assertMate(); return r; }
-    friend constexpr Score operator - (Arg a, Ply p) { a.assertMate(); Score r{static_cast<_t>(a.v_ - p.v())}; r.assertMate(); return r; }
+    constexpr bool none() const { assert (v_ == NoScore || any()); return v_ == NoScore; }
+    constexpr bool any() const { return MateLoss <= v_ && v_ <= MateWin; } // MateLoss <= v_ <= MateWin
+    constexpr bool isEval() const { assert (any()); return MinEval <= v_ && v_ <= MaxEval; } // MinEval <= v_ <= MaxEval
+    constexpr bool isOkMate(Ply ply) const { assert (any()); return MateLoss <= v_ - ply.v() && v_ + ply.v() < MateWin; }
 
-    friend constexpr bool operator == (Arg a, Arg b) { a.assertOk(); b.assertOk(); return a.v_ == b.v_; }
-    friend constexpr bool operator <  (Arg a, Arg b) { a.assertOk(); b.assertOk(); return a.v_ < b.v_; }
-
-    constexpr unsigned toTt(Ply ply) const {
-        Score score{v_};
-        if (score.v_ == NoScore) { return 0; }
-
-        if (score.v_ < MinEval) { score = score - ply; }
-        else if (MaxEval < score.v_) { score = score + ply; }
-        else { score.assertEval(); }
-
-        // convert signed to unsigned
-        return static_cast<unsigned>(score.v_ - NoScore);
+    // 1_ply || 1_cp
+    constexpr Score minus1() const {
+        assert (MateLoss <= v_); assert (v_ <= MateWin);
+        //assert (v_ != MinEval); // boundary between mate and eval
+        assert (v_ != MateLoss); // mate boundary
+        return Score{static_cast<_t>(v_ - 1)};
     }
 
-    static constexpr Score fromTt(unsigned n, Ply ply) {
+    constexpr Score operator - () const {
+        assert (MateLoss <= v_); assert (v_ <= MateWin);
+        return Score{static_cast<_t>(-v_)};
+    }
+
+    friend constexpr Score operator + (Arg a, Arg b) {
+        assert (MinEval <= a.v_); assert (a.v_ <= MaxEval);
+        assert (MinEval <= b.v_); assert (b.v_ <= MaxEval);
+        return Score::clampEval(a.v_ + b.v_);
+    }
+
+    friend constexpr Score operator - (Arg a, Arg b) {
+        assert (MinEval <= a.v_); assert (a.v_ <= MaxEval);
+        assert (MinEval <= b.v_); assert (b.v_ <= MaxEval);
+        return Score::clampEval(a.v_ - b.v_);
+    }
+
+    friend constexpr bool operator == (Arg a, Arg b) {
+        assert (MateLoss <= a.v_); assert (a.v_ <= MateWin);
+        assert (MateLoss <= b.v_); assert (b.v_ <= MateWin);
+        return a.v_ == b.v_;
+    }
+
+    friend constexpr bool operator < (Arg a, Arg b) {
+        assert (MateLoss <= a.v_); assert (a.v_ <= MateWin);
+        assert (MateLoss <= b.v_); assert (b.v_ <= MateWin);
+        return a.v_ < b.v_;
+    }
+
+    constexpr unsigned tt(Ply ply) const {
+        auto v = v_;
+        assert (v != NoScore); assert (MateLoss <= v); assert (v < MateWin);
+
+        if (v == NoScore) { return 0; }
+
+        if (v < MinEval) {
+            v = static_cast<_t>(v - ply.v());
+            assert (MateLoss <= v); assert (v < MateWin);
+        }
+        else if (MaxEval < v) {
+            v = static_cast<_t>(v + ply.v());
+            assert (MateLoss <= v); assert (v < MateWin);
+        }
+
+        // convert signed to unsigned
+        return static_cast<unsigned>(v - NoScore);
+    }
+
+    static constexpr Score tt(unsigned n, Ply ply) {
         // convert unsigned to signed
-        Score score{static_cast<_t>(static_cast<int>(n) + NoScore)};
+        auto v = static_cast<_t>(static_cast<int>(n) + NoScore);
+        assert (v != NoScore); assert (MateLoss <= v); assert (v < MateWin);
 
-        if (score.v_ < MinEval) { score = score + ply; }
-        else if (MaxEval < score.v_) { score = score - ply; }
-        else { score.assertEval(); }
+        if (v == NoScore) { return Score{v}; }
 
-        return score;
+        if (v < MinEval) {
+            v = static_cast<_t>(v + ply.v());
+            assert (v < MinEval);
+        }
+        else if (MaxEval < v) {
+            v = static_cast<_t>(v - ply.v());
+            assert (MaxEval < v);
+        }
+
+        return Score{v};
     }
 
     friend ostream& operator << (ostream& out, Score score) {
@@ -94,18 +137,19 @@ public:
             return out << "none";
         }
 
-        score.assertOk();
+        auto v = score.v_;
 
-        if (score.v_ < MinEval) {
-            return out << "mate " << (MateLoss - score.v_) / 2;
+        if (v < MinEval) {
+            assert ((v & 1) == 0); // even
+            return out << "mate " << (MateLoss - v) / 2;
         }
 
-        if (MaxEval < score.v_) {
-            return out << "mate " << (MateWin - score.v_ + 1) / 2;
+        if (MaxEval < v) {
+            assert ((v & 1) == 1); // odd
+            return out << "mate " << (MateWin - v + 1) / 2;
         }
 
-        score.assertEval();
-        return out << "cp " << static_cast<signed>(score.v_);
+        return out << "cp " << static_cast<signed>(v);
     }
 };
 

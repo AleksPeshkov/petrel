@@ -374,6 +374,7 @@ ReturnStatus Node::search() {
             score = alpha;
             return ReturnStatus::Continue;
         }
+        assert (score.isOkMate(ply));
         // fail low, no good move found, write back previous TT move if any
         currentMove = ttMove();
         *tt = TtSlot{this};
@@ -558,6 +559,7 @@ void Node::failHigh() const {
 
     if (depth > 0_ply) {
         bound = FailHigh;
+        assert (score.isOkMate(ply));
         *tt = TtSlot{this};
         ++root.tt.writes;
     }
@@ -572,6 +574,7 @@ ReturnStatus Node::updatePv() const {
 
     if (depth > 0_ply) {
         bound = ExactScore;
+        assert (score.isOkMate(ply));
         *tt = TtSlot{this};
         ++root.tt.writes;
     }
@@ -679,9 +682,17 @@ namespace {
         Ply   ply   = 0_ply;
         Ply   depth = pv.depth();
         Score score = pv.score();
+        assert (score.any());
         auto  pmoves = pv.moves();
 
         for (UciMove move; (move = *pmoves++).any();) {
+            if (!score.isOkMate(ply)) {
+                std::ostringstream o;
+                o << "ply = " << ply << ", depth = " << depth << ", score = " << static_cast<signed>(score.v());
+                io::error(o.str());
+                //assert (score.isOkMate(ply));
+                break;
+            }
             assert ((pos.generateMoves(), pos.isPossibleMove(move.from(), move.to())));
 
             auto o = tt.addr<TtSlot>(pos.z());
