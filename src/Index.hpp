@@ -177,10 +177,10 @@ public:
 struct Ply : Index<Ply, 64> {
     constexpr explicit Ply(int i) : Index{i > 0 ? i : 0} { assertOk(); }
     friend constexpr Ply operator""_ply(unsigned long long);
-    friend Ply operator + (Ply a, Ply b) { return Ply{a.v() + b.v()}; }
-    friend Ply operator - (Ply a, Ply b) { return Ply{a.v() - b.v()}; }
-    friend Ply operator * (Ply a, int n) { return Ply{a.v() * n}; }
-    friend Ply operator / (Ply a, int n) { return Ply{a.v() / n}; }
+    friend constexpr Ply operator + (Ply a, Ply b) { return Ply{a.v() + b.v()}; }
+    friend constexpr Ply operator - (Ply a, Ply b) { return Ply{a.v() - b.v()}; }
+    friend constexpr Ply operator * (Ply a, int n) { return Ply{a.v() * n}; }
+    friend constexpr Ply operator / (Ply a, int n) { return Ply{a.v() / n}; }
 
     friend ostream& operator << (ostream& out, Ply ply) { return out << ply.v(); }
 

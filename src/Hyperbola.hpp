@@ -1,7 +1,6 @@
 #ifndef HYPERBOLA_HPP
 #define HYPERBOLA_HPP
 
-#include <type_traits>
 #include "bitops128.hpp"
 #include "Bb.hpp"
 

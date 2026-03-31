@@ -31,10 +31,10 @@ public:
     constexpr _t v() const { return v_; } // _t v() const { return v_; }
 
     constexpr void clear() { *this = Self{}; }
-    constexpr Self& operator &= (Arg b) { v_ &= b.v_; return SELF; }
-    constexpr Self& operator |= (Arg b) { v_ |= b.v_; return SELF; }
-    constexpr Self& operator ^= (Arg b) { v_ ^= b.v_; return SELF; }
-    constexpr Self& operator %= (Arg b) { v_ |= b.v_; v_ ^= b.v_; return SELF; } // andnot_assign
+    constexpr Self& operator &= (Arg b) { v_ &= b.v(); return SELF; }
+    constexpr Self& operator |= (Arg b) { v_ |= b.v(); return SELF; }
+    constexpr Self& operator ^= (Arg b) { v_ ^= b.v(); return SELF; }
+    constexpr Self& operator %= (Arg b) { v_ |= b.v(); v_ ^= b.v(); return SELF; } // andnot_assign
     constexpr Self& operator += (Arg b) { assert (none(b)); return SELF ^= b; }
     constexpr Self& operator -= (Arg b) { assert (CONST_SELF >= b); return SELF ^= b; }
 
@@ -45,7 +45,7 @@ public:
     friend constexpr Self operator -  (Arg a, Arg b) { return Self{a} -= b; }
     friend constexpr Self operator %  (Arg a, Arg b) { return Self{a} %= b; }
 
-    friend constexpr bool operator == (Arg a, Arg b) { return Ops::equals(a.v_, b.v_); }
+    friend constexpr bool operator == (Arg a, Arg b) { return Ops::equals(a.v(), b.v()); }
     friend constexpr bool operator <  (Arg a, Arg b) { return !((a & b) == b); }
 
     constexpr bool none() const { return CONST_SELF == Self{}; }

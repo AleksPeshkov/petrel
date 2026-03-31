@@ -62,7 +62,7 @@ class PieceSet : public BitSet<PieceSet, Pi, u64_t> {
     using Base = BitSet<PieceSet, Pi, u64_t>;
 public:
     constexpr explicit PieceSet (_t n = 0) : Base{n & U64(0x8888'8888'8888'8888)} {}
-    constexpr explicit PieceSet (Pi pi) : Base{::singleton<u64_t>((pi << 2) + 3)} {}
+    constexpr explicit PieceSet (Pi pi) : Base{::singleton<u64_t>((pi.v() << 2) + 3)} {}
 
     // get the first (lowest) bit set
     constexpr Pi first() const {
@@ -130,12 +130,12 @@ public:
     constexpr _t v() const { return v_; } // _t v() const { return v_; }
 
     // check if either 0 or 0xff bytes are set
-    bool isOk() const { return ::equals(v_, v_ != zero()); }
+    constexpr bool isOk() const { return ::equals(v_, v_ != zero()); }
 
     // assert if either 0 or 0xff bytes are set
     constexpr void assertOk() const { assert (isOk()); }
 
-    explicit operator PieceSet() const {
+    constexpr explicit operator PieceSet() const {
         assertOk();
         #ifndef NEON_VECTOR
             return PieceSet{static_cast<PieceSet::_t>(::mask(v_))};

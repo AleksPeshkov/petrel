@@ -22,38 +22,36 @@ TAG_TEST  := $(BUILD_DIR)/tag_test
 TAG_DEBUG := $(BUILD_DIR)/tag_debug
 
 # === Common Flags ===
-BUILD_FLAGS := -march=native -mtune=native
-#BUILD_FLAGS := -march=x86-64-v3 -mtune=znver3 -static
+BUILD_ARCH := -march=native -mtune=native
 CXXFLAGS := -std=c++20 -fno-exceptions -fno-rtti
 WARNINGS := -Wall -Wpedantic -Wextra
-WARNINGS += -Wuninitialized -Wcast-qual -Wshadow -Wmissing-declarations -Wstrict-aliasing=1 -Wstrict-overflow=1 -Wsign-promo
-WARNINGS += -Wpacked -Wdisabled-optimization -Wredundant-decls -Wextra-semi -Wsuggest-override
+WARNINGS += -Wcast-qual -Wshadow -Wmissing-declarations -Wredundant-decls -Wextra-semi -Wsuggest-override
+WARNINGS += -Wuninitialized -Wstrict-aliasing=1 -Wstrict-overflow=1 -Wpacked -Wsign-promo
+WARNINGS += -Winline -Wdisabled-optimization -Winvalid-constexpr
 
 # === Set Flags Based on Tags ===
 ifeq ($(wildcard $(TAG_TEST)), $(TAG_TEST))
-	DEFINES := -DDEBUG -DENABLE_ASSERT_LOGGING
 	BUILD_FLAGS += -Og -ggdb
-	BUILD_FLAGS += -fsanitize=address,undefined
-	WARNINGS += -Wno-inline
-else ifeq ($(wildcard $(TAG_DEBUG)), $(TAG_DEBUG))
 	DEFINES := -DDEBUG -DENABLE_ASSERT_LOGGING
+else ifeq ($(wildcard $(TAG_DEBUG)), $(TAG_DEBUG))
 	BUILD_FLAGS += -O0 -ggdb
 	BUILD_FLAGS += -fsanitize=address,undefined
+	DEFINES := -DDEBUG -DENABLE_ASSERT_LOGGING
 else
-	DEFINES := -DNDEBUG
+#BUILD_ARCH := -march=x86-64-v3 -mtune=znver3 -static
+#BUILD_ARCH := -mfloat-abi=hard -DNEON_VECTOR
 	BUILD_FLAGS += -O3 -flto -finline-functions
-	WARNINGS += -Winline
+	DEFINES := -DNDEBUG
 endif
 
 ifeq ($(CXX), g++)
 	BUILD_FLAGS += -flto=auto --param inline-unit-growth=1000
 	CXXFLAGS += -flax-vector-conversions
-	WARNINGS += -Wno-class-memaccess -Wno-invalid-constexpr
+	WARNINGS += -Wno-class-memaccess
 	WARNINGS += -Wuseless-cast -Wcast-align=strict -Wsuggest-final-types -Wsuggest-final-methods
 	WARNINGS += -Wnormalized -Wunsafe-loop-optimizations -Wvector-operation-performance
 else ifeq ($(CXX), clang++)
-	WARNINGS += -Wcast-align -Wconditional-uninitialized -Wmissing-prototypes -Winvalid-constexpr
-#WARNINGS += -Wconversion
+	WARNINGS += -Wcast-align -Wconditional-uninitialized -Wmissing-prototypes
 endif
 
 GIT_DATE := $(shell git log -1 --date=short --pretty=format:%cd 2>/dev/null || true)
@@ -71,7 +69,7 @@ ifneq ($(GIT_ORIGIN),)
 #	DEFINES += -DGIT_ORIGIN=\"$(GIT_ORIGIN)\"
 endif
 
-CXXFLAGS := $(BUILD_FLAGS) $(CXXFLAGS) $(WARNINGS) $(DEFINES)
+CXXFLAGS := $(BUILD_ARCH) $(BUILD_FLAGS) $(CXXFLAGS) $(WARNINGS) $(DEFINES)
 LDFLAGS := $(BUILD_FLAGS) -pthread
 
 # === Build Targets ===
