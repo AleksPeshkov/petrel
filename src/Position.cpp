@@ -395,83 +395,89 @@ Zobrist Position::generateZobrist() const {
 }
 
 Zobrist Position::createZobrist(Square from, Square to) const {
-    // side to move pieces hash
-    Zobrist mz{zobrist_};
+    Zobrist mz{zobrist_}; // side to move pieces hash
+    Zobrist oz{}; // opponent side pieces hash
 
-    // opponent side pieces hash
-    Zobrist oz{};
-
-    Pi pi = MY.pi(from);
-    PieceType ty = MY.typeOf(pi);
+    Pi pi{MY.pi(from)};
+    PieceType ty{MY.typeOf(pi)};
 
     if (OP.hasEnPassant()) {
+        // clear en passant tag
         oz.enPassant(OP.sqEnPassant());
 
-        // en passant capture
+        // actual en passant capture
         if (ty.is(Pawn) && from.on(Rank5) && to.on(Rank5)) {
             mz.move(Pawn, from, Square{File{to}, Rank6});
             oz(Pawn, ~to);
-            goto zobrist;
+            return Zobrist{oz, mz};
         }
     }
 
-    if (ty.is(Pawn)) {
-        if (from.on(Rank7)) {
-            PromoType promo{::promoTypeFrom(Rank{to})};
-            to = Square{File{to}, Rank8};
+    do {
+        if (ty.is(Pawn)) {
+            if (from.on(Rank7)) {
+                PromoType promo{::promoTypeFrom(Rank{to})};
+                to = Square{File{to}, Rank8};
 
-            mz.promote(from, promo, to);
-            goto capture;
-        }
+                mz.promote(from, promo, to);
+                break; // goto handle captured piece if any
+            }
 
-        if (from.on(Rank2) && to.on(Rank4)) {
-            mz.move(ty, from, to);
+            if (from.on(Rank2) && to.on(Rank4)) {
+                mz.move(PieceType{Pawn}, from, to);
 
-            File file{from};
-            Square ep{file, Rank3};
+                File file{from};
+                Square ep{file, Rank3};
 
-            Bb killers = ~OP.bbPawns() & ::attacksFrom(Pawn, ep);
-            if (killers.any() && !MY.isPinned(OCCUPIED - Bb{from} + Bb{ep})) {
-                for (Square killer : killers) {
-                    assert (killer.on(Rank4));
+                Bb killers = ~OP.bbPawns() & ::attacksFrom(Pawn, ep);
+                if (killers.any() && !MY.isPinned(OCCUPIED - Bb{from} + Bb{ep})) {
+                    for (Square killer : killers) {
+                        assert (killer.on(Rank4));
 
-                    if (!MY.isPinned(OCCUPIED - Bb{killer} + Bb{ep})) {
-                        mz.enPassant(to);
-                        goto zobrist;
+                        if (!MY.isPinned(OCCUPIED - Bb{killer} + Bb{ep})) {
+                            // strictly legal en passant tag
+                            //TODO: set en passant traits here and skip legality check again
+                            mz.enPassant(to);
+                            return Zobrist{oz, mz};
+                        }
                     }
                 }
+                return Zobrist{oz, mz};
             }
-            goto zobrist;
+
+            // common pawn move (with capture and non-capture)
+            mz.move(PieceType{Pawn}, from, to);
+            break; // goto handle captured piece if any
         }
 
-        // fall though the rest of pawns moves (non-promotion, non en passant, non double push)
-    }
-    else if (MY.sqKing().is(to)) {
-        Square kingFrom = to;
-        Square rookFrom = from;
-        Square kingTo = CastlingRules::castlingKingTo(kingFrom, rookFrom);
-        Square rookTo = CastlingRules::castlingRookTo(kingFrom, rookFrom);
+        if (MY.sqKing().is(to)) {
+            //castling move encoded as rook moves over own king's square
+            Square kingFrom = to;
+            Square rookFrom = from;
+            Square kingTo = CastlingRules::castlingKingTo(kingFrom, rookFrom);
+            Square rookTo = CastlingRules::castlingRookTo(kingFrom, rookFrom);
 
-        //castling move encoded as rook moves over own king's square
-        for (Pi rook : MY.castlingRooks()) {
-            mz.castling(MY.sq(rook));
+            // clear all castling rights
+            for (Pi rook : MY.castlingRooks()) { mz.castling(MY.sq(rook)); }
+
+            mz.castle(kingFrom, kingTo, rookFrom, rookTo);
+            return Zobrist{oz, mz};
+        }
+        else if (ty.is(King)) {
+            // clear all castling rights
+            for (Pi rook : MY.castlingRooks()) { mz.castling(MY.sq(rook)); }
+        }
+        else if (MY.isCastling(pi)) {
+            // clear the moved rook castling right
+            assert (ty.is(Rook));
+            mz.castling(from);
         }
 
-        mz.castle(kingFrom, kingTo, rookFrom, rookTo);
-        goto zobrist;
-    }
-    else if (ty.is(King)) {
-        for (Pi rook : MY.castlingRooks()) { mz.castling(MY.sq(rook)); }
-    }
-    else if (MY.isCastling(pi)) {
-        //move of the rook with castling rights
-        assert (ty.is(Rook));
-        mz.castling(from);
-    }
+        // common non-pawn move
+        mz.move(ty, from, to);
+    } while (false);
 
-    mz.move(ty, from, to);
-
-capture:
+// handle captured piece if any
     if (OP.has(~to)) {
         Pi victim = OP.pi(~to);
         oz(OP.typeOf(victim), ~to);
@@ -479,6 +485,6 @@ capture:
         if (OP.isCastling(victim)) { oz.castling(~to); }
     }
 
-zobrist:
+    // side to move changes after a move, so we flip zobrist here
     return Zobrist{oz, mz};
 }
