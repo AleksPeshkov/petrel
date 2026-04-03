@@ -1,7 +1,7 @@
 #include "Position.hpp"
 
 void Position::clear() {
-    accumulator.clear();
+    accumulator = {};
 }
 
 Score Position::evaluate() const {
@@ -145,14 +145,14 @@ void Position::makeMove(Square from, Square to) {
                 OP.capture(~to);
 
                 if constexpr (Flags & WithEval) {
-                    accumulator.promote(promo, from, to, captured);
+                    accumulator.promote(from, promo, to, captured);
                 }
                 updateSliderAttacks<My>(MY.affectedBy(from) | PiMask{pi}, OP.affectedBy(~from));
                 return; // end of pawn promotion move with capture
             }
 
             if constexpr (Flags & WithEval) {
-                accumulator.promote(promo, from, to);
+                accumulator.promote(from, promo, to);
             }
             updateSliderAttacks<My>(MY.affectedBy(from, to) | PiMask{pi}, OP.affectedBy(~from, ~to));
             return; // end of pawn promotion move without capture
