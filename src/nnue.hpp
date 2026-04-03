@@ -49,7 +49,7 @@ constexpr V1 clamp(V1 a, V2 b, V3 c) {
  * compatible with the simple example provided by the bullet trainer:
  * https://github.com/jw1912/bullet/blob/main/examples/simple.rs
  *
- * Actual training script ../net/petrel128.rs
+ * Actual training script ../net/simple.rs
  **/
 
 // (768 -> 128) x 2 -> 1
@@ -61,11 +61,19 @@ struct CACHE_ALIGN Nnue {
     static constexpr int QA = 256;
     static constexpr int QB = 64;
 
-    struct FeatureIndex; STRUCT_INDEX (FeatureIndex, 768);
-    struct HalfAccumulatorIndex; STRUCT_INDEX (HalfAccumulatorIndex, HIDDEN_SIZE / VECTOR_SIZE);
-    struct AccumulatorIndex; STRUCT_INDEX (AccumulatorIndex, 2*HalfAccumulatorIndex::Size);
+    struct FeatureIndex : ::Index<FeatureIndex, 768> {
+        static constexpr PieceType::arrayOf<PieceType::_t> pieceType = {Pawn, Knight, Bishop, Rook, Queen, King};
 
-    using L0b = HalfAccumulatorIndex::arrayOf<_t>;
+        //TODO: reshape feauture indexing during net loading
+        constexpr FeatureIndex (Side si, PieceType ty, Square sq)
+            : Index{ 6*64*si.v() + 64*pieceType[ty] + (~sq).v() }
+        {}
+    };
+
+    struct AccumulatorSideIndex; STRUCT_INDEX (AccumulatorSideIndex, HIDDEN_SIZE / VECTOR_SIZE);
+    struct AccumulatorIndex; STRUCT_INDEX (AccumulatorIndex, 2*AccumulatorSideIndex::Size);
+
+    using L0b = AccumulatorSideIndex::arrayOf<_t>;
     using L0w = FeatureIndex::arrayOf<L0b>;
     using L1w = AccumulatorIndex::arrayOf<_t>;
 
@@ -95,36 +103,31 @@ struct CACHE_ALIGN Nnue {
 extern Nnue nnue;
 
 // 2x128 neurons, 512 bytes
-//TRICK: accumulator assumes updates from NOT side to move
 class CACHE_ALIGN Accumulator {
     // 128 neurons, 256 bytes
     class AccumulatorSide {
-        using Index = Nnue::HalfAccumulatorIndex; // 8
+        using Index = Nnue::AccumulatorSideIndex; // 8
+        using Fi = Nnue::FeatureIndex; // 768
+        using _t = Nnue::_t; // vi16x16_t
 
         static constexpr auto& w = nnue.l0w; // feauture weights
         static constexpr auto& b = nnue.l0b; // feauture biases
 
-        //TODO: reshape feauture indexing during net loading
-        static constexpr Nnue::FeatureIndex fi(Side si, PieceType ty, Square sq) {
-            constexpr PieceType::arrayOf<PieceType::_t> pieceType = {Pawn, Knight, Bishop, Rook, Queen, King};
-            return Nnue::FeatureIndex{ 6*64*si.v() + 64*pieceType[ty] + (~sq).v() };
-        }
-
-        constexpr void move(Index i, Side si, Square from, PromoType toType, Square to) {
-            v_[i] -= w[fi(si, Pawn, from)][i];
-            v_[i] += w[fi(si, toType, to)][i];
-        }
+        Index::arrayOf<_t> v_;
 
         constexpr void move(Index i, Side si, PieceType ty, Square from, Square to) {
-            v_[i] -= w[fi(si, ty, from)][i];
-            v_[i] += w[fi(si, ty, to)][i];
+            v_[i] -= w[Fi{si, ty, from}][i];
+            v_[i] += w[Fi{si, ty, to}][i];
+        }
+
+        constexpr void promote(Index i, Side si, Square from, PromoType promoted, Square to) {
+            v_[i] -= w[Fi{si, Pawn, from}][i];
+            v_[i] += w[Fi{si, promoted, to}][i];
         }
 
         constexpr void capture(Index i, Side si, NonKingType captured, Square to) {
-            v_[i] -= w[fi(~si, captured, to)][i];
+            v_[i] -= w[Fi{~si, captured, to}][i];
         }
-
-        Index::arrayOf<Nnue::_t> v_;
 
     public:
         constexpr void clear() {
@@ -135,7 +138,7 @@ class CACHE_ALIGN Accumulator {
 
         void drop(Side si, PieceType ty, Square to) {
             for (auto i : range<Index>()) {
-                v_[i] += w[fi(si, ty, to)][i];
+                v_[i] += w[Fi{si, ty, to}][i];
             }
         }
 
@@ -152,15 +155,15 @@ class CACHE_ALIGN Accumulator {
             }
         }
 
-        void promote(Side si, PromoType promoted, Square from, Square to) {
+        void promote(Side si, Square from, PromoType promoted, Square to) {
             for (auto i : range<Index>()) {
-                move(i, si, from, promoted, to);
+                promote(i, si, from, promoted, to);
             }
         }
 
-        void promote(Side si, PromoType promoted, Square from, Square to, NonKingType captured) {
+        void promote(Side si, Square from, PromoType promoted, Square to, NonKingType captured) {
             for (auto i : range<Index>()) {
-                move(i, si, from, promoted, to);
+                promote(i, si, from, promoted, to);
                 capture(i, si, captured, to);
             }
         }
@@ -223,18 +226,18 @@ public:
         side[Side{My}].move(Side{Op}, ty, ~from, ~to, captured);
     }
 
-    void promote(PromoType promoted, Square from, Square to) {
+    void promote(Square from, PromoType promoted, Square to) {
         assert (from.on(Rank7));
         assert (to.on(Rank8));
-        side[Side{Op}].promote(Side{My}, promoted, from, to);
-        side[Side{My}].promote(Side{Op}, promoted, ~from, ~to);
+        side[Side{Op}].promote(Side{My}, from, promoted, to);
+        side[Side{My}].promote(Side{Op}, ~from, promoted, ~to);
     }
 
-    void promote(PromoType promoted, Square from, Square to, NonKingType captured) {
+    void promote(Square from, PromoType promoted, Square to, NonKingType captured) {
         assert (from.on(Rank7));
         assert (to.on(Rank8));
-        side[Side{Op}].promote(Side{My}, promoted, from, to, captured);
-        side[Side{My}].promote(Side{Op}, promoted, ~from, ~to, captured);
+        side[Side{Op}].promote(Side{My}, from, promoted, to, captured);
+        side[Side{My}].promote(Side{Op}, ~from, promoted, ~to, captured);
     }
 
     void ep(Square from, Square to, Square ep) {

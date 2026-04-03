@@ -9,18 +9,6 @@
 #define INCBIN_PREFIX
 #include "incbin.h"
 
-// global const default nnue value
-INCBIN(EmbeddedNnue, "net/quantised.bin");
-
-// global almost constant instance
-Nnue nnue;
-
-// copy NNUE weigths from embedded binary
-void Nnue::setEmbeddedEval() {
-    assert (EmbeddedNnueSize == sizeof(Nnue));
-    std::memcpy(this, EmbeddedNnueData, sizeof(Nnue));
-}
-
 /**
 * Startup constant initialization
 */
@@ -32,6 +20,18 @@ constexpr VectorOfAll vectorOfAll; // 4k 256*16
 constexpr PiSingle piSingle; // 256
 constinit CastlingRules castlingRules; // 128
 constinit PieceCountTable pieceCountTable; // 48 6*8
+
+// global const default nnue value
+INCBIN(EmbeddedNnue, "net/quantised.bin");
+
+// global almost constant instance
+Nnue nnue;
+
+// copy NNUE weigths from embedded binary
+void Nnue::setEmbeddedEval() {
+    assert (EmbeddedNnueSize == sizeof(Nnue));
+    std::memcpy(this, EmbeddedNnueData, sizeof(Nnue));
+}
 
 // global Uci instance
 Uci The_uci(std::cout);
