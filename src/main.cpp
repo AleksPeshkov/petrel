@@ -8,19 +8,8 @@
 #include "Uci.hpp"
 
 #define INCBIN_PREFIX
+#define INCBIN_STYLE INCBIN_STYLE_SNAKE
 #include "incbin.h"
-
-// global const default nnue value
-INCBIN(EmbeddedNnue, "net/quantised.bin");
-
-// global almost constant instance
-Nnue nnue;
-
-// copy NNUE weigths from embedded binary
-void Nnue::setEmbeddedEval() {
-    assert (EmbeddedNnueSize == sizeof(Nnue));
-    std::memcpy(this, EmbeddedNnueData, sizeof(Nnue));
-}
 
 /**
 * Startup constant initialization
@@ -31,6 +20,18 @@ constinit const HyperbolaSq hyperbolaSq; // 1k 64*16
 constinit const AttacksFrom attacksFrom; // 3k 6*64*8
 constinit const CastlingRules castlingRules; // 128
 constinit const PieceCountTable pieceCountTable; // 48 6*8
+
+// global const default nnue value
+INCBIN(incbin_nnue, "net/quantised.bin");
+
+// global almost constant instance
+Nnue nnue;
+
+// copy NNUE weigths from embedded binary
+void Nnue::setEmbeddedEval() {
+    assert (incbin_nnue_size == sizeof(Nnue));
+    std::memcpy(this, incbin_nnue_data, sizeof(Nnue));
+}
 
 // global Uci instance
 Uci The_uci(std::cout);
@@ -52,7 +53,7 @@ void assert_fail(const char* assertion, const char* file, unsigned int line, con
 #endif
 
 int main(int argc, const char* argv[]) {
-    if (EmbeddedNnueSize != sizeof(Nnue)) {
+    if (incbin_nnue_size != sizeof(Nnue)) {
         std::cerr << "petrel: fatal error: embedded NNUE data file has invalid size, expected " << sizeof(Nnue) << " bytes, \n";
         return ENOEXEC;
     }
