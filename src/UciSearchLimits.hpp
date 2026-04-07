@@ -27,8 +27,8 @@ inline TimeInterval elapsedSince(TimePoint start) { return ::timeNow() - start; 
 class Position;
 
 class UciSearchLimits {
-    // IterationDeadline = ~2/3, HardDeadline = ~3x of averageMoveTime
-    enum deadline_t { IterationDeadline = 13, AverageTimeScale = 20, HardDeadline = 64 };
+    // IterationDeadline = x0.6, HardDeadline = x3.2 of averageMoveTime
+    enum deadline_t { IterationDeadline = 12, AverageTimeScale = 20, HardDeadline = 64 };
 
     // EasyMove = 3/5, HardMove = 8/5 (Fibonacci numbers)
     enum move_control_t { ExactTime = 0, EasyMove = 3, NormalMove = 5, HardMove = 8 };
@@ -75,6 +75,7 @@ class UciSearchLimits {
 
     mutable move_control_t timeControl_{ExactTime}; // ExactTime = 0, EasyMove = 3, NormalMove = 5, HardMove = 8
     mutable UciMove easyMove_{}; // previous root best move (for EasyMove / NormalMove / HardMove strategy)
+    mutable Score easyScore_{}; // previous root score (for EasyMove / NormalMove / HardMove strategy)
     bool isNewGame_{true}; // the first move after ucinewgame will spend more thinking time
 
 // UCI configurable options
@@ -134,7 +135,7 @@ public:
 
     [[nodiscard]] ReturnStatus hardDeadlineReached() const;
     [[nodiscard]] ReturnStatus iterationDeadlineReached() const;
-    [[nodiscard]] ReturnStatus updateMoveComplexity(UciMove) const;
+    [[nodiscard]] ReturnStatus updateMoveComplexity(UciMove, Score) const;
 };
 
 #endif

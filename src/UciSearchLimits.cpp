@@ -20,7 +20,8 @@ void UciSearchLimits::newSearch() {
 
     timePool_ = UnlimitedTime;
     timeControl_ = ExactTime;
-    easyMove_ = UciMove{};
+    easyMove_ = {};
+    easyScore_ = {};
     iterLowMaterialBonus_ = 0;
 
     maxDepth_ = MaxPly;
@@ -94,20 +95,24 @@ ReturnStatus UciSearchLimits::reachedTime() const {
 ReturnStatus UciSearchLimits::hardDeadlineReached() const { return reachedTime<HardDeadline>(); }
 ReturnStatus UciSearchLimits::iterationDeadlineReached() const { return reachedTime<IterationDeadline>(); }
 
-ReturnStatus UciSearchLimits::updateMoveComplexity(UciMove bestMove) const {
+ReturnStatus UciSearchLimits::updateMoveComplexity(UciMove bestMove, Score rootScore) const {
     if (timeControl_ == ExactTime) { return ReturnStatus::Continue; }
 
     if (easyMove_.none()) {
         // Easy Move: root best move never changed
-        easyMove_ = bestMove;
+        timeControl_ = EasyMove;
+    } else if (rootScore.isEval() && rootScore + 40_cp < easyScore_) {
+        // score drops, spend more time
+        timeControl_ = HardMove;
     } else if (easyMove_ != bestMove) {
-        easyMove_ = bestMove;
         // Hard Move: root best move just have changed
         timeControl_ = HardMove;
     } else if (timeControl_ == HardMove) {
         // Normal Move: root best move have not changed during last two iterations
         timeControl_ = NormalMove;
     }
+    easyMove_ = bestMove;
+    easyScore_ = rootScore;
 
     // good place to check as there are no wasted search nodes
     // and timeControl_ just possibly changed

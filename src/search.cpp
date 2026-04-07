@@ -599,7 +599,7 @@ ReturnStatus Node::updatePv() const {
         pvIndex = root.pv.set(depth - 1_ply, score, bestMove, child->pvIndex);
         child->pvIndex = PrincipalVariation::Index{pvIndex.v() + 1};
 
-        RETURN_IF_STOP (root.limits.updateMoveComplexity(bestMove));
+        RETURN_IF_STOP (root.limits.updateMoveComplexity(bestMove, score));
 
         ::insert_unique(root.rootBestMoves, bestMove);
         if (depth > 1_ply) { root.info_pv(); }
