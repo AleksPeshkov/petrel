@@ -15,14 +15,15 @@ TtSlot::TtSlot (const Node* n) : TtSlot{
 } {}
 
 Node::Node (const PositionMoves& p, const Uci& r) :
-    PositionMoves{p}, root{r}, parent{nullptr}, grandParent{nullptr}, ply{0}, plyPv{0_ply},
-    alpha{MateLoss}, beta{MateWin}, pvIndex{0}
+    PositionMoves{p}, root{r}, parent{nullptr}, grandParent{nullptr}, ply{0},
+    alpha{MateLoss}, beta{MateWin}, pvPly{0_ply}, pvIndex{0}
 {}
 
 Node::Node (const Node* p) :
-    PositionMoves{}, root{p->root}, parent{p}, grandParent{p->parent},
-    ply{p->ply + 1_ply}, plyPv{p->isPv() ? ply : p->plyPv},
-    alpha{-p->beta}, beta{-p->alpha}, pvIndex{p->pvIndex.v()+1}
+    PositionMoves{}, root{p->root}, parent{p}, grandParent{p->parent}, ply{p->ply + 1_ply},
+    alpha{-p->beta}, beta{-p->alpha},
+    pvPly{p->isPv() ? ply : p->pvPly},
+    pvIndex{p->pvIndex.v()+1}
 {
     if (grandParent) {
         killer[0] = grandParent->killer[0];
@@ -73,7 +74,7 @@ ReturnStatus Node::negamax(Ply R) const {
         assert (currentMove.any()); // null move in PV is not allowed
 
         if (!child->isPv()) {
-            child->plyPv = child->ply;
+            child->pvPly = child->ply;
             assert (child->isPv());
             child->alpha = -beta;
             assert (child->beta == -alpha);
@@ -89,7 +90,7 @@ ReturnStatus Node::negamax(Ply R) const {
 
     // set zero window for the next sibling move search
     child->alpha = child->beta.minus1(); // can be either 1 centipawn or 1 mate distance ply
-    child->plyPv = plyPv;
+    child->pvPly = pvPly;
 
     assert (child->beta == -alpha);
     return ReturnStatus::Continue;

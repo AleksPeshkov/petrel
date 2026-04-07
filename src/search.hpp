@@ -6,12 +6,6 @@
 
 class Node;
 
-enum Bound : u8_t { NoBound,
-    FailLow = 0b01, // upper bound
-    FailHigh = 0b10, // lower bound
-    ExactScore = FailLow | FailHigh
-};
-
 // 8 byte, always replace slot, so no age field, only one score, depth and bound flags
 class TtSlot {
     enum shift_t {
@@ -81,7 +75,6 @@ protected:
 
     Ply ply; // distance from root (root is ply == 0)
     Ply depth{0}; // remaining depth to horizon (should be set before search)
-    Ply plyPv; // ply of nearest PV node, if plyPv == ply, this is PV node
 
     TtSlot* tt; // pointer to the slot in TT
     TtSlot  ttSlot;
@@ -90,6 +83,7 @@ protected:
 
     mutable Score alpha; // alpha-beta window lower margin
     Score beta; // alpha-beta window upper margin
+    Ply pvPly; // ply of nearest PV node, if pvPly == ply, this is PV node
     mutable Score score{NoScore}; // best score found so far
     mutable Bound bound{FailLow}; // FailLow is default unless have found Exact or FailHigh move later
 
@@ -132,9 +126,9 @@ protected:
 
     constexpr Color colorToMove() const; // current node's side to move color
     constexpr bool isRoot() const { assert (parent == nullptr || ply > 0_ply); return parent == nullptr; } // ply == 0
-    constexpr bool isPv() const { return ply == plyPv; } // ply == plyPv
-    constexpr bool isCutNode() const { return (ply - plyPv).v() & 1; } // odd (ply - plyPv)
-    constexpr bool isAllNode() const { return !isPv() && !isCutNode(); } // even (plv - plyPv)
+    constexpr bool isPv() const { return ply == pvPly; } // ply == pvPly
+    constexpr bool isCutNode() const { return (ply - pvPly).v() & 1; } // odd (ply - pvPly)
+    constexpr bool isAllNode() const { return !isPv() && !isCutNode(); } // even (plv - pvPly)
     constexpr Ply depthR() const { assert (!isRoot()); return parent->depth - depth; } // parent->depth - depth
     Ply adjustDepthR(Ply) const;
 

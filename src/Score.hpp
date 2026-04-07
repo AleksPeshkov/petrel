@@ -3,6 +3,44 @@
 
 #include "Index.hpp"
 
+// search tree distance in halfmoves
+struct Ply : Index<Ply, 64> {
+    constexpr explicit Ply(_t n) : Index{n > 0 ? n : 0} { assertOk(); }
+    friend constexpr Ply operator""_ply(unsigned long long);
+    friend constexpr Ply operator + (Ply a, Ply b) { return Ply{a.v_ + b.v_}; }
+    friend constexpr Ply operator - (Ply a, Ply b) { return Ply{a.v_ - b.v_}; }
+    friend constexpr Ply operator * (Ply a, int n) { return Ply{a.v_ * n}; }
+    friend constexpr Ply operator / (Ply a, int n) { return Ply{a.v_ / n}; }
+
+    friend ostream& operator << (ostream& os, Ply ply) { return os << ply.v_; }
+
+    friend istream& operator >> (istream& is, Ply& ply) {
+        _t n;
+        auto before = is.tellg();
+        is >> n;
+        if (!(0 <= n && n <= Last)) { return io::fail_pos(is, before); }
+        ply = Ply{n};
+        return is;
+    }
+};
+constexpr Ply MaxPly{Ply::Last}; // Ply is limited to [0 .. MaxPly]
+constexpr Ply operator""_ply(unsigned long long n) { return Ply{static_cast<Ply::_t>(n)}; }
+
+// color to move of the given ply
+constexpr Color::_t distance(Color c, Ply ply) { return static_cast<Color::_t>((ply.v() ^ static_cast<unsigned>(c.v())) & Color::Mask); }
+
+enum Bound : u8_t {
+    NoBound = 0,
+    FailLow = 0b01, // upper bound
+    FailHigh = 0b10, // lower bound
+    ExactScore = FailLow | FailHigh,
+    BoundMask = ExactScore
+};
+
+constexpr Bound operator ~ (Bound bound) {
+    return (bound == FailLow) ? FailHigh : (bound == FailHigh) ? FailLow : bound;
+}
+
 static constexpr int ScoreBitSize = 14;
 
 // position evaluation score, fits in 14 bits

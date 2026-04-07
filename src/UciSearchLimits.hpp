@@ -4,7 +4,7 @@
 #include <atomic>
 #include <chrono>
 #include "io.hpp"
-#include "Index.hpp"
+#include "Score.hpp"
 
 using namespace std::chrono_literals;
 
