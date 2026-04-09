@@ -184,17 +184,18 @@ void rtrim(std::string& str) {
 class Output : public io::ostringstream {
 protected:
     const Uci& uci;
+    bool flush_;
 public:
-    Output (const Uci* u) : io::ostringstream{}, uci{*u} {}
-    io::ostringstream& flush() { uci.output(str()); str(""); return *this; }
-    ~Output () { flush(); }
+    Output (const Uci* u, bool flush = true) : io::ostringstream{}, uci{*u}, flush_{flush} {}
+    io::ostringstream& flush(bool _flush = true) { uci.output(str(), _flush); str(""); return *this; }
+    ~Output () { flush(flush_); }
 };
 
 // std::ostringstream UciMove capable output buffer, flushed on destruction
 class UciOutput : public Output {
     Color colorToMove;
 public:
-    UciOutput(const Uci* u) : Output{u}, colorToMove{uci.colorToMove()} {}
+    UciOutput(const Uci* u, bool flush = true) : Output{u, flush}, colorToMove{uci.colorToMove()} {}
     ChessVariant chessVariant() const { return uci.chessVariant(); }
     Color color() const { return colorToMove; }
     Color flipColor() { return Color{colorToMove.flip()}; }
@@ -785,19 +786,19 @@ void Uci::newIteration() const {
     tt.newIteration();
 }
 
-void Uci::output(std::string_view message) const {
+void Uci::output(std::string_view message, bool flush) const {
     if (message.empty()) { return; }
 
     {
         std::lock_guard<decltype(outMutex)> lock{outMutex};
         out_ << message << '\n';
-        out_.flush();
+        if (flush) { out_.flush(); }
 
-        if (debugOn_ && !logFileName.empty()) { _log('<', message); }
+        if (debugOn_ && !logFileName.empty()) { _log('<', message, flush); }
     }
 }
 
-void Uci::_log(io::char_type tag, std::string_view message) const {
+void Uci::_log(io::char_type tag, std::string_view message, bool flush) const {
     assert (!logFileName.empty() && logFile.is_open());
 
     if (!logFile && !logFileName.empty()) {
@@ -814,7 +815,7 @@ void Uci::_log(io::char_type tag, std::string_view message) const {
     logFile << pid_ << " " << ms << '.' << std::setfill('0') << std::setw(3) << us << " ";
 
     logFile << tag << message << '\n';
-    logFile.flush();
+    if (flush) { logFile.flush(); }
 }
 
 void Uci::log(io::char_type tag, std::string_view message) const {
@@ -1158,7 +1159,13 @@ void Uci::ponderhit() {
 }
 
 void Uci::info_pv() const {
-    UciOutput ob{this};
+#ifdef NDEBUG
+    bool flush = limits.getNodes() >= 1'000'000;
+#else
+    bool flush = true;
+#endif
+
+    UciOutput ob{this, flush};
     ::info_pv(ob, pv, limits);
 }
 

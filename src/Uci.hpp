@@ -100,8 +100,8 @@ private:
     void goPerft();
     void bench();
 
-    void log(io::char_type tag, std::string_view) const; // log messages to the logFile named by logFileName
-    void _log(io::char_type tag, std::string_view) const; // log() without mutex
+    void log(io::char_type tag, std::string_view) const; // log messages to the file logFileName
+    void _log(io::char_type tag, std::string_view, bool flush = true) const; // write into logFile without mutex and logFileName check
 
     void sendDelayedBestMove() const;
     void info_readyok() const;
@@ -115,7 +115,7 @@ public:
     void processInput(istream&);
 
     // output to cout and (if debugOn_) to log file
-    void output(std::string_view) const;
+    void output(std::string_view, bool flush = true) const;
 
     // output to cerr and log file
     void error(std::string_view) const;
