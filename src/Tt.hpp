@@ -42,7 +42,11 @@ class Tt {
         zeroFill();
     }
 
-    constexpr uintptr_t mask(size_t align) const { return (size_-1) ^ (align-1); }
+    template <size_t Align>
+    constexpr uintptr_t mask() const {
+        static_assert (isSingleton(Align));
+        return (size_-1) ^ (Align-1);
+    }
 
 public:
     mutable node_count_t reads = 0;
@@ -65,24 +69,26 @@ public:
     void newSearch() { reads = 0; writes = 0; hits = 0; }
     void newIteration() const {}
 
-    constexpr void* addr(Z z, size_t align) const {
-        return static_cast<void*>(static_cast<char*>(memory) + (z.v() & mask(align)));
+    template <size_t Align>
+    constexpr void* addr(Z z) const {
+        return static_cast<void*>( static_cast<char*>(memory) + (z.v() & mask<Align>()) );
     }
 
     template <typename T>
     constexpr T* addr(Z z) const {
-        return static_cast<T*>( addr(z, sizeof(T)) );
+        return static_cast<T*>( addr<sizeof(T)>(z) );
     }
 
-    void* prefetch(Z z, size_t align) const {
-        auto ptr = addr(z, align);
+    template <size_t Align>
+    void* prefetch(Z z) const {
+        auto ptr = addr<Align>(z);
         __builtin_prefetch(ptr);
         return ptr;
     }
 
     template <typename T>
     T* prefetch(Z z) const {
-        return static_cast<T*>( prefetch(z, sizeof(T)) );
+        return static_cast<T*>( prefetch<sizeof(T)>(z) );
     }
 
 };

@@ -329,7 +329,7 @@ class PiType {
     constexpr vu8x16_t vector(PieceType::_t ty) const { return vector(element(ty)); }
 
     constexpr bool has(Pi pi, element_type e) const { assertOk(pi); return (static_cast<u8_t>(type[pi]) & static_cast<u8_t>(e)) != 0; }
-    constexpr bool is(Pi pi, PieceType::_t ty) const { assertOk(pi);  return has(pi, element(ty)); }
+    constexpr bool is(Pi pi, PieceType::_t ty) const { assertOk(pi); return has(pi, element(ty)); }
     constexpr PiMask any(element_type e) const { return PiMask::any(vu8x16 & vector(e)); }
 
 public:

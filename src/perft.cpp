@@ -319,7 +319,7 @@ ReturnStatus NodePerft::visitMove(Square from, Square to) {
         default: {
             assert (depth >= 2_ply);
             makeZobrist(parent, from, to);
-            root.tt.prefetch(z(), 64);
+            root.tt.prefetch<64>(z());
 
             RETURN_IF_STOP (root.limits.countNode());
             makeMoveNoZobrist(parent, from, to);

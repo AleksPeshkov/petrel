@@ -126,15 +126,13 @@ protected:
         return parent->isPossibleMove(move) ? searchMove(move.from(), move.to(), R) : ReturnStatus::Continue;
     }
 
+    constexpr Color colorToMove() const; // current node's side to move color
     constexpr bool isRoot() const { assert (parent == nullptr || ply > 0_ply); return parent == nullptr; } // ply == 0
     constexpr bool isPv() const { return ply == plyPv; } // ply == plyPv
     constexpr bool isCutNode() const { return (ply - plyPv).v() & 1; } // odd (ply - plyPv)
     constexpr bool isAllNode() const { return !isPv() && !isCutNode(); } // even (plv - plyPv)
     constexpr Ply depthR() const { assert (!isRoot()); return parent->depth - depth; } // parent->depth - depth
     Ply adjustDepthR(Ply) const;
-
-    // current node's side to move color
-    constexpr Color colorToMove() const;
 
     bool isDrawMaterial() const;
     bool isRepetition() const;

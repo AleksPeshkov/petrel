@@ -16,7 +16,7 @@ public:
     constexpr PiRank(Pi pi, File file) : PiRank{PiRank{file} & PiRank{pi}} {}
     constexpr PiRank(Pi pi, BitRank br) : PiRank{PiRank{br} & PiRank{pi}} {}
 
-    BitRank bb() const {
+    BitRank bitRank() const {
         u8_t r  = v_[0] | v_[1] | v_[2] | v_[3] | v_[4] | v_[5] | v_[6] | v_[7]
             | v_[8] | v_[9] | v_[10] | v_[11] | v_[12] | v_[13] | v_[14] | v_[15];
         return BitRank{r};
@@ -102,7 +102,7 @@ public:
     constexpr Bb bb() const {
         Rank::arrayOf<BitRank> br;
         for (auto rank : range<Rank>()) {
-            br[rank] = v_[rank].bb();
+            br[rank] = v_[rank].bitRank();
         }
         return Bb{std::bit_cast<Bb::_t>(br)};
     }
