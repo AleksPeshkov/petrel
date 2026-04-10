@@ -581,6 +581,8 @@ void Node::failHigh() {
 }
 
 ReturnStatus Node::updatePv() {
+    assert (isPseudoLegal(currentMove));
+
     if (depth > 0_ply) {
         bound = ExactScore;
         *tt = TtSlot{this};
@@ -591,10 +593,12 @@ ReturnStatus Node::updatePv() {
         updateHistory(currentMove);
     }
 
-    root.pv.set(pvIndex, uciMove(currentMove.from(), currentMove.to()), &child->pvIndex);
-    if (isRoot()) {
-        const auto& bestMove = root.pv.move(0_ply);
-        root.pv.set(depth, score);
+    auto bestMove = uciMove(currentMove.from(), currentMove.to());
+    if (!isRoot()) {
+        child->pvIndex = root.pv.set(pvIndex, bestMove, child->pvIndex);
+    } else {
+        pvIndex = root.pv.set(depth, score, bestMove, child->pvIndex);
+        child->pvIndex = PrincipalVariation::Index{+pvIndex+1};
 
         RETURN_IF_STOP (root.limits.updateTimeStrategy(root.pv));
 
@@ -712,8 +716,7 @@ ReturnStatus Node::searchRoot() {
 
     auto moveCount = rootMovesClone.popcount();
     if (moveCount == 0) {
-        root.pv.set(0_ply, inCheck() ? Score::mateLoss(0_ply) : Score{DrawScore});
-        return ReturnStatus::Continue;
+        maxDepth = 1_ply;
     } else if (moveCount == 1) {
         // minimal search to get score and ponder move
         maxDepth = root.limits.canPonder() ? 2_ply : 1_ply;
