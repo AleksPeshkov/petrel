@@ -24,17 +24,19 @@ class TtSlot {
     static constexpr _t ZMask{ U64(0xffff'ffff'ffff'ffff) << (64 - ZBits) };
 
 public:
-    constexpr TtSlot (Z z = {},
-        Score score = Score{NoScore},
-        Ply ply = 0_ply,
-        Bound bound = NoBound,
-        Ply draft = 0_ply,
-        Square from = Square{static_cast<Square::_t>(0)},
-        Square to = Square{static_cast<Square::_t>(0)},
-        bool canBeKiller = false
+    constexpr TtSlot () : v_{0} {}
+
+    constexpr TtSlot (Z z,
+        Score score,
+        Ply ply,
+        Bound bound,
+        Ply draft,
+        Square from,
+        Square to,
+        bool canBeKiller
     ) : v_{
         (z & ZMask)
-        | pack<_t>(score.toTt(ply), ShiftScore)
+        | pack<_t>(score.tt(ply), ShiftScore)
         | pack<_t>(bound, ShiftBound)
         | draft.pack<_t>(ShiftDraft)
         | from.pack<_t>(ShiftFrom)
