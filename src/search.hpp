@@ -29,17 +29,19 @@ class TtSlot {
     constexpr T get(shift_t shift, T mask) const { return static_cast<T>((v_ >> shift) & mask); }
 
 public:
-    constexpr TtSlot (Z z = {},
-        Score score = Score{NoScore},
-        Ply ply = 0_ply,
-        Bound bound = NoBound,
-        Ply draft = 0_ply,
-        Square from = Square{static_cast<Square::_t>(0)},
-        Square to = Square{static_cast<Square::_t>(0)},
-        bool canBeKiller = false
+    constexpr TtSlot () : v_{0} {}
+
+    constexpr TtSlot (Z z,
+        Score score,
+        Ply ply,
+        Bound bound,
+        Ply draft,
+        Square from,
+        Square to,
+        bool canBeKiller
     ) : v_{
         (z.v() & HashMask)
-        | v(score.toTt(ply), ScoreShift)
+        | v(score.tt(ply), ScoreShift)
         | v(bound, BoundShift)
         | v(draft.v(), DraftShift)
         | v(from.v(), FromShift)

@@ -142,7 +142,10 @@ ReturnStatus Node::search() {
     }
 
     do {
-        if (depth == 0_ply) { break; }
+        if (depth == 0_ply) {
+            ttHit = false;
+            break;
+        }
 
         ++root.tt.reads;
         ttSlot = *tt;
@@ -150,17 +153,24 @@ ReturnStatus Node::search() {
         ttHit = (ttSlot == z());
         if (!ttHit) { break; }
 
+        Bound ttBound = ttSlot.bound();
+        Score ttScore = ttSlot.score(ply);
+        if (ttScore.none()) {
+            // cleared TT or collision
+            ttHit = false;
+            break;
+        }
+
         bool ttHasMove = ttSlot.hasMove();
         Square ttFrom = ttSlot.from();
         Square ttTo = ttSlot.to();
         if (ttHasMove && !isPossibleMove(ttFrom, ttTo)) {
+            // collision
             ttHit = false;
             break;
         }
 
         ++root.tt.hits;
-        Bound ttBound = ttSlot.bound();
-        Score ttScore = ttSlot.score(ply);
 
         if (!isPv()
             && ttSlot.draft() >= depth
@@ -368,13 +378,15 @@ ReturnStatus Node::search() {
 
     if (bound == FailLow) {
         if (movesMade() == 0) {
+            assert (!inCheck());
             assert (currentMove.none());
             score = alpha;
             return ReturnStatus::Continue;
         }
+        assert (score.isOk(ply));
         // fail low, no good move found, write back previous TT move if any
         currentMove = ttMove();
-        *tt = TtSlot(this);
+        *tt = TtSlot{this};
         ++root.tt.writes;
     }
     return ReturnStatus::Continue;
@@ -554,6 +566,7 @@ void Node::failHigh() const {
         currentMove = ttMove();
     }
 
+    assert (score.isOk(ply));
     if (depth > 0_ply) {
         bound = FailHigh;
         *tt = TtSlot{this};
@@ -671,8 +684,9 @@ void refreshTtPv(const PositionMoves& p, const PrincipalVariation& pv, const Tt&
     Score score = pv.score();
     auto  pmoves = pv.moves();
 
-        for (UciMove move; (move = *pmoves++).any();) {
-            assert ((pos.generateMoves(), pos.isPossibleMove(move.from(), move.to())));
+    for (UciMove move; (move = *pmoves++).any();) {
+        assert (score.isOk(ply));
+        assert ((pos.generateMoves(), pos.isPossibleMove(move.from(), move.to())));
 
         auto o = tt.addr<TtSlot>(pos.z());
         *o = TtSlot{pos.z(), score, ply, ExactScore, depth, move.from(), move.to(), false};
