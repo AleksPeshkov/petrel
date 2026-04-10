@@ -90,7 +90,7 @@ protected:
     mutable Bound bound{FailLow}; // FailLow is default unless have found Exact or FailHigh move later
 
     mutable HistoryMove currentMove = {}; // last move made from *this into *child
-    PrincipalVariation::Index pvIndex; // start of subPV for the current ply
+    mutable PrincipalVariation::Index pvIndex; // start of subPV for the current ply
 
     // Killer heuristic
     mutable std::array<HistoryMove, 3> killer = {};
