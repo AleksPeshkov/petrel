@@ -66,44 +66,59 @@ public:
 
 class CACHE_ALIGN PrincipalVariation {
     // final PV size + triangular arrays of subPVs (including final null moves)
-    static constexpr auto triangularArraySize = Ply::size()*(Ply::size()+1) / 2;
+    static constexpr auto triangularArraySize = Ply::size() + Ply::size()*(Ply::size()+1) / 2;
 public:
     struct Index : ::Index<Index, triangularArraySize> { using ::Index<Index, triangularArraySize>::Index; };
-    array<UciMove, Index> moves_;
+    using Move = UciMove;
 
-    Ply   depth_{0}; // last root PV update iteration depth
-    Score score_{NoScore}; // last root PV update score
+private:
+    array<Move, Index> pv_;
+
+    Ply depth_{0}; // latest PV iteration depth
+    Score score_{NoScore}; // latest PV score
 
 public:
     PrincipalVariation () { clear(); }
 
     void clear() {
-        std::memset(&moves_, 0, sizeof(moves_));
         depth_ = 0_ply;
         score_ = Score{NoScore};
     }
 
-    void  set(Ply depth, Score score) { depth_ = depth; score_ = score; }
-    Ply   depth() const { return depth_; }
-    Score score() const { return score_; }
+    // clear child PV space: pv_[i] = {}
+    void clear(Index i) { pv_[i] = {}; }
 
-    void clear(Index i) { moves_[i] = UciMove{}; }
+    /// set parent PV move and copy child PV
+    /// @return Index of space past PV
+    Index set(Index parent, Move childMove, Index childPv) {
+        auto from = childPv;
+        auto to   = parent;
 
-    // set PV as child move plus child PV, update child PV index
-    void set(Index parent, UciMove move, Index* child) {
-        auto from = +(*child);
-        auto to   = +parent;
-        assert (to < from);
+        pv_[to++] = childMove;
+        if (from == to) {
+            // no need to copy, but still needs to find move list end
+            while ((pv_[to++]).any()) {}
+        } else {
+            assert (from > to);
+            // copies null move terminated move list (including last null)
+            while ((pv_[to++] = pv_[from++]).any()) {}
+        }
 
-        moves_[Index{to++}] = move;
-        // copies null move terminated move list (including last null)
-        while ((moves_[Index{to++}] = moves_[Index{from++}]).any()) {}
-
-        *child = Index{to};
+        return to; // new childPv
     }
 
-    const UciMove* moves() const { return &moves_[Index{0}]; }
-    UciMove move(Ply ply) const { return moves_[Index{+ply}]; }
+    /// set root PV depth, score and PV moves
+    /// @return Index of space past PV
+    Index set(Ply depth, Score score, Move bestRootMove, Index childPv) {
+        depth_ = depth;
+        score_ = score;
+        return set(Index{0}, bestRootMove, childPv);
+    }
+
+    const auto* moves() const { return &pv_[Index{0}]; }
+    auto move(Ply ply) const { return pv_[Index{+ply}]; }
+    auto depth() const { return depth_; }
+    auto score() const { return score_; }
 };
 
 // https://www.talkchess.com/forum/viewtopic.php?p=554664#p554664
