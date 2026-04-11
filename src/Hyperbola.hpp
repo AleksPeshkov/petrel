@@ -1,11 +1,10 @@
 #ifndef HYPERBOLA_HPP
 #define HYPERBOLA_HPP
 
-#include <type_traits>
 #include "bitops128.hpp"
 #include "Bb.hpp"
 
-// bitreverse all 128-bits (actually only 64-bits are needed)
+// bitreverse each byte
 constexpr vu8x16_t bitSwap(vu8x16_t v) {
     constexpr vu8x16_t nibbleSwap{
         0b0000, 0b1000, 0b0100, 0b1100,  // 0000 → 0000, 0001 → 1000, 0010 → 0100, 0011 → 1100
@@ -23,6 +22,7 @@ constexpr vu8x16_t byteSwap(vu8x16_t v) {
     return shufflevector(v, _byteSwap);
 }
 
+// bitreverse all 128-bits (actually only 64-bits are needed)
 constexpr vu64x2_t bitReverse(vu64x2_t v) {
 #ifdef __aarch64__
     if (std::is_constant_evaluated()) {

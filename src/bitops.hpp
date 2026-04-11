@@ -2,22 +2,22 @@
 #define BIT_OPS_HPP
 
 #include <algorithm>
+#include <array>
 #include <bit>
 #include <cstdint>
 #include <cstring>
+#include <type_traits>
 #include "assert.hpp"
 
-using std::size_t;
+#define CACHE_ALIGN alignas(64)
 
+using std::size_t;
 using i8_t = std::int8_t;
 using u8_t = std::uint8_t;
-
 using i16_t = std::int16_t;
 using u16_t = std::uint16_t;
-
 using i32_t = std::int32_t;
 using u32_t = std::uint32_t;
-
 using i64_t = std::int64_t;
 using u64_t = std::uint64_t;
 
@@ -26,8 +26,6 @@ using u64_t = std::uint64_t;
 #else
 #   define U64(number) number##ul
 #endif
-
-#define CACHE_ALIGN alignas(64)
 
 template <typename T> [[nodiscard]] constexpr bool operator != (T a, T b) { return !(a == b); }
 template <typename T> [[nodiscard]] constexpr bool operator >  (T a, T b) { return b < a; }
