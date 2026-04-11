@@ -44,7 +44,7 @@ public:
 
 class CACHE_ALIGN HashBucket {
 public:
-    using _t = vu64x2_t;
+    using _t = u64x2_t;
 
 private:
     std::array<_t, 4> v_;

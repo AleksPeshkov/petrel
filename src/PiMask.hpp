@@ -1,19 +1,78 @@
 #ifndef PI_MASK_HPP
 #define PI_MASK_HPP
 
+#if defined __aarch64__
+
+#include <arm_neon.h>
+#define NEON_VECTOR
+
+#endif
+
 #include "Index.hpp"
 #include "bitops128.hpp"
 #include "BitArray.hpp"
 
+constexpr u8x16_t all(u8_t i) { return u8x16_t{ i,i,i,i, i,i,i,i, i,i,i,i, i,i,i,i }; }
+
+constexpr u8_t u8(u8x16_t v, int i) {
+    return std::bit_cast<std::array<u8_t, 16>>(v)[i];
+}
+
+#ifndef NEON_VECTOR
+
+constexpr int mask(u8x16_t v) {
+    if (std::is_constant_evaluated()) {
+        int result = 0;
+        for (int i = 0; i < 16; ++i) {
+            result |= (::u8(v, i) >> 7) << i;
+        }
+        return result;
+    /*
+        // much faster, but somehow broke clang linker
+        // https://stackoverflow.com/questions/74722950/convert-vector-compare-mask-into-bit-mask-in-aarch64-simd-or-arm-neon
+        int hi = (::u64(v, 1) * U64(0x000103070f1f3f80)) >> 56;
+        int lo = (::u64(v, 0) * U64(0x000103070f1f3f80)) >> 56;
+        return (hi << 8) + lo;
+    */
+    } else {
+        return __builtin_ia32_pmovmskb128(v);
+    }
+}
+
+constexpr bool equals(u8x16_t a, u8x16_t b) {
+    return mask(a == b) == 0xffffu;
+}
+
+#else
+
+// https://community.arm.com/arm-community-blogs/b/servers-and-cloud-computing-blog/posts/porting-x86-vector-bitmask-optimizations-to-arm-neon
+constexpr u64_t mask4(u8x16_t v) {
+    if (std::is_constant_evaluated()) {
+        u64_t result = 0;
+        for (int i = 0; i < 16; ++i) {
+            result |= static_cast<u64_t>(::u8(v, i) >> 4) << (i << 2);
+        }
+        return result;
+    } else {
+        return vget_lane_u64(vreinterpret_u64_u8(vshrn_n_u16(vreinterpretq_u16_u8(v), 4)), 0);
+    }
+}
+
+constexpr bool equals(u8x16_t a, u8x16_t b) {
+    return mask4(a == b) == U64(0xffff'ffff'ffff'ffff);
+}
+
+#endif // NEON_VECTOR
+
 template <>
-struct BitArrayOps<vu8x16_t> {
-    using _t = vu8x16_t;
+struct BitArrayOps<u8x16_t> {
+    using _t = u8x16_t;
     using Arg = const _t&;
     static bool equals(Arg a, Arg b) { return ::equals(a, b); }
 };
 
 class CACHE_ALIGN VectorOfAll {
-    using _t = vu8x16_t;
+    using _t = u8x16_t;
     struct Index; STRUCT_INDEX (Index, 0x100);
     Index::arrayOf<_t> v_;
 
@@ -88,7 +147,7 @@ public:
 #endif // NEON_VECTOR
 
 class PiSingle {
-    using _t = vu8x16_t;
+    using _t = u8x16_t;
     Pi::arrayOf<_t> v_;
 
 public:
@@ -96,7 +155,7 @@ public:
         for (auto pi : range<Pi>()) {
             std::array<uint8_t, 16> vec = {}; // zero
             vec[static_cast<int>(pi.v())] = 0xff;
-            v_[pi] = std::bit_cast<vu8x16_t>(vec);
+            v_[pi] = std::bit_cast<u8x16_t>(vec);
         }
     }
 
@@ -106,9 +165,9 @@ public:
 extern const PiSingle piSingle;
 
 ///piece vector of boolean values: false (0) or true (0xff)
-class PiMask : public BitArray<PiMask, vu8x16_t> {
-    using Base = BitArray<PiMask, vu8x16_t>;
-    friend class BitArray<PiMask, vu8x16_t>;
+class PiMask : public BitArray<PiMask, u8x16_t> {
+    using Base = BitArray<PiMask, u8x16_t>;
+    friend class BitArray<PiMask, u8x16_t>;
 
     using Base::v_;
 
@@ -175,12 +234,12 @@ class PiSquare {
     // defined to make debugging clear
     union {
         Pi::arrayOf<_t> square;
-        vu8x16_t vu8x16;
+        u8x16_t u8x16;
     };
 
     constexpr void set(Pi pi, _t sq) { square[pi] = sq; }
     constexpr void set(Pi pi, Square sq) { square[pi] = sq.v(); }
-    constexpr vu8x16_t vector(_t e) const { return ::vectorOfAll[e]; }
+    constexpr u8x16_t vector(_t e) const { return ::vectorOfAll[e]; }
 
 public:
     constexpr PiSquare () {
@@ -224,12 +283,12 @@ public:
     constexpr Pi pi(_t sq) const { assert (has(sq)); return piecesAt(sq).pi(); }
     constexpr Pi pi(Square sq) const { return pi(sq.v()); }
 
-    constexpr PiMask pieces() const { return PiMask::notEquals(vu8x16, ::all(None)); }
-    constexpr PiMask piecesAt(_t sq) const { return PiMask::equals(vu8x16, vector(sq)); }
+    constexpr PiMask pieces() const { return PiMask::notEquals(u8x16, ::all(None)); }
+    constexpr PiMask piecesAt(_t sq) const { return PiMask::equals(u8x16, vector(sq)); }
 
     constexpr PiMask piecesOn(Rank::_t rank) const {
         return PiMask::equals(
-            vu8x16 & vector(static_cast<_t>(None ^ static_cast<_t>(File::Mask))),
+            u8x16 & vector(static_cast<_t>(None ^ static_cast<_t>(File::Mask))),
             vector(Square{static_cast<File::_t>(0), rank}.v())
         );
     }
@@ -277,17 +336,17 @@ class PiType {
     // defined to make debugging clear
     union {
         Pi::arrayOf<pieces_t> type;
-        vu8x16_t vu8x16;
+        u8x16_t u8x16;
     };
 
     constexpr element_type element(PieceType::_t ty) const { return static_cast<element_type>(::singleton<u8_t>(ty)); }
     constexpr element_type element(PieceType ty) const { return element(ty.v()); }
-    constexpr vu8x16_t vector(element_type e) const { return ::vectorOfAll[static_cast<u8_t>(e)]; }
-    constexpr vu8x16_t vector(PieceType::_t ty) const { return vector(element(ty)); }
+    constexpr u8x16_t vector(element_type e) const { return ::vectorOfAll[static_cast<u8_t>(e)]; }
+    constexpr u8x16_t vector(PieceType::_t ty) const { return vector(element(ty)); }
 
     constexpr bool has(Pi pi, element_type e) const { assertOk(pi); return (static_cast<u8_t>(type[pi]) & static_cast<u8_t>(e)) != 0; }
     constexpr bool is(Pi pi, PieceType::_t ty) const { assertOk(pi);  return has(pi, element(ty)); }
-    constexpr PiMask any(element_type e) const { return PiMask::any(vu8x16 & vector(e)); }
+    constexpr PiMask any(element_type e) const { return PiMask::any(u8x16 & vector(e)); }
 
 public:
     constexpr PiType () {
@@ -314,7 +373,7 @@ public:
     constexpr bool isSlider(Pi pi) const { assertOk(pi); return has(pi, Sliders); }
     constexpr PieceType typeOf(Pi pi) const { assertOk(pi); return PieceType{static_cast<PieceType::_t>( ::lsb(static_cast<unsigned>(type[pi])) )}; }
 
-    constexpr PiMask pieces() const { return PiMask::any(vu8x16); }
+    constexpr PiMask pieces() const { return PiMask::any(u8x16); }
     constexpr PiMask piecesOfType(PieceType::_t ty) const { assert (!PieceType{ty}.is(King)); return any(element(ty)); }
     constexpr PiMask piecesOfType(PieceType ty) const { return piecesOfType(ty.v()); }
 
@@ -356,11 +415,11 @@ class PiTrait {
     // defined to make debugging clear
     union {
         Pi::arrayOf<element_type> trait;
-        vu8x16_t vu8x16;
+        u8x16_t u8x16;
     };
 
-    constexpr PiMask any(element_type e) const { return PiMask::any(vu8x16 & ::vectorOfAll[static_cast<u8_t>(e)]); }
-    constexpr void clear(element_type e) { vu8x16 &= ::vectorOfAll[0xff ^ static_cast<u8_t>(e)]; }
+    constexpr PiMask any(element_type e) const { return PiMask::any(u8x16 & ::vectorOfAll[static_cast<u8_t>(e)]); }
+    constexpr void clear(element_type e) { u8x16 &= ::vectorOfAll[0xff ^ static_cast<u8_t>(e)]; }
 
     constexpr bool has(Pi pi, element_type e) const {
         return (static_cast<u8_t>(trait[pi]) & static_cast<u8_t>(e)) != 0;
@@ -412,7 +471,7 @@ public:
 };
 
 class ShuffleToFront {
-    std::array<vu8x16_t, 16> shuffle;
+    std::array<u8x16_t, 16> shuffle;
 public:
     constexpr ShuffleToFront() : shuffle{{
         {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15},
@@ -433,7 +492,7 @@ public:
         {15,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14},
     }} {}
 
-    constexpr const vu8x16_t& operator[] (Pi pi) const { return shuffle[pi.v()]; }
+    constexpr const u8x16_t& operator[] (Pi pi) const { return shuffle[pi.v()]; }
 };
 
 class PiOrder {
@@ -441,17 +500,17 @@ class PiOrder {
 
     union {
         PiArray order;
-        vu8x16_t vu8x16;
+        u8x16_t u8x16;
     };
 
     static constexpr ShuffleToFront shuffleToFront{};
-    static constexpr vu8x16_t ordered = shuffleToFront[Pi{static_cast<Pi::_t>(0)}];
+    static constexpr u8x16_t ordered = shuffleToFront[Pi{static_cast<Pi::_t>(0)}];
 
     constexpr bool isOk() const {
         // check all values [0, 15] are represented
         u32_t mask = 0;
         for (int i = 0; i < 16; ++i) {
-            mask |= ::singleton<int>(::u8(vu8x16, i));
+            mask |= ::singleton<int>(::u8(u8x16, i));
         }
         return ::popcount(mask) == 16;
     }
@@ -459,19 +518,19 @@ class PiOrder {
     constexpr void assertOk() const { assert (isOk()); }
 
 public:
-    constexpr PiOrder () : vu8x16{ordered} { assertOk(); }
+    constexpr PiOrder () : u8x16{ordered} { assertOk(); }
 
     constexpr PiMask operator () (PiMask pieces) const {
-        return PiMask{::shufflevector(pieces.v(), vu8x16)};
+        return PiMask{::shuffle(pieces.v(), u8x16)};
     }
 
     constexpr const Pi& operator[] (Pi pi) const { return order[pi]; }
 
     PiOrder& forward(Pi pi) {
         // find index of pi in the shuffled vector
-        PiMask mask = PiMask::equals(vu8x16, ::vectorOfAll[pi]);
+        PiMask mask = PiMask::equals(u8x16, ::vectorOfAll[pi]);
         // shuffle selected pi to the first position
-        vu8x16 = ::shufflevector(vu8x16, std::bit_cast<vu8x16_t>(shuffleToFront[mask.pi()]));
+        u8x16 = ::shuffle(u8x16, std::bit_cast<u8x16_t>(shuffleToFront[mask.pi()]));
         assertOk();
         return *this;
     }

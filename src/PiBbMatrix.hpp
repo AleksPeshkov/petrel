@@ -4,8 +4,8 @@
 #include "Bb.hpp"
 #include "PiMask.hpp"
 
-class PiRank : public BitArray<PiRank, vu8x16_t> {
-    using Base = BitArray<PiRank, vu8x16_t>;
+class PiRank : public BitArray<PiRank, u8x16_t> {
+    using Base = BitArray<PiRank, u8x16_t>;
 
 public:
     using Base::Base;

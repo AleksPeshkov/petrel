@@ -1,29 +1,29 @@
 #ifndef HYPERBOLA_HPP
 #define HYPERBOLA_HPP
 
-#include <type_traits>
 #include "bitops128.hpp"
 #include "Bb.hpp"
 
-// bitreverse all 128-bits (actually only 64-bits are needed)
-constexpr vu8x16_t bitSwap(vu8x16_t v) {
-    constexpr vu8x16_t nibbleSwap{
+// bitreverse each byte
+constexpr u8x16_t bitSwap(u8x16_t v) {
+    constexpr u8x16_t nibbleSwap{
         0b0000, 0b1000, 0b0100, 0b1100,  // 0000 → 0000, 0001 → 1000, 0010 → 0100, 0011 → 1100
         0b0010, 0b1010, 0b0110, 0b1110,  // 0100 → 0010, 0101 → 1010, 0110 → 0110, 0111 → 1110
         0b0001, 0b1001, 0b0101, 0b1101,  // 1000 → 0001, 1001 → 1001, 1010 → 0101, 1011 → 1101
         0b0011, 0b1011, 0b0111, 0b1111,  // 1100 → 0011, 1101 → 1011, 1110 → 0111, 1111 → 1111
     };
-    auto hi = shufflevector(nibbleSwap, (v >> 4) & 0b1111);
-    auto lo = shufflevector(nibbleSwap << 4, v & 0b1111);
+    auto hi = shuffle(nibbleSwap, (v >> 4) & 0b1111);
+    auto lo = shuffle(nibbleSwap << 4, v & 0b1111);
     return lo | hi;
 }
 
-constexpr vu8x16_t byteSwap(vu8x16_t v) {
-    constexpr vu8x16_t _byteSwap{15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0,};
-    return shufflevector(v, _byteSwap);
+constexpr u8x16_t byteSwap(u8x16_t v) {
+    constexpr u8x16_t _byteSwap{15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0,};
+    return shuffle(v, _byteSwap);
 }
 
-constexpr vu64x2_t bitReverse(vu64x2_t v) {
+// bitreverse all 128-bits (actually only 64-bits are needed)
+constexpr u64x2_t bitReverse(u64x2_t v) {
 #ifdef __aarch64__
     if (std::is_constant_evaluated()) {
         return byteSwap(bitSwap(v));
@@ -35,28 +35,28 @@ constexpr vu64x2_t bitReverse(vu64x2_t v) {
 #endif
 }
 
-constexpr vu64x2_t vu64x2(Bb a, Bb b) {
-    return vu64x2_t{ a.v(), b.v() };
+constexpr u64x2_t u64x2(Bb a, Bb b) {
+    return u64x2_t{ a.v(), b.v() };
 }
 
 //TRICK: Square operator~ is different
 constexpr Square reverse(Square sq) { return Square{ ~File{sq}, ~Rank{sq} }; }
 
-struct CACHE_ALIGN HyperbolaSq : Square::arrayOf<vu64x2_t> {
+struct CACHE_ALIGN HyperbolaSq : Square::arrayOf<u64x2_t> {
     consteval HyperbolaSq () {
         for (auto sq : range<Square>()) {
-            (*this)[sq] = vu64x2(Bb{sq}, Bb{::reverse(sq)});
+            (*this)[sq] = u64x2(Bb{sq}, Bb{::reverse(sq)});
         }
     }
 };
 extern constinit HyperbolaSq hyperbolaSq;
 
-struct CACHE_ALIGN HyperbolaDir : Square::arrayOf<Direction::arrayOf<vu64x2_t>> {
+struct CACHE_ALIGN HyperbolaDir : Square::arrayOf<Direction::arrayOf<u64x2_t>> {
     consteval HyperbolaDir () {
         for (auto sq : range<Square>()) {
             Square rsq{::reverse(sq)};
             for (auto dir : range<Direction>()) {
-                (*this)[sq][dir] = vu64x2(sq.bbDirection(dir), rsq.bbDirection(dir));
+                (*this)[sq][dir] = u64x2(sq.bbDirection(dir), rsq.bbDirection(dir));
             }
         }
     }
@@ -69,13 +69,13 @@ extern constinit HyperbolaDir hyperbolaDir;
  * https://www.chessprogramming.org/Hyperbola_Quintessence
  */
 class alignas(32) Hyperbola {
-    vu64x2_t occupied;
+    u64x2_t occupied;
 
-    static constexpr vu64x2_t hyperbola(vu64x2_t v) { return v ^ bitReverse(v); }
+    static constexpr u64x2_t hyperbola(u64x2_t v) { return v ^ bitReverse(v); }
 
 public:
     // hyperbola({bb1, 0}) == {bb ^ bitreverse64(0), 0 ^ bitreverse64(bb)} == {bb, bitreverse64(bb)}
-    explicit Hyperbola (Bb bb) : occupied{ hyperbola(vu64x2(bb, Bb{})) } {}
+    explicit Hyperbola (Bb bb) : occupied{ hyperbola(u64x2(bb, Bb{})) } {}
 
     constexpr Bb attack(SliderType ty, Square from) const {
         const auto& sq = hyperbolaSq[from];
