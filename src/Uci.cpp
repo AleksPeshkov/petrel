@@ -409,7 +409,7 @@ void Uci::setHash() {
         return;
     }
 
-    io::char_type unit = 'm';
+    io::char_type unit{'m'};
     inputLine >> unit;
 
     switch (std::tolower(unit)) {

@@ -164,7 +164,7 @@ public:
     }
 
     friend istream& operator >> (istream& in, Self& index) {
-        io::char_type c;
+        io::char_type c{};
         if (in.get(c)) {
             if (!index.from_char(c)) { io::fail_char(in); }
         }
@@ -217,7 +217,7 @@ struct File : Index<File, 8, file_t> {
     }
 
     friend istream& operator >> (istream& in, File& file) {
-        io::char_type c;
+        io::char_type c{};
         if (in.get(c)) {
             if (!file.from_char(c)) { io::fail_char(in); }
         }
@@ -242,7 +242,7 @@ struct Rank : Index<Rank, 8, rank_t> {
     }
 
     friend istream& operator >> (istream& in, Rank& rank) {
-        io::char_type c;
+        io::char_type c{};
         if (in.get(c)) {
             if (!rank.from_char(c)) { io::fail_char(in); }
         }
