@@ -2,9 +2,11 @@
 #define BIT_OPS_HPP
 
 #include <algorithm>
+#include <array>
 #include <bit>
 #include <cstdint>
 #include <cstring>
+#include <type_traits>
 #include "assert.hpp"
 
 using std::size_t;
