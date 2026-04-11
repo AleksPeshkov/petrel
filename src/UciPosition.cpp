@@ -46,7 +46,7 @@ public:
 istream& read(istream& in, FenToBoard& board) {
     File file{FileA}; Rank rank{Rank8};
 
-    for (io::char_type c; in.get(c); ) {
+    for (io::char_type c{}; in.get(c); ) {
         if (std::isalpha(c) && rank.isOk() && file.isOk()) {
             Color color{std::isupper(c) ? White : Black};
             c = static_cast<io::char_type>(std::tolower(c));
@@ -190,7 +190,7 @@ class CastlingToFen {
 
     void insert(const PositionSide& positionSide, Color::_t color, ChessVariant chessVariant) {
         for (Pi pi : positionSide.castlingRooks()) {
-            io::char_type castlingSymbol;
+            io::char_type castlingSymbol{};
 
             switch (chessVariant.v()) {
                 case Chess960:
@@ -390,7 +390,7 @@ istream& UciPosition::readBoard(istream& in) {
 istream& UciPosition::readCastling(istream& in) {
     if (in.peek() == '-') { return in.ignore(); }
 
-    for (io::char_type c; in.get(c) && !std::isblank(c); ) {
+    for (io::char_type c{}; in.get(c) && !std::isblank(c); ) {
         if (std::isalpha(c)) {
             Color color{std::isupper(c) ? White : Black};
             Side side = sideOf(color.v());
