@@ -28,15 +28,13 @@ public:
 };
 
 class TtPerft : public Tt {
-    using Base = Tt;
-
 public:
     HashAge hashAge;
     const HashAge& getAge() const { return hashAge; }
     void nextAge() { hashAge.nextAge(); }
 
-    void newGame() { Base::newGame(); hashAge = {}; }
-    void newIteration() { Base::newIteration(); hashAge.nextAge(); }
+    void newGame() { Tt::newGame(); hashAge = {}; }
+    void newIteration() { Tt::newIteration(); hashAge.nextAge(); }
 
     node_count_t get(Z, Ply);
     void set(Z, Ply, node_count_t);

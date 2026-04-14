@@ -5,13 +5,11 @@
 #include "PiMask.hpp"
 
 class PiRank : public BitArray<PiRank, vu8x16_t> {
-    using Base = BitArray<PiRank, vu8x16_t>;
-
 public:
-    using Base::Base;
-    constexpr PiRank () : Base{::all(0)} {}
-    constexpr explicit PiRank (BitRank br) : Base{::vectorOfAll[br.v()]} {}
-    constexpr explicit PiRank (PiMask m) : Base{m.v()} {}
+    using BitArray::BitArray;
+    constexpr PiRank () : BitArray{::all(0)} {}
+    constexpr explicit PiRank (BitRank br) : BitArray{::vectorOfAll[br.v()]} {}
+    constexpr explicit PiRank (PiMask m) : BitArray{m.v()} {}
     constexpr explicit PiRank (File file) : PiRank{BitRank{file}} {}
     constexpr explicit PiRank (Pi pi) : PiRank{PiMask{pi}} {}
     constexpr PiRank(Bb bb, Rank rank) : PiRank{BitRank{bb, rank}} {}

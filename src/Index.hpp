@@ -175,17 +175,17 @@ public:
 
 // search tree distance in halfmoves
 struct Ply : Index<Ply, 64> {
-    constexpr explicit Ply(int i) : Index{i > 0 ? i : 0} { assertOk(); }
+    constexpr explicit Ply(_t n) : Index{n > 0 ? n : 0} { assertOk(); }
     friend constexpr Ply operator""_ply(unsigned long long);
-    friend constexpr Ply operator + (Ply a, Ply b) { return Ply{a.v() + b.v()}; }
-    friend constexpr Ply operator - (Ply a, Ply b) { return Ply{a.v() - b.v()}; }
-    friend constexpr Ply operator * (Ply a, int n) { return Ply{a.v() * n}; }
-    friend constexpr Ply operator / (Ply a, int n) { return Ply{a.v() / n}; }
+    friend constexpr Ply operator + (Ply a, Ply b) { return Ply{a.v_ + b.v_}; }
+    friend constexpr Ply operator - (Ply a, Ply b) { return Ply{a.v_ - b.v_}; }
+    friend constexpr Ply operator * (Ply a, int n) { return Ply{a.v_ * n}; }
+    friend constexpr Ply operator / (Ply a, int n) { return Ply{a.v_ / n}; }
 
-    friend ostream& operator << (ostream& out, Ply ply) { return out << ply.v(); }
+    friend ostream& operator << (ostream& out, Ply ply) { return out << ply.v_; }
 
     friend istream& operator >> (istream& in, Ply& ply) {
-        int n;
+        _t n;
         auto before = in.tellg();
         in >> n;
         if (!(0 <= n && n <= Last)) { return io::fail_pos(in, before); }
@@ -266,19 +266,15 @@ enum square_t : u8_t {
 
 class Bb;
 class Square : public Index<Square, 64, square_t> {
-    using Base = Index<Square, 64, square_t>;
-    friend class Index<Square, 64, square_t>;
-
 protected:
     enum { RankShift = 3 };
     static constexpr _t RankMask{Rank::Mask << RankShift};
-    using Index::v_;
 
 public:
     static constexpr _t None{0xff};
 
-    constexpr Square () : Base{None} {}
-    constexpr explicit Square (_t sq) : Base{sq} {}
+    constexpr Square () : Index{None} {}
+    constexpr explicit Square (_t sq) : Index{sq} {}
     constexpr Square (File::_t file, Rank::_t rank) : Square{static_cast<_t>(file + (rank << RankShift))} {}
     constexpr Square (File file, Rank rank) : Square{file.v(), rank.v()} {}
     constexpr Square (File file, Rank::_t rank) : Square{file.v(), rank} {}
@@ -316,10 +312,8 @@ constexpr color_t operator ~ (color_t color) { return static_cast<color_t>(color
 
 template <> struct CharMap<color_t> { static constexpr io::czstring The_string = "wb"; };
 class Color : public IndexChar<Color, 2, color_t> {
-    using Base = IndexChar<Color, 2, color_t>;
-    using Base::v_;
 public:
-    using Base::Base;
+    using IndexChar::IndexChar;
     constexpr Color operator ~ () const { return Color{~v_}; }
 };
 

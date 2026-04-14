@@ -8,21 +8,12 @@
  * BitBoard type: a bit for each chessboard square
  */
 class Bb : public BitSet<Bb, Square, u64_t> {
-    using Base = BitSet<Bb, Square, u64_t>;
-    using Base::v_;
-
-    friend class BitArray<Bb, u64_t>;
-
-    //declared to catch type cast bugs
-    Bb (int) = delete;
-
+    Bb (int) = delete; // declared to catch type cast bugs
 public:
-    using typename Base::_t;
+    constexpr Bb () : BitSet{} {}
+    constexpr explicit Bb (_t bb) : BitSet{bb} {}
 
-    constexpr Bb () : Base{} {}
-    constexpr explicit Bb (_t bb) : Base{bb} {}
-
-    constexpr explicit Bb (Square sq) : Base{sq} {}
+    constexpr explicit Bb (Square sq) : BitSet{sq} {}
     constexpr explicit Bb (Square::_t sq) : Bb{Square{sq}} {}
     constexpr explicit Bb (File::_t file) : Bb{U64(0x0101'0101'0101'0101) << file} {}
     constexpr explicit Bb (Rank::_t rank) : Bb{U64(0xff) << 8*rank} {}
@@ -89,12 +80,11 @@ constexpr Bb Square::bb(signed df, signed dr) const {
  * a bit for each square of a chessboard rank
  */
 class BitRank : public BitArray<BitRank, u8_t> {
-    using Base = BitArray<BitRank, u8_t>;
 public:
-    constexpr BitRank () : Base{} {}
-    constexpr explicit BitRank (_t v) : Base{v} {}
-    constexpr explicit BitRank (File file) : Base{static_cast<_t>(1 << file.v())} {}
-    constexpr BitRank (Bb bb, Rank rank) : Base{small_cast<_t>(bb.v() >> 8*rank.v())} {}
+    constexpr BitRank () : BitArray{} {}
+    constexpr explicit BitRank (_t v) : BitArray{v} {}
+    constexpr explicit BitRank (File file) : BitArray{static_cast<_t>(1 << file.v())} {}
+    constexpr BitRank (Bb bb, Rank rank) : BitArray{small_cast<_t>(bb.v() >> 8*rank.v())} {}
 };
 
 // line (file, rank, diagonal) in between two squares (excluding both ends) or 0 (32k)
