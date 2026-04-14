@@ -10,6 +10,7 @@
 template <class self_type, class index_type, typename value_type = unsigned>
 class BitSet : public BitArray<self_type, value_type> {
     using Base = BitArray<self_type, value_type>;
+    friend class BitArray<self_type, value_type>;
 
 public:
     using typename Base::_t;
