@@ -130,12 +130,12 @@ public:
     constexpr _t v() const { return v_; } // _t v() const { return v_; }
 
     // check if either 0 or 0xff bytes are set
-    bool isOk() const { return ::equals(v_, v_ != zero()); }
+    constexpr bool isOk() const { return ::equals(v_, v_ != zero()); }
 
     // assert if either 0 or 0xff bytes are set
     constexpr void assertOk() const { assert (isOk()); }
 
-    explicit operator PieceSet() const {
+    constexpr explicit operator PieceSet() const {
         assertOk();
         #ifndef NEON_VECTOR
             return PieceSet{static_cast<PieceSet::_t>(::mask(v_))};

@@ -28,7 +28,7 @@ public:
         return BitRank{ ::u8(v_, pi.v()) };
     }
 
-    PiMask piMask(File file) const {
+    constexpr PiMask piMask(File file) const {
         _t file_vector = PiRank{file}.v();
         return PiMask{ (v_ & file_vector) == file_vector };
     }
@@ -87,7 +87,7 @@ public:
     }
 
     // pieces affecting the given square
-    PiMask piMask(Square sq) const {
+    constexpr PiMask piMask(Square sq) const {
         return v_[Rank{sq}].piMask(File{sq});
     }
 

@@ -121,14 +121,14 @@ protected:
     constexpr const Bb& occupied(Side side) const { return occupied_[side]; }
 
     // myAttackers > opAttackers
-    constexpr bool safeForMe(Square sq) const {
+    bool safeForMe(Square sq) const {
         int myAttackers = MY.countAttackersTo(sq, OCCUPIED);
         int opAttackers = OP.countAttackersTo(~sq, OP_OCCUPIED);
         return myAttackers > opAttackers;
     }
 
     // opAttackers > myAttackers
-    constexpr bool safeForOp(Square sq) const {
+    bool safeForOp(Square sq) const {
         int myAttackers = MY.countAttackersTo(sq, OCCUPIED);
         int opAttackers = OP.countAttackersTo(~sq, OP_OCCUPIED);
         return opAttackers > myAttackers;
