@@ -622,16 +622,17 @@ void Uci::bench() {
 
 void Uci::bench(std::string& goLimits) {
     if (goLimits.empty()) {
-#ifdef NDEBUG
-        goLimits = "depth 18 nodes 50000000"; // default
+#ifndef NDEBUG
+        goLimits = "depth 9 nodes 100000"; // default for slow debug build
 #else
-        goLimits = "depth 8 nodes 100000"; // default for slow build
+        goLimits = "depth 18 nodes 50000000"; // default
 #endif
     }
 
     std::istringstream is{goLimits};
 
     static std::string_view positions[][2] = {
+        //{"2r2rk1/ppR5/1n1n4/3PNP2/3q3p/5Qp1/P5PP/1B3R1K w - - 0 28", "bm c7g7; id mate#11 talkchess.com/forum/viewtopic.php?p=937997"},
         {"1B1Q2K1/q1p4P/4P3/3Pk1p1/1r1NrR1b/4pn1P/1pRp2n1/1B2N2b w - -", "bm c2c7; id mate#2 talkchess.com/viewtopic.php?p=190985"},
         {"3R1R2/K3k3/1p1nPb2/pN2P2N/nP1ppp2/4P3/6P1/4Qq1r w - -", "bm e1e2; id mate#5 talkchess.com/viewtopic.php?p=904264"}, // depth 13
         {"8/1Pp5/nP5K/p7/8/8/PR6/2r4k w - -", "bm b7b8n id Dann Corbit aleks.underpromotion.09"},

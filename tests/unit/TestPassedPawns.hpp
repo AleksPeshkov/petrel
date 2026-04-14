@@ -1,5 +1,3 @@
-#define NDEBUG 1
-
 #include "Hyperbola.hpp"
 #include "UciPosition.hpp"
 
@@ -7,11 +5,11 @@ Nnue nnue;
 void Nnue::setEmbeddedEval() {}
 
 constexpr InBetween inBetween;
-constexpr AttacksFrom attacksFrom;
+constinit AttacksFrom attacksFrom;
 constexpr VectorOfAll vectorOfAll;
 constexpr PiSingle piSingle;
-constexpr CastlingRules castlingRules;
-constexpr PieceCountTable pieceCountTable; // 48 6*8
+constinit CastlingRules castlingRules;
+constinit PieceCountTable pieceCountTable; // 48 6*8
 
 void assertPassed(const char* fen, Square::_t sq, bool shouldBePassed, const char* msg) {
     UciPosition uciPosition;

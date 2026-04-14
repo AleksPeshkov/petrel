@@ -1,7 +1,7 @@
 #include "Hyperbola.hpp"
 
-constexpr HyperbolaDir hyperbolaDir; // 4k 64*2*32
-constexpr HyperbolaSq hyperbolaSq; // 2k 64*32
+constinit HyperbolaDir hyperbolaDir; // 4k 64*2*32
+constinit HyperbolaSq hyperbolaSq; // 2k 64*32
 
 void test_hyperbola_rook_attack() {
     Square from{D4};

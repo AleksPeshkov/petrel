@@ -489,7 +489,6 @@ public:
 
 private:
     _t v_;
-    constexpr explicit Z(_t n) : v_{n} {}
 
     //hand picked set of de Bruijn numbers
     enum : _t {
@@ -507,6 +506,10 @@ private:
     static constexpr _t zKey[] = {
         ZQueen, ZRook, ZBishop, ZKnight, ZPawn, ZKing, ZCastling, ZEnPassant
     };
+
+protected:
+    // only for testing
+    constexpr explicit Z(_t n) : v_{n} {}
 
 public:
     constexpr Z () : v_{0} {}
