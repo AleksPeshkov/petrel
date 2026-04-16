@@ -448,22 +448,11 @@ ReturnStatus Node::search() {
         }
 
         // safe pawns pushes attacking non-pawns
-        //TODO: double push attacks
-        Bb pawnsThreatsFrom = ((OP.bbSide() - OP.bbPawns()).pForwardDiag() % OP_OCCUPIED).pForward();
-        Bb potentialAttackers = MY.bbPawns() & ~pawnsThreatsFrom;
-        for (Square from : potentialAttackers) {
-            Square to{from.file(), from.rank().forward()};
-            if (!bbMovesOf(MY.pi(from)).has(to)) { continue; }
-            if (safeForOp(to)) { continue; }
-            RETURN_CUTOFF (searchMove(from, to, 2_ply));
-        }
+        RETURN_CUTOFF (goodPawnsMovesTo(~(OP.bbSide() - OP.bbPawns()), 2_ply));
 
         if (depth <= 1_ply && !inCheck() && movesMade() >= 3) { break; }
 
-        // LMR
-        if (depth >= 6_ply && movesMade() >= 5) {
-            baseR = baseR + 1_ply;
-        }
+        if (depth >= 6_ply && movesMade() >= 5) { baseR = baseR + 1_ply; } // LMR
 
         // safe officers moves
         while (safePieces.any()) {
@@ -540,6 +529,31 @@ ReturnStatus Node::search() {
         assert (score.isOk(ply));
         saveNode();
     }
+    return ReturnStatus::Continue;
+}
+
+// safe pawns pushes attacking non-pawns
+ReturnStatus Node::goodPawnsMovesTo(Bb target, Ply R) {
+    Bb totallySafe = (Bb::full() % bbAttacked()) | (MY.bbPawnAttacks() % ~OP.bbPawnAttacks());
+
+    Bb canAttackFrom = (target.pBackwardDiag() % OCCUPIED).pBackward(); // squares from where pawns can move to attack target
+    for (Square from : MY.bbPawns() & canAttackFrom) {
+        Square to{ from.file(), from.rank().forward() }; assert (!OCCUPIED.has(to));
+        if ( bbMovesOf(MY.pi(from)).has(to) && (totallySafe.has(to) || !safeForOp(to)) ) {
+            RETURN_CUTOFF (searchMove(from, to, R));
+        }
+    }
+
+    // double push attacks
+    canAttackFrom = (canAttackFrom % OCCUPIED).pBackward() & Bb{Rank2};
+    for (Square from : MY.bbPawns() & canAttackFrom) {
+        assert (!OCCUPIED.has(Square{ from.file(), Rank{Rank3} }));
+        Square to{ from.file(), Rank{Rank4} }; assert (!OCCUPIED.has(to));
+        if ( bbMovesOf(MY.pi(from)).has(to) && (totallySafe.has(to) || !safeForOp(to)) ) {
+            RETURN_CUTOFF (searchMove(from, to, R));
+        }
+    }
+
     return ReturnStatus::Continue;
 }
 

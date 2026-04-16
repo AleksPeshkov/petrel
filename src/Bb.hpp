@@ -24,6 +24,8 @@ public:
     constexpr explicit Bb (File file) : Bb{*file} {}
     constexpr explicit Bb (Rank rank) : Bb{*rank} {}
 
+    static constexpr Bb full() { return Bb{U64(0xffff'ffff'ffff'ffff)}; }
+
     constexpr Bb operator ~ () const { return Bb{::byteswap(v_)}; }
     constexpr void move(Square from, Square to) { assert (from != to); *this -= Bb{from}; *this += Bb{to}; }
 
