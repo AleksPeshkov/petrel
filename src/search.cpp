@@ -302,18 +302,24 @@ ReturnStatus Node::search() {
 
             assert (OP.attackersTo(~from).any());
 
-            if (OP.attackersTo(~from).none(OP.lessOrEqualValue(MY.typeOf(pi)))) {
-                // attacked by more valuable attacker
-
-                if (MY.bbPawnAttacks().has(from) || safeForMe(from)) {
-                    // piece is protected
-                    safePieces += pi;
-                    continue;
-                }
-                //TODO: try protecting moves of other pieces
+            if (!OP.attackersTo(~from).none(OP.lessOrEqualValue(MY.typeOf(pi)))) {
+                RETURN_CUTOFF (goodNonCaptures(pi, bbMovesOf(pi) % bbAvoid, 2_ply));
+                continue;
             }
 
+            // attacked by more valuable attacker
+
+            if (MY.bbPawnAttacks().has(from) || safeForMe(from)) {
+                // piece is protected
+                safePieces += pi;
+                continue;
+            }
+
+            // the piece evasion moves
             RETURN_CUTOFF (goodNonCaptures(pi, bbMovesOf(pi) % bbAvoid, 2_ply));
+
+            // protective pawn moves
+            RETURN_CUTOFF (goodPawnsMovesTo(Bb{from}, 2_ply));
         }
 
         // safe passed pawns moves
