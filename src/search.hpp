@@ -123,6 +123,7 @@ protected:
     // promotions to queen, winning or equal captures, plus complex SEE captures
     [[nodiscard]] ReturnStatus goodCaptures(PiMask);
     [[nodiscard]] ReturnStatus goodNonCaptures(Pi, Bb moves, Ply R);
+    [[nodiscard]] ReturnStatus goodPawnsMovesTo(Bb target, Ply R);
 
     [[nodiscard]] ReturnStatus counterMove();
     [[nodiscard]] ReturnStatus followMove();

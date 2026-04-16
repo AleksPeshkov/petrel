@@ -327,15 +327,7 @@ ReturnStatus Node::search() {
         }
 
         // safe pawns pushes attacking non-pawns
-        //TODO: double push attacks
-        Bb pawnsThreatsFrom = ((OP.bbSide() - OP.bbPawns()).pawnAttacks() % OP_OCCUPIED) >> 8;
-        Bb potentialAttackers = MY.bbPawns() & ~pawnsThreatsFrom;
-        for (Square from : potentialAttackers) {
-            Square to{File{from}, Rank{from}.forward()};
-            if (!bbMovesOf(MY.pi(from)).has(to)) { continue; }
-            if (safeForOp(to)) { continue; }
-            RETURN_CUTOFF (child->searchMove(from, to, 2_ply));
-        }
+        RETURN_CUTOFF (goodPawnsMovesTo(~(OP.bbSide() - OP.bbPawns()), 2_ply));
 
         // safe officers moves
         while (safePieces.any()) {
@@ -401,6 +393,31 @@ ReturnStatus Node::search() {
     }
 
     updateHistory(depth);
+    return ReturnStatus::Continue;
+}
+
+// safe pawns pushes attacking non-pawns
+ReturnStatus Node::goodPawnsMovesTo(Bb target, Ply R) {
+    Bb canAttackFrom = target.pawnAttacksBack() % OCCUPIED << 8; // squares from where my pawns can move to to attack target
+    for (Square from : MY.bbPawns() & canAttackFrom) {
+        Square to{File{from}, Rank{from}.forward()};
+        if (!bbMovesOf(MY.pi(from)).has(to)) { continue; } // pinned pawn or already searched move
+        if (MY.bbPawnAttacks().has(to) || !safeForOp(to)) {
+            RETURN_CUTOFF (child->searchMove(from, to, R));
+        }
+    }
+
+    // double push attacks
+    canAttackFrom = (canAttackFrom % OCCUPIED << 8) & Bb{Rank2};
+    for (Square from : MY.bbPawns() & canAttackFrom) {
+        Square to{File{from}, Rank{Rank4}};
+        assert (!OCCUPIED.has(to)); assert (!OCCUPIED.has(Square{File{from}, Rank{Rank3}}));
+        if (!bbMovesOf(MY.pi(from)).has(to)) { continue; } // pinned pawn or already searched move
+        if (MY.bbPawnAttacks().has(to) || !safeForOp(to)) {
+            RETURN_CUTOFF (child->searchMove(from, to, R));
+        }
+    }
+
     return ReturnStatus::Continue;
 }
 

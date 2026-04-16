@@ -69,6 +69,7 @@ public:
     void move(Square from, Square to) { assert (from != to); *this -= Bb{from}; *this += Bb{to}; }
 
     constexpr Bb pawnAttacks() const { return (*this % Bb{FileA} >> 9u) | (*this % Bb{FileH} >> 7u); }
+    constexpr Bb pawnAttacksBack() const { return (*this % Bb{FileA} << 7u) | (*this % Bb{FileH} << 9u); }
 
     // bidirectional signed rank shift
     constexpr Bb shiftRank(signed r) { return Bb{ r >= 0 ? (v_ << 8*r) : (v_ >> -8*r) }; }
