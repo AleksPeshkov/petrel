@@ -140,4 +140,9 @@ protected:
     }
 };
 
+class Tt;
+
+// update TT with latest PV (in case it have been overwritten)
+void refreshTtPv(const PositionMoves&, const PrincipalVariation&, const Tt&);
+
 #endif
