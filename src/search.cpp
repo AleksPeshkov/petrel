@@ -670,32 +670,29 @@ bool Node::isRepetition() const {
     return root.repetitions.has(colorToMove(), z());
 }
 
-namespace {
-    // update TT with latest PV (in case it have been overwritten)
-    void refreshTtPv(const PositionMoves& p, const PrincipalVariation& pv, const Tt& tt) {
-        // clone position
-        PositionMoves pos{p};
+void refreshTtPv(const PositionMoves& p, const PrincipalVariation& pv, const Tt& tt) {
+    // clone position
+    PositionMoves pos{p};
 
-        Ply   ply   = 0_ply;
-        Ply   depth = pv.depth();
-        Score score = pv.score();
-        auto  pmoves = pv.moves();
+    Ply   ply   = 0_ply;
+    Ply   depth = pv.depth();
+    Score score = pv.score();
+    auto  pmoves = pv.moves();
 
         for (UciMove move; (move = *pmoves++).any();) {
             assert ((pos.generateMoves(), pos.isPossibleMove(move.from(), move.to())));
 
-            auto o = tt.addr<TtSlot>(pos.z());
-            *o = TtSlot{pos.z(), score, ply, ExactScore, depth, move.from(), move.to(), false};
-            ++tt.writes;
+        auto o = tt.addr<TtSlot>(pos.z());
+        *o = TtSlot{pos.z(), score, ply, ExactScore, depth, move.from(), move.to(), false};
+        ++tt.writes;
 
-            //we cannot use makeZobrist() because of en passant legality validation
-            pos.makeMoveNoEval(move.from(), move.to());
-            score = -score;
-            depth = depth - 1_ply;
-            ply = ply + 1_ply;
+        //we cannot use makeZobrist() because of en passant legality validation
+        pos.makeMoveNoEval(move.from(), move.to());
+        score = -score;
+        depth = depth - 1_ply;
+        ply = ply + 1_ply;
 
-            if (depth == 0_ply) { break; }
-        }
+        if (depth == 0_ply) { break; }
     }
 }
 
