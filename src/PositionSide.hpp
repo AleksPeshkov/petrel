@@ -151,8 +151,8 @@ public:
     Pi piPromoted(Pi, Square, PromoType, Square);
     void capture(Square);
 
-    void setEnPassantVictim(Pi);
-    void setEnPassantKiller(Pi);
+    void setEnPassantVictim(Square);
+    void setEnPassantKiller(Square);
     void clearEnPassantVictim();
     void clearEnPassantKillers();
     void clearCheckers() { traits.clearCheckers(); }

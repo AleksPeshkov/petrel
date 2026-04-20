@@ -412,19 +412,6 @@ istream& UciPosition::readCastling(istream& in) {
     return in;
 }
 
-bool UciPosition::setEnPassant(File file) {
-    Square to{file, Rank4};
-    if (!OP.has(to)) { return false; }
-
-    Pi victim = OP.pi(to);
-    if (!OP.isPawn(victim)) { return false; }
-
-    if (OCCUPIED.has(~Square{file, Rank3})) { return false; }
-
-    setLegalEnPassant<Op>(victim, to);
-    return true;
-}
-
 istream& UciPosition::readEnPassant(istream& in) {
     if (in.peek() == '-') { return in.ignore(); }
 

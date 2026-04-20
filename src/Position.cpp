@@ -183,7 +183,7 @@ void Position::makeMove(Square from, Square to) {
         }
         updateSliderAttacks<My>(MY.affectedBy(from, to), OP.affectedBy(~from, ~to));
         if (from.on(Rank2) && to.on(Rank4)) {
-            setLegalEnPassant<My>(pi, to);
+            setLegalEnPassant<My>(to);
             if constexpr (Flags & WithZobrist) {
                 if (MY.hasEnPassant()) { zobrist_.enPassant(MY.sqEnPassant()); }
             }
@@ -306,34 +306,45 @@ void Position::updateSliderAttacks(PiMask myAffected, PiMask opAffected) {
 }
 
 template <Side::_t My>
-void Position::setLegalEnPassant(Pi victim, Square to) {
+void Position::setLegalEnPassant(Square ep) {
     constexpr Side::_t Op{~My};
 
-    assert (MY.isPawn(victim));
-    assert (MY.sq(victim).is(to));
-    assert (to.on(Rank4));
-
+    assert (ep.on(Rank4));
+    assert (MY.isPawn(ep));
     assert (!MY.hasEnPassant());
     assert (!OP.hasEnPassant());
 
-    Square ep{File{to}, Rank3};
+    Square to{File{ep}, Rank3}; // attacking pawn destination square
 
     // check if there are any pawns to capture ep victim
-    Bb killers = ~OP.bbPawns() & ::attacksFrom(Pawn, ep);
+    Bb killers = ~OP.bbPawns() & ::attacksFrom(Pawn, to);
     if (killers.none()) { return; }
 
     // discovered check
-    if (MY.isPinned(OCCUPIED)) { assert ((MY.checkers() % victim).any()); return; }
-    assert ((MY.checkers() % victim).none());
+    if (MY.isPinned(OCCUPIED)) { assert ((MY.checkers() % MY.pi(ep)).any()); return; }
+    assert ((MY.checkers() % MY.pi(ep)).none());
 
     for (Square from : killers) {
         assert (from.on(Rank4));
 
-        if (!MY.isPinned(OCCUPIED - Bb{from} + Bb{ep} - Bb{to})) {
-            MY.setEnPassantVictim(victim);
-            OP.setEnPassantKiller(OP.pi(~from));
+        if (!MY.isPinned(OCCUPIED - Bb{from} + Bb{to} - Bb{ep})) {
+            MY.setEnPassantVictim(ep);
+            OP.setEnPassantKiller(~from);
         }
     }
+}
+
+bool Position::setEnPassant(File file) {
+    Square ep{file, Rank4}; // not FEN ep square, but victim pawn location
+
+    if (!OP.isPawn(ep) || OCCUPIED.has(Square{file, Rank6})) {
+        //pseudo legal test failed
+        return false;
+    }
+
+    // full legality check
+    setLegalEnPassant<Op>(ep);
+    return true;
 }
 
 bool Position::dropValid(Side si, PieceType ty, Square to) {

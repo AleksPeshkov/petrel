@@ -15,9 +15,6 @@ class UciPosition : public PositionMoves {
     istream& readCastling(istream&);
     istream& readEnPassant(istream&);
     istream& readMove(istream&, Square&, Square&) const;
-
-    bool setEnPassant(File);
-
     ostream& fen(ostream&) const;
 
 public:
