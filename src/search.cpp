@@ -444,6 +444,8 @@ ReturnStatus Node::search() {
             RETURN_CUTOFF (searchMove(from, to, 2_ply));
         }
 
+        if (depth <= 1_ply && !inCheck() && movesMade() >= 3) { break; }
+
         // safe officers moves
         while (safePieces.any()) {
             Pi pi = safePieces.piLast(); safePieces -= PiMask{pi};
