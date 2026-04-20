@@ -98,7 +98,7 @@ void Position::makeMove(Square from, Square to) {
         MY.clearEnPassantKillers();
 
         // en passant capture encoded as the pawn captures the pawn
-        if (MY.isPawn(pi) && from.on(Rank5) && to.on(Rank5)) {
+        if (MY.isPawn(from) && from.on(Rank5) && to.on(Rank5)) {
             rule50_.clear();
 
             Square ep{to};
@@ -124,7 +124,7 @@ void Position::makeMove(Square from, Square to) {
     assert (!MY.hasEnPassant());
     assert (!OP.hasEnPassant());
 
-    if (MY.isPawn(pi)) {
+    if (MY.isPawn(from)) {
         rule50_.clear();
 
         if (from.on(Rank7)) {
@@ -193,7 +193,7 @@ void Position::makeMove(Square from, Square to) {
         return; // end of simple pawn push move
     }
 
-    if (MY.sqKing().is(from)) {
+    if (MY.isKing(from)) {
         if constexpr (Flags & WithZobrist) {
             for (Pi rook : MY.castlingRooks()) { zobrist_.castling(MY.sq(rook)); }
             zobrist_.move(King, from, to);
@@ -225,7 +225,7 @@ void Position::makeMove(Square from, Square to) {
     }
 
     // castling move encoded as castling rook captures own king
-    if (MY.sqKing().is(to)) {
+    if (MY.isKing(to)) {
         Square rookFrom = from;
         Square kingFrom = to;
         Square kingTo = CastlingRules::castlingKingTo(kingFrom, rookFrom);
@@ -309,7 +309,7 @@ template <Side::_t My>
 void Position::setLegalEnPassant(Pi victim, Square to) {
     constexpr Side::_t Op{~My};
 
-    assert (MY.isPawn(victim));
+    assert (MY.isPawn(to));
     assert (MY.sq(victim).is(to));
     assert (to.on(Rank4));
 
@@ -359,11 +359,11 @@ Bb Position::bbPassedPawns() const {
 }
 
 bool Position::isSpecialMove(Square from, Square to) const {
-    if (MY.sqKing().is(to)) {
+    if (MY.isKing(to)) {
         return true; // castling
     }
 
-    if (MY.isPawn(MY.pi(from))) {
+    if (MY.isPawn(from)) {
         if (from.on(Rank7)) {
             return true; // pawn promotion
         }
@@ -445,7 +445,7 @@ Zobrist Position::createZobrist(Square from, Square to) const {
 
         // fall though the rest of pawns moves (non-promotion, non en passant, non double push)
     }
-    else if (MY.sqKing().is(to)) {
+    else if (MY.isKing(to)) {
         Square kingFrom = to;
         Square rookFrom = from;
         Square kingTo = CastlingRules::castlingKingTo(kingFrom, rookFrom);

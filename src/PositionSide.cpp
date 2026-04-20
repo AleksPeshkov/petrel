@@ -270,14 +270,14 @@ void PositionSide::updateSlidersCheckers(PiMask affectedSliders, Bb occupiedBb) 
 }
 
 void PositionSide::setEnPassantVictim(Pi pi) {
-    assert (isPawn(pi));
+    assert (isPawn(sq(pi)));
     assert (sq(pi).on(Rank4));
     assert (!hasEnPassant() || traits.isEnPassant(pi));
     traits.setEnPassant(pi);
 }
 
 void PositionSide::setEnPassantKiller(Pi pi) {
-    assert (isPawn(pi));
+    assert (isPawn(sq(pi)));
     assert (sq(pi).on(Rank5));
     traits.setEnPassant(pi);
 }
