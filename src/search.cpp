@@ -338,7 +338,7 @@ ReturnStatus Node::search() {
         // safe officers moves
         while (safePieces.any()) {
             Pi pi = safePieces.piLast(); safePieces -= pi;
-            RETURN_CUTOFF (goodNonCaptures(pi, bbMovesOf(pi) % bbAvoid, 3_ply));
+            RETURN_CUTOFF (goodNonCaptures(pi, bbMovesOf(pi) % bbAvoid, 4_ply));
         }
 
         if (depth <= 2_ply && !inCheck() && (!isPv() || movesMade() > 0)) { break; }
