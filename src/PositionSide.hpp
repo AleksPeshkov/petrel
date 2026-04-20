@@ -28,8 +28,8 @@ class PositionSide {
             Square sq = squares.sq(pi);
             assert (has(sq));
 
-            assert (types.isPawn(pi) == bbPawns().has(sq));
-            assert (!types.isPawn(pi) || (!sq.on(Rank1) && !sq.on(Rank8)));
+            assert (types.isPawn(pi) == isPawn(sq));
+            assert (!isPawn(sq) || (!sq.on(Rank1) && !sq.on(Rank8)));
 
             assert (traits.isEnPassant(pi) <= types.isPawn(pi));
             assert (traits.isEnPassant(pi) <= (sq.on(Rank4) || sq.on(Rank5)));
@@ -77,6 +77,7 @@ public:
 
     // sq(TheKing)
     constexpr Square sqKing() const { return sq(Pi{TheKing}); }
+    constexpr bool isKing(Square sq) const { return sqKing().is(sq); }
 
     // all onboard pieces of the given side
     constexpr PiMask pieces() const { assert (squares.pieces() == types.pieces()); return squares.pieces(); }
@@ -102,6 +103,7 @@ public:
 
     constexpr PiMask pawns() const { return types.piecesOfType(Pawn); }
     constexpr bool isPawn(Pi pi) const { assertOk(pi); return types.isPawn(pi); }
+    constexpr bool isPawn(Square sq) const { return bbPawns_.has(sq); }
 
     // pieces of less valuable types than given piece type
     constexpr PiMask lessValue(PieceType ty) const { return types.lessValue(ty); }

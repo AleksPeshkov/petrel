@@ -98,7 +98,7 @@ void Position::makeMove(Square from, Square to) {
         MY.clearEnPassantKillers();
 
         // en passant capture encoded as the pawn captures the pawn
-        if (MY.isPawn(pi) && from.on(Rank5) && to.on(Rank5)) {
+        if (MY.isPawn(from) && from.on(Rank5) && to.on(Rank5)) {
             rule50_.clear();
 
             Square ep{to};
@@ -124,7 +124,7 @@ void Position::makeMove(Square from, Square to) {
     assert (!MY.hasEnPassant());
     assert (!OP.hasEnPassant());
 
-    if (MY.isPawn(pi)) {
+    if (MY.isPawn(from)) {
         rule50_.clear();
 
         if (from.on(Rank7)) {
@@ -193,7 +193,7 @@ void Position::makeMove(Square from, Square to) {
         return; // end of simple pawn push move
     }
 
-    if (MY.sqKing().is(from)) {
+    if (MY.isKing(from)) {
         if constexpr (Flags & WithZobrist) {
             for (Pi rook : MY.castlingRooks()) { zobrist_.castling(MY.sq(rook)); }
             zobrist_.move(King, from, to);
@@ -225,7 +225,7 @@ void Position::makeMove(Square from, Square to) {
     }
 
     // castling move encoded as castling rook captures own king
-    if (MY.sqKing().is(to)) {
+    if (MY.isKing(to)) {
         Square rookFrom = from;
         Square kingFrom = to;
         Square kingTo = CastlingRules::castlingKingTo(kingFrom, rookFrom);
@@ -359,7 +359,7 @@ Bb Position::bbPassedPawns() const {
 }
 
 bool Position::isSpecialMove(Square from, Square to) const {
-    if (MY.sqKing().is(to)) {
+    if (MY.isKing(to)) {
         return true; // castling
     }
 
@@ -450,7 +450,7 @@ Zobrist Position::createZobrist(Square from, Square to) const {
             break; // goto handle captured piece if any
         }
 
-        if (MY.sqKing().is(to)) {
+        if (MY.isKing(to)) {
             //castling move encoded as rook moves over own king's square
             Square kingFrom = to;
             Square rookFrom = from;

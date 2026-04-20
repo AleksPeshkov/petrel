@@ -261,10 +261,9 @@ istream& UciPosition::readMove(istream& in, Square& from, Square& to) const {
     if (colorToMove_.is(Black)) { from.flip(); to.flip(); }
 
     if (!MY.has(from)) { return io::fail_pos(in, before); }
-    Pi pi = MY.pi(from);
 
     //convert special moves (castling, promotion, ep) to the internal move format
-    if (MY.isPawn(pi)) {
+    if (MY.isPawn(from)) {
         if (from.on(Rank7)) {
             PromoType promo{Queen};
             in >> promo;
@@ -282,7 +281,7 @@ istream& UciPosition::readMove(istream& in, Square& from, Square& to) const {
         return in;
     }
 
-    if (pi.is(TheKing)) {
+    if (MY.isKing(from)) {
         if (MY.has(to)) { //Chess960 castling encoding
             if (!MY.isCastling(to)) { return io::fail_pos(in, before); }
 
