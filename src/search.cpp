@@ -335,6 +335,8 @@ ReturnStatus Node::search() {
         // safe pawns pushes attacking non-pawns
         RETURN_CUTOFF (goodPawnsMovesTo(~(OP.bbSide() - OP.bbPawns()), 2_ply));
 
+        if (depth <= 1_ply && !inCheck() && movesMade() >= 2) { break; }
+
         // safe officers moves
         while (safePieces.any()) {
             Pi pi = safePieces.piLast(); safePieces -= pi;
