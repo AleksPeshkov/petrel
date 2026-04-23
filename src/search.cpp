@@ -30,6 +30,7 @@ Node::Node (const Node* p) :
     }
 }
 
+// child->depth = depth - R
 ReturnStatus Node::negamax(Ply R) const {
     assert (child);
     child->depth = depth - R; //TRICK: Ply >= 0
@@ -163,8 +164,8 @@ ReturnStatus Node::search() {
         if (!isPv()
             && ttSlot.draft() >= depth
             && (ttBound == ExactScore
-                || ((ttBound == FailHigh) && beta <= ttScore)
-                || ((ttBound == FailLow) && ttScore <= alpha)
+                || (ttBound == FailHigh && beta <= ttScore)
+                || (ttBound == FailLow && ttScore <= alpha)
             )
         ) {
             score = ttScore;
@@ -206,36 +207,32 @@ ReturnStatus Node::search() {
 
     assert (currentMove.none());
 
-    if (
-        !inCheck()
-        && !isPv()
-        && depth <= 3_ply
-    ) {
-        auto delta = (depth == 1_ply) ? 50_cp : (depth == 2_ply) ? 150_cp : 200_cp;
-        if (Score{MinEval} <= beta && beta <= eval-delta) {
-            // Static Null Move Pruning (Reverse Futility Pruning)
-            score = eval;
-            assert (currentMove.none());
-            return ReturnStatus::Cutoff;
-        } else {
-            delta = (depth == 1_ply) ? 50_cp : (depth == 2_ply) ? 250_cp : 350_cp;
-            if (eval+delta < alpha && alpha <= Score{MaxEval}) {
-                // Razoring
-                return quiescence();
+    if (!isPv() && !inCheck()) {
+        if (depth <= 3_ply) {
+            auto delta = (depth == 1_ply) ? 50_cp : (depth == 2_ply) ? 150_cp : 200_cp;
+            if (Score{MinEval} <= beta && beta <= eval-delta) {
+                // Static Null Move Pruning (Reverse Futility Pruning)
+                score = eval;
+                assert (currentMove.none());
+                return ReturnStatus::Cutoff;
+            } else {
+                delta = (depth == 1_ply) ? 50_cp : (depth == 2_ply) ? 250_cp : 350_cp;
+                if (eval+delta < alpha && alpha <= Score{MaxEval}) {
+                    // Razoring
+                    return quiescence();
+                }
             }
         }
-    }
 
-    // Null Move Pruning
-    if (
-        !inCheck()
-        && !isPv()
-        && Score{MinEval} <= beta && beta <= eval
-        && depth >= 2_ply // overhead higher then gain at very low depth
-        && MY.material().canNullMove() // avoid null move in late endgame
-    ) {
-        canBeKiller = false;
-        RETURN_CUTOFF (child->searchNullMove(4_ply + (depth-2_ply)/4));
+        // Null Move Pruning
+        if (
+            depth >= 2_ply // overhead higher then gain at very low depth
+            && MY.material().canNullMove() // avoid null move in late endgame
+            && Score{MinEval} <= beta && beta <= eval
+        ) {
+            canBeKiller = false;
+            RETURN_CUTOFF (child->searchNullMove(4_ply + (depth-2_ply)/4));
+        }
     }
 
     if (ttHit && ttSlot.hasMove()) {
@@ -326,7 +323,7 @@ ReturnStatus Node::search() {
             RETURN_CUTOFF (goodNonCaptures(pi, bbMovesOf(pi) % bbAvoid, 3_ply));
         }
 
-        if (!inCheck() && depth <= 2_ply && (!isPv() || movesMade() > 0)) { break; }
+        if (depth <= 2_ply && !inCheck() && (!isPv() || movesMade() > 0)) { break; }
 
         // king quiet moves (always safe), castling is a rook move
         {
@@ -356,7 +353,7 @@ ReturnStatus Node::search() {
             }
         }
 
-        if (!inCheck() && depth <= 4_ply && (!isPv() || movesMade() > 0)) { break; }
+        if (depth <= 4_ply && !inCheck() && (!isPv() || movesMade() > 0)) { break; }
 
         // unsafe (losing) non-captures (N/B, R, Q order)
         for (PiMask pieces = MY.officers(); pieces.any(); ) {
