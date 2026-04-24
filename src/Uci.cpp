@@ -304,7 +304,6 @@ void Uci::setoption() {
         return;
     }
 
-
     if (consume("EvalFile")) {
         consume("value");
 
@@ -441,6 +440,8 @@ void Uci::setHash() {
 void Uci::ucinewgame() {
     newGame();
     position_.setStartpos();
+    repetitions.clear();
+    repetitions.push(colorToMove(), position_.z());
 }
 
 void Uci::position() {
