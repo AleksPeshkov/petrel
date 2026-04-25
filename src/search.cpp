@@ -750,7 +750,7 @@ ReturnStatus Node::searchRoot() {
 
         root.info_pv();
         root.newIteration();
-        ::refreshTtPv(*this, root.pv, root.tt);
+        //::refreshTtPv(*this, root.pv, root.tt); // loses Elo
     }
 
     return ReturnStatus::Continue;
