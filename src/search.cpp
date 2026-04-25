@@ -452,14 +452,11 @@ ReturnStatus Node::search() {
             }
         }
 
-        // all remaining pawn moves
-        // losing queen promotions, all underpromotions
-        // losing passed pawns moves, all non passed pawns moves
-        for (Square from : MY.bbPawns()) {
-            Pi pi = MY.pi(from);
-            for (Square to : bbMovesOf(pi)) {
-                RETURN_CUTOFF (searchMove(from, to, 4_ply));
-            }
+        // remaining (losing) queen promotion moves
+        for (Pi pi : MY.promotables()) {
+            Square from{MY.sq(pi)};
+            Square to{from.file(), Rank8};
+            RETURN_CUTOFF (searchIfPossible(historyMove(from, to, CanBeKiller::Yes), 3_ply));
         }
 
         // unsafe (losing) captures (N/B, R, Q order)
@@ -468,6 +465,15 @@ ReturnStatus Node::search() {
             Square from{MY.sq(pi)};
             for (Square to : bbMovesOf(pi) & ~OP.bbSide()) {
                 RETURN_CUTOFF (searchMove(from, to, 4_ply));
+            }
+        }
+
+        // all remaining pawn moves:
+        // all underpromotions, losing passed pawns moves, the rest pawns moves
+        for (Square from : MY.bbPawns()) {
+            Pi pi = MY.pi(from);
+            for (Square to : bbMovesOf(pi)) {
+                RETURN_CUTOFF (searchMove(from, to, 3_ply));
             }
         }
 
