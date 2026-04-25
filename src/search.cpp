@@ -352,6 +352,13 @@ ReturnStatus Node::search() {
             }
         }
 
+        // remaining (losing) queen promotion moves
+        for (Pi pi : MY.promotables()) {
+            Square from{MY.sq(pi)};
+            Square to{File{from}, Rank8};
+            RETURN_CUTOFF (child->searchIfPossible(from, to, 4_ply));
+        }
+
         // unsafe (losing) captures (N/B, R, Q order)
         for (PiMask pieces = MY.officers(); pieces.any(); ) {
             Pi pi = pieces.piLast(); pieces -= pi;

@@ -142,6 +142,10 @@ protected:
         return searchMove(from, to, R, !parent->inCheck() ? CanBeKiller::Yes : CanBeKiller::No);
     }
 
+    [[nodiscard]] ReturnStatus searchIfPossible(Square from, Square to, Ply R = 1_ply) {
+        return searchIfPossible(parent->historyMove(from, to, !parent->inCheck() ? CanBeKiller::Yes : CanBeKiller::No), R);
+    }
+
     constexpr Color colorToMove() const; // current node's side to move color
     constexpr bool isRoot() const { assert (parent == nullptr || ply > 0_ply); return parent == nullptr; } // ply == 0
     constexpr bool isPv() const { return ply == pvPly; } // ply == pvPly
