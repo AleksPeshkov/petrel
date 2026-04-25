@@ -352,21 +352,20 @@ ReturnStatus Node::search() {
             }
         }
 
-        // all remaining pawn moves
-        // losing queen promotions, all underpromotions
-        // losing passed pawns moves, all non passed pawns moves
-        for (Square from : MY.bbPawns()) {
-            Pi pi = MY.pi(from);
-            for (Square to : bbMovesOf(pi)) {
-                RETURN_CUTOFF (child->searchMove(from, to, 4_ply));
-            }
-        }
-
         // unsafe (losing) captures (N/B, R, Q order)
         for (PiMask pieces = MY.officers(); pieces.any(); ) {
             Pi pi = pieces.piLast(); pieces -= pi;
             Square from{MY.sq(pi)};
             for (Square to : bbMovesOf(pi) & ~OP.bbSide()) {
+                RETURN_CUTOFF (child->searchMove(from, to, 4_ply));
+            }
+        }
+
+        // all remaining pawn moves:
+        // all underpromotions, losing passed pawns moves, the rest pawns moves
+        for (Square from : MY.bbPawns()) {
+            Pi pi = MY.pi(from);
+            for (Square to : bbMovesOf(pi)) {
                 RETURN_CUTOFF (child->searchMove(from, to, 4_ply));
             }
         }
