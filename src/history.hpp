@@ -122,6 +122,8 @@ public:
         moves_[Index{1}] = {};
     }
 
+    void set(Ply depth) { depth_ = depth; }
+
     const auto* moves() const { return &moves_[Index{0}]; }
     auto move(Ply ply) const { return moves_[Index{ply.v()}]; }
     auto depth() const { return depth_; }
