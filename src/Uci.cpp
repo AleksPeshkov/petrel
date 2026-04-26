@@ -605,7 +605,7 @@ istream& UciPosition::readMove(istream& is, Square& from, Square& to) const {
 void UciPosition::limitMoves(istream& is) {
     PiBbMatrix movesMatrix;
     movesMatrix.clear();
-    int n = 0;
+    int rootMoves = 0;
 
     while (is >> std::ws && !is.eof()) {
         auto before = is.tellg();
@@ -621,17 +621,19 @@ void UciPosition::limitMoves(istream& is) {
         Pi pi = MY.pi(from);
         if (!movesMatrix.has(pi, to)) {
             movesMatrix.add(pi, to);
-            ++n;
+            ++rootMoves;
         }
     }
+    rootMoves_ = rootMoves;
 
-    if (n) {
-        setMoves(movesMatrix);
-        is.clear();
+    if (rootMoves == 0) {
+        io::error("go searchmoves: 0 moves");
+        io::fail_rewind(is);
         return;
     }
 
-    io::fail_rewind(is);
+    setMoves(movesMatrix);
+    is.clear();
 }
 
 void UciPosition::playMoves(istream& is, Repetitions& repetitions) {
@@ -746,6 +748,16 @@ void UciPosition::readFen(istream& is) {
 void UciPosition::setStartpos() {
     io::istringstream startpos{"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"};
     readFen(startpos);
+    rootMoves_ = 20;
+}
+
+// fast exit: return the first legal move found
+UciMove UciPosition::firstRootMove() const {
+    for (Pi pi : MY.pieces()) {
+        if (bbMovesOf(pi).none()) { continue; }
+        return uciMove(MY.sq(pi), bbMovesOf(pi).first());
+    }
+    return {};
 }
 
 Uci::Uci(ostream &o) :
@@ -1084,7 +1096,7 @@ void Uci::setHash() {
 
 void Uci::ucinewgame() {
     newGame();
-    position_.setStartpos();
+    position_.setStartpos(); //TRICK: also counts root moves
     repetitions.clear();
     repetitions.push(colorToMove(), position_.z());
 }
@@ -1117,6 +1129,7 @@ void Uci::position() {
     consume("moves");
     position_.playMoves(inputLine, repetitions);
     tt.prefetch<TtSlot>(position_.z());
+    position_.countRootMoves();
 }
 
 void Uci::go() {
@@ -1129,6 +1142,13 @@ void Uci::go() {
     limits.go(inputLine, position_.sideOf(White), &position_);
     if (consume("searchmoves")) { position_.limitMoves(inputLine); }
 
+    if (position_.rootMoves() <= 1) {
+        // fast return on 0 or 1 root legal moves
+        pv.set(position_.rootMoves() == 0 ? UciMove{} : position_.firstRootMove());
+        info_bestmove();
+        return;
+    }
+
     auto started = mainSearchThread.start([this] {
         Node{position_, *this}.searchRoot();
         info_bestmove();
@@ -1140,6 +1160,7 @@ void Uci::go() {
 
     if (bestmove_.empty()) {
         error("search not started, send bestmove 0000");
+        pv.set({});
         info_bestmove();
     } else {
         error("search not started, bestmove not empty:" + bestmove_);

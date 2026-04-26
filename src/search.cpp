@@ -710,17 +710,7 @@ ReturnStatus Node::searchRoot() {
     auto rootMovesClone = moves(); // copy all moves (filtered by `go moves` command)
     repHash = root.repetitions.repHash(colorToMove());
 
-    Ply maxDepth = root.limits.maxDepth();
-
-    auto moveCount = rootMovesClone.popcount();
-    if (moveCount == 0) {
-        maxDepth = 1_ply;
-    } else if (moveCount == 1) {
-        // minimal search to get score and ponder move
-        maxDepth = root.limits.canPonder() ? 2_ply : 1_ply;
-    }
-
-    for (depth = 1_ply; depth <= maxDepth; ++depth) {
+    for (depth = 1_ply; depth <= root.limits.maxDepth(); ++depth) {
         tt = root.tt.prefetch<TtSlot>(z());
         setMoves(rootMovesClone);
         alpha = Score{MateLoss};

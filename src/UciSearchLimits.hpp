@@ -42,7 +42,7 @@ class UciSearchLimits {
     mutable node_count_t nodesLimit_{NodeCountMax}; // search limit
 
     // avoid output duplicate 'info nps'
-    mutable node_count_t lastInfoNodes_{NodeCountMax};
+    mutable node_count_t lastInfoNodes_{0};
 
     // number of remaining nodes before slow checking for search stop
     // (0 <= nodesQuota_ && nodesQuota_ <= QuotaLimit)

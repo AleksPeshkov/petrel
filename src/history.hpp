@@ -116,6 +116,12 @@ public:
         return set(Index{0}, bestRootMove, childPv);
     }
 
+    void set(Move bestRootMove) {
+        clear();
+        moves_[Index{0}] = bestRootMove;
+        moves_[Index{1}] = {};
+    }
+
     const auto* moves() const { return &moves_[Index{0}]; }
     auto move(Ply ply) const { return moves_[Index{ply.v()}]; }
     auto depth() const { return depth_; }

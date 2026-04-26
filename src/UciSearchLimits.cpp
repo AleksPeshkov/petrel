@@ -11,7 +11,7 @@ void UciSearchLimits::newSearch() {
     nodes_ = 0;
     nodesLimit_ = NodeCountMax;
     nodesQuota_ = 0;
-    lastInfoNodes_ = NodeCountMax;
+    lastInfoNodes_ = 0;
 
     time_ = {{ 0ms, 0ms }};
     inc_ = {{ 0ms, 0ms }};
