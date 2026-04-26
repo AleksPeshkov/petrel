@@ -47,9 +47,7 @@ void UciSearchLimits::assertNodesOk() const {
 ReturnStatus UciSearchLimits::refreshQuota() const {
     assertNodesOk();
 
-    if (hardDeadlineReached()) {
-        return ReturnStatus::Stop;
-    }
+    RETURN_IF_STOP (hardDeadlineReached());
 
     // expected nodesQuata_ == 0
     nodes_ -= nodesQuota_;
@@ -76,28 +74,28 @@ ReturnStatus UciSearchLimits::refreshQuota() const {
 }
 
 template <UciSearchLimits::deadline_t Deadline>
-bool UciSearchLimits::reachedTime() const {
-    if (nodes_ == 0) { return false; } // skip checking before search even started
-    if (stop_.load(std::memory_order_seq_cst)) { return true; }
-    if (timePool_ == UnlimitedTime || pondering_.load(std::memory_order_relaxed)) { return false; }
+ReturnStatus UciSearchLimits::reachedTime() const {
+    if (nodes_ == 0) { return ReturnStatus::Continue; } // skip checking before search even started
+    if (stop_.load(std::memory_order_seq_cst)) { return ReturnStatus::Stop; } // unconditional stop
+    if (timePool_ == UnlimitedTime || pondering_.load(std::memory_order_relaxed)) { return ReturnStatus::Continue; }
 
     auto timePool = timePool_;
     if (timeControl_ != ExactTime) {
         int deadlineRatio = Deadline;
-        if (Deadline == IterationDeadline) { deadlineRatio += iterLowMaterialBonus_; }
+        if (Deadline != HardDeadline) { deadlineRatio += iterLowMaterialBonus_; }
 
         timePool *= static_cast<int>(timeControl_) * deadlineRatio;
         timePool /= static_cast<int>(HardMove) * HardDeadline;
     }
 
     bool deadlineReached = timePool < elapsedSinceStart();
-    return deadlineReached;
+    return deadlineReached ? ReturnStatus::Stop : ReturnStatus::Continue;
 }
-bool UciSearchLimits::hardDeadlineReached() const { return reachedTime<HardDeadline>(); }
-bool UciSearchLimits::iterationDeadlineReached() const { return reachedTime<IterationDeadline>(); }
+ReturnStatus UciSearchLimits::hardDeadlineReached() const { return reachedTime<HardDeadline>(); }
+ReturnStatus UciSearchLimits::iterationDeadlineReached() const { return reachedTime<IterationDeadline>(); }
 
-void UciSearchLimits::updateMoveComplexity(UciMove bestMove) const {
-    if (timeControl_ == ExactTime) { return; }
+ReturnStatus UciSearchLimits::updateMoveComplexity(UciMove bestMove) const {
+    if (timeControl_ == ExactTime) { return ReturnStatus::Continue; }
 
     if (easyMove_.none()) {
         // Easy Move: root best move never changed
@@ -110,13 +108,19 @@ void UciSearchLimits::updateMoveComplexity(UciMove bestMove) const {
         // Normal Move: root best move have not changed during last two iterations
         timeControl_ = NormalMove;
     }
+
+    // good place to check as there are no wasted search nodes
+    // and timeControl_ just possibly changed
+    RETURN_IF_STOP (hardDeadlineReached());
+
+    return ReturnStatus::Continue;
 }
 
 int UciSearchLimits::lookAheadMoves() const { return movestogo_ > 0 ? std::min(movestogo_, 16) : 16; }
 TimeInterval UciSearchLimits::lookAheadTime(Side si) const { return time_[si] + inc_[si] * (lookAheadMoves() - 1); }
 TimeInterval UciSearchLimits::averageMoveTime(Side si) const { return lookAheadTime(si) / lookAheadMoves(); }
 
-void UciSearchLimits::setSearchDeadlines(const Position* p) {
+void UciSearchLimits::setTimeDeadlines(const Position* p) {
     if (movetime_ > 0ms) {
         timePool_ = movetime_;
         timeControl_ = ExactTime;
@@ -186,7 +190,7 @@ void UciSearchLimits::go(istream& is, Side white, const Position* p) {
         else { break; }
     }
 
-    setSearchDeadlines(p);
+    setTimeDeadlines(p);
 }
 
 void UciSearchLimits::setoption(istream& is) {
@@ -224,13 +228,6 @@ ostream& UciSearchLimits::nps(ostream& os) const {
     auto elapsedTime = elapsedSinceStart();
     if (elapsedTime >= 1ms) {
         os << " time " << elapsedTime << " nps " << ::nps(lastInfoNodes_, elapsedTime);
-    }
-    return os;
-}
-
-ostream& UciSearchLimits::info_nps(ostream& os) const {
-    if (hasNewNodes()) {
-        os << "info"; nps(os) << '\n';
     }
     return os;
 }

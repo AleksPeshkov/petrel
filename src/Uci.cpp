@@ -280,6 +280,13 @@ UciOutput& operator << (UciOutput& ob, const PrincipalVariation& pv) {
     return ob;
 }
 
+UciOutput& info_pv(UciOutput& ob, const PrincipalVariation& pv, const UciSearchLimits& limits) {
+    ob << "info depth " << pv.depth();
+    limits.nps(ob);
+    ob << pv;
+    return ob;
+}
+
 } // anonymous namespace
 
 Uci::Uci(ostream& os) :
@@ -678,14 +685,7 @@ void Uci::ponderhit() {
 
 void Uci::info_pv() const {
     UciOutput ob{this};
-    info_pv(ob);
-}
-
-UciOutput& Uci::info_pv(UciOutput& ob) const {
-    ob << "info depth " << pv.depth();
-    limits.nps(ob);
-    ob << pv;
-    return ob;
+    ::info_pv(ob, pv, limits);
 }
 
 void Uci::info_bestmove() const {
@@ -693,7 +693,7 @@ void Uci::info_bestmove() const {
     auto delayed = limits.shouldDelayBestmove();
 
     if (limits.hasNewNodes()) {
-        info_pv(ob);
+        ::info_pv(ob, pv, limits);
         if (delayed) { ob.flush(); } else { ob << '\n'; }
     }
 
@@ -720,11 +720,11 @@ ostream& Uci::info_fen(ostream& os) const {
 }
 
 void Uci::info_readyok() const {
-    Output ob{this};
+    UciOutput ob{this};
 #ifndef NDEBUG
     info_fen(ob) << '\n';
 #endif
-    limits.info_nps(ob);
+    if (limits.hasNewNodes() && limits.getNodes() > 0) { ::info_pv(ob, pv, limits) << '\n'; }
     ob << "readyok";
 }
 
@@ -743,7 +743,9 @@ void Uci::goPerft() {
 
 void Uci::info_perft_bestmove() const {
     Output ob{this};
-    limits.info_nps(ob);
+    if (limits.hasNewNodes()) {
+        ob << "info"; limits.nps(ob) << '\n';
+    }
     ob << "bestmove 0000";
 }
 

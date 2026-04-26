@@ -566,8 +566,6 @@ void Node::failHigh() const {
 }
 
 ReturnStatus Node::updatePv() const {
-    root.pv.set(pvIndex, uciMove(currentMove.from(), currentMove.to()), &child->pvIndex);
-
     if (depth > 0_ply) {
         bound = ExactScore;
         *tt = TtSlot{this};
@@ -578,19 +576,15 @@ ReturnStatus Node::updatePv() const {
         updateHistory(currentMove);
     }
 
-    if (ply == 0_ply) {
+    root.pv.set(pvIndex, uciMove(currentMove.from(), currentMove.to()), &child->pvIndex);
+    if (isRoot()) {
         const auto& bestMove = root.pv.move(0_ply);
-        root.limits.updateMoveComplexity(bestMove);
-        ::insert_unique(root.rootBestMoves, bestMove);
-
         root.pv.set(depth, score);
-        root.info_pv();
 
-        // good place to check as there are no wasted search nodes
-        // and HardDeadline just possibly changed
-        if (root.limits.hardDeadlineReached()) {
-            return ReturnStatus::Stop;
-        }
+        RETURN_IF_STOP (root.limits.updateMoveComplexity(bestMove));
+
+        ::insert_unique(root.rootBestMoves, bestMove);
+        root.info_pv();
     }
 
     return ReturnStatus::Continue;
@@ -695,7 +689,7 @@ void refreshTtPv(const PositionMoves& p, const PrincipalVariation& pv, const Tt&
 }
 
 ReturnStatus Node::searchRoot() {
-    auto rootMovesClone = moves();
+    auto rootMovesClone = moves(); // copy all moves (filtered by `go moves` command)
     repHash = root.repetitions.repHash(colorToMove());
 
     Ply maxDepth = root.limits.maxDepth();
@@ -714,14 +708,12 @@ ReturnStatus Node::searchRoot() {
         setMoves(rootMovesClone);
         alpha = Score{MateLoss};
         beta = Score{MateWin};
-        auto returnStatus = search();
+
+        RETURN_IF_STOP (search());
+        RETURN_IF_STOP (root.limits.iterationDeadlineReached());
 
         root.newIteration();
         ::refreshTtPv(*this, root.pv, root.tt);
-
-        RETURN_IF_STOP (returnStatus);
-
-        if (root.limits.iterationDeadlineReached()) { return ReturnStatus::Stop; }
     }
 
     return ReturnStatus::Continue;

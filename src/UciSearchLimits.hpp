@@ -6,6 +6,8 @@
 #include "io.hpp"
 #include "Score.hpp"
 
+#define RETURN_IF_STOP(visitor) { if (visitor == ReturnStatus::Stop) { return ReturnStatus::Stop; } } ((void)0)
+
 using namespace std::chrono_literals;
 
 using clock_type = std::chrono::steady_clock;
@@ -34,6 +36,7 @@ class UciSearchLimits {
     static constexpr TimeInterval UnlimitedTime{TimeInterval::max()};
     static constexpr node_count_t NodeCountMax{std::numeric_limits<node_count_t>::max()};
     static constexpr int QuotaLimit{1000};
+    static constexpr TimeInterval MoveOverheadDefault{400us};
 
     mutable node_count_t nodes_{0}; // (0 <= nodes_ && nodes_ <= nodesLimit_)
     mutable node_count_t nodesLimit_{NodeCountMax}; // search limit
@@ -75,41 +78,43 @@ class UciSearchLimits {
     bool isNewGame_{true}; // the first move after ucinewgame will spend more thinking time
 
 // UCI configurable options
-    static constexpr TimeInterval MoveOverheadDefault{400us};
     TimeInterval moveOverhead_{MoveOverheadDefault};
     bool canPonder_{false};
-
-    void assertNodesOk() const;
 
 // unify sudden death, increment and cyclic time controls
     int lookAheadMoves() const;
     TimeInterval lookAheadTime(Side) const;
     TimeInterval averageMoveTime(Side) const;
-    void setSearchDeadlines(const Position* = nullptr);
-
-    template <deadline_t Deadline> bool reachedTime() const;
     TimeInterval elapsedSinceStart() const { return ::elapsedSince(searchStartTime_); }
 
+    void setTimeDeadlines(const Position* = nullptr);
+
+    template <deadline_t Deadline>
+    [[nodiscard]] ReturnStatus reachedTime() const;
+
+    void assertNodesOk() const;
     ReturnStatus refreshQuota() const;
 
 public:
+    constexpr bool canPonder() const { return canPonder_; }
+    constexpr Ply maxDepth() const { return maxDepth_; }
+    constexpr node_count_t getNodes() const { return nodes_ - nodesQuota_; } // exact number of searched nodes
+
 // called from the Uci input handling thread:
-    void newGame() { isNewGame_ = true; newSearch(); }
-    void newSearch(); // start search timer, clear all limits except canPonder_, moveOverhead_ and isNewGame_
-    void setoption(istream&);
-    void go(istream&, Side, const Position* = nullptr);
-    void stop();
-    void ponderhit();
+    ostream& nps(ostream&) const;
     ostream& uciok(ostream&) const;
 
-    // ponder || infinite
-    bool shouldDelayBestmove() const { return pondering_.load(std::memory_order_relaxed) || infinite_; }
+    void setoption(istream&);
+    void go(istream&, Side, const Position* = nullptr);
 
-    constexpr bool canPonder() const { return canPonder_; }
-    constexpr node_count_t getNodes() const { return nodes_ - nodesQuota_; } // exact number of searched nodes
+    void newGame() { isNewGame_ = true; newSearch(); }
+    void newSearch(); // start search timer, clear all limits except canPonder_, moveOverhead_ and isNewGame_
+    void stop();
+    void ponderhit();
+
+    // pondering || infinite
+    bool shouldDelayBestmove() const { return pondering_.load(std::memory_order_relaxed) || infinite_; }
     constexpr bool hasNewNodes() const { return lastInfoNodes_ != getNodes(); }
-    ostream& nps(ostream&) const;
-    ostream& info_nps(ostream&) const;
 
 // used in search.cpp:
     // checks for search stop reasons
@@ -127,10 +132,9 @@ public:
         return ReturnStatus::Continue;
     }
 
-    constexpr Ply maxDepth() const { return maxDepth_; }
-    bool hardDeadlineReached() const;
-    bool iterationDeadlineReached() const;
-    void updateMoveComplexity(UciMove bestMove) const;
+    [[nodiscard]] ReturnStatus hardDeadlineReached() const;
+    [[nodiscard]] ReturnStatus iterationDeadlineReached() const;
+    [[nodiscard]] ReturnStatus updateMoveComplexity(UciMove) const;
 };
 
 #endif
