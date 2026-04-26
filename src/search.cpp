@@ -617,13 +617,14 @@ ReturnStatus Node::updatePv() {
     if (!isRoot()) {
         child->pvIndex = root.pv.set(pvIndex, bestMove, child->pvIndex);
     } else {
-        pvIndex = root.pv.set(depth, score, bestMove, child->pvIndex);
+        // unfinished iteration, so report depth-1
+        pvIndex = root.pv.set(depth - 1_ply, score, bestMove, child->pvIndex);
         child->pvIndex = PrincipalVariation::Index{+pvIndex+1};
 
         RETURN_IF_STOP (root.limits.updateTimeStrategy(root.pv));
 
         ::insert_unique(root.rootBestMoves, bestMove);
-        root.info_pv();
+        if (depth > 1_ply) { root.info_pv(); }
     }
 
     return ReturnStatus::Continue;
@@ -749,9 +750,12 @@ ReturnStatus Node::searchRoot() {
         beta = Score{MateWin};
 
         RETURN_IF_STOP (search());
+        root.pv.set(depth); // iteration fully completed
+
         RETURN_IF_STOP (root.limits.iterationDeadlineReached());
         if (depth >= root.limits.maxDepth()) { return ReturnStatus::Continue; }
 
+        root.info_pv();
         ::refreshTtPv(*this, root.pv, root.tt);
     }
 
