@@ -812,9 +812,23 @@ void Uci::_log(io::char_type tag, std::string_view message, bool flush) const {
     auto timeStamp = ::elapsedSince(logStartTime);
     auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(timeStamp).count();
     auto us = (std::chrono::duration_cast<std::chrono::microseconds>(timeStamp) % 1000).count();
-    logFile << pid_ << " " << ms << '.' << std::setfill('0') << std::setw(3) << us << " ";
 
-    logFile << tag << message << '\n';
+    // format multi-line messages:
+
+    size_t start = 0;
+    while (start < message.size()) {
+        auto end = message.find('\n', start);
+        if (end == std::string_view::npos) { end = message.size(); }
+
+        logFile << pid_
+            << " " << ms << '.' << std::setfill('0') << std::setw(3) << us
+            << " " << tag
+            << message.substr(start, end - start)
+            << '\n'
+        ;
+        start = end + 1; // skip '\n'
+    }
+
     if (flush) { logFile.flush(); }
 }
 

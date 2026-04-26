@@ -1,0 +1,1525 @@
+785326 0.004 >uci
+785326 0.099 <id name petrel 2026-04-26 87ecb503d DEBUG
+785326 0.099 <id author Aleks Peshkov
+785326 0.099 <option name Debug Log File type string default perft.log
+785326 0.099 <option name EvalFile type string default <empty>
+785326 0.099 <option name Hash type spin min 2 max 8192 default 16
+785326 0.099 <option name Move Overhead type spin min 0 max 10000 default 0
+785326 0.099 <option name Ponder type check default false
+785326 0.099 <option name UCI_Chess960 type check default false
+785326 0.099 <uciok
+785326 0.269 >set UCI_Chess960 true
+785326 0.289 >setoption hash 16
+785326 3.917 >isready
+785326 4.042 <info score cp 43 fen rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w AHah - 0 1
+785326 4.042 <readyok
+785326 4.335 >perft 5
+785326 10.275 <info currmovenumber 1 nodes 9306 time 5 nps 1577581 currmove b1a3 perft 198572
+785326 16.087 <info currmovenumber 2 nodes 18650 time 11 nps 1592872 currmove b1c3 perft 234656
+785326 22.207 <info currmovenumber 3 nodes 27524 time 17 nps 1543334 currmove g1f3 perft 233491
+785326 26.909 <info currmovenumber 4 nodes 35068 time 22 nps 1556492 currmove g1h3 perft 198502
+785326 33.953 <info currmovenumber 5 nodes 46300 time 29 nps 1565174 currmove d2d4 perft 361790
+785326 42.083 <info currmovenumber 6 nodes 57039 time 37 nps 1512540 currmove d2d3 perft 328511
+785326 49.564 <info currmovenumber 7 nodes 68143 time 45 nps 1507915 currmove e2e4 perft 405385
+785326 56.840 <info currmovenumber 8 nodes 79226 time 52 nps 1510090 currmove e2e3 perft 402988
+785326 62.411 <info currmovenumber 9 nodes 86308 time 58 nps 1487060 currmove c2c4 perft 240082
+785326 66.549 <info currmovenumber 10 nodes 92904 time 62 nps 1494139 currmove c2c3 perft 222861
+785326 69.804 <info currmovenumber 11 nodes 98238 time 65 nps 1501366 currmove f2f4 perft 198473
+785326 73.386 <info currmovenumber 12 nodes 103088 time 69 nps 1493669 currmove f2f3 perft 178889
+785326 76.990 <info currmovenumber 13 nodes 107530 time 72 nps 1480766 currmove b2b4 perft 216145
+785326 80.049 <info currmovenumber 14 nodes 111972 time 75 nps 1479572 currmove b2b3 perft 215255
+785326 82.252 <info currmovenumber 15 nodes 115523 time 77 nps 1483281 currmove g2g4 perft 214048
+785326 84.442 <info currmovenumber 16 nodes 119076 time 80 nps 1487076 currmove g2g3 perft 217210
+785326 86.317 <info currmovenumber 17 nodes 122169 time 81 nps 1490797 currmove a2a4 perft 217832
+785326 87.654 <info currmovenumber 18 nodes 124350 time 83 nps 1493043 currmove a2a3 perft 181046
+785326 89.365 <info currmovenumber 19 nodes 126553 time 84 nps 1488972 currmove h2h4 perft 218829
+785326 90.260 <info currmovenumber 20 nodes 127844 time 85 nps 1488426 currmove h2h3 perft 181044
+785326 90.276 <info depth 5 perft 4865609
+785326 90.287 <bestmove 0000
+785326 90.492 >position fen 6kr///////6K1 b k
+785326 90.555 !petrel 785326 unparsed input->
+785326 90.555 !root fen 6kr/8/8/8/8/8/8/6K1 b h - 0 1 node 127844 depth 0 score none
+785326 90.555 !position fen 6kr///////6K1 b k
+785326 90.570 >perft 6
+785326 92.228 <info currmovenumber 1 nodes 4543 time 1 nps 2772877 currmove g8f7 perft 42739
+785326 93.533 <info currmovenumber 2 nodes 8145 time 2 nps 2763248 currmove g8g7 perft 39649
+785326 94.180 <info currmovenumber 3 nodes 9825 time 3 nps 2733054 currmove g8h7 perft 27426
+785326 94.685 <info currmovenumber 4 nodes 11142 time 4 nps 2717540 currmove g8f8 perft 20896
+785326 95.554 <info currmovenumber 5 nodes 13505 time 4 nps 2717521 currmove h8h1 perft 19808
+785326 95.755 <info currmovenumber 6 nodes 14006 time 5 nps 2708865 currmove h8h2 perft 5295
+785326 96.353 <info currmovenumber 7 nodes 15422 time 5 nps 2674843 currmove h8h3 perft 24678
+785326 97.062 <info currmovenumber 8 nodes 17361 time 6 nps 2680049 currmove h8h4 perft 31578
+785326 97.796 <info currmovenumber 9 nodes 19300 time 7 nps 2678342 currmove h8h5 perft 32996
+785326 98.496 <info currmovenumber 10 nodes 21230 time 7 nps 2683313 currmove h8h6 perft 32786
+785326 99.258 <info currmovenumber 11 nodes 22968 time 8 nps 2649251 currmove h8h7 perft 29646
+785326 99.754 <info currmovenumber 12 nodes 24100 time 9 nps 2628548 currmove g8h8 perft 17796
+785326 99.785 <info depth 6 perft 325293
+785326 99.798 <bestmove 0000
+785326 99.884 >position fen 5kr1///////5K2 b k
+785326 99.943 !petrel 785326 unparsed input->
+785326 99.943 !root fen 5kr1/8/8/8/8/8/8/5K2 b g - 0 1 node 24100 depth 0 score none
+785326 99.943 !position fen 5kr1///////5K2 b k
+785326 99.966 >perft 6
+785326 101.532 <info currmovenumber 1 nodes 4165 time 1 nps 2692869 currmove f8e7 perft 44247
+785326 102.357 <info currmovenumber 2 nodes 6395 time 2 nps 2696921 currmove f8f7 perft 41942
+785326 102.934 <info currmovenumber 3 nodes 7650 time 2 nps 2594160 currmove f8g7 perft 44162
+785326 103.474 <info currmovenumber 4 nodes 9034 time 3 nps 2587542 currmove f8e8 perft 23093
+785326 104.306 <info currmovenumber 5 nodes 11242 time 4 nps 2600676 currmove g8g1 perft 21311
+785326 104.538 <info currmovenumber 6 nodes 11754 time 4 nps 2580200 currmove g8g2 perft 6106
+785326 105.031 <info currmovenumber 7 nodes 13000 time 5 nps 2575293 currmove g8g3 perft 25726
+785326 105.762 <info currmovenumber 8 nodes 14692 time 5 nps 2543597 currmove g8g4 perft 33026
+785326 106.443 <info currmovenumber 9 nodes 16384 time 6 nps 2536785 currmove g8g5 perft 34556
+785326 107.102 <info currmovenumber 10 nodes 18067 time 7 nps 2537958 currmove g8g6 perft 34346
+785326 107.671 <info currmovenumber 11 nodes 19537 time 7 nps 2540936 currmove g8g7 perft 31121
+785326 108.143 <info currmovenumber 12 nodes 20691 time 8 nps 2535392 currmove f8g8 perft 26514
+785326 108.229 <info currmovenumber 13 nodes 20842 time 8 nps 2527246 currmove g8h8 perft 35484
+785326 108.244 <info depth 6 perft 401634
+785326 108.260 <bestmove 0000
+785326 108.363 >position fen 4kr2///////4K3 b k
+785326 108.415 !petrel 785326 unparsed input->
+785326 108.415 !root fen 4kr2/8/8/8/8/8/8/4K3 b f - 0 1 node 20842 depth 0 score none
+785326 108.415 !position fen 4kr2///////4K3 b k
+785326 108.433 >perft 6
+785326 109.941 <info currmovenumber 1 nodes 4195 time 1 nps 2809071 currmove e8d7 perft 44739
+785326 110.825 <info currmovenumber 2 nodes 6434 time 2 nps 2709030 currmove e8e7 perft 42311
+785326 111.329 <info currmovenumber 3 nodes 7711 time 2 nps 2677895 currmove e8f7 perft 48168
+785326 111.957 <info currmovenumber 4 nodes 9311 time 3 nps 2653578 currmove e8d8 perft 25530
+785326 112.772 <info currmovenumber 5 nodes 11519 time 4 nps 2664565 currmove f8f1 perft 21570
+785326 113.017 <info currmovenumber 6 nodes 12031 time 4 nps 2634401 currmove f8f2 perft 6412
+785326 113.500 <info currmovenumber 7 nodes 13277 time 5 nps 2627840 currmove f8f3 perft 25849
+785326 114.157 <info currmovenumber 8 nodes 14969 time 5 nps 2622173 currmove f8f4 perft 33149
+785326 114.810 <info currmovenumber 9 nodes 16661 time 6 nps 2619120 currmove f8f5 perft 34679
+785326 115.454 <info currmovenumber 10 nodes 18344 time 7 nps 2618102 currmove f8f6 perft 34469
+785326 116.027 <info currmovenumber 11 nodes 19814 time 7 nps 2614200 currmove f8f7 perft 31490
+785326 116.386 <info currmovenumber 12 nodes 20654 time 7 nps 2601770 currmove e8f8 perft 26553
+785326 116.490 <info currmovenumber 13 nodes 20863 time 8 nps 2593872 currmove f8g8 perft 39089
+785326 116.872 <info currmovenumber 14 nodes 21782 time 8 nps 2585475 currmove f8h8 perft 45248
+785326 116.885 <info depth 6 perft 459256
+785326 116.905 <bestmove 0000
+785326 117.001 >position fen 3kr3///////3K4 b k
+785326 117.050 !petrel 785326 unparsed input->
+785326 117.050 !root fen 3kr3/8/8/8/8/8/8/3K4 b e - 0 1 node 21782 depth 0 score none
+785326 117.050 !position fen 3kr3///////3K4 b k
+785326 117.069 >perft 6
+785326 118.586 <info currmovenumber 1 nodes 4225 time 1 nps 2818156 currmove d8c7 perft 45231
+785326 119.428 <info currmovenumber 2 nodes 6473 time 2 nps 2764850 currmove d8d7 perft 42680
+785326 119.936 <info currmovenumber 3 nodes 7738 time 2 nps 2715369 currmove d8e7 perft 48168
+785326 120.632 <info currmovenumber 4 nodes 9578 time 3 nps 2701898 currmove d8c8 perft 28255
+785326 121.453 <info currmovenumber 5 nodes 11786 time 4 nps 2699190 currmove e8e1 perft 21659
+785326 121.657 <info currmovenumber 6 nodes 12298 time 4 nps 2690723 currmove e8e2 perft 6446
+785326 122.138 <info currmovenumber 7 nodes 13544 time 5 nps 2680989 currmove e8e3 perft 25972
+785326 122.890 <info currmovenumber 8 nodes 15236 time 5 nps 2627592 currmove e8e4 perft 33272
+785326 123.599 <info currmovenumber 9 nodes 16928 time 6 nps 2600437 currmove e8e5 perft 34802
+785326 124.249 <info currmovenumber 10 nodes 18611 time 7 nps 2598424 currmove e8e6 perft 34592
+785326 124.798 <info currmovenumber 11 nodes 20081 time 7 nps 2603657 currmove e8e7 perft 31859
+785326 125.198 <info currmovenumber 12 nodes 21054 time 8 nps 2595668 currmove d8e8 perft 43885
+785326 125.329 <info currmovenumber 13 nodes 21335 time 8 nps 2588387 currmove e8f8 perft 43082
+785326 125.666 <info currmovenumber 14 nodes 22221 time 8 nps 2589975 currmove e8g8 perft 49275
+785326 125.991 <info currmovenumber 15 nodes 23051 time 8 nps 2588621 currmove e8h8 perft 50514
+785326 126.010 <info depth 6 perft 539692
+785326 126.024 <bestmove 0000
+785326 126.100 >position fen 8/PPPk4/8/8/8/8/4Kppp/8 b - -
+785326 126.138 >perft 6
+785326 153.616 <info currmovenumber 1 nodes 61776 time 27 nps 2251999 currmove d7c6 perft 1662316
+785326 178.441 <info currmovenumber 2 nodes 122797 time 52 nps 2349059 currmove d7d6 perft 2124652
+785326 205.144 <info currmovenumber 3 nodes 177791 time 78 nps 2251273 currmove d7e6 perft 2175029
+785326 218.492 <info currmovenumber 4 nodes 211591 time 92 nps 2291757 currmove d7c7 perft 745285
+785326 239.376 <info currmovenumber 5 nodes 260985 time 113 nps 2305305 currmove d7e7 perft 2013706
+785326 247.313 <info currmovenumber 6 nodes 280574 time 121 nps 2315892 currmove d7e8 perft 848663
+785326 255.193 <info currmovenumber 7 nodes 298966 time 129 nps 2316957 currmove f2f1q perft 340274
+785326 297.630 <info currmovenumber 8 nodes 376429 time 171 nps 2195417 currmove f2f1r perft 2669383
+785326 309.840 <info currmovenumber 9 nodes 396148 time 183 nps 2156807 currmove f2f1b perft 548328
+785326 324.531 <info currmovenumber 10 nodes 429198 time 198 nps 2163648 currmove f2f1n perft 1316997
+785326 365.090 <info currmovenumber 11 nodes 501670 time 238 nps 2099699 currmove g2g1q perft 2545486
+785326 412.344 <info currmovenumber 12 nodes 576626 time 286 nps 2014925 currmove g2g1r perft 3098494
+785326 421.038 <info currmovenumber 13 nodes 590293 time 294 nps 2001911 currmove g2g1b perft 969473
+785326 426.861 <info currmovenumber 14 nodes 600109 time 300 nps 1995686 currmove g2g1n perft 382756
+785326 461.416 <info currmovenumber 15 nodes 655333 time 335 nps 1954744 currmove h2h1q perft 2596500
+785326 496.821 <info currmovenumber 16 nodes 712674 time 370 nps 1922748 currmove h2h1r perft 2963669
+785326 498.008 <info currmovenumber 17 nodes 714429 time 371 nps 1921271 currmove h2h1b perft 940326
+785326 499.822 <info currmovenumber 18 nodes 717520 time 373 nps 1920215 currmove h2h1n perft 917946
+785326 499.846 <info depth 6 perft 28859283
+785326 499.863 <bestmove 0000
+785326 500.047 >position fen n1n5/1Pk5/8/8/8/8/5Kp1/5N1N b - -
+785326 500.108 >perft 6
+785326 550.098 <info currmovenumber 1 nodes 87597 time 49 nps 1753731 currmove c7b6 perft 2364430
+785326 593.836 <info currmovenumber 2 nodes 167564 time 93 nps 1788485 currmove c7c6 perft 2730758
+785326 629.875 <info currmovenumber 3 nodes 244804 time 129 nps 1886981 currmove c7d6 perft 2931061
+785326 643.577 <info currmovenumber 4 nodes 275649 time 143 nps 1921765 currmove c7b7 perft 568011
+785326 679.032 <info currmovenumber 5 nodes 351130 time 178 nps 1962802 currmove c7d7 perft 2907497
+785326 694.219 <info currmovenumber 6 nodes 382216 time 194 nps 1969343 currmove c7b8 perft 975583
+785326 718.971 <info currmovenumber 7 nodes 434112 time 218 nps 1983767 currmove c7d8 perft 1973056
+785326 736.948 <info currmovenumber 8 nodes 479387 time 236 nps 2024381 currmove c8b6 perft 1829537
+785326 762.038 <info currmovenumber 9 nodes 537505 time 261 nps 2052354 currmove c8d6 perft 2318025
+785326 777.672 <info currmovenumber 10 nodes 570437 time 277 nps 2055388 currmove c8a7 perft 1658505
+785326 795.835 <info currmovenumber 11 nodes 613332 time 295 nps 2074217 currmove c8e7 perft 2303016
+785326 812.053 <info currmovenumber 12 nodes 652385 time 311 nps 2091582 currmove a8b6 perft 1858890
+785326 818.735 <info currmovenumber 13 nodes 666570 time 318 nps 2092183 currmove g2f1q perft 303529
+785326 827.016 <info currmovenumber 14 nodes 684818 time 326 nps 2095032 currmove g2g1q perft 553486
+785326 856.930 <info currmovenumber 15 nodes 747309 time 356 nps 2094532 currmove g2h1q perft 2223256
+785326 864.920 <info currmovenumber 16 nodes 764162 time 364 nps 2094834 currmove g2f1r perft 520681
+785326 884.158 <info currmovenumber 17 nodes 805080 time 384 nps 2096469 currmove g2g1r perft 2203196
+785326 905.206 <info currmovenumber 18 nodes 848416 time 405 nps 2094646 currmove g2h1r perft 2274521
+785326 914.403 <info currmovenumber 19 nodes 867524 time 414 nps 2094159 currmove g2f1b perft 1020857
+785326 919.917 <info currmovenumber 20 nodes 878957 time 419 nps 2093920 currmove g2g1b perft 606005
+785326 930.050 <info currmovenumber 21 nodes 900365 time 429 nps 2094316 currmove g2h1b perft 1434753
+785326 934.817 <info currmovenumber 22 nodes 911051 time 434 nps 2095908 currmove g2f1n perft 704458
+785326 939.382 <info currmovenumber 23 nodes 921362 time 439 nps 2097595 currmove g2g1n perft 1094242
+785326 940.944 <info currmovenumber 24 nodes 924779 time 440 nps 2097899 currmove g2h1n perft 307976
+785326 940.963 <info depth 6 perft 37665329
+785326 940.978 <bestmove 0000
+785326 941.144 >position fen r3k2r/8/8/8/8/8/8/R3K2R w KQkq
+785326 941.216 !petrel 785326 unparsed input->
+785326 941.216 !root fen r3k2r/8/8/8/8/8/8/R3K2R w AHah - 0 1 node 924779 depth 0 score none
+785326 941.216 !position fen r3k2r/8/8/8/8/8/8/R3K2R w KQkq
+785326 941.234 >perft 6
+785326 1078.121 <info currmovenumber 1 nodes 267935 time 136 nps 1957769 currmove e1d2 perft 10636865
+785326 1185.969 <info currmovenumber 2 nodes 522696 time 244 nps 2136033 currmove e1e2 perft 11733530
+785326 1273.112 <info currmovenumber 3 nodes 741391 time 331 nps 2234127 currmove e1f2 perft 10519249
+785326 1317.795 <info currmovenumber 4 nodes 857829 time 376 nps 2278227 currmove e1d1 perft 6357740
+785326 1360.786 <info currmovenumber 5 nodes 973061 time 419 nps 2319423 currmove e1f1 perft 6274390
+785326 1369.113 <info currmovenumber 6 nodes 997267 time 427 nps 2330811 currmove a1a8 perft 545276
+785326 1410.204 <info currmovenumber 7 nodes 1109919 time 468 nps 2366831 currmove a1a7 perft 4071181
+785326 1452.364 <info currmovenumber 8 nodes 1229161 time 511 nps 2404909 currmove a1a6 perft 6447915
+785326 1493.064 <info currmovenumber 9 nodes 1345926 time 551 nps 2439118 currmove a1a5 perft 7189546
+785326 1534.496 <info currmovenumber 10 nodes 1466723 time 593 nps 2472391 currmove a1a4 perft 7739115
+785326 1576.375 <info currmovenumber 11 nodes 1592124 time 635 nps 2506812 currmove a1a3 perft 8275997
+785326 1618.933 <info currmovenumber 12 nodes 1720693 time 677 nps 2539102 currmove a1a2 perft 8563373
+785326 1648.677 <info currmovenumber 13 nodes 1813150 time 707 nps 2563047 currmove a1b1 perft 8198901
+785326 1674.200 <info currmovenumber 14 nodes 1893344 time 732 nps 2583203 currmove a1c1 perft 7710115
+785326 1692.725 <info currmovenumber 15 nodes 1952372 time 751 nps 2598069 currmove a1d1 perft 6027769
+785326 1734.107 <info currmovenumber 16 nodes 2083026 time 792 nps 2627257 currmove e1a1 perft 5150161
+785326 1738.570 <info currmovenumber 17 nodes 2098318 time 797 nps 2631711 currmove h1h8 perft 585361
+785326 1762.672 <info currmovenumber 18 nodes 2176664 time 821 nps 2649879 currmove h1h7 perft 4163894
+785326 1783.542 <info currmovenumber 19 nodes 2245840 time 842 nps 2666348 currmove h1h6 perft 6740373
+785326 1801.984 <info currmovenumber 20 nodes 2307188 time 860 nps 2680491 currmove h1h5 perft 7582114
+785326 1820.384 <info currmovenumber 21 nodes 2368523 time 879 nps 2694169 currmove h1h4 perft 8217017
+785326 1838.752 <info currmovenumber 22 nodes 2430587 time 897 nps 2708183 currmove h1h3 perft 8839334
+785326 1857.024 <info currmovenumber 23 nodes 2492297 time 915 nps 2721538 currmove h1h2 perft 9157898
+785326 1881.141 <info currmovenumber 24 nodes 2573539 time 939 nps 2738152 currmove e1h1 perft 5187935
+785326 1886.150 <info currmovenumber 25 nodes 2590440 time 944 nps 2741495 currmove h1f1 perft 6099283
+785326 1891.228 <info currmovenumber 26 nodes 2607672 time 949 nps 2744982 currmove h1g1 perft 7848606
+785326 1891.242 <info depth 6 perft 179862938
+785326 1891.249 <bestmove 0000
+785326 1891.502 >position fen rnbqkb1r/pp1p1ppp/2p5/4P3/2B5/8/PPP1NnPP/RNBQK2R w KQkq - 0 6
+785326 1891.591 >perft 3
+785326 1891.642 <info currmovenumber 1 nodes 35 currmove e1d2 perft 1003
+785326 1891.665 <info currmovenumber 2 nodes 64 currmove e1f2 perft 1171
+785326 1891.687 <info currmovenumber 3 nodes 99 currmove e1f1 perft 1363
+785326 1891.699 <info currmovenumber 4 nodes 104 currmove d1d7 perft 143
+785326 1891.719 <info currmovenumber 5 nodes 133 currmove d1d6 perft 1385
+785326 1891.742 <info currmovenumber 6 nodes 168 currmove d1d5 perft 1451
+785326 1891.765 <info currmovenumber 7 nodes 203 currmove d1d4 perft 1588
+785326 1891.788 <info currmovenumber 8 nodes 238 currmove d1d3 perft 1615
+785326 1891.810 <info currmovenumber 9 nodes 273 currmove d1d2 perft 1356
+785326 1891.833 <info currmovenumber 10 nodes 308 currmove e1h1 perft 1296
+785326 1891.854 <info currmovenumber 11 nodes 343 currmove h1f1 perft 1294
+785326 1891.875 <info currmovenumber 12 nodes 378 currmove h1g1 perft 1241
+785326 1891.886 <info currmovenumber 13 nodes 381 currmove c4f7 perft 80
+785326 1891.928 <info currmovenumber 14 nodes 415 currmove c4a6 perft 1190
+785326 1891.956 <info currmovenumber 15 nodes 452 currmove c4e6 perft 1399
+785326 1891.978 <info currmovenumber 16 nodes 487 currmove c4b5 perft 1265
+785326 1892.000 <info currmovenumber 17 nodes 522 currmove c4d5 perft 1239
+785326 1892.023 <info currmovenumber 18 nodes 557 currmove c4b3 perft 1205
+785326 1892.045 <info currmovenumber 19 nodes 592 currmove c4d3 perft 1177
+785326 1892.067 <info currmovenumber 20 nodes 626 currmove c1h6 perft 1336
+785326 1892.088 <info currmovenumber 21 nodes 658 currmove c1g5 perft 1329
+785326 1892.110 <info currmovenumber 22 nodes 693 currmove c1f4 perft 1362
+785326 1892.133 <info currmovenumber 23 nodes 728 currmove c1e3 perft 1517
+785326 1892.155 <info currmovenumber 24 nodes 763 currmove c1d2 perft 1264
+785326 1892.177 <info currmovenumber 25 nodes 798 currmove e2d4 perft 1460
+785326 1892.199 <info currmovenumber 26 nodes 833 currmove e2f4 perft 1486
+785326 1892.222 <info currmovenumber 27 nodes 868 currmove e2c3 perft 1517
+785326 1892.244 <info currmovenumber 28 nodes 903 currmove e2g3 perft 1453
+785326 1892.266 <info currmovenumber 29 nodes 938 currmove e2g1 perft 1361
+785326 1892.289 <info currmovenumber 30 nodes 973 currmove b1a3 perft 1233
+785326 1892.312 <info currmovenumber 31 nodes 1008 currmove b1c3 perft 1389
+785326 1892.334 <info currmovenumber 32 nodes 1043 currmove b1d2 perft 1070
+785326 1892.357 <info currmovenumber 33 nodes 1080 currmove e5e6 perft 1366
+785326 1892.379 <info currmovenumber 34 nodes 1115 currmove c2c3 perft 1362
+785326 1892.401 <info currmovenumber 35 nodes 1149 currmove b2b4 perft 1324
+785326 1892.424 <info currmovenumber 36 nodes 1184 currmove b2b3 perft 1298
+785326 1892.446 <info currmovenumber 37 nodes 1219 currmove g2g4 perft 1267
+785326 1892.468 <info currmovenumber 38 nodes 1254 currmove g2g3 perft 1238
+785326 1892.490 <info currmovenumber 39 nodes 1289 currmove a2a4 perft 1363
+785326 1892.512 <info currmovenumber 40 nodes 1324 currmove a2a3 perft 1303
+785326 1892.535 <info currmovenumber 41 nodes 1359 currmove h2h4 perft 1332
+785326 1892.557 <info currmovenumber 42 nodes 1394 currmove h2h3 perft 1301
+785326 1892.564 <info depth 3 perft 53392
+785326 1892.572 <bestmove 0000
+785326 1892.662 >position fen 8/8/8/2rk/2p1p/5R/QP1P2B/2KR w - -
+785326 1892.685 >perft 6
+785326 1954.551 <info currmovenumber 1 nodes 174282 time 61 nps 2818032 currmove c1c2 perft 3938645
+785326 2006.492 <info currmovenumber 2 nodes 324800 time 113 nps 2854846 currmove c1b1 perft 3467609
+785326 2035.278 <info currmovenumber 3 nodes 415372 time 142 nps 2913317 currmove a2a8 perft 1597455
+785326 2087.170 <info currmovenumber 4 nodes 574661 time 194 nps 2955029 currmove a2a7 perft 3786296
+785326 2119.641 <info currmovenumber 5 nodes 675008 time 226 nps 2974362 currmove a2a6 perft 2417553
+785326 2145.553 <info currmovenumber 6 nodes 757720 time 252 nps 2996693 currmove a2a5 perft 2301636
+785326 2180.956 <info currmovenumber 7 nodes 869899 time 288 nps 3017808 currmove a2a4 perft 3371941
+785326 2190.977 <info currmovenumber 8 nodes 904682 time 298 nps 3032993 currmove a2c4 perft 540156
+785326 2224.374 <info currmovenumber 9 nodes 1011080 time 331 nps 3048482 currmove a2a3 perft 3477246
+785326 2250.457 <info currmovenumber 10 nodes 1092357 time 357 nps 3053349 currmove a2b3 perft 2926697
+785326 2281.481 <info currmovenumber 11 nodes 1196735 time 388 nps 3078162 currmove a2a1 perft 3318078
+785326 2308.598 <info currmovenumber 12 nodes 1288907 time 415 nps 3099084 currmove a2b1 perft 2670004
+785326 2336.501 <info currmovenumber 13 nodes 1384625 time 443 nps 3119924 currmove f3f8 perft 2921109
+785326 2358.837 <info currmovenumber 14 nodes 1462213 time 466 nps 3136864 currmove f3f7 perft 2695937
+785326 2371.799 <info currmovenumber 15 nodes 1506367 time 479 nps 3144132 currmove f3f6 perft 1495275
+785326 2379.964 <info currmovenumber 16 nodes 1535913 time 487 nps 3152091 currmove f3f5 perft 927818
+785326 2396.912 <info currmovenumber 17 nodes 1594777 time 504 nps 3162886 currmove f3f4 perft 2499708
+785326 2418.497 <info currmovenumber 18 nodes 1668591 time 525 nps 3173431 currmove f3a3 perft 2275565
+785326 2434.648 <info currmovenumber 19 nodes 1722558 time 541 nps 3178482 currmove f3b3 perft 2615899
+785326 2449.769 <info currmovenumber 20 nodes 1775261 time 557 nps 3186805 currmove f3c3 perft 2440841
+785326 2454.277 <info currmovenumber 21 nodes 1792576 time 561 nps 3192010 currmove f3d3 perft 756954
+785326 2469.754 <info currmovenumber 22 nodes 1846622 time 577 nps 3200079 currmove f3e3 perft 2559921
+785326 2484.645 <info currmovenumber 23 nodes 1900705 time 591 nps 3210943 currmove f3g3 perft 2926462
+785326 2500.660 <info currmovenumber 24 nodes 1957915 time 607 nps 3220465 currmove f3h3 perft 3079407
+785326 2513.834 <info currmovenumber 25 nodes 2005374 time 621 nps 3228569 currmove f3f2 perft 2321511
+785326 2523.317 <info currmovenumber 26 nodes 2038287 time 630 nps 3232198 currmove f3f1 perft 2039487
+785326 2542.142 <info currmovenumber 27 nodes 2106406 time 649 nps 3243456 currmove d1e1 perft 3830945
+785326 2554.070 <info currmovenumber 28 nodes 2149045 time 661 nps 3249370 currmove d1f1 perft 3336554
+785326 2565.914 <info currmovenumber 29 nodes 2192903 time 673 nps 3257356 currmove d1g1 perft 3469931
+785326 2586.320 <info currmovenumber 30 nodes 2268424 time 693 nps 3270410 currmove d1h1 perft 4465724
+785326 2597.782 <info currmovenumber 31 nodes 2311142 time 705 nps 3277837 currmove g2h3 perft 3088731
+785326 2607.254 <info currmovenumber 32 nodes 2345918 time 714 nps 3283037 currmove g2f1 perft 2869314
+785326 2612.538 <info currmovenumber 33 nodes 2364200 time 719 nps 3284327 currmove g2h1 perft 2678469
+785326 2621.431 <info currmovenumber 34 nodes 2394409 time 728 nps 3285710 currmove d2d4 perft 2518756
+785326 2629.491 <info currmovenumber 35 nodes 2422665 time 736 nps 3288125 currmove d2d3 perft 3434864
+785326 2639.507 <info currmovenumber 36 nodes 2457182 time 746 nps 3290237 currmove b2b4 perft 3326727
+785326 2646.724 <info currmovenumber 37 nodes 2482232 time 754 nps 3291968 currmove b2b3 perft 3651079
+785326 2646.741 <info depth 6 perft 102040304
+785326 2646.747 <bestmove 0000
+785326 2646.874 >position fen 8/5bk1/8/2Pp4/8/1K6/8/8 w - d6 0 1
+785326 2646.935 >position
+785326 2646.977 <info score cp -418 fen 8/5bk1/8/2Pp4/8/1K6/8/8 w - - 0 1
+785326 2647.059 >perft 6
+785326 2648.392 <info currmovenumber 1 nodes 4348 time 1 nps 3311485 currmove b3a4 perft 80828
+785326 2648.844 <info currmovenumber 2 nodes 6716 time 1 nps 3800205 currmove b3b4 perft 97074
+785326 2649.289 <info currmovenumber 3 nodes 9006 time 2 nps 4070633 currmove b3a3 perft 82957
+785326 2650.018 <info currmovenumber 4 nodes 12933 time 2 nps 4397400 currmove b3c3 perft 118973
+785326 2650.389 <info currmovenumber 5 nodes 14767 time 3 nps 4458817 currmove b3a2 perft 76150
+785326 2650.710 <info currmovenumber 6 nodes 16445 time 3 nps 4525438 currmove b3b2 perft 119231
+785326 2651.030 <info currmovenumber 7 nodes 18018 time 3 nps 4557833 currmove b3c2 perft 129058
+785326 2651.256 <info currmovenumber 8 nodes 19126 time 4 nps 4576495 currmove c5c6 perft 119793
+785326 2651.263 <info depth 6 perft 824064
+785326 2651.271 <bestmove 0000
+785326 2651.335 >position fen 3k4/8/8/K1Pp3r/8/8/8/8 w - d6 0 1
+785326 2651.371 >position
+785326 2651.391 <info score cp -1113 fen 3k4/8/8/K1Pp3r/8/8/8/8 w - - 0 1
+785326 2651.458 >perft 6
+785326 2652.574 <info currmovenumber 1 nodes 5889 time 1 nps 5388416 currmove a5a6 perft 156082
+785326 2653.142 <info currmovenumber 2 nodes 8738 time 1 nps 5262584 currmove a5b6 perft 171667
+785326 2653.773 <info currmovenumber 3 nodes 12074 time 2 nps 5268552 currmove a5b5 perft 182011
+785326 2654.378 <info currmovenumber 4 nodes 15209 time 2 nps 5250908 currmove a5a4 perft 172818
+785326 2654.827 <info currmovenumber 5 nodes 17567 time 3 nps 5250482 currmove a5b4 perft 210405
+785326 2654.980 <info currmovenumber 6 nodes 18206 time 3 nps 5203175 currmove c5c6 perft 127497
+785326 2654.990 <info depth 6 perft 1020480
+785326 2654.998 <bestmove 0000
+785326 2655.074 >position fen 8/8/1k6/2b5/2pP4/8/5K2/8 b - d3 0 1
+785326 2655.099 >perft 6
+785326 2656.307 <info currmovenumber 1 nodes 5995 time 1 nps 5017605 currmove b6a5 perft 82446
+785326 2657.273 <info currmovenumber 2 nodes 10899 time 2 nps 5040659 currmove b6b5 perft 94791
+785326 2658.223 <info currmovenumber 3 nodes 15534 time 3 nps 4992614 currmove b6a6 perft 84489
+785326 2659.315 <info currmovenumber 4 nodes 21025 time 4 nps 5001634 currmove b6c6 perft 103031
+785326 2660.139 <info currmovenumber 5 nodes 25178 time 5 nps 5007496 currmove b6a7 perft 78445
+785326 2661.043 <info currmovenumber 6 nodes 29905 time 5 nps 5041680 currmove b6b7 perft 114427
+785326 2661.940 <info currmovenumber 7 nodes 34533 time 6 nps 5057517 currmove b6c7 perft 115172
+785326 2662.619 <info currmovenumber 8 nodes 38158 time 7 nps 5082233 currmove c5a3 perft 107630
+785326 2663.176 <info currmovenumber 9 nodes 40942 time 8 nps 5076833 currmove c5b4 perft 107054
+785326 2663.944 <info currmovenumber 10 nodes 45140 time 8 nps 5110575 currmove c5d4 perft 70642
+785326 2664.554 <info currmovenumber 11 nodes 48319 time 9 nps 5117180 currmove c5d6 perft 112868
+785326 2665.070 <info currmovenumber 12 nodes 50950 time 9 nps 5115719 currmove c5e7 perft 125696
+785326 2665.405 <info currmovenumber 13 nodes 52668 time 10 nps 5116652 currmove c5f8 perft 108263
+785326 2665.587 <info currmovenumber 14 nodes 53475 time 10 nps 5104660 currmove c4c3 perft 95420
+785326 2666.480 <info currmovenumber 15 nodes 58301 time 11 nps 5128344 currmove c4d3 perft 40093
+785326 2666.491 <info depth 6 perft 1440467
+785326 2666.499 <bestmove 0000
+785326 2666.589 >position fen 5k2/8/8/8/8/8/8/4K2R w K - 0 1
+785326 2666.628 >perft 6
+785326 2667.318 <info currmovenumber 1 nodes 3621 currmove e1d2 perft 71189
+785326 2667.773 <info currmovenumber 2 nodes 6053 time 1 nps 5357296 currmove e1e2 perft 71135
+785326 2667.926 <info currmovenumber 3 nodes 6708 time 1 nps 5227800 currmove e1f2 perft 71030
+785326 2668.092 <info currmovenumber 4 nodes 7478 time 1 nps 5159436 currmove e1d1 perft 40135
+785326 2668.101 <info currmovenumber 5 nodes 7479 time 1 nps 5133016 currmove e1f1 perft 35484
+785326 2668.241 <info currmovenumber 6 nodes 8122 time 1 nps 5083007 currmove h1h8 perft 32290
+785326 2668.337 <info currmovenumber 7 nodes 8539 time 1 nps 5041374 currmove h1h7 perft 8084
+785326 2668.488 <info currmovenumber 8 nodes 9258 time 1 nps 5021187 currmove h1h6 perft 42702
+785326 2668.692 <info currmovenumber 9 nodes 10245 time 2 nps 4998670 currmove h1h5 perft 54262
+785326 2668.902 <info currmovenumber 10 nodes 11232 time 2 nps 4983959 currmove h1h4 perft 56590
+785326 2669.106 <info currmovenumber 11 nodes 12219 time 2 nps 4960469 currmove h1h3 perft 56590
+785326 2669.309 <info currmovenumber 12 nodes 13188 time 2 nps 4946647 currmove h1h2 perft 53464
+785326 2669.329 <info currmovenumber 13 nodes 13189 time 2 nps 4911292 currmove e1h1 perft 26514
+785326 2669.379 <info currmovenumber 14 nodes 13366 time 2 nps 4884626 currmove h1f1 perft 18510
+785326 2669.387 <info currmovenumber 15 nodes 13367 time 2 nps 4872664 currmove h1g1 perft 23093
+785326 2669.395 <info depth 6 perft 661072
+785326 2669.402 <bestmove 0000
+785326 2669.456 >position fen r3k2r/7b/8/8/8/8/1B4BQ/R3K2R b KQkq - 0 1
+785326 2669.490 >perft 4
+785326 2669.866 <info currmovenumber 1 nodes 1203 currmove e8d7 perft 53401
+785326 2670.252 <info currmovenumber 2 nodes 2461 currmove e8e7 perft 57805
+785326 2670.632 <info currmovenumber 3 nodes 3722 time 1 nps 3307618 currmove e8f7 perft 55433
+785326 2670.928 <info currmovenumber 4 nodes 4635 time 1 nps 3262457 currmove e8d8 perft 39985
+785326 2671.204 <info currmovenumber 5 nodes 5533 time 1 nps 3260941 currmove e8f8 perft 39070
+785326 2671.259 <info currmovenumber 6 nodes 5665 time 1 nps 3232720 currmove a8a1 perft 4427
+785326 2671.524 <info currmovenumber 7 nodes 6547 time 2 nps 3245953 currmove a8a2 perft 35744
+785326 2671.844 <info currmovenumber 8 nodes 7617 time 2 nps 3259368 currmove a8a3 perft 44730
+785326 2672.177 <info currmovenumber 9 nodes 8726 time 2 nps 3267976 currmove a8a4 perft 47033
+785326 2672.511 <info currmovenumber 10 nodes 9866 time 3 nps 3284634 currmove a8a5 perft 49150
+785326 2672.854 <info currmovenumber 11 nodes 11034 time 3 nps 3296495 currmove a8a6 perft 50836
+785326 2673.203 <info currmovenumber 12 nodes 12181 time 3 nps 3295547 currmove a8a7 perft 50325
+785326 2673.514 <info currmovenumber 13 nodes 13217 time 4 nps 3298234 currmove a8b8 perft 47958
+785326 2673.823 <info currmovenumber 14 nodes 14275 time 4 nps 3307224 currmove a8c8 perft 47557
+785326 2674.124 <info currmovenumber 15 nodes 15238 time 4 nps 3300608 currmove a8d8 perft 42247
+785326 2674.376 <info currmovenumber 16 nodes 16057 time 4 nps 3297964 currmove e8a8 perft 32959
+785326 2674.720 <info currmovenumber 17 nodes 17222 time 5 nps 3303816 currmove e8h8 perft 46811
+785326 2675.071 <info currmovenumber 18 nodes 18403 time 5 nps 3307958 currmove h8f8 perft 50602
+785326 2675.440 <info currmovenumber 19 nodes 19645 time 5 nps 3311321 currmove h8g8 perft 55938
+785326 2675.808 <info currmovenumber 20 nodes 20854 time 6 nps 3309817 currmove h7b1 perft 54752
+785326 2676.208 <info currmovenumber 21 nodes 22180 time 6 nps 3309951 currmove h7c2 perft 60199
+785326 2676.609 <info currmovenumber 22 nodes 23554 time 7 nps 3316375 currmove h7d3 perft 61097
+785326 2677.026 <info currmovenumber 23 nodes 24922 time 7 nps 3314559 currmove h7e4 perft 59135
+785326 2677.465 <info currmovenumber 24 nodes 26415 time 7 nps 3319299 currmove h7f5 perft 69053
+785326 2677.873 <info currmovenumber 25 nodes 27784 time 8 nps 3320892 currmove h7g6 perft 62626
+785326 2678.250 <info currmovenumber 26 nodes 28993 time 8 nps 3316193 currmove h7g8 perft 55333
+785326 2678.261 <info depth 4 perft 1274206
+785326 2678.269 <bestmove 0000
+785326 2678.379 >position fen r3k2r/8/3Q4/8/8/5q2/8/R3K2R b KQkq - 0 1
+785326 2678.422 >perft 4
+785326 2678.988 <info currmovenumber 1 nodes 1765 currmove e8f7 perft 57060
+785326 2679.075 <info currmovenumber 2 nodes 1872 currmove f3d1 perft 3782
+785326 2679.133 <info currmovenumber 3 nodes 1956 currmove f3f1 perft 3126
+785326 2679.208 <info currmovenumber 4 nodes 2074 currmove f3h1 perft 3553
+785326 2679.232 <info currmovenumber 5 nodes 2096 currmove f3e2 perft 1009
+785326 2679.277 <info currmovenumber 6 nodes 2162 currmove f3f2 perft 2386
+785326 2680.085 <info currmovenumber 7 nodes 3693 time 1 nps 2242197 currmove f3g2 perft 50810
+785326 2680.623 <info currmovenumber 8 nodes 4995 time 2 nps 2283654 currmove f3a3 perft 43980
+785326 2681.070 <info currmovenumber 9 nodes 6690 time 2 nps 2539818 currmove f3b3 perft 61216
+785326 2681.135 <info currmovenumber 10 nodes 6918 time 2 nps 2563144 currmove f3c3 perft 7646
+785326 2681.505 <info currmovenumber 11 nodes 8352 time 3 nps 2721224 currmove f3d3 perft 46225
+785326 2681.532 <info currmovenumber 12 nodes 8443 time 3 nps 2726222 currmove f3e3 perft 2870
+785326 2681.594 <info currmovenumber 13 nodes 8638 time 3 nps 2735150 currmove f3g3 perft 6834
+785326 2681.955 <info currmovenumber 14 nodes 9961 time 3 nps 2829977 currmove f3h3 perft 45034
+785326 2682.007 <info currmovenumber 15 nodes 10146 time 3 nps 2840923 currmove f3e4 perft 6298
+785326 2682.433 <info currmovenumber 16 nodes 11621 time 3 nps 2908249 currmove f3f4 perft 47066
+785326 2682.834 <info currmovenumber 17 nodes 13235 time 4 nps 3009080 currmove f3g4 perft 55830
+785326 2683.233 <info currmovenumber 18 nodes 14746 time 4 nps 3073962 currmove f3d5 perft 52949
+785326 2683.674 <info currmovenumber 19 nodes 16483 time 5 nps 3146603 currmove f3f5 perft 62753
+785326 2684.027 <info currmovenumber 20 nodes 17736 time 5 nps 3172274 currmove f3h5 perft 43743
+785326 2684.439 <info currmovenumber 21 nodes 19296 time 6 nps 3214264 currmove f3c6 perft 58992
+785326 2684.852 <info currmovenumber 22 nodes 20867 time 6 nps 3252303 currmove f3f6 perft 54394
+785326 2685.307 <info currmovenumber 23 nodes 22615 time 6 nps 3291218 currmove f3b7 perft 68331
+785326 2685.721 <info currmovenumber 24 nodes 24225 time 7 nps 3325314 currmove f3f7 perft 62015
+785326 2686.064 <info currmovenumber 25 nodes 25471 time 7 nps 3339148 currmove f3f8 perft 45984
+785326 2686.098 <info currmovenumber 26 nodes 25571 time 7 nps 3337240 currmove a8a1 perft 1980
+785326 2686.463 <info currmovenumber 27 nodes 26989 time 8 nps 3362262 currmove a8a2 perft 40544
+785326 2686.842 <info currmovenumber 28 nodes 28389 time 8 nps 3377162 currmove a8a3 perft 41303
+785326 2687.290 <info currmovenumber 29 nodes 29949 time 8 nps 3383061 currmove a8a4 perft 47961
+785326 2687.711 <info currmovenumber 30 nodes 31560 time 9 nps 3402662 currmove a8a5 perft 50431
+785326 2688.125 <info currmovenumber 31 nodes 33145 time 9 nps 3420918 currmove a8a6 perft 49811
+785326 2688.564 <info currmovenumber 32 nodes 34852 time 10 nps 3440943 currmove a8a7 perft 55332
+785326 2688.983 <info currmovenumber 33 nodes 36490 time 10 nps 3459713 currmove a8b8 perft 54262
+785326 2689.405 <info currmovenumber 34 nodes 38166 time 10 nps 3479342 currmove a8c8 perft 54887
+785326 2689.805 <info currmovenumber 35 nodes 39739 time 11 nps 3495164 currmove a8d8 perft 49727
+785326 2689.825 <info currmovenumber 36 nodes 39789 time 11 nps 3493632 currmove h8h1 perft 1352
+785326 2690.201 <info currmovenumber 37 nodes 41198 time 11 nps 3501648 currmove h8h2 perft 39991
+785326 2690.562 <info currmovenumber 38 nodes 42520 time 12 nps 3506493 currmove h8h3 perft 38539
+785326 2690.976 <info currmovenumber 39 nodes 44083 time 12 nps 3515201 currmove h8h4 perft 47637
+785326 2691.396 <info currmovenumber 40 nodes 45667 time 12 nps 3523561 currmove h8h5 perft 48797
+785326 2691.813 <info currmovenumber 41 nodes 47270 time 13 nps 3533448 currmove h8h6 perft 49692
+785326 2692.265 <info currmovenumber 42 nodes 48980 time 13 nps 3541741 currmove h8h7 perft 55134
+785326 2692.806 <info currmovenumber 43 nodes 50438 time 14 nps 3510559 currmove h8f8 perft 46570
+785326 2693.316 <info currmovenumber 44 nodes 52047 time 14 nps 3497926 currmove h8g8 perft 52640
+785326 2693.326 <info depth 4 perft 1720476
+785326 2693.333 <bestmove 0000
+785326 2693.418 >position fen 8/8/1P2K3/8/2n5/1q6/8/5k2 b - - 0 1
+785326 2693.455 >perft 5
+785326 2693.789 <info currmovenumber 1 nodes 1568 currmove f1e1 perft 42228
+785326 2694.050 <info currmovenumber 2 nodes 3022 currmove f1g1 perft 42353
+785326 2694.319 <info currmovenumber 3 nodes 4544 currmove f1e2 perft 48873
+785326 2694.568 <info currmovenumber 4 nodes 5960 time 1 nps 5422209 currmove f1f2 perft 49517
+785326 2694.806 <info currmovenumber 5 nodes 7320 time 1 nps 5470512 currmove f1g2 perft 49546
+785326 2695.014 <info currmovenumber 6 nodes 8412 time 1 nps 5444188 currmove b3b1 perft 35096
+785326 2695.164 <info currmovenumber 7 nodes 9231 time 1 nps 5442299 currmove b3d1 perft 31676
+785326 2695.349 <info currmovenumber 8 nodes 10238 time 1 nps 5444655 currmove b3a2 perft 42340
+785326 2695.480 <info currmovenumber 9 nodes 10916 time 2 nps 5427057 currmove b3b2 perft 41247
+785326 2695.596 <info currmovenumber 10 nodes 11459 time 2 nps 5386280 currmove b3c2 perft 39534
+785326 2695.728 <info currmovenumber 11 nodes 12153 time 2 nps 5378980 currmove b3a3 perft 40996
+785326 2695.831 <info currmovenumber 12 nodes 12684 time 2 nps 5367421 currmove b3c3 perft 41432
+785326 2695.910 <info currmovenumber 13 nodes 13047 time 2 nps 5343333 currmove b3d3 perft 28068
+785326 2696.010 <info currmovenumber 14 nodes 13522 time 2 nps 5320329 currmove b3e3 perft 29254
+785326 2696.083 <info currmovenumber 15 nodes 13880 time 2 nps 5307756 currmove b3f3 perft 21754
+785326 2696.238 <info currmovenumber 16 nodes 14658 time 2 nps 5292092 currmove b3g3 perft 47132
+785326 2696.318 <info currmovenumber 17 nodes 15068 time 2 nps 5286303 currmove b3h3 perft 24663
+785326 2696.424 <info currmovenumber 18 nodes 15614 time 2 nps 5281414 currmove b3a4 perft 34477
+785326 2696.522 <info currmovenumber 19 nodes 16097 time 3 nps 5270414 currmove b3b4 perft 32808
+785326 2696.594 <info currmovenumber 20 nodes 16451 time 3 nps 5262290 currmove b3b5 perft 23059
+785326 2696.747 <info currmovenumber 21 nodes 17287 time 3 nps 5272963 currmove b3b6 perft 24326
+785326 2696.891 <info currmovenumber 22 nodes 18052 time 3 nps 5274887 currmove c4b2 perft 30626
+785326 2697.063 <info currmovenumber 23 nodes 18836 time 3 nps 5242906 currmove c4d2 perft 33151
+785326 2697.229 <info currmovenumber 24 nodes 19571 time 3 nps 5205302 currmove c4a3 perft 32124
+785326 2697.348 <info currmovenumber 25 nodes 20183 time 3 nps 5202588 currmove c4e3 perft 27112
+785326 2697.483 <info currmovenumber 26 nodes 20901 time 4 nps 5206208 currmove c4a5 perft 30993
+785326 2697.608 <info currmovenumber 27 nodes 21535 time 4 nps 5202085 currmove c4e5 perft 27378
+785326 2697.730 <info currmovenumber 28 nodes 22198 time 4 nps 5208699 currmove c4b6 perft 25466
+785326 2697.853 <info currmovenumber 29 nodes 22816 time 4 nps 5203015 currmove c4d6 perft 27429
+785326 2697.859 <info depth 5 perft 1004658
+785326 2697.865 <bestmove 0000
+785326 2697.916 >position fen 8/P1k5/K7/8/8/8/8/8 w - - 0 1
+785326 2697.948 >perft 6
+785326 2698.221 <info currmovenumber 1 nodes 1448 currmove a6a5 perft 14506
+785326 2698.445 <info currmovenumber 2 nodes 2713 currmove a6b5 perft 16567
+785326 2699.069 <info currmovenumber 3 nodes 5842 time 1 nps 5266089 currmove a7a8q perft 19066
+785326 2699.387 <info currmovenumber 4 nodes 7495 time 1 nps 5249139 currmove a7a8r perft 17190
+785326 2699.698 <info currmovenumber 5 nodes 9126 time 1 nps 5248269 currmove a7a8b perft 18675
+785326 2699.796 <info currmovenumber 6 nodes 9677 time 1 nps 5268963 currmove a7a8n perft 6679
+785326 2699.802 <info depth 6 perft 92683
+785326 2699.808 <bestmove 0000
+785326 2699.864 >position fen 8/k1P5/8/1K6/8/8/8/8 w - - 0 1
+785326 2699.882 >perft 7
+785326 2700.129 <info currmovenumber 1 nodes 1296 currmove b5c6 perft 21955
+785326 2700.351 <info currmovenumber 2 nodes 2533 currmove b5a5 perft 18352
+785326 2700.631 <info currmovenumber 3 nodes 4092 currmove b5c5 perft 56683
+785326 2700.988 <info currmovenumber 4 nodes 6114 time 1 nps 5579913 currmove b5a4 perft 74272
+785326 2701.257 <info currmovenumber 5 nodes 7626 time 1 nps 5588684 currmove b5b4 perft 108544
+785326 2701.525 <info currmovenumber 6 nodes 9131 time 1 nps 5593302 currmove b5c4 perft 133887
+785326 2701.532 <info currmovenumber 7 nodes 9132 time 1 nps 5570734 currmove c7c8q perft 0
+785326 2701.906 <info currmovenumber 8 nodes 11148 time 2 nps 5536886 currmove c7c8r perft 52185
+785326 2702.224 <info currmovenumber 9 nodes 12614 time 2 nps 5415286 currmove c7c8b perft 57162
+785326 2702.356 <info currmovenumber 10 nodes 13347 time 2 nps 5420094 currmove c7c8n perft 44544
+785326 2702.362 <info depth 7 perft 567584
+785326 2702.368 <bestmove 0000
+785326 2702.429 >position fen r3k3/8/8/8/8/8/8/3K4 b q - 0 1
+785326 2702.461 >perft 6
+785326 2703.235 <info currmovenumber 1 nodes 4128 currmove e8d7 perft 81484
+785326 2703.772 <info currmovenumber 2 nodes 7085 time 1 nps 5482570 currmove e8e7 perft 81423
+785326 2704.333 <info currmovenumber 3 nodes 10170 time 1 nps 5487316 currmove e8f7 perft 81618
+785326 2704.531 <info currmovenumber 4 nodes 11176 time 2 nps 5449801 currmove e8d8 perft 45248
+785326 2704.840 <info currmovenumber 5 nodes 12812 time 2 nps 5429181 currmove e8f8 perft 50691
+785326 2704.982 <info currmovenumber 6 nodes 13531 time 2 nps 5407407 currmove a8a1 perft 36441
+785326 2705.029 <info currmovenumber 7 nodes 13735 time 2 nps 5388670 currmove a8a2 perft 9605
+785326 2705.106 <info currmovenumber 8 nodes 14110 time 2 nps 5373373 currmove a8a3 perft 48882
+785326 2705.198 <info currmovenumber 9 nodes 14561 time 2 nps 5357809 currmove a8a4 perft 61591
+785326 2705.292 <info currmovenumber 10 nodes 15031 time 2 nps 5344330 currmove a8a5 perft 64120
+785326 2705.383 <info currmovenumber 11 nodes 15482 time 2 nps 5331790 currmove a8a6 perft 64120
+785326 2705.474 <info currmovenumber 12 nodes 15927 time 2 nps 5318241 currmove a8a7 perft 61144
+785326 2705.591 <info currmovenumber 13 nodes 16505 time 3 nps 5305238 currmove a8b8 perft 41794
+785326 2705.660 <info currmovenumber 14 nodes 16826 time 3 nps 5291434 currmove a8c8 perft 25530
+785326 2705.698 <info currmovenumber 15 nodes 16987 time 3 nps 5277991 currmove a8d8 perft 23433
+785326 2706.116 <info currmovenumber 16 nodes 19143 time 3 nps 5265394 currmove e8a8 perft 26587
+785326 2706.123 <info depth 6 perft 803711
+785326 2706.130 <bestmove 0000
+785326 2706.214 >position fen 2K2r2/4P3/8/8/8/8/8/3k4 w - - 0 1
+785326 2706.248 >perft 6
+785326 2711.054 <info currmovenumber 1 nodes 21194 time 4 nps 4431436 currmove c8b7 perft 593714
+785326 2714.277 <info currmovenumber 2 nodes 37368 time 8 nps 4663743 currmove c8c7 perft 613707
+785326 2716.394 <info currmovenumber 3 nodes 48579 time 10 nps 4795580 currmove c8d7 perft 512052
+785326 2722.738 <info currmovenumber 4 nodes 79898 time 16 nps 4850522 currmove e7e8q perft 790243
+785326 2724.200 <info currmovenumber 5 nodes 85628 time 17 nps 4774773 currmove e7f8q perft 72240
+785326 2727.438 <info currmovenumber 6 nodes 101297 time 21 nps 4784623 currmove e7e8r perft 518290
+785326 2727.988 <info currmovenumber 7 nodes 104182 time 21 nps 4795753 currmove e7f8r perft 46121
+785326 2729.846 <info currmovenumber 8 nodes 113158 time 23 nps 4798864 currmove e7e8b perft 345373
+785326 2730.212 <info currmovenumber 9 nodes 115170 time 23 nps 4809184 currmove e7f8b perft 32349
+785326 2731.286 <info currmovenumber 10 nodes 121131 time 25 nps 4840954 currmove e7e8n perft 275193
+785326 2731.476 <info currmovenumber 11 nodes 122286 time 25 nps 4850191 currmove e7f8n perft 21719
+785326 2731.483 <info depth 6 perft 3821001
+785326 2731.489 <bestmove 0000
+785326 2731.583 >position fen K1k5/8/P7/8/8/8/8/8 w - - 0 1
+785326 2731.624 >perft 6
+785326 2731.688 <info currmovenumber 1 nodes 216 currmove a8a7 perft 1380
+785326 2731.718 <info currmovenumber 2 nodes 349 currmove a6a7 perft 837
+785326 2731.724 <info depth 6 perft 2217
+785326 2731.729 <bestmove 0000
+785326 2731.814 >position fen 8/8/2k5/5q2/5n2/8/5K2/8 b - - 0 1
+785326 2731.833 >perft 4
+785326 2731.904 <info currmovenumber 1 nodes 217 currmove c6b5 perft 730
+785326 2731.955 <info currmovenumber 2 nodes 427 currmove c6c5 perft 687
+785326 2732.000 <info currmovenumber 3 nodes 623 currmove c6d5 perft 623
+785326 2732.051 <info currmovenumber 4 nodes 852 currmove c6b6 perft 784
+785326 2732.102 <info currmovenumber 5 nodes 1081 currmove c6d6 perft 786
+785326 2732.152 <info currmovenumber 6 nodes 1310 currmove c6b7 perft 785
+785326 2732.202 <info currmovenumber 7 nodes 1539 currmove c6c7 perft 785
+785326 2732.252 <info currmovenumber 8 nodes 1756 currmove c6d7 perft 735
+785326 2732.280 <info currmovenumber 9 nodes 1871 currmove f5b1 perft 524
+785326 2732.329 <info currmovenumber 10 nodes 2094 currmove f5c2 perft 603
+785326 2732.351 <info currmovenumber 11 nodes 2177 currmove f5d3 perft 199
+785326 2732.370 <info currmovenumber 12 nodes 2252 currmove f5h3 perft 182
+785326 2732.399 <info currmovenumber 13 nodes 2367 currmove f5e4 perft 318
+785326 2732.425 <info currmovenumber 14 nodes 2470 currmove f5g4 perft 277
+785326 2732.474 <info currmovenumber 15 nodes 2661 currmove f5a5 perft 782
+785326 2732.515 <info currmovenumber 16 nodes 2842 currmove f5b5 perft 726
+785326 2732.550 <info currmovenumber 17 nodes 2995 currmove f5c5 perft 515
+785326 2732.594 <info currmovenumber 18 nodes 3191 currmove f5d5 perft 597
+785326 2732.633 <info currmovenumber 19 nodes 3356 currmove f5e5 perft 562
+785326 2732.671 <info currmovenumber 20 nodes 3501 currmove f5g5 perft 478
+785326 2732.712 <info currmovenumber 21 nodes 3687 currmove f5h5 perft 558
+785326 2732.748 <info currmovenumber 22 nodes 3840 currmove f5e6 perft 513
+785326 2732.796 <info currmovenumber 23 nodes 4051 currmove f5f6 perft 763
+785326 2732.830 <info currmovenumber 24 nodes 4196 currmove f5g6 perft 473
+785326 2732.877 <info currmovenumber 25 nodes 4413 time 1 nps 4271866 currmove f5d7 perft 812
+785326 2732.931 <info currmovenumber 26 nodes 4630 time 1 nps 4261158 currmove f5f7 perft 841
+785326 2732.981 <info currmovenumber 27 nodes 4859 time 1 nps 4275057 currmove f5h7 perft 838
+785326 2733.023 <info currmovenumber 28 nodes 5052 time 1 nps 4283483 currmove f5c8 perft 823
+785326 2733.069 <info currmovenumber 29 nodes 5257 time 1 nps 4291708 currmove f5f8 perft 809
+785326 2733.105 <info currmovenumber 30 nodes 5412 time 1 nps 4291804 currmove f4e2 perft 544
+785326 2733.139 <info currmovenumber 31 nodes 5561 time 1 nps 4293339 currmove f4g2 perft 534
+785326 2733.183 <info currmovenumber 32 nodes 5757 time 1 nps 4300074 currmove f4d3 perft 677
+785326 2733.224 <info currmovenumber 33 nodes 5943 time 1 nps 4306952 currmove f4h3 perft 640
+785326 2733.265 <info currmovenumber 34 nodes 6129 time 1 nps 4311763 currmove f4d5 perft 665
+785326 2733.306 <info currmovenumber 35 nodes 6315 time 1 nps 4317600 currmove f4h5 perft 688
+785326 2733.357 <info currmovenumber 36 nodes 6550 time 1 nps 4328394 currmove f4e6 perft 839
+785326 2733.407 <info currmovenumber 37 nodes 6779 time 1 nps 4338013 currmove f4g6 perft 832
+785326 2733.413 <info depth 4 perft 23527
+785326 2733.418 <bestmove 0000
+785326 2733.456 >position fen 3k4/3p4/8/K1P4r/8/8/8/8 b - -
+785326 2733.467 >perft 6
+785326 2734.467 <info currmovenumber 1 nodes 5000 currmove d8c7 perft 44453
+785326 2735.928 <info currmovenumber 2 nodes 12291 time 2 nps 5019219 currmove d8e7 perft 82944
+785326 2737.200 <info currmovenumber 3 nodes 16746 time 3 nps 4499777 currmove d8c8 perft 53281
+785326 2738.223 <info currmovenumber 4 nodes 21910 time 4 nps 4615955 currmove d8e8 perft 68117
+785326 2739.313 <info currmovenumber 5 nodes 27513 time 5 nps 4713756 currmove h5h1 perft 88123
+785326 2740.354 <info currmovenumber 6 nodes 31475 time 6 nps 4578326 currmove h5h2 perft 86705
+785326 2741.189 <info currmovenumber 7 nodes 34547 time 7 nps 4480008 currmove h5h3 perft 77839
+785326 2741.730 <info currmovenumber 8 nodes 36622 time 8 nps 4438752 currmove h5h4 perft 45878
+785326 2742.297 <info currmovenumber 9 nodes 39568 time 8 nps 4485856 currmove h5c5 perft 24713
+785326 2742.694 <info currmovenumber 10 nodes 41500 time 9 nps 4502237 currmove h5d5 perft 45827
+785326 2743.126 <info currmovenumber 11 nodes 43564 time 9 nps 4514705 currmove h5e5 perft 60611
+785326 2743.494 <info currmovenumber 12 nodes 45382 time 10 nps 4529878 currmove h5f5 perft 61765
+785326 2743.860 <info currmovenumber 13 nodes 47200 time 10 nps 4545560 currmove h5g5 perft 61765
+785326 2744.160 <info currmovenumber 14 nodes 48641 time 10 nps 4552548 currmove h5h6 perft 57409
+785326 2744.400 <info currmovenumber 15 nodes 49809 time 10 nps 4559745 currmove h5h7 perft 68741
+785326 2744.624 <info currmovenumber 16 nodes 50894 time 11 nps 4565286 currmove h5h8 perft 69854
+785326 2744.880 <info currmovenumber 17 nodes 52161 time 11 nps 4573976 currmove d7d5 perft 58564
+785326 2745.120 <info currmovenumber 18 nodes 53319 time 11 nps 4579185 currmove d7d6 perft 78299
+785326 2745.128 <info depth 6 perft 1134888
+785326 2745.134 <bestmove 0000
+785326 2745.210 >position fen 1k6/1b6/8/8/7R/8/8/4K2R b K - 0 1
+785326 2745.245 >perft 5
+785326 2746.953 <info currmovenumber 1 nodes 7077 time 1 nps 4193325 currmove b8a7 perft 80992
+785326 2748.658 <info currmovenumber 2 nodes 14748 time 3 nps 4345983 currmove b8c7 perft 115488
+785326 2749.694 <info currmovenumber 3 nodes 19562 time 4 nps 4414330 currmove b8a8 perft 54505
+785326 2750.719 <info currmovenumber 4 nodes 24360 time 5 nps 4464384 currmove b8c8 perft 79601
+785326 2751.221 <info currmovenumber 5 nodes 26926 time 5 nps 4518644 currmove b7h1 perft 41555
+785326 2752.158 <info currmovenumber 6 nodes 31307 time 6 nps 4539764 currmove b7g2 perft 77566
+785326 2752.981 <info currmovenumber 7 nodes 34561 time 7 nps 4478931 currmove b7f3 perft 90001
+785326 2753.728 <info currmovenumber 8 nodes 38001 time 8 nps 4488738 currmove b7e4 perft 98364
+785326 2754.615 <info currmovenumber 9 nodes 42155 time 9 nps 4507039 currmove b7d5 perft 125371
+785326 2754.999 <info currmovenumber 10 nodes 43876 time 9 nps 4506440 currmove b7a6 perft 57850
+785326 2755.572 <info currmovenumber 11 nodes 46512 time 10 nps 4511650 currmove b7c6 perft 107267
+785326 2755.754 <info currmovenumber 12 nodes 47327 time 10 nps 4510923 currmove b7a8 perft 67938
+785326 2756.084 <info currmovenumber 13 nodes 48781 time 10 nps 4507846 currmove b7c8 perft 67015
+785326 2756.092 <info depth 5 perft 1063513
+785326 2756.098 <bestmove 0000
+785326 2756.174 >position fen 1k6/8/8/8/R7/1n6/8/R3K3 b Q - 0 1
+785326 2756.206 >perft 5
+785326 2757.981 <info currmovenumber 1 nodes 5303 time 1 nps 3021791 currmove b8b7 perft 48605
+785326 2759.078 <info currmovenumber 2 nodes 10257 time 2 nps 3595466 currmove b8c7 perft 68902
+785326 2759.690 <info currmovenumber 3 nodes 13240 time 3 nps 3819837 currmove b8c8 perft 47624
+785326 2759.858 <info currmovenumber 4 nodes 14126 time 3 nps 3886092 currmove b3a1 perft 12501
+785326 2760.114 <info currmovenumber 5 nodes 15319 time 3 nps 3937990 currmove b3c1 perft 20712
+785326 2760.594 <info currmovenumber 6 nodes 17656 time 4 nps 4040098 currmove b3d2 perft 33444
+785326 2761.071 <info currmovenumber 7 nodes 19954 time 4 nps 4116220 currmove b3d4 perft 34087
+785326 2761.564 <info currmovenumber 8 nodes 22134 time 5 nps 4144874 currmove b3a5 perft 30889
+785326 2762.024 <info currmovenumber 9 nodes 24386 time 5 nps 4204376 currmove b3c5 perft 49931
+785326 2762.031 <info depth 5 perft 346695
+785326 2762.037 <bestmove 0000
+785326 2762.117 >position fen 2r1kr2/8/8/8/8/8/8/1R2K1R1 w GBfc - 0 1
+785326 2762.153 >perft 6
+785326 2809.254 <info currmovenumber 1 nodes 206012 time 47 nps 4376036 currmove e1d2 perft 8572496
+785326 2854.052 <info currmovenumber 2 nodes 403074 time 91 nps 4387220 currmove e1e2 perft 9605901
+785326 2879.303 <info currmovenumber 3 nodes 516555 time 117 nps 4410144 currmove e1d1 perft 5828584
+785326 2897.182 <info currmovenumber 4 nodes 597277 time 135 nps 4423930 currmove b1b8 perft 2974058
+785326 2919.263 <info currmovenumber 5 nodes 697761 time 157 nps 4441713 currmove b1b7 perft 5722932
+785326 2944.589 <info currmovenumber 6 nodes 814730 time 182 nps 4466295 currmove b1b6 perft 7473876
+785326 2970.081 <info currmovenumber 7 nodes 932003 time 207 nps 4482707 currmove b1b5 perft 7653764
+785326 2995.650 <info currmovenumber 8 nodes 1049206 time 233 nps 4493795 currmove b1b4 perft 7698009
+785326 3021.041 <info currmovenumber 9 nodes 1166181 time 258 nps 4504883 currmove b1b3 perft 7745970
+785326 3046.481 <info currmovenumber 10 nodes 1282397 time 284 nps 4510558 currmove b1b2 perft 7699945
+785326 3063.422 <info currmovenumber 11 nodes 1360443 time 301 nps 4515968 currmove b1a1 perft 6580113
+785326 3078.178 <info currmovenumber 12 nodes 1427109 time 316 nps 4516057 currmove b1c1 perft 5338684
+785326 3089.868 <info currmovenumber 13 nodes 1481059 time 327 nps 4519558 currmove b1d1 perft 4728992
+785326 3100.272 <info currmovenumber 14 nodes 1529274 time 338 nps 4523091 currmove g1g8 perft 2969621
+785326 3112.433 <info currmovenumber 15 nodes 1583761 time 350 nps 4521628 currmove g1g7 perft 6039682
+785326 3124.536 <info currmovenumber 16 nodes 1638855 time 362 nps 4522626 currmove g1g6 perft 7923660
+785326 3136.449 <info currmovenumber 17 nodes 1693060 time 374 nps 4523502 currmove g1g5 perft 8113928
+785326 3148.498 <info currmovenumber 18 nodes 1747246 time 386 nps 4522705 currmove g1g4 perft 8164960
+785326 3160.428 <info currmovenumber 19 nodes 1801215 time 398 nps 4522738 currmove g1g3 perft 8218246
+785326 3172.080 <info currmovenumber 20 nodes 1854123 time 409 nps 4523224 currmove g1g2 perft 8163869
+785326 3174.633 <info currmovenumber 21 nodes 1865255 time 412 nps 4522208 currmove g1f1 perft 5092348
+785326 3178.549 <info currmovenumber 22 nodes 1882846 time 416 nps 4521929 currmove g1h1 perft 6962082
+785326 3178.558 <info depth 6 perft 149271720
+785326 3178.564 <bestmove 0000
+785326 3178.733 >position fen rkr5/8/8/8/8/8/8/5RKR w HFca - 0 1
+785326 3178.795 >perft 6
+785326 3208.570 <info currmovenumber 1 nodes 131866 time 29 nps 4432409 currmove g1f2 perft 5433055
+785326 3244.608 <info currmovenumber 2 nodes 293546 time 65 nps 4461794 currmove g1g2 perft 7444452
+785326 3260.681 <info currmovenumber 3 nodes 364787 time 81 nps 4455904 currmove g1h2 perft 3874322
+785326 3280.036 <info currmovenumber 4 nodes 447773 time 101 nps 4423769 currmove f1f8 perft 2848010
+785326 3301.186 <info currmovenumber 5 nodes 541716 time 122 nps 4426924 currmove f1f7 perft 5005174
+785326 3325.432 <info currmovenumber 6 nodes 651158 time 146 nps 4441265 currmove f1f6 perft 6438415
+785326 3349.747 <info currmovenumber 7 nodes 760599 time 170 nps 4449713 currmove f1f5 perft 6583750
+785326 3374.045 <info currmovenumber 8 nodes 869859 time 195 nps 4455742 currmove f1f4 perft 6611288
+785326 3398.227 <info currmovenumber 9 nodes 978555 time 219 nps 4459960 currmove f1f3 perft 6626961
+785326 3420.150 <info currmovenumber 10 nodes 1076864 time 241 nps 4462096 currmove f1f2 perft 6273007
+785326 3440.000 <info currmovenumber 11 nodes 1164901 time 261 nps 4460218 currmove f1a1 perft 5128138
+785326 3441.875 <info currmovenumber 12 nodes 1173554 time 263 nps 4461110 currmove f1b1 perft 347314
+785326 3456.086 <info currmovenumber 13 nodes 1236232 time 277 nps 4458542 currmove f1c1 perft 4957501
+785326 3470.649 <info currmovenumber 14 nodes 1302537 time 291 nps 4463251 currmove f1d1 perft 6210298
+785326 3485.263 <info currmovenumber 15 nodes 1369177 time 306 nps 4467866 currmove f1e1 perft 6251436
+785326 3501.154 <info currmovenumber 16 nodes 1439746 time 322 nps 4466538 currmove h1h8 perft 4045400
+785326 3515.471 <info currmovenumber 17 nodes 1503385 time 336 nps 4465655 currmove h1h7 perft 6572837
+785326 3530.628 <info currmovenumber 18 nodes 1572096 time 351 nps 4468561 currmove h1h6 perft 8422546
+785326 3545.759 <info currmovenumber 19 nodes 1640356 time 366 nps 4470313 currmove h1h5 perft 8623690
+785326 3560.968 <info currmovenumber 20 nodes 1708699 time 382 nps 4471249 currmove h1h4 perft 8674846
+785326 3576.074 <info currmovenumber 21 nodes 1776808 time 397 nps 4472683 currmove h1h3 perft 8704949
+785326 3590.094 <info currmovenumber 22 nodes 1836560 time 411 nps 4465495 currmove h1h2 perft 8178301
+785326 3590.119 <info depth 6 perft 133255690
+785326 3590.128 <bestmove 0000
+785326 3590.393 >position fen 2r3kr/8/8/8/8/8/8/2KRR3 w h - 3 2
+785326 3590.449 >perft 6
+785326 3630.460 <info currmovenumber 1 nodes 184174 time 39 nps 4605518 currmove c1b2 perft 7741740
+785326 3650.299 <info currmovenumber 2 nodes 272701 time 59 nps 4557596 currmove c1d2 perft 3972695
+785326 3678.376 <info currmovenumber 3 nodes 401773 time 87 nps 4570244 currmove c1b1 perft 6160130
+785326 3678.397 <info depth 6 perft 17874565
+785326 3678.403 <bestmove 0000
+785326 3678.557 >position fen 5rkr/8/8/8/8/8/8/RKR5 w CAhf - 0 1
+785326 3678.612 >perft 6
+785326 3700.646 <info currmovenumber 1 nodes 96894 time 22 nps 4403115 currmove b1a2 perft 3885562
+785326 3736.514 <info currmovenumber 2 nodes 257972 time 57 nps 4457347 currmove b1b2 perft 7464300
+785326 3761.542 <info currmovenumber 3 nodes 369517 time 82 nps 4457125 currmove b1c2 perft 5588889
+785326 3780.726 <info currmovenumber 4 nodes 452599 time 102 nps 4433356 currmove c1c8 perft 2849636
+785326 3802.037 <info currmovenumber 5 nodes 547566 time 123 nps 4437342 currmove c1c7 perft 5022822
+785326 3826.424 <info currmovenumber 6 nodes 658291 time 147 nps 4454336 currmove c1c6 perft 6466347
+785326 3850.945 <info currmovenumber 7 nodes 769233 time 172 nps 4464283 currmove c1c5 perft 6622819
+785326 3875.532 <info currmovenumber 8 nodes 880223 time 196 nps 4470485 currmove c1c4 perft 6661518
+785326 3899.942 <info currmovenumber 9 nodes 990911 time 221 nps 4477552 currmove c1c3 perft 6688547
+785326 3922.230 <info currmovenumber 10 nodes 1091339 time 243 nps 4480149 currmove c1c2 perft 6343745
+785326 3939.921 <info currmovenumber 11 nodes 1171911 time 261 nps 4485164 currmove c1d1 perft 5988773
+785326 3955.378 <info currmovenumber 12 nodes 1242399 time 276 nps 4489347 currmove c1e1 perft 6167364
+785326 3968.377 <info currmovenumber 13 nodes 1299819 time 289 nps 4486111 currmove c1f1 perft 4965909
+785326 3970.046 <info currmovenumber 14 nodes 1307668 time 291 nps 4487323 currmove c1g1 perft 344370
+785326 3985.448 <info currmovenumber 15 nodes 1375931 time 306 nps 4484594 currmove c1h1 perft 5113998
+785326 4001.392 <info currmovenumber 16 nodes 1446551 time 322 nps 4481850 currmove a1a8 perft 4055394
+785326 4015.844 <info currmovenumber 17 nodes 1510790 time 337 nps 4480293 currmove a1a7 perft 6595114
+785326 4031.071 <info currmovenumber 18 nodes 1579717 time 352 nps 4482288 currmove a1a6 perft 8435137
+785326 4046.280 <info currmovenumber 19 nodes 1648092 time 367 nps 4482862 currmove a1a5 perft 8634957
+785326 4061.491 <info currmovenumber 20 nodes 1716549 time 382 nps 4483548 currmove a1a4 perft 8684992
+785326 4076.600 <info currmovenumber 21 nodes 1784772 time 397 nps 4484775 currmove a1a3 perft 8713957
+785326 4089.928 <info currmovenumber 22 nodes 1844575 time 411 nps 4484802 currmove a1a2 perft 8184674
+785326 4089.937 <info depth 6 perft 133478824
+785326 4089.943 <bestmove 0000
+785326 4090.138 >position fen 3rkr2/8/8/8/8/8/8/R3K2R w HAfd - 0 1
+785326 4090.198 >perft 6
+785326 4135.803 <info currmovenumber 1 nodes 202647 time 45 nps 4446120 currmove e1e2 perft 8947664
+785326 4154.014 <info currmovenumber 2 nodes 283423 time 63 nps 4442544 currmove a1a8 perft 2830128
+785326 4176.306 <info currmovenumber 3 nodes 383355 time 86 nps 4453059 currmove a1a7 perft 5160890
+785326 4201.001 <info currmovenumber 4 nodes 495583 time 110 nps 4473420 currmove a1a6 perft 6550543
+785326 4225.869 <info currmovenumber 5 nodes 608558 time 135 nps 4486174 currmove a1a5 perft 6709788
+785326 4250.951 <info currmovenumber 6 nodes 721745 time 160 nps 4490418 currmove a1a4 perft 6753289
+785326 4275.810 <info currmovenumber 7 nodes 834824 time 185 nps 4498166 currmove a1a3 perft 6798861
+785326 4300.614 <info currmovenumber 8 nodes 946998 time 210 nps 4500990 currmove a1a2 perft 6778159
+785326 4316.302 <info currmovenumber 9 nodes 1018765 time 226 nps 4506100 currmove a1b1 perft 5608176
+785326 4330.791 <info currmovenumber 10 nodes 1084657 time 240 nps 4508596 currmove a1c1 perft 5264918
+785326 4342.330 <info currmovenumber 11 nodes 1136046 time 252 nps 4506058 currmove a1d1 perft 4165222
+785326 4352.993 <info currmovenumber 12 nodes 1184420 time 262 nps 4507299 currmove h1h8 perft 2808223
+785326 4364.874 <info currmovenumber 13 nodes 1237332 time 274 nps 4504977 currmove h1h7 perft 5519831
+785326 4376.629 <info currmovenumber 14 nodes 1290755 time 286 nps 4506596 currmove h1h6 perft 7018383
+785326 4388.346 <info currmovenumber 15 nodes 1343835 time 298 nps 4507525 currmove h1h5 perft 7193114
+785326 4400.155 <info currmovenumber 16 nodes 1396985 time 309 nps 4507279 currmove h1h4 perft 7240887
+785326 4412.276 <info currmovenumber 17 nodes 1450152 time 322 nps 4502848 currmove h1h3 perft 7290965
+785326 4423.837 <info currmovenumber 18 nodes 1502148 time 333 nps 4502560 currmove h1h2 perft 7259903
+785326 4426.637 <info currmovenumber 19 nodes 1514448 time 336 nps 4501614 currmove h1f1 perft 4126245
+785326 4429.499 <info currmovenumber 20 nodes 1527070 time 339 nps 4500836 currmove h1g1 perft 5313077
+785326 4429.508 <info depth 6 perft 119338266
+785326 4429.514 <bestmove 0000
+785326 4429.675 >position fen 4k3/8/8/8/8/8/8/4KR2 w F - 0 1
+785326 4429.734 >perft 6
+785326 4429.774 <info currmovenumber 1 nodes 1 currmove e1d2 perft 44739
+785326 4429.780 <info currmovenumber 2 nodes 2 currmove e1e2 perft 42311
+785326 4429.785 <info currmovenumber 3 nodes 3 currmove e1f2 perft 48168
+785326 4429.791 <info currmovenumber 4 nodes 4 currmove e1d1 perft 25530
+785326 4429.799 <info currmovenumber 5 nodes 5 currmove f1f8 perft 21570
+785326 4429.807 <info currmovenumber 6 nodes 6 currmove f1f7 perft 6412
+785326 4429.813 <info currmovenumber 7 nodes 7 currmove f1f6 perft 25849
+785326 4429.820 <info currmovenumber 8 nodes 8 currmove f1f5 perft 33149
+785326 4429.826 <info currmovenumber 9 nodes 9 currmove f1f4 perft 34679
+785326 4429.832 <info currmovenumber 10 nodes 10 currmove f1f3 perft 34469
+785326 4429.839 <info currmovenumber 11 nodes 11 currmove f1f2 perft 31490
+785326 4429.848 <info currmovenumber 12 nodes 12 currmove e1f1 perft 26553
+785326 4429.854 <info currmovenumber 13 nodes 13 currmove f1g1 perft 39089
+785326 4429.860 <info currmovenumber 14 nodes 14 currmove f1h1 perft 45248
+785326 4429.866 <info depth 6 perft 459256
+785326 4429.871 <bestmove 0000
+785326 4429.965 >position fen 4kr2/8/8/8/8/8/8/4K3 w f - 0 1
+785326 4430.008 >perft 6
+785326 4432.095 <info currmovenumber 1 nodes 8175 time 2 nps 3954898 currmove e1d2 perft 192134
+785326 4432.464 <info currmovenumber 2 nodes 10271 time 2 nps 4212867 currmove e1e2 perft 132412
+785326 4432.487 <info currmovenumber 3 nodes 10351 time 2 nps 4204626 currmove e1d1 perft 118753
+785326 4432.493 <info depth 6 perft 443299
+785326 4432.498 <bestmove 0000
+785326 4432.576 >position fen 4k3/8/8/8/8/8/8/2R1K3 w C - 0 1
+785326 4432.598 >perft 6
+785326 4433.160 <info currmovenumber 1 nodes 2968 currmove e1d2 perft 69243
+785326 4433.562 <info currmovenumber 2 nodes 5221 currmove e1e2 perft 74273
+785326 4433.969 <info currmovenumber 3 nodes 7441 time 1 nps 5490479 currmove e1f2 perft 74378
+785326 4434.184 <info currmovenumber 4 nodes 8555 time 1 nps 5444875 currmove e1d1 perft 37090
+785326 4434.308 <info currmovenumber 5 nodes 9175 time 1 nps 5412417 currmove e1f1 perft 46121
+785326 4434.335 <info currmovenumber 6 nodes 9280 time 1 nps 5386961 currmove c1c8 perft 33181
+785326 4434.389 <info currmovenumber 7 nodes 9533 time 1 nps 5367441 currmove c1c7 perft 8428
+785326 4434.425 <info currmovenumber 8 nodes 9677 time 1 nps 5341374 currmove c1c6 perft 44099
+785326 4434.466 <info currmovenumber 9 nodes 9838 time 1 nps 5317872 currmove c1c5 perft 55964
+785326 4434.501 <info currmovenumber 10 nodes 9980 time 1 nps 5285988 currmove c1c4 perft 58349
+785326 4434.536 <info currmovenumber 11 nodes 10122 time 1 nps 5263825 currmove c1c3 perft 58166
+785326 4434.572 <info currmovenumber 12 nodes 10264 time 1 nps 5239881 currmove c1c2 perft 55613
+785326 4434.624 <info currmovenumber 13 nodes 10498 time 2 nps 5219841 currmove c1a1 perft 50514
+785326 4434.659 <info currmovenumber 14 nodes 10643 time 2 nps 5202220 currmove c1b1 perft 49275
+785326 4434.677 <info currmovenumber 15 nodes 10703 time 2 nps 5185685 currmove c1d1 perft 24622
+785326 4434.833 <info currmovenumber 16 nodes 11516 time 2 nps 5186413 currmove e1c1 perft 24334
+785326 4434.839 <info depth 6 perft 763650
+785326 4434.845 <bestmove 0000
+785326 4434.881 >position fen 2r1k3/8/8/8/8/8/8/4K3 w c - 0 1
+785326 4434.910 >perft 6
+785326 4435.610 <info currmovenumber 1 nodes 3741 currmove e1d2 perft 148493
+785326 4436.259 <info currmovenumber 2 nodes 7429 time 1 nps 5567604 currmove e1e2 perft 216397
+785326 4436.871 <info currmovenumber 3 nodes 10983 time 1 nps 5643536 currmove e1f2 perft 242703
+785326 4436.892 <info currmovenumber 4 nodes 11053 time 1 nps 5617874 currmove e1d1 perft 91935
+785326 4436.920 <info currmovenumber 5 nodes 11145 time 1 nps 5586824 currmove e1f1 perft 150118
+785326 4436.927 <info depth 6 perft 849646
+785326 4436.932 <bestmove 0000
+785326 4436.988 >position fen r3k2r/8/8/8/3pPp2/8/8/R3K1RR b KQkq e3 0 1
+785326 4437.007 >perft 6
+785326 4566.151 <info currmovenumber 1 nodes 518917 time 129 nps 4018798 currmove e8d7 perft 28439089
+785326 4679.350 <info currmovenumber 2 nodes 979892 time 242 nps 4043677 currmove e8e7 perft 28451141
+785326 4772.461 <info currmovenumber 3 nodes 1355879 time 335 nps 4042106 currmove e8f7 perft 24068498
+785326 4832.724 <info currmovenumber 4 nodes 1601796 time 395 nps 4047989 currmove e8d8 perft 17400054
+785326 4889.656 <info currmovenumber 5 nodes 1834500 time 452 nps 4052940 currmove e8f8 perft 14840962
+785326 4897.627 <info currmovenumber 6 nodes 1870249 time 460 nps 4060366 currmove a8a1 perft 1098971
+785326 4951.733 <info currmovenumber 7 nodes 2090930 time 514 nps 4062339 currmove a8a2 perft 11677400
+785326 5003.195 <info currmovenumber 8 nodes 2302189 time 566 nps 4066219 currmove a8a3 perft 15980510
+785326 5035.700 <info currmovenumber 9 nodes 2437754 time 598 nps 4071886 currmove a8a4 perft 13576295
+785326 5091.323 <info currmovenumber 10 nodes 2663466 time 654 nps 4070700 currmove a8a5 perft 19383467
+785326 5148.907 <info currmovenumber 11 nodes 2898541 time 711 nps 4071665 currmove a8a6 perft 20639347
+785326 5208.418 <info currmovenumber 12 nodes 3139019 time 771 nps 4069271 currmove a8a7 perft 21166076
+785326 5249.298 <info currmovenumber 13 nodes 3308652 time 812 nps 4073312 currmove a8b8 perft 19144206
+785326 5285.530 <info currmovenumber 14 nodes 3459622 time 848 nps 4077302 currmove a8c8 perft 18210583
+785326 5314.182 <info currmovenumber 15 nodes 3576268 time 877 nps 4077090 currmove a8d8 perft 13951120
+785326 5374.447 <info currmovenumber 16 nodes 3811949 time 937 nps 4066400 currmove e8a8 perft 14017906
+785326 5390.904 <info currmovenumber 17 nodes 3884825 time 953 nps 4072626 currmove h8h1 perft 4999159
+785326 5429.270 <info currmovenumber 18 nodes 4040805 time 992 nps 4072364 currmove h8h2 perft 11709206
+785326 5459.652 <info currmovenumber 19 nodes 4164973 time 1022 nps 4072848 currmove h8h3 perft 16597370
+785326 5469.902 <info currmovenumber 20 nodes 4206461 time 1032 nps 4072556 currmove h8h4 perft 13366181
+785326 5502.112 <info currmovenumber 21 nodes 4336428 time 1065 nps 4071410 currmove h8h5 perft 20691062
+785326 5546.847 <info currmovenumber 22 nodes 4470972 time 1109 nps 4028572 currmove h8h6 perft 22428369
+785326 5585.245 <info currmovenumber 23 nodes 4606733 time 1148 nps 4012073 currmove h8h7 perft 23272829
+785326 5597.331 <info currmovenumber 24 nodes 4654777 time 1160 nps 4011662 currmove h8f8 perft 15421908
+785326 5610.596 <info currmovenumber 25 nodes 4707549 time 1173 nps 4011277 currmove h8g8 perft 18396355
+785326 5617.386 <info currmovenumber 26 nodes 4734985 time 1180 nps 4011442 currmove d4d3 perft 15208374
+785326 5681.663 <info currmovenumber 27 nodes 5002367 time 1244 nps 4019128 currmove d4e3 perft 13134096
+785326 5685.721 <info currmovenumber 28 nodes 5018858 time 1248 nps 4019252 currmove f4f3 perft 15195773
+785326 5749.221 <info currmovenumber 29 nodes 5283550 time 1312 nps 4026480 currmove f4e3 perft 13181300
+785326 5749.243 <info depth 6 perft 485647607
+785326 5749.249 <bestmove 0000
+785326 5749.720 >position fen r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1
+785326 5749.796 >perft 6
+785326 6479.099 <info currmovenumber 1 nodes 2033980 time 729 nps 2789055 currmove g1h1 perft 149335005
+785326 7085.703 <info currmovenumber 2 nodes 3716042 time 1335 nps 2781726 currmove f1f2 perft 123078367
+785326 7514.507 <info currmovenumber 3 nodes 4903787 time 1764 nps 2778848 currmove b4c5 perft 87986826
+785326 8139.771 <info currmovenumber 4 nodes 6629269 time 2389 nps 2773816 currmove f3d4 perft 129579089
+785326 8572.031 <info currmovenumber 5 nodes 7839100 time 2822 nps 2777650 currmove c4c5 perft 92063670
+785326 9168.017 <info currmovenumber 6 nodes 9483345 time 3418 nps 2774373 currmove d2d4 perft 124002076
+785326 9168.047 <info depth 6 perft 706045033
+785326 9168.055 <bestmove 0000
+785326 9168.322 >position fen 8/7p/p5pb/4k3/P1pPn3/8/P5PP/1rB2RK1 b - d3 0 28
+785326 9168.390 >perft 6
+785326 9228.812 <info currmovenumber 1 nodes 225602 time 60 nps 3735809 currmove e5d4 perft 7438869
+785326 9294.947 <info currmovenumber 2 nodes 464963 time 126 nps 3674777 currmove e5d5 perft 7747197
+785326 9358.609 <info currmovenumber 3 nodes 697877 time 190 nps 3669340 currmove e5d6 perft 8335508
+785326 9418.515 <info currmovenumber 4 nodes 917464 time 250 nps 3668419 currmove e5e6 perft 8232156
+785326 9476.570 <info currmovenumber 5 nodes 1133960 time 308 nps 3679864 currmove c4d3 perft 6879553
+785326 9476.590 <info depth 6 perft 38633283
+785326 9476.596 <bestmove 0000
+785326 9476.853 >position fen 8/3K4/2p5/p2b2r1/5k2/8/8/1q6 b - - 1 67
+785326 9476.930 >perft 7
+785326 9494.873 <info currmovenumber 1 nodes 78158 time 17 nps 4363473 currmove f4e3 perft 12724877
+785326 9508.055 <info currmovenumber 2 nodes 134208 time 31 nps 4316228 currmove f4f3 perft 10859476
+785326 9521.126 <info currmovenumber 3 nodes 190136 time 44 nps 4305139 currmove f4g3 perft 10914020
+785326 9531.016 <info currmovenumber 4 nodes 231855 time 54 nps 4289133 currmove f4e4 perft 8665333
+785326 9542.141 <info currmovenumber 5 nodes 279271 time 65 nps 4284487 currmove f4g4 perft 9601320
+785326 9551.953 <info currmovenumber 6 nodes 321068 time 74 nps 4281447 currmove f4e5 perft 7489136
+785326 9562.096 <info currmovenumber 7 nodes 364482 time 85 nps 4281059 currmove f4f5 perft 8897345
+785326 9575.172 <info currmovenumber 8 nodes 420426 time 98 nps 4280811 currmove b1a1 perft 12159133
+785326 9583.544 <info currmovenumber 9 nodes 455700 time 106 nps 4275510 currmove b1c1 perft 11795406
+785326 9592.179 <info currmovenumber 10 nodes 491850 time 115 nps 4268751 currmove b1d1 perft 11421457
+785326 9599.381 <info currmovenumber 11 nodes 522012 time 122 nps 4264109 currmove b1e1 perft 8802280
+785326 9607.683 <info currmovenumber 12 nodes 556954 time 130 nps 4260511 currmove b1f1 perft 12336624
+785326 9614.386 <info currmovenumber 13 nodes 584658 time 137 nps 4254292 currmove b1g1 perft 11211782
+785326 9621.428 <info currmovenumber 14 nodes 614234 time 144 nps 4251642 currmove b1h1 perft 11725198
+785326 9627.420 <info currmovenumber 15 nodes 639553 time 150 nps 4250585 currmove b1a2 perft 10314935
+785326 9632.881 <info currmovenumber 16 nodes 662086 time 155 nps 4246278 currmove b1b2 perft 12219229
+785326 9640.058 <info currmovenumber 17 nodes 692203 time 163 nps 4244031 currmove b1c2 perft 13565083
+785326 9644.207 <info currmovenumber 18 nodes 709228 time 167 nps 4240541 currmove b1b3 perft 9887152
+785326 9650.472 <info currmovenumber 19 nodes 734524 time 173 nps 4233479 currmove b1d3 perft 12203856
+785326 9653.466 <info currmovenumber 20 nodes 746778 time 176 nps 4230830 currmove b1b4 perft 5382673
+785326 9656.936 <info currmovenumber 21 nodes 760983 time 179 nps 4228186 currmove b1e4 perft 6821881
+785326 9661.249 <info currmovenumber 22 nodes 778787 time 184 nps 4225852 currmove b1b5 perft 8125018
+785326 9665.705 <info currmovenumber 23 nodes 796449 time 188 nps 4219702 currmove b1f5 perft 4367969
+785326 9668.855 <info currmovenumber 24 nodes 809200 time 191 nps 4216837 currmove b1b6 perft 3719107
+785326 9673.318 <info currmovenumber 25 nodes 827696 time 196 nps 4215188 currmove b1g6 perft 5262702
+785326 9674.819 <info currmovenumber 26 nodes 833718 time 197 nps 4213655 currmove b1b7 perft 1285057
+785326 9677.747 <info currmovenumber 27 nodes 845586 time 200 nps 4211317 currmove b1h7 perft 3254167
+785326 9678.821 <info currmovenumber 28 nodes 849965 time 201 nps 4210594 currmove b1b8 perft 614957
+785326 9686.391 <info currmovenumber 29 nodes 881146 time 209 nps 4207343 currmove g5g1 perft 12343774
+785326 9692.409 <info currmovenumber 30 nodes 906503 time 215 nps 4207470 currmove g5g2 perft 13413160
+785326 9698.643 <info currmovenumber 31 nodes 932428 time 221 nps 4206085 currmove g5g3 perft 13753970
+785326 9702.434 <info currmovenumber 32 nodes 947946 time 225 nps 4204209 currmove g5g4 perft 10828288
+785326 9705.854 <info currmovenumber 33 nodes 962236 time 228 nps 4203803 currmove g5e5 perft 5849489
+785326 9708.924 <info currmovenumber 34 nodes 974906 time 231 nps 4202787 currmove g5f5 perft 7932522
+785326 9713.104 <info currmovenumber 35 nodes 992299 time 236 nps 4202047 currmove g5h5 perft 12666335
+785326 9715.617 <info currmovenumber 36 nodes 1002211 time 238 nps 4199356 currmove g5g6 perft 8518386
+785326 9717.968 <info currmovenumber 37 nodes 1011519 time 241 nps 4197001 currmove g5g7 perft 2770446
+785326 9721.049 <info currmovenumber 38 nodes 1024301 time 244 nps 4196394 currmove g5g8 perft 4167228
+785326 9724.554 <info currmovenumber 39 nodes 1038882 time 247 nps 4195871 currmove d5h1 perft 11733328
+785326 9732.689 <info currmovenumber 40 nodes 1074039 time 255 nps 4199909 currmove d5a2 perft 12038694
+785326 9735.886 <info currmovenumber 41 nodes 1087290 time 258 nps 4199191 currmove d5g2 perft 12247916
+785326 9744.844 <info currmovenumber 42 nodes 1126632 time 267 nps 4205641 currmove d5b3 perft 14593454
+785326 9748.031 <info currmovenumber 43 nodes 1139221 time 271 nps 4202633 currmove d5f3 perft 14321238
+785326 9755.990 <info currmovenumber 44 nodes 1174052 time 279 nps 4207589 currmove d5c4 perft 16128973
+785326 9758.296 <info currmovenumber 45 nodes 1183394 time 281 nps 4206302 currmove d5e4 perft 14418082
+785326 9768.195 <info currmovenumber 46 nodes 1226904 time 291 nps 4212759 currmove d5e6 perft 10648859
+785326 9774.606 <info currmovenumber 47 nodes 1255047 time 297 nps 4216558 currmove d5f7 perft 12241163
+785326 9780.176 <info currmovenumber 48 nodes 1279419 time 303 nps 4219491 currmove d5g8 perft 12742371
+785326 9781.205 <info currmovenumber 49 nodes 1282867 time 304 nps 4216522 currmove a5a4 perft 11754729
+785326 9782.747 <info currmovenumber 50 nodes 1289154 time 305 nps 4215826 currmove c6c5 perft 12667996
+785326 9782.757 <info depth 7 perft 493407574
+785326 9782.763 <bestmove 0000
+785326 9782.861 >position fen 8/p7/8/1P6/K1k3p1/6P1/7P/8 w - -
+785326 9782.903 >perft 8
+785326 9787.888 <info currmovenumber 1 nodes 25563 time 4 nps 5143282 currmove a4a5 perft 996474
+785326 9794.397 <info currmovenumber 2 nodes 59483 time 11 nps 5181004 currmove a4a3 perft 2120164
+785326 9800.880 <info currmovenumber 3 nodes 92179 time 17 nps 5134441 currmove b5b6 perft 2429979
+785326 9802.411 <info currmovenumber 4 nodes 99990 time 19 nps 5128754 currmove h2h4 perft 986637
+785326 9804.373 <info currmovenumber 5 nodes 110366 time 21 nps 5143332 currmove h2h3 perft 1570536
+785326 9804.382 <info depth 8 perft 8103790
+785326 9804.388 <bestmove 0000
+785326 9804.534 >position fen n1n5/PPPk4/8/8/8/8/4Kppp/5N1N b - -
+785326 9804.580 >perft 6
+785326 9834.070 <info currmovenumber 1 nodes 133716 time 29 nps 4537671 currmove d7c6 perft 3875735
+785326 9859.669 <info currmovenumber 2 nodes 250597 time 55 nps 4550581 currmove d7d6 perft 4150696
+785326 9885.078 <info currmovenumber 3 nodes 368587 time 80 nps 4579946 currmove d7e6 perft 4442545
+785326 9905.885 <info currmovenumber 4 nodes 466180 time 101 nps 4602574 currmove d7c7 perft 2665492
+785326 9928.076 <info currmovenumber 5 nodes 567893 time 123 nps 4599129 currmove d7e7 perft 4006487
+785326 9944.461 <info currmovenumber 6 nodes 641842 time 139 nps 4589049 currmove d7e8 perft 2792294
+785326 9963.384 <info currmovenumber 7 nodes 727989 time 158 nps 4584714 currmove c8b6 perft 3956392
+785326 9990.579 <info currmovenumber 8 nodes 851469 time 185 nps 4578592 currmove c8d6 perft 5264760
+785326 10009.853 <info currmovenumber 9 nodes 942008 time 205 nps 4589457 currmove c8a7 perft 3942027
+785326 10031.427 <info currmovenumber 10 nodes 1039986 time 226 nps 4585135 currmove c8e7 perft 4738536
+785326 10049.602 <info currmovenumber 11 nodes 1122667 time 245 nps 4582240 currmove a8b6 perft 4830962
+785326 10074.005 <info currmovenumber 12 nodes 1239498 time 269 nps 4600875 currmove a8c7 perft 6139718
+785326 10077.558 <info currmovenumber 13 nodes 1255304 time 272 nps 4598802 currmove g2f1q perft 470385
+785326 10093.230 <info currmovenumber 14 nodes 1324460 time 288 nps 4588705 currmove g2g1q perft 3580762
+785326 10103.543 <info currmovenumber 15 nodes 1369391 time 298 nps 4580749 currmove g2h1q perft 2156009
+785326 10109.779 <info currmovenumber 16 nodes 1397297 time 305 nps 4578530 currmove g2f1r perft 1594489
+785326 10124.661 <info currmovenumber 17 nodes 1464062 time 320 nps 4574282 currmove g2g1r perft 4178891
+785326 10128.866 <info currmovenumber 18 nodes 1482902 time 324 nps 4573017 currmove g2h1r perft 1732884
+785326 10131.455 <info currmovenumber 19 nodes 1494434 time 326 nps 4572085 currmove g2f1b perft 548111
+785326 10133.545 <info currmovenumber 20 nodes 1503458 time 328 nps 4570514 currmove g2g1b perft 1585231
+785326 10139.893 <info currmovenumber 21 nodes 1531672 time 335 nps 4568084 currmove g2h1b perft 1956376
+785326 10142.323 <info currmovenumber 22 nodes 1543220 time 337 nps 4569406 currmove g2f1n perft 960124
+785326 10143.301 <info currmovenumber 23 nodes 1547854 time 338 nps 4569883 currmove g2g1n perft 498850
+785326 10144.565 <info currmovenumber 24 nodes 1553709 time 339 nps 4570119 currmove g2h1n perft 1111383
+785326 10144.574 <info depth 6 perft 71179139
+785326 10144.580 <bestmove 0000
+785326 10144.710 >position fen r3k2r/p6p/8/B7/1pp1p3/3b4/P6P/R3K2R w KQkq -
+785326 10144.763 >perft 6
+785326 10186.202 <info currmovenumber 1 nodes 145826 time 41 nps 3521142 currmove e1d2 perft 5219312
+785326 10224.927 <info currmovenumber 2 nodes 281682 time 80 nps 3514750 currmove e1f2 perft 5416699
+785326 10245.083 <info currmovenumber 3 nodes 353544 time 100 nps 3524818 currmove e1d1 perft 2997927
+785326 10273.737 <info currmovenumber 4 nodes 455522 time 128 nps 3532484 currmove a1b1 perft 4321724
+785326 10300.194 <info currmovenumber 5 nodes 549366 time 155 nps 3534938 currmove a1c1 perft 4356383
+785326 10325.502 <info currmovenumber 6 nodes 638874 time 180 nps 3535184 currmove a1d1 perft 3920659
+785326 10360.789 <info currmovenumber 7 nodes 760443 time 216 nps 3520479 currmove e1a1 perft 4238116
+785326 10387.399 <info currmovenumber 8 nodes 854974 time 242 nps 3523986 currmove h1f1 perft 4242336
+785326 10417.114 <info currmovenumber 9 nodes 962852 time 272 nps 3535625 currmove h1g1 perft 5525512
+785326 10438.735 <info currmovenumber 10 nodes 1037279 time 293 nps 3528740 currmove a5d8 perft 4478978
+785326 10460.979 <info currmovenumber 11 nodes 1114663 time 316 nps 3525236 currmove a5c7 perft 5686114
+785326 10484.945 <info currmovenumber 12 nodes 1197716 time 340 nps 3521061 currmove a5b6 perft 6435080
+785326 10506.659 <info currmovenumber 13 nodes 1275999 time 361 nps 3526061 currmove a5b4 perft 4430602
+785326 10517.447 <info currmovenumber 14 nodes 1313399 time 372 nps 3524351 currmove a2a4 perft 3751855
+785326 10527.229 <info currmovenumber 15 nodes 1347594 time 382 nps 3523586 currmove a2a3 perft 4296057
+785326 10534.658 <info currmovenumber 16 nodes 1373347 time 389 nps 3522516 currmove h2h4 perft 4032280
+785326 10540.263 <info currmovenumber 17 nodes 1392845 time 395 nps 3521879 currmove h2h3 perft 3705359
+785326 10540.280 <info depth 6 perft 77054993
+785326 10540.287 <bestmove 0000
+785326 10540.522 >position fen 8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -
+785326 10540.573 >perft 7
+785326 10639.554 <info currmovenumber 1 nodes 424025 time 98 nps 4285023 currmove a5a6 perft 16022983
+785326 10723.864 <info currmovenumber 2 nodes 787743 time 183 nps 4298266 currmove a5a4 perft 14139786
+785326 10783.652 <info currmovenumber 3 nodes 1033165 time 243 nps 4250691 currmove b4a4 perft 11996400
+785326 10836.937 <info currmovenumber 4 nodes 1248664 time 296 nps 4213612 currmove b4c4 perft 17400108
+785326 10882.225 <info currmovenumber 5 nodes 1430240 time 341 nps 4186652 currmove b4d4 perft 15996777
+785326 10921.183 <info currmovenumber 6 nodes 1587247 time 380 nps 4170481 currmove b4e4 perft 14187097
+785326 10938.703 <info currmovenumber 7 nodes 1659278 time 398 nps 4167865 currmove b4f4 perft 3069955
+785326 10976.570 <info currmovenumber 8 nodes 1812685 time 435 nps 4157753 currmove b4b3 perft 15482610
+785326 11002.023 <info currmovenumber 9 nodes 1916816 time 461 nps 4154077 currmove b4b2 perft 12755330
+785326 11040.089 <info currmovenumber 10 nodes 2072905 time 499 nps 4149987 currmove b4b1 perft 19481757
+785326 11055.930 <info currmovenumber 11 nodes 2137512 time 515 nps 4147775 currmove e2e4 perft 8853383
+785326 11068.458 <info currmovenumber 12 nodes 2187569 time 527 nps 4144160 currmove e2e3 perft 11427551
+785326 11093.013 <info currmovenumber 13 nodes 2289146 time 552 nps 4143830 currmove g2g4 perft 13629805
+785326 11101.824 <info currmovenumber 14 nodes 2325559 time 561 nps 4143645 currmove g2g3 perft 4190119
+785326 11101.840 <info depth 7 perft 178633661
+785326 11101.847 <bestmove 0000
+785326 11102.006 >position fen 8/5p2/8/2k3P1/p3K3/8/1P6/8 b - -
+785326 11102.040 >perft 8
+785326 11117.486 <info currmovenumber 1 nodes 78135 time 15 nps 5062897 currmove c5b4 perft 4669642
+785326 11125.573 <info currmovenumber 2 nodes 117650 time 23 nps 5001706 currmove c5c4 perft 4208721
+785326 11134.969 <info currmovenumber 3 nodes 168563 time 32 nps 5120950 currmove c5b5 perft 7866067
+785326 11144.771 <info currmovenumber 4 nodes 221567 time 42 nps 5186203 currmove c5b6 perft 10577513
+785326 11151.774 <info currmovenumber 5 nodes 258576 time 49 nps 5200207 currmove c5c6 perft 10191758
+785326 11158.405 <info currmovenumber 6 nodes 293987 time 56 nps 5216543 currmove c5d6 perft 8078254
+785326 11166.090 <info currmovenumber 7 nodes 334276 time 64 nps 5219650 currmove a4a3 perft 9390584
+785326 11168.356 <info currmovenumber 8 nodes 346309 time 66 nps 5222796 currmove f7f5 perft 3241645
+785326 11170.221 <info currmovenumber 9 nodes 356658 time 68 nps 5231625 currmove f7f6 perft 6227221
+785326 11170.230 <info depth 8 perft 64451405
+785326 11170.236 <bestmove 0000
+785326 11170.311 >position fen r3k2r/pb3p2/5npp/n2p4/1p1PPB2/6P1/P2N1PBP/R3K2R w KQkq -
+785326 11170.374 >perft 5
+785326 11180.163 <info currmovenumber 1 nodes 34929 time 9 nps 3574368 currmove e1e2 perft 1244723
+785326 11187.868 <info currmovenumber 2 nodes 62133 time 17 nps 3554959 currmove e1d1 perft 869971
+785326 11194.365 <info currmovenumber 3 nodes 85113 time 23 nps 3549905 currmove e1f1 perft 691718
+785326 11202.634 <info currmovenumber 4 nodes 112392 time 32 nps 3485721 currmove a1b1 perft 969990
+785326 11211.069 <info currmovenumber 5 nodes 140145 time 40 nps 3445060 currmove a1c1 perft 1139670
+785326 11218.025 <info currmovenumber 6 nodes 163197 time 47 nps 3426020 currmove a1d1 perft 822076
+785326 11225.390 <info currmovenumber 7 nodes 189488 time 55 nps 3445151 currmove e1a1 perft 769767
+785326 11232.491 <info currmovenumber 8 nodes 214325 time 62 nps 3451199 currmove e1h1 perft 830094
+785326 11238.993 <info currmovenumber 9 nodes 235623 time 68 nps 3434532 currmove h1f1 perft 771161
+785326 11245.720 <info currmovenumber 10 nodes 257874 time 75 nps 3423169 currmove h1g1 perft 911131
+785326 11251.039 <info currmovenumber 11 nodes 274459 time 80 nps 3403113 currmove f4b8 perft 695555
+785326 11256.561 <info currmovenumber 12 nodes 291587 time 86 nps 3383764 currmove f4c7 perft 849461
+785326 11261.755 <info currmovenumber 13 nodes 307614 time 91 nps 3366913 currmove f4d6 perft 834696
+785326 11267.838 <info currmovenumber 14 nodes 326435 time 97 nps 3349820 currmove f4h6 perft 774908
+785326 11273.068 <info currmovenumber 15 nodes 342302 time 102 nps 3333711 currmove f4e5 perft 830184
+785326 11278.984 <info currmovenumber 16 nodes 360395 time 108 nps 3318696 currmove f4g5 perft 845313
+785326 11284.335 <info currmovenumber 17 nodes 376912 time 113 nps 3307851 currmove f4e3 perft 769670
+785326 11289.011 <info currmovenumber 18 nodes 391147 time 118 nps 3297428 currmove g2f3 perft 916122
+785326 11293.195 <info currmovenumber 19 nodes 404001 time 122 nps 3289746 currmove g2h3 perft 868271
+785326 11298.133 <info currmovenumber 20 nodes 419326 time 127 nps 3282546 currmove g2f1 perft 906716
+785326 11304.012 <info currmovenumber 21 nodes 437376 time 133 nps 3273223 currmove d2c4 perft 1226344
+785326 11308.013 <info currmovenumber 22 nodes 449675 time 137 nps 3267405 currmove d2b3 perft 921727
+785326 11312.081 <info currmovenumber 23 nodes 462251 time 141 nps 3262348 currmove d2f3 perft 930655
+785326 11315.774 <info currmovenumber 24 nodes 473838 time 145 nps 3259202 currmove d2b1 perft 744536
+785326 11319.227 <info currmovenumber 25 nodes 484560 time 148 nps 3255627 currmove d2f1 perft 698730
+785326 11323.286 <info currmovenumber 26 nodes 497059 time 152 nps 3250934 currmove e4d5 perft 1020488
+785326 11326.715 <info currmovenumber 27 nodes 507632 time 156 nps 3247246 currmove e4e5 perft 793857
+785326 11329.587 <info currmovenumber 28 nodes 516328 time 159 nps 3243295 currmove g3g4 perft 962498
+785326 11331.566 <info currmovenumber 29 nodes 522411 time 161 nps 3241208 currmove f2f3 perft 808267
+785326 11340.700 <info currmovenumber 30 nodes 551575 time 170 nps 3238650 currmove a2a4 perft 933725
+785326 11342.668 <info currmovenumber 31 nodes 557591 time 172 nps 3236543 currmove a2a3 perft 1008885
+785326 11344.568 <info currmovenumber 32 nodes 563457 time 174 nps 3234927 currmove h2h4 perft 958286
+785326 11346.001 <info currmovenumber 33 nodes 567734 time 175 nps 3232882 currmove h2h3 perft 860698
+785326 11346.010 <info depth 5 perft 29179893
+785326 11346.017 <bestmove 0000
+785326 11346.225 >set UCI_Chess960 false
+785326 11346.260 >position fen rnbqkbnr/pppppppp///4P//PPPP1PPP/RNBQKBNR b qkQK e3 0 1 moves g8h6 e4e5 f7f5
+785326 11346.310 >position
+785326 11346.340 <info score cp 130 fen rnbqkb1r/ppppp1pp/7n/4Pp2/8/8/PPPP1PPP/RNBQKBNR w KQkq f6 0 3
+785326 11346.497 >perft 6
+785326 11398.711 <info currmovenumber 1 nodes 160589 time 52 nps 3079963 currmove e1e2 perft 5390634
+785326 11415.892 <info currmovenumber 2 nodes 210140 time 69 nps 3030602 currmove d1h5 perft 979924
+785326 11549.612 <info currmovenumber 3 nodes 626694 time 203 nps 3085953 currmove d1g4 perft 13618644
+785326 11659.686 <info currmovenumber 4 nodes 964739 time 313 nps 3080713 currmove d1f3 perft 13202224
+785326 11719.948 <info currmovenumber 5 nodes 1141806 time 373 nps 3057730 currmove d1e2 perft 8190360
+785326 11788.197 <info currmovenumber 6 nodes 1353275 time 441 nps 3064020 currmove f1a6 perft 7332653
+785326 11844.913 <info currmovenumber 7 nodes 1517907 time 498 nps 3045690 currmove f1b5 perft 6291500
+785326 11914.095 <info currmovenumber 8 nodes 1730245 time 567 nps 3048569 currmove f1c4 perft 8507348
+785326 11975.294 <info currmovenumber 9 nodes 1919333 time 628 nps 3052561 currmove f1d3 perft 8144206
+785326 12028.786 <info currmovenumber 10 nodes 2084289 time 682 nps 3055005 currmove f1e2 perft 6639258
+785326 12077.922 <info currmovenumber 11 nodes 2236286 time 731 nps 3057592 currmove b1a3 perft 7535899
+785326 12135.679 <info currmovenumber 12 nodes 2417728 time 789 nps 3063724 currmove b1c3 perft 9044741
+785326 12178.726 <info currmovenumber 13 nodes 2549392 time 832 nps 3063449 currmove g1f3 perft 6716187
+785326 12217.709 <info currmovenumber 14 nodes 2669791 time 871 nps 3064577 currmove g1h3 perft 7267772
+785326 12255.483 <info currmovenumber 15 nodes 2787573 time 908 nps 3066798 currmove g1e2 perft 5179235
+785326 12288.501 <info currmovenumber 16 nodes 2889187 time 941 nps 3067180 currmove e5e6 perft 5979034
+785326 12387.033 <info currmovenumber 17 nodes 3202314 time 1040 nps 3077669 currmove e5f6 perft 12010133
+785326 12461.898 <info currmovenumber 18 nodes 3431926 time 1115 nps 3076967 currmove d2d4 perft 11790960
+785326 12521.252 <info currmovenumber 19 nodes 3614132 time 1174 nps 3076590 currmove d2d3 perft 9141051
+785326 12560.137 <info currmovenumber 20 nodes 3734410 time 1213 nps 3077118 currmove c2c4 perft 7336306
+785326 12598.224 <info currmovenumber 21 nodes 3852242 time 1251 nps 3077619 currmove c2c3 perft 7969295
+785326 12626.291 <info currmovenumber 22 nodes 3938539 time 1279 nps 3077552 currmove f2f4 perft 6255103
+785326 12650.523 <info currmovenumber 23 nodes 4013031 time 1303 nps 3077527 currmove f2f3 perft 5977053
+785326 12676.600 <info currmovenumber 24 nodes 4093559 time 1330 nps 3077694 currmove b2b4 perft 8111112
+785326 12702.400 <info currmovenumber 25 nodes 4173675 time 1355 nps 3078223 currmove b2b3 perft 8104141
+785326 12728.389 <info currmovenumber 26 nodes 4254002 time 1381 nps 3078458 currmove g2g4 perft 8527339
+785326 12748.173 <info currmovenumber 27 nodes 4315664 time 1401 nps 3078996 currmove g2g3 perft 8056798
+785326 12766.287 <info currmovenumber 28 nodes 4372322 time 1419 nps 3079619 currmove a2a4 perft 8175355
+785326 12777.979 <info currmovenumber 29 nodes 4408707 time 1431 nps 3079882 currmove a2a3 perft 7140492
+785326 12791.104 <info currmovenumber 30 nodes 4449345 time 1444 nps 3080031 currmove h2h4 perft 8277323
+785326 12798.124 <info currmovenumber 31 nodes 4471171 time 1451 nps 3080168 currmove h2h3 perft 7171219
+785326 12798.133 <info depth 6 perft 244063299
+785326 12798.138 <bestmove 0000
+785326 12798.357 >position fen 8/PPP4k/8/8/8/8/4Kppp/8 w - - 0 1
+785326 12798.408 >perft 6
+785326 12813.460 <info currmovenumber 1 nodes 74624 time 15 nps 4965221 currmove e2d3 perft 2288102
+785326 12825.916 <info currmovenumber 2 nodes 134895 time 27 nps 4907495 currmove e2e3 perft 2257286
+785326 12835.034 <info currmovenumber 3 nodes 178780 time 36 nps 4883635 currmove e2f3 perft 1678369
+785326 12845.970 <info currmovenumber 4 nodes 231381 time 47 nps 4867675 currmove e2d2 perft 2164860
+785326 12852.194 <info currmovenumber 5 nodes 262543 time 53 nps 4882855 currmove e2f2 perft 721536
+785326 12856.271 <info currmovenumber 6 nodes 281932 time 57 nps 4873934 currmove e2d1 perft 845169
+785326 12877.085 <info currmovenumber 7 nodes 376674 time 78 nps 4788781 currmove c7c8q perft 2788607
+785326 12893.274 <info currmovenumber 8 nodes 450978 time 94 nps 4754830 currmove c7c8r perft 2589529
+785326 12902.576 <info currmovenumber 9 nodes 494075 time 104 nps 4743923 currmove c7c8b perft 1772616
+785326 12909.835 <info currmovenumber 10 nodes 529034 time 111 nps 4748556 currmove c7c8n perft 1510152
+785326 12924.447 <info currmovenumber 11 nodes 595389 time 126 nps 4724561 currmove b7b8q perft 2659713
+785326 12938.052 <info currmovenumber 12 nodes 657713 time 139 nps 4710615 currmove b7b8r perft 2713309
+785326 12940.797 <info currmovenumber 13 nodes 670276 time 142 nps 4707917 currmove b7b8b perft 1161336
+785326 12945.490 <info currmovenumber 14 nodes 693253 time 147 nps 4713934 currmove b7b8n perft 1507749
+785326 12956.619 <info currmovenumber 15 nodes 744456 time 158 nps 4706018 currmove a7a8q perft 2713687
+785326 12966.709 <info currmovenumber 16 nodes 791655 time 168 nps 4704337 currmove a7a8r perft 2681805
+785326 12967.031 <info currmovenumber 17 nodes 792953 time 168 nps 4703031 currmove a7a8b perft 1101674
+785326 12967.955 <info currmovenumber 18 nodes 797431 time 169 nps 4703771 currmove a7a8n perft 1181278
+785326 12967.964 <info depth 6 perft 34336777
+785326 12967.970 <bestmove 0000
+785326 12968.204 >position fen 2rkr3/5PP1/8/5Q2/5q2/8/5pp1/2RKR3 w KQkq - 0 1
+785326 12968.274 >perft 5
+785326 12968.337 <info currmovenumber 1 nodes 1 currmove f5c8 perft 0
+785326 12968.748 <info currmovenumber 2 nodes 1422 currmove f5d7 perft 33556
+785326 12990.483 <info currmovenumber 3 nodes 78998 time 22 nps 3560404 currmove f5h7 perft 2479500
+785326 13007.364 <info currmovenumber 4 nodes 138149 time 39 nps 3535902 currmove f5e6 perft 2455405
+785326 13008.589 <info currmovenumber 5 nodes 142473 time 40 nps 3535491 currmove f5f6 perft 153636
+785326 13025.913 <info currmovenumber 6 nodes 203981 time 57 nps 3540138 currmove f5g6 perft 2790851
+785326 13027.175 <info currmovenumber 7 nodes 208379 time 58 nps 3538800 currmove f5a5 perft 195684
+785326 13045.854 <info currmovenumber 8 nodes 273902 time 77 nps 3531617 currmove f5b5 perft 3043932
+785326 13061.175 <info currmovenumber 9 nodes 327184 time 92 nps 3522569 currmove f5c5 perft 2430292
+785326 13061.486 <info currmovenumber 10 nodes 328086 time 93 nps 3520394 currmove f5d5 perft 25922
+785326 13074.167 <info currmovenumber 11 nodes 372661 time 105 nps 3519854 currmove f5e5 perft 2332455
+785326 13075.432 <info currmovenumber 12 nodes 377114 time 107 nps 3519771 currmove f5g5 perft 209901
+785326 13090.757 <info currmovenumber 13 nodes 431786 time 122 nps 3525805 currmove f5h5 perft 2856956
+785326 13102.963 <info currmovenumber 14 nodes 474191 time 134 nps 3521143 currmove f5e4 perft 2692578
+785326 13112.319 <info currmovenumber 15 nodes 507039 time 144 nps 3520403 currmove f5f4 perft 1290723
+785326 13125.957 <info currmovenumber 16 nodes 554726 time 157 nps 3518370 currmove f5g4 perft 2452540
+785326 13126.575 <info currmovenumber 17 nodes 556602 time 158 nps 3516466 currmove f5d3 perft 52493
+785326 13140.639 <info currmovenumber 18 nodes 606588 time 172 nps 3519578 currmove f5h3 perft 2929122
+785326 13152.411 <info currmovenumber 19 nodes 648029 time 184 nps 3519619 currmove f5c2 perft 2370891
+785326 13165.699 <info currmovenumber 20 nodes 696153 time 197 nps 3526464 currmove f5b1 perft 2490353
+785326 13165.710 <info currmovenumber 21 nodes 696154 time 197 nps 3526255 currmove e1e8 perft 0
+785326 13177.434 <info currmovenumber 22 nodes 739931 time 209 nps 3537936 currmove e1e7 perft 1864744
+785326 13188.187 <info currmovenumber 23 nodes 780318 time 219 nps 3548599 currmove e1e6 perft 2063082
+785326 13196.136 <info currmovenumber 24 nodes 810180 time 227 nps 3555832 currmove e1e5 perft 1552918
+785326 13204.723 <info currmovenumber 25 nodes 841535 time 236 nps 3559308 currmove e1e4 perft 1726492
+785326 13215.502 <info currmovenumber 26 nodes 881178 time 247 nps 3564467 currmove e1e3 perft 2368041
+785326 13225.805 <info currmovenumber 27 nodes 918704 time 257 nps 3567595 currmove e1e2 perft 2297688
+785326 13235.830 <info currmovenumber 28 nodes 955648 time 267 nps 3572007 currmove e1f1 perft 1891641
+785326 13245.641 <info currmovenumber 29 nodes 991732 time 277 nps 3575741 currmove e1g1 perft 1734862
+785326 13258.270 <info currmovenumber 30 nodes 1038590 time 289 nps 3581624 currmove e1h1 perft 2417856
+785326 13258.286 <info currmovenumber 31 nodes 1038591 time 289 nps 3581402 currmove c1c8 perft 0
+785326 13270.157 <info currmovenumber 32 nodes 1080205 time 301 nps 3578434 currmove c1c7 perft 2248193
+785326 13281.385 <info currmovenumber 33 nodes 1119487 time 313 nps 3575563 currmove c1c6 perft 2673833
+785326 13290.402 <info currmovenumber 34 nodes 1150953 time 322 nps 3573165 currmove c1c5 perft 2354672
+785326 13300.115 <info currmovenumber 35 nodes 1184271 time 331 nps 3568964 currmove c1c4 perft 2621856
+785326 13311.506 <info currmovenumber 36 nodes 1223712 time 343 nps 3565453 currmove c1c3 perft 3099575
+785326 13321.489 <info currmovenumber 37 nodes 1257906 time 353 nps 3561486 currmove c1c2 perft 2812131
+785326 13330.841 <info currmovenumber 38 nodes 1291236 time 362 nps 3561542 currmove c1a1 perft 2897670
+785326 13339.660 <info currmovenumber 39 nodes 1322247 time 371 nps 3560474 currmove c1b1 perft 2777859
+785326 13339.673 <info currmovenumber 40 nodes 1322248 time 371 nps 3560334 currmove f7e8q perft 0
+785326 13346.585 <info currmovenumber 41 nodes 1345049 time 378 nps 3555558 currmove f7f8q perft 2131021
+785326 13346.595 <info currmovenumber 42 nodes 1345050 time 378 nps 3555466 currmove f7e8r perft 0
+785326 13351.996 <info currmovenumber 43 nodes 1362989 time 383 nps 3552180 currmove f7f8r perft 1815185
+785326 13358.657 <info currmovenumber 44 nodes 1385962 time 390 nps 3550428 currmove f7e8b perft 1926880
+785326 13365.704 <info currmovenumber 45 nodes 1409596 time 397 nps 3546923 currmove f7f8b perft 2393335
+785326 13370.883 <info currmovenumber 46 nodes 1427568 time 402 nps 3545941 currmove f7e8n perft 1630289
+785326 13377.469 <info currmovenumber 47 nodes 1450121 time 409 nps 3543985 currmove f7f8n perft 2285926
+785326 13383.547 <info currmovenumber 48 nodes 1469984 time 415 nps 3539950 currmove g7g8q perft 2524925
+785326 13389.146 <info currmovenumber 49 nodes 1488310 time 420 nps 3536407 currmove g7g8r perft 2392543
+785326 13392.181 <info currmovenumber 50 nodes 1498271 time 423 nps 3534574 currmove g7g8b perft 2202248
+785326 13396.108 <info currmovenumber 51 nodes 1511539 time 427 nps 3533137 currmove g7g8n perft 2377894
+785326 13396.117 <info depth 5 perft 94370149
+785326 13396.123 <bestmove 0000
+785326 13396.239 >set UCI_Chess960 true
+785326 13396.271 >position fen bnrbnkrq/pppppppp/8/8/8/8/PPPPPPPP/BNRBNKRQ w CGkq - 0 1
+785326 13396.313 >perft 6
+785326 13443.357 <info currmovenumber 1 nodes 137320 time 47 nps 2920340 currmove f1g1 perft 5384650
+785326 13498.529 <info currmovenumber 2 nodes 306909 time 102 nps 3003113 currmove e1d3 perft 6871686
+785326 13547.027 <info currmovenumber 3 nodes 455840 time 150 nps 3024891 currmove e1f3 perft 6591849
+785326 13587.924 <info currmovenumber 4 nodes 580609 time 191 nps 3030425 currmove b1a3 perft 5949256
+785326 13631.291 <info currmovenumber 5 nodes 714712 time 234 nps 3041845 currmove b1c3 perft 6666016
+785326 13671.232 <info currmovenumber 6 nodes 837210 time 274 nps 3045502 currmove d2d4 perft 5771449
+785326 13708.223 <info currmovenumber 7 nodes 949189 time 311 nps 3043312 currmove d2d3 perft 5400151
+785326 13756.699 <info currmovenumber 8 nodes 1095217 time 360 nps 3039160 currmove e2e4 perft 7751988
+785326 13806.106 <info currmovenumber 9 nodes 1243454 time 409 nps 3034493 currmove e2e3 perft 7990495
+785326 13856.762 <info currmovenumber 10 nodes 1397257 time 460 nps 3034676 currmove c2c4 perft 8688295
+785326 13897.162 <info currmovenumber 11 nodes 1519659 time 500 nps 3034267 currmove c2c3 perft 7253962
+785326 13924.123 <info currmovenumber 12 nodes 1602237 time 527 nps 3035723 currmove f2f4 perft 6017884
+785326 13946.260 <info currmovenumber 13 nodes 1669527 time 549 nps 3035892 currmove f2f3 perft 5207105
+785326 13980.959 <info currmovenumber 14 nodes 1775542 time 584 nps 3037036 currmove b2b4 perft 7975710
+785326 14015.209 <info currmovenumber 15 nodes 1880184 time 618 nps 3038049 currmove b2b3 perft 7922212
+785326 14066.146 <info currmovenumber 16 nodes 2031184 time 669 nps 3032458 currmove g2g4 perft 11178440
+785326 14111.390 <info currmovenumber 17 nodes 2165541 time 715 nps 3028478 currmove g2g3 perft 10455634
+785326 14120.038 <info currmovenumber 18 nodes 2192071 time 723 nps 3028938 currmove a2a4 perft 5390516
+785326 14126.176 <info currmovenumber 19 nodes 2210803 time 729 nps 3029129 currmove a2a3 perft 4961804
+785326 14135.040 <info currmovenumber 20 nodes 2237632 time 738 nps 3029093 currmove h2h4 perft 6613405
+785326 14140.135 <info currmovenumber 21 nodes 2253010 time 743 nps 3029019 currmove h2h3 perft 5956752
+785326 14140.144 <info depth 6 perft 145999259
+785326 14140.150 <bestmove 0000
+785326 14140.404 >position fen rbknqnbr/pppppppp/8/8/8/8/PPPPPPPP/RBKNQNBR w ahKQ - 0 1
+785326 14140.460 >perft 6
+785326 14192.713 <info currmovenumber 1 nodes 165167 time 52 nps 3162421 currmove d1c3 perft 6222344
+785326 14238.022 <info currmovenumber 2 nodes 307568 time 97 nps 3153170 currmove d1e3 perft 5864998
+785326 14279.684 <info currmovenumber 3 nodes 439612 time 139 nps 3158044 currmove f1e3 perft 5452108
+785326 14317.229 <info currmovenumber 4 nodes 557486 time 176 nps 3154079 currmove f1g3 perft 5500248
+785326 14371.776 <info currmovenumber 5 nodes 726472 time 231 nps 3140878 currmove d2d4 perft 7551236
+785326 14425.495 <info currmovenumber 6 nodes 893340 time 285 nps 3134364 currmove d2d3 perft 7529270
+785326 14464.838 <info currmovenumber 7 nodes 1016375 time 324 nps 3133497 currmove e2e4 perft 5779858
+785326 14492.364 <info currmovenumber 8 nodes 1102180 time 351 nps 3132218 currmove e2e3 perft 4262269
+785326 14543.537 <info currmovenumber 9 nodes 1258255 time 403 nps 3121788 currmove c2c4 perft 7764364
+785326 14590.405 <info currmovenumber 10 nodes 1400720 time 449 nps 3113234 currmove c2c3 perft 7261035
+785326 14644.266 <info currmovenumber 11 nodes 1567146 time 503 nps 3110745 currmove f2f4 perft 9453215
+785326 14698.607 <info currmovenumber 12 nodes 1734714 time 558 nps 3108101 currmove f2f3 perft 9653727
+785326 14717.986 <info currmovenumber 13 nodes 1795321 time 577 nps 3108732 currmove b2b4 perft 5552051
+785326 14736.710 <info currmovenumber 14 nodes 1853762 time 596 nps 3109123 currmove b2b3 perft 5492519
+785326 14749.187 <info currmovenumber 15 nodes 1892792 time 608 nps 3109509 currmove g2g4 perft 4765131
+785326 14758.709 <info currmovenumber 16 nodes 1922585 time 618 nps 3109812 currmove g2g3 perft 4222402
+785326 14772.946 <info currmovenumber 17 nodes 1967017 time 632 nps 3110059 currmove a2a4 perft 6107433
+785326 14783.963 <info currmovenumber 18 nodes 2001539 time 643 nps 3110455 currmove a2a3 perft 5592329
+785326 14795.712 <info currmovenumber 19 nodes 2038060 time 655 nps 3110423 currmove h2h4 perft 6477291
+785326 14804.324 <info currmovenumber 20 nodes 2064957 time 663 nps 3110588 currmove h2h3 perft 5976212
+785326 14804.337 <info depth 6 perft 126480040
+785326 14804.343 <bestmove 0000
+785326 14804.496 >position fen qbrnnkbr/pppppppp/8/8/8/8/PPPPPPPP/QBRNNKBR w KQkq - 0 1
+785326 14804.552 >perft 6
+785326 14851.631 <info currmovenumber 1 nodes 149737 time 47 nps 3181734 currmove d1c3 perft 5662221
+785326 14896.549 <info currmovenumber 2 nodes 290931 time 91 nps 3162836 currmove d1e3 perft 5829003
+785326 14938.891 <info currmovenumber 3 nodes 424953 time 134 nps 3163582 currmove e1d3 perft 5805946
+785326 14977.902 <info currmovenumber 4 nodes 548977 time 173 nps 3167173 currmove e1f3 perft 5698656
+785326 15010.029 <info currmovenumber 5 nodes 649641 time 205 nps 3161786 currmove d2d4 perft 4479130
+785326 15038.652 <info currmovenumber 6 nodes 739755 time 234 nps 3160132 currmove d2d3 perft 4067554
+785326 15070.807 <info currmovenumber 7 nodes 840518 time 266 nps 3156959 currmove e2e4 perft 4876506
+785326 15099.074 <info currmovenumber 8 nodes 928934 time 294 nps 3154161 currmove e2e3 perft 4449419
+785326 15158.311 <info currmovenumber 9 nodes 1110652 time 353 nps 3139685 currmove c2c4 perft 8769552
+785326 15207.883 <info currmovenumber 10 nodes 1262139 time 403 nps 3129379 currmove c2c3 perft 7618368
+785326 15256.250 <info currmovenumber 11 nodes 1410492 time 451 nps 3122752 currmove f2f4 perft 8060064
+785326 15300.571 <info currmovenumber 12 nodes 1545922 time 496 nps 3116735 currmove f2f3 perft 7587173
+785326 15336.988 <info currmovenumber 13 nodes 1659146 time 532 nps 3116264 currmove b2b4 perft 7564371
+785326 15372.433 <info currmovenumber 14 nodes 1769642 time 567 nps 3116282 currmove b2b3 perft 7450972
+785326 15387.170 <info currmovenumber 15 nodes 1816176 time 582 nps 3117332 currmove g2g4 perft 5427135
+785326 15401.238 <info currmovenumber 16 nodes 1860688 time 596 nps 3118416 currmove g2g3 perft 5327877
+785326 15415.689 <info currmovenumber 17 nodes 1905125 time 611 nps 3117396 currmove a2a4 perft 5973602
+785326 15426.763 <info currmovenumber 18 nodes 1939829 time 622 nps 3117685 currmove a2a3 perft 5504271
+785326 15436.360 <info currmovenumber 19 nodes 1969780 time 631 nps 3117735 currmove h2h4 perft 5982836
+785326 15443.019 <info currmovenumber 20 nodes 1990463 time 638 nps 3117608 currmove h2h3 perft 5478500
+785326 15443.031 <info depth 6 perft 121613156
+785326 15443.038 <bestmove 0000
+785326 15443.274 >position fen nqbnrbkr/pppppppp/8/8/8/8/PPPPPPPP/NQBNRBKR w KQkq - 0 1
+785326 15443.335 >perft 6
+785326 15484.220 <info currmovenumber 1 nodes 128388 time 40 nps 3142191 currmove d1c3 perft 4626221
+785326 15520.722 <info currmovenumber 2 nodes 243750 time 77 nps 3150914 currmove d1e3 perft 4529888
+785326 15556.623 <info currmovenumber 3 nodes 356725 time 113 nps 3149371 currmove a1b3 perft 4709774
+785326 15600.949 <info currmovenumber 4 nodes 491858 time 157 nps 3121063 currmove d2d4 perft 5527448
+785326 15643.004 <info currmovenumber 5 nodes 621118 time 199 nps 3111059 currmove d2d3 perft 5376279
+785326 15692.537 <info currmovenumber 6 nodes 771683 time 249 nps 3096868 currmove e2e4 perft 6424166
+785326 15734.326 <info currmovenumber 7 nodes 898698 time 290 nps 3088667 currmove e2e3 perft 5444232
+785326 15777.615 <info currmovenumber 8 nodes 1033423 time 334 nps 3091693 currmove c2c4 perft 6164398
+785326 15816.954 <info currmovenumber 9 nodes 1155228 time 373 nps 3092162 currmove c2c3 perft 5729588
+785326 15837.862 <info currmovenumber 10 nodes 1219600 time 394 nps 3091442 currmove f2f4 perft 4250762
+785326 15858.304 <info currmovenumber 11 nodes 1282572 time 414 nps 3090913 currmove f2f3 perft 4322943
+785326 15886.542 <info currmovenumber 12 nodes 1368627 time 443 nps 3088144 currmove b2b4 perft 5565823
+785326 15908.213 <info currmovenumber 13 nodes 1434943 time 464 nps 3086837 currmove b2b3 perft 4746410
+785326 15924.331 <info currmovenumber 14 nodes 1484039 time 480 nps 3085465 currmove g2g4 perft 4765098
+785326 15940.300 <info currmovenumber 15 nodes 1532728 time 496 nps 3084303 currmove g2g3 perft 4791415
+785326 15947.741 <info currmovenumber 16 nodes 1555269 time 504 nps 3083467 currmove a2a4 perft 3959132
+785326 15954.960 <info currmovenumber 17 nodes 1577210 time 511 nps 3082848 currmove a2a3 perft 3948972
+785326 15963.032 <info currmovenumber 18 nodes 1602074 time 519 nps 3082804 currmove h2h4 perft 4739208
+785326 15968.222 <info currmovenumber 19 nodes 1618211 time 524 nps 3083062 currmove h2h3 perft 4267199
+785326 15968.231 <info depth 6 perft 93888956
+785326 15968.236 <bestmove 0000
+785326 15968.392 >position fen nrnkbqrb/pppppppp/8/8/8/8/PPPPPPPP/NRNKBQRB w KQkq - 0 1
+785326 15968.449 >perft 6
+785326 16010.620 <info currmovenumber 1 nodes 130208 time 42 nps 3089414 currmove c1b3 perft 4670341
+785326 16054.916 <info currmovenumber 2 nodes 267193 time 86 nps 3091619 currmove c1d3 perft 5388264
+785326 16090.411 <info currmovenumber 3 nodes 378692 time 121 nps 3105826 currmove a1b3 perft 4428006
+785326 16136.651 <info currmovenumber 4 nodes 519782 time 168 nps 3090588 currmove d2d4 perft 5505872
+785326 16178.224 <info currmovenumber 5 nodes 646971 time 209 nps 3084402 currmove d2d3 perft 5090157
+785326 16227.274 <info currmovenumber 6 nodes 795769 time 258 nps 3074775 currmove e2e4 perft 6619971
+785326 16276.344 <info currmovenumber 7 nodes 944964 time 307 nps 3069338 currmove e2e3 perft 6683675
+785326 16301.605 <info currmovenumber 8 nodes 1023724 time 333 nps 3072978 currmove c2c4 perft 4411656
+785326 16326.149 <info currmovenumber 9 nodes 1100216 time 357 nps 3075985 currmove c2c3 perft 4325341
+785326 16358.394 <info currmovenumber 10 nodes 1198181 time 389 nps 3072852 currmove f2f4 perft 5848440
+785326 16385.105 <info currmovenumber 11 nodes 1279749 time 416 nps 3071633 currmove f2f3 perft 5158869
+785326 16407.057 <info currmovenumber 12 nodes 1347923 time 438 nps 3073339 currmove b2b4 perft 4504779
+785326 16420.802 <info currmovenumber 13 nodes 1390500 time 452 nps 3074097 currmove b2b3 perft 3396536
+785326 16460.486 <info currmovenumber 14 nodes 1510751 time 492 nps 3070539 currmove g2g4 perft 8115924
+785326 16494.996 <info currmovenumber 15 nodes 1615808 time 526 nps 3068803 currmove g2g3 perft 7418288
+785326 16501.971 <info currmovenumber 16 nodes 1637459 time 533 nps 3069242 currmove a2a4 perft 4045605
+785326 16508.866 <info currmovenumber 17 nodes 1658788 time 540 nps 3069557 currmove a2a3 perft 4060883
+785326 16510.738 <info currmovenumber 18 nodes 1664550 time 542 nps 3069578 currmove h2h4 perft 3691602
+785326 16512.445 <info currmovenumber 19 nodes 1669835 time 543 nps 3069661 currmove h2h3 perft 3680521
+785326 16512.453 <info depth 6 perft 97044730
+785326 16512.459 <bestmove 0000
+785326 16512.634 >position fen rbbknnqr/pppppppp/8/8/8/8/PPPPPPPP/RBBKNNQR w KQkq - 0 1
+785326 16512.695 >perft 6
+785326 16561.059 <info currmovenumber 1 nodes 152395 time 48 nps 3152775 currmove e1d3 perft 5699687
+785326 16605.946 <info currmovenumber 2 nodes 294100 time 93 nps 3154642 currmove e1f3 perft 5827956
+785326 16648.600 <info currmovenumber 3 nodes 427446 time 135 nps 3145712 currmove f1e3 perft 5815797
+785326 16686.329 <info currmovenumber 4 nodes 544778 time 173 nps 3137916 currmove f1g3 perft 5466351
+785326 16745.066 <info currmovenumber 5 nodes 726967 time 232 nps 3128795 currmove d2d4 perft 7670119
+785326 16798.780 <info currmovenumber 6 nodes 892868 time 286 nps 3121240 currmove d2d3 perft 7084052
+785326 16830.887 <info currmovenumber 7 nodes 992547 time 318 nps 3119573 currmove e2e4 perft 5044308
+785326 16858.641 <info currmovenumber 8 nodes 1079061 time 345 nps 3119363 currmove e2e3 perft 4447711
+785326 16909.341 <info currmovenumber 9 nodes 1235310 time 396 nps 3114600 currmove c2c4 perft 8160119
+785326 16959.886 <info currmovenumber 10 nodes 1390794 time 447 nps 3110234 currmove c2c3 perft 8274795
+785326 17004.574 <info currmovenumber 11 nodes 1526414 time 491 nps 3103379 currmove f2f4 perft 7479051
+785326 17045.500 <info currmovenumber 12 nodes 1650032 time 532 nps 3097003 currmove f2f3 perft 7113119
+785326 17065.165 <info currmovenumber 13 nodes 1711861 time 552 nps 3098677 currmove b2b4 perft 5583381
+785326 17084.411 <info currmovenumber 14 nodes 1772567 time 571 nps 3100547 currmove b2b3 perft 5519854
+785326 17106.186 <info currmovenumber 15 nodes 1840546 time 593 nps 3101328 currmove g2g4 perft 6152911
+785326 17120.971 <info currmovenumber 16 nodes 1886843 time 608 nps 3102047 currmove g2g3 perft 5072371
+785326 17134.998 <info currmovenumber 17 nodes 1930823 time 622 nps 3102805 currmove a2a4 perft 6042652
+785326 17145.835 <info currmovenumber 18 nodes 1964911 time 633 nps 3103533 currmove a2a3 perft 5498304
+785326 17157.845 <info currmovenumber 19 nodes 2002165 time 645 nps 3103543 currmove h2h4 perft 6486895
+785326 17166.506 <info currmovenumber 20 nodes 2029218 time 653 nps 3103765 currmove h2h3 perft 5941963
+785326 17166.515 <info depth 6 perft 124381396
+785326 17166.521 <bestmove 0000
+785326 17166.678 >position fen r1k1r2q/p1ppp1pp/8/8/8/8/P1PPP1PP/R1K1R2Q w KQkq -
+785326 17166.728 >perft 6
+785326 17234.123 <info currmovenumber 1 nodes 202162 time 67 nps 3000866 currmove c1b2 perft 7716113
+785326 17272.174 <info currmovenumber 2 nodes 329988 time 105 nps 3130047 currmove c1b1 perft 5287176
+785326 17311.539 <info currmovenumber 3 nodes 459027 time 144 nps 3170395 currmove c1d1 perft 5355821
+785326 17378.921 <info currmovenumber 4 nodes 679390 time 212 nps 3202082 currmove h1f1 perft 9532246
+785326 17444.322 <info currmovenumber 5 nodes 894155 time 277 nps 3221380 currmove h1g1 perft 10123479
+785326 17514.155 <info currmovenumber 6 nodes 1126851 time 347 nps 3243631 currmove c1e1 perft 9180393
+785326 17552.481 <info currmovenumber 7 nodes 1255542 time 385 nps 3254959 currmove e1d1 perft 6271163
+785326 17611.022 <info currmovenumber 8 nodes 1448698 time 444 nps 3260844 currmove e1f1 perft 9534409
+785326 17640.705 <info currmovenumber 9 nodes 1547043 time 473 nps 3264116 currmove e1g1 perft 5560154
+785326 17689.649 <info currmovenumber 10 nodes 1711910 time 522 nps 3274011 currmove a1b1 perft 8535014
+785326 17715.263 <info currmovenumber 11 nodes 1797355 time 548 nps 3276755 currmove c1a1 perft 4733447
+785326 17746.408 <info currmovenumber 12 nodes 1897122 time 579 nps 3272818 currmove d2d4 perft 7075489
+785326 17776.824 <info currmovenumber 13 nodes 1994972 time 610 nps 3270031 currmove d2d3 perft 7096357
+785326 17805.615 <info currmovenumber 14 nodes 2088369 time 638 nps 3268940 currmove e2e4 perft 7712927
+785326 17830.887 <info currmovenumber 15 nodes 2170111 time 664 nps 3267548 currmove e2e3 perft 7035923
+785326 17851.796 <info currmovenumber 16 nodes 2237579 time 685 nps 3266300 currmove c2c4 perft 7008068
+785326 17872.703 <info currmovenumber 17 nodes 2304969 time 705 nps 3265030 currmove c2c3 perft 7117319
+785326 17905.432 <info currmovenumber 18 nodes 2411409 time 738 nps 3264455 currmove g2g4 perft 9171407
+785326 17937.950 <info currmovenumber 19 nodes 2517759 time 771 nps 3264714 currmove g2g3 perft 9195544
+785326 17951.161 <info currmovenumber 20 nodes 2561210 time 784 nps 3265115 currmove a2a4 perft 7644067
+785326 17961.401 <info currmovenumber 21 nodes 2594465 time 794 nps 3264889 currmove a2a3 perft 7066835
+785326 17970.849 <info currmovenumber 22 nodes 2624935 time 804 nps 3264411 currmove h2h4 perft 7749409
+785326 17976.784 <info currmovenumber 23 nodes 2644270 time 810 nps 3264370 currmove h2h3 perft 7140729
+785326 17976.795 <info depth 6 perft 172843489
+785326 17976.800 <bestmove 0000
+785326 17976.957 >position fen r1k2r1q/p1ppp1pp/8/8/8/8/P1PPP1PP/R1K2R1Q w KQkq - 0 1
+785326 17976.991 >perft 6
+785326 18099.344 <info currmovenumber 1 nodes 402780 time 122 nps 3292452 currmove c1b2 perft 18679872
+785326 18174.445 <info currmovenumber 2 nodes 652560 time 197 nps 3305104 currmove c1b1 perft 12205218
+785326 18257.304 <info currmovenumber 3 nodes 932064 time 280 nps 3325255 currmove c1d1 perft 13347851
+785326 18386.152 <info currmovenumber 4 nodes 1357209 time 409 nps 3317182 currmove h1g1 perft 21405374
+785326 18395.833 <info currmovenumber 5 nodes 1390311 time 418 nps 3319525 currmove f1f8 perft 916978
+785326 18466.995 <info currmovenumber 6 nodes 1627697 time 489 nps 3321915 currmove f1f7 perft 11006043
+785326 18553.307 <info currmovenumber 7 nodes 1920003 time 576 nps 3331600 currmove f1f6 perft 16381350
+785326 18639.496 <info currmovenumber 8 nodes 2210855 time 662 nps 3337203 currmove f1f5 perft 17181003
+785326 18732.876 <info currmovenumber 9 nodes 2523621 time 755 nps 3338700 currmove f1f4 perft 19243863
+785326 18830.005 <info currmovenumber 10 nodes 2849691 time 852 nps 3340799 currmove f1f3 perft 20702065
+785326 18892.244 <info currmovenumber 11 nodes 3059247 time 915 nps 3342576 currmove f1f2 perft 15035922
+785326 18941.037 <info currmovenumber 12 nodes 3222391 time 964 nps 3342618 currmove f1d1 perft 11521031
+785326 18996.310 <info currmovenumber 13 nodes 3407723 time 1019 nps 3343182 currmove f1e1 perft 12274064
+785326 19032.646 <info currmovenumber 14 nodes 3527895 time 1055 nps 3341944 currmove f1g1 perft 9825966
+785326 19108.339 <info currmovenumber 15 nodes 3785155 time 1131 nps 3345747 currmove a1b1 perft 17352612
+785326 19161.037 <info currmovenumber 16 nodes 3956043 time 1184 nps 3341170 currmove c1a1 perft 12896308
+785326 19212.300 <info currmovenumber 17 nodes 4117410 time 1235 nps 3333148 currmove d2d4 perft 15133295
+785326 19263.291 <info currmovenumber 18 nodes 4276526 time 1286 nps 3324720 currmove d2d3 perft 15170473
+785326 19298.916 <info currmovenumber 19 nodes 4392462 time 1321 nps 3322809 currmove e2e4 perft 13993592
+785326 19335.244 <info currmovenumber 20 nodes 4509792 time 1358 nps 3320320 currmove e2e3 perft 13893912
+785326 19370.645 <info currmovenumber 21 nodes 4621762 time 1393 nps 3316334 currmove c2c4 perft 15016454
+785326 19405.479 <info currmovenumber 22 nodes 4733954 time 1428 nps 3313991 currmove c2c3 perft 15225756
+785326 19456.167 <info currmovenumber 23 nodes 4897941 time 1479 nps 3311300 currmove g2g4 perft 18464391
+785326 19506.508 <info currmovenumber 24 nodes 5061719 time 1529 nps 3309391 currmove g2g3 perft 18507959
+785326 19529.116 <info currmovenumber 25 nodes 5135509 time 1552 nps 3308732 currmove a2a4 perft 16218247
+785326 19547.173 <info currmovenumber 26 nodes 5194033 time 1570 nps 3307950 currmove a2a3 perft 15127393
+785326 19563.814 <info currmovenumber 27 nodes 5247563 time 1586 nps 3306988 currmove h2h4 perft 16435151
+785326 19575.012 <info currmovenumber 28 nodes 5284044 time 1598 nps 3306638 currmove h2h3 perft 15268455
+785326 19575.025 <info depth 6 perft 418430598
+785326 19575.031 <bestmove 0000
+785326 19575.270 >position fen 8/8/8/4B2b/6nN/8/5P2/2R1K2k w Q - 0 1
+785326 19575.325 >perft 6
+785326 19575.370 <info currmovenumber 1 nodes 1 currmove e1d2 perft 0
+785326 19575.385 <info currmovenumber 2 nodes 2 currmove e1e2 perft 0
+785326 19583.418 <info currmovenumber 3 nodes 36602 time 8 nps 4533814 currmove e1d1 perft 598958
+785326 19594.680 <info currmovenumber 4 nodes 87532 time 19 nps 4527931 currmove e1f1 perft 872766
+785326 19614.621 <info currmovenumber 5 nodes 185010 time 39 nps 4710693 currmove c1c8 perft 1972915
+785326 19630.398 <info currmovenumber 6 nodes 261265 time 55 nps 4745889 currmove c1c7 perft 1839007
+785326 19646.294 <info currmovenumber 7 nodes 338232 time 70 nps 4767298 currmove c1c6 perft 1896172
+785326 19659.950 <info currmovenumber 8 nodes 404062 time 84 nps 4776206 currmove c1c5 perft 1717946
+785326 19675.297 <info currmovenumber 9 nodes 477192 time 99 nps 4774317 currmove c1c4 perft 1829021
+785326 19689.013 <info currmovenumber 10 nodes 542953 time 113 nps 4776629 currmove c1c3 perft 1671631
+785326 19702.622 <info currmovenumber 11 nodes 608332 time 127 nps 4779623 currmove c1c2 perft 1692721
+785326 19714.260 <info currmovenumber 12 nodes 659890 time 138 nps 4750300 currmove c1a1 perft 1468103
+785326 19725.734 <info currmovenumber 13 nodes 711098 time 150 nps 4728354 currmove c1b1 perft 1506217
+785326 19736.283 <info currmovenumber 14 nodes 757558 time 160 nps 4707117 currmove c1d1 perft 1435920
+785326 19736.294 <info currmovenumber 15 nodes 757559 time 160 nps 4706745 currmove e1c1 perft 0
+785326 19744.642 <info currmovenumber 16 nodes 794507 time 169 nps 4692984 currmove e5b8 perft 1111733
+785326 19753.141 <info currmovenumber 17 nodes 832504 time 177 nps 4682327 currmove e5h8 perft 1291335
+785326 19759.432 <info currmovenumber 18 nodes 859817 time 184 nps 4670672 currmove e5c7 perft 1134380
+785326 19766.619 <info currmovenumber 19 nodes 892281 time 191 nps 4664904 currmove e5g7 perft 1468257
+785326 19773.528 <info currmovenumber 20 nodes 922640 time 198 nps 4655453 currmove e5d6 perft 1435739
+785326 19779.828 <info currmovenumber 21 nodes 950759 time 204 nps 4649574 currmove e5f6 perft 1514512
+785326 19786.064 <info currmovenumber 22 nodes 978060 time 210 nps 4641498 currmove e5d4 perft 1637892
+785326 19790.438 <info currmovenumber 23 nodes 996880 time 215 nps 4634616 currmove e5f4 perft 1288458
+785326 19794.779 <info currmovenumber 24 nodes 1014993 time 219 nps 4625508 currmove e5c3 perft 1101675
+785326 19798.605 <info currmovenumber 25 nodes 1031672 time 223 nps 4620924 currmove e5g3 perft 1035797
+785326 19804.017 <info currmovenumber 26 nodes 1055555 time 228 nps 4615999 currmove e5b2 perft 1418843
+785326 19808.560 <info currmovenumber 27 nodes 1076026 time 233 nps 4613867 currmove e5h2 perft 1053052
+785326 19813.503 <info currmovenumber 28 nodes 1097992 time 238 nps 4610339 currmove e5a1 perft 1256253
+785326 19819.064 <info currmovenumber 29 nodes 1122793 time 243 nps 4606887 currmove h4g6 perft 1223973
+785326 19825.767 <info currmovenumber 30 nodes 1152709 time 250 nps 4603041 currmove h4f5 perft 2184789
+785326 19829.499 <info currmovenumber 31 nodes 1169450 time 254 nps 4601320 currmove h4f3 perft 1514127
+785326 19831.867 <info currmovenumber 32 nodes 1179972 time 256 nps 4599867 currmove h4g2 perft 1725470
+785326 19835.131 <info currmovenumber 33 nodes 1194397 time 259 nps 4597588 currmove f2f4 perft 1428003
+785326 19837.003 <info currmovenumber 34 nodes 1202600 time 261 nps 4596048 currmove f2f3 perft 1229174
+785326 19837.012 <info depth 6 perft 44554839
+785326 19837.018 <bestmove 0000
+785326 19837.171 >position fen 2r5/8/8/8/8/8/6PP/k2KR3 w K - 0 1
+785326 19837.219 >perft 7
+785326 19870.004 <info currmovenumber 1 nodes 143938 time 32 nps 4394100 currmove d1d2 perft 4940501
+785326 19886.294 <info currmovenumber 2 nodes 216321 time 49 nps 4410148 currmove d1e2 perft 3734447
+785326 19947.359 <info currmovenumber 3 nodes 484356 time 110 nps 4398744 currmove e1e8 perft 18260379
+785326 19981.563 <info currmovenumber 4 nodes 632850 time 144 nps 4385137 currmove e1e7 perft 27126995
+785326 20013.989 <info currmovenumber 5 nodes 771856 time 176 nps 4367123 currmove e1e6 perft 27203462
+785326 20046.241 <info currmovenumber 6 nodes 910928 time 208 nps 4358606 currmove e1e5 perft 27287357
+785326 20077.718 <info currmovenumber 7 nodes 1046616 time 240 nps 4352369 currmove e1e4 perft 26834748
+785326 20107.827 <info currmovenumber 8 nodes 1176330 time 270 nps 4347412 currmove e1e3 perft 25865629
+785326 20124.632 <info currmovenumber 9 nodes 1247323 time 287 nps 4340206 currmove e1e2 perft 15959323
+785326 20146.934 <info currmovenumber 10 nodes 1344312 time 309 nps 4340863 currmove d1e1 perft 3463501
+785326 20161.073 <info currmovenumber 11 nodes 1405275 time 323 nps 4339540 currmove e1f1 perft 16551893
+785326 20169.825 <info currmovenumber 12 nodes 1443654 time 332 nps 4340693 currmove e1g1 perft 4971729
+785326 20177.650 <info currmovenumber 13 nodes 1477413 time 340 nps 4340156 currmove e1h1 perft 4971928
+785326 20184.013 <info currmovenumber 14 nodes 1503364 time 346 nps 4335310 currmove g2g4 perft 13033906
+785326 20189.631 <info currmovenumber 15 nodes 1526729 time 352 nps 4332463 currmove g2g3 perft 13114642
+785326 20192.518 <info currmovenumber 16 nodes 1538506 time 355 nps 4330429 currmove h2h4 perft 13109855
+785326 20195.454 <info currmovenumber 17 nodes 1549513 time 358 nps 4325674 currmove h2h3 perft 13173913
+785326 20195.470 <info depth 7 perft 259604208
+785326 20195.476 <bestmove 0000
+785326 20195.637 >position fen 4r3/3k4/8/8/8/8/6PP/qR1K1R2 w KQ - 0 1
+785326 20195.691 >perft 6
+785326 20288.024 <info currmovenumber 1 nodes 400540 time 92 nps 4339213 currmove d1c2 perft 24348139
+785326 20375.291 <info currmovenumber 2 nodes 779980 time 179 nps 4343499 currmove d1d2 perft 24972993
+785326 20421.189 <info currmovenumber 3 nodes 981693 time 225 nps 4353944 currmove d1c1 perft 14062509
+785326 20475.858 <info currmovenumber 4 nodes 1222850 time 280 nps 4365216 currmove f1f8 perft 14480550
+785326 20485.739 <info currmovenumber 5 nodes 1265860 time 290 nps 4364634 currmove f1f7 perft 2255429
+785326 20527.707 <info currmovenumber 6 nodes 1448952 time 331 nps 4364540 currmove f1f6 perft 14548128
+785326 20578.488 <info currmovenumber 7 nodes 1672428 time 382 nps 4369266 currmove f1f5 perft 19621451
+785326 20629.854 <info currmovenumber 8 nodes 1896455 time 434 nps 4368313 currmove f1f4 perft 19991210
+785326 20681.336 <info currmovenumber 9 nodes 2118660 time 485 nps 4362795 currmove f1f3 perft 19745798
+785326 20723.009 <info currmovenumber 10 nodes 2305665 time 527 nps 4372614 currmove f1f2 perft 17391181
+785326 20751.848 <info currmovenumber 11 nodes 2433043 time 556 nps 4374896 currmove f1e1 perft 13187512
+785326 20777.212 <info currmovenumber 12 nodes 2545053 time 581 nps 4376724 currmove f1g1 perft 9460567
+785326 20800.123 <info currmovenumber 13 nodes 2646864 time 604 nps 4379244 currmove f1h1 perft 9542365
+785326 20815.198 <info currmovenumber 14 nodes 2718315 time 619 nps 4387999 currmove b1a1 perft 4310096
+785326 20843.770 <info currmovenumber 15 nodes 2846319 time 648 nps 4392066 currmove b1c1 perft 13283705
+785326 20869.163 <info currmovenumber 16 nodes 2959000 time 673 nps 4393778 currmove g2g4 perft 15060096
+785326 20894.544 <info currmovenumber 17 nodes 3071706 time 698 nps 4395482 currmove g2g3 perft 15012940
+785326 20914.928 <info currmovenumber 18 nodes 3162386 time 719 nps 4396983 currmove h2h4 perft 15007880
+785326 20935.341 <info currmovenumber 19 nodes 3253080 time 739 nps 4398248 currmove h2h3 perft 15048161
+785326 20935.358 <info depth 6 perft 281330710
+785326 20935.364 <bestmove 0000
+785326 20935.605 >set UCI_Chess960 false
+785326 20935.656 >position startpos moves e2e4 e7e5 f1c4 g8f6 d2d4 c7c6 d4e5 f6e4 g1e2 e4f2 e5e6 f8e7 e6d7 e8f8
+785326 20935.737 >position
+785326 20935.764 <info score cp -34 fen rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8
+785326 20935.955 >perft 5
+785326 20946.636 <info currmovenumber 1 nodes 34436 time 10 nps 3235980 currmove e1d2 perft 1043007
+785326 20957.808 <info currmovenumber 2 nodes 72517 time 21 nps 3323590 currmove e1f2 perft 1667505
+785326 20972.537 <info currmovenumber 3 nodes 122694 time 36 nps 3357221 currmove e1f1 perft 2154511
+785326 20987.267 <info currmovenumber 4 nodes 166813 time 51 nps 3253243 currmove d1d6 perft 2229266
+785326 21003.873 <info currmovenumber 5 nodes 216623 time 67 nps 3191248 currmove d1d5 perft 2742654
+785326 21020.125 <info currmovenumber 6 nodes 264764 time 84 nps 3146933 currmove d1d4 perft 2920749
+785326 21034.798 <info currmovenumber 7 nodes 308955 time 98 nps 3126844 currmove d1d3 perft 2792521
+785326 21046.975 <info currmovenumber 8 nodes 345512 time 110 nps 3113151 currmove d1d2 perft 2109913
+785326 21059.924 <info currmovenumber 9 nodes 388578 time 123 nps 3135356 currmove e1g1 perft 1979843
+785326 21073.123 <info currmovenumber 10 nodes 429555 time 137 nps 3132421 currmove h1f1 perft 1911413
+785326 21084.715 <info currmovenumber 11 nodes 466835 time 148 nps 3138944 currmove h1g1 perft 1781002
+785326 21096.325 <info currmovenumber 12 nodes 501489 time 160 nps 3127781 currmove c1h6 perft 1748274
+785326 21108.232 <info currmovenumber 13 nodes 537339 time 172 nps 3119673 currmove c1g5 perft 2042591
+785326 21121.542 <info currmovenumber 14 nodes 577523 time 185 nps 3112478 currmove c1f4 perft 2380374
+785326 21135.412 <info currmovenumber 15 nodes 618830 time 199 nps 3103133 currmove c1e3 perft 2484771
+785326 21148.065 <info currmovenumber 16 nodes 656787 time 212 nps 3096957 currmove c1d2 perft 1894062
+785326 21158.656 <info currmovenumber 17 nodes 688873 time 222 nps 3093742 currmove c4f7 perft 1817665
+785326 21168.163 <info currmovenumber 18 nodes 717525 time 232 nps 3090476 currmove c4a6 perft 1644109
+785326 21179.741 <info currmovenumber 19 nodes 752807 time 243 nps 3088441 currmove c4e6 perft 2079471
+785326 21189.515 <info currmovenumber 20 nodes 782467 time 253 nps 3086344 currmove c4b5 perft 1832566
+785326 21199.560 <info currmovenumber 21 nodes 812962 time 263 nps 3084462 currmove c4d5 perft 1934045
+785326 21207.236 <info currmovenumber 22 nodes 836351 time 271 nps 3083357 currmove c4b3 perft 1686064
+785326 21216.357 <info currmovenumber 23 nodes 863957 time 280 nps 3081532 currmove c4d3 perft 1672391
+785326 21223.728 <info currmovenumber 24 nodes 886281 time 287 nps 3080155 currmove b1a3 perft 1777712
+785326 21232.285 <info currmovenumber 25 nodes 911782 time 296 nps 3077284 currmove b1c3 perft 2191455
+785326 21241.074 <info currmovenumber 26 nodes 938451 time 305 nps 3076052 currmove b1d2 perft 1450852
+785326 21250.573 <info currmovenumber 27 nodes 967533 time 314 nps 3075607 currmove e2d4 perft 2353001
+785326 21259.705 <info currmovenumber 28 nodes 995519 time 323 nps 3075289 currmove e2f4 perft 2274063
+785326 21268.577 <info currmovenumber 29 nodes 1022125 time 332 nps 3073274 currmove e2c3 perft 2465011
+785326 21276.116 <info currmovenumber 30 nodes 1045027 time 340 nps 3072466 currmove e2g3 perft 2302529
+785326 21283.851 <info currmovenumber 31 nodes 1068957 time 347 nps 3072951 currmove e2g1 perft 2032466
+785326 21291.731 <info currmovenumber 32 nodes 1092469 time 355 nps 3070960 currmove d7c8q perft 2106366
+785326 21297.000 <info currmovenumber 33 nodes 1108165 time 361 nps 3069633 currmove d7c8r perft 1628284
+785326 21308.084 <info currmovenumber 34 nodes 1142015 time 372 nps 3069149 currmove d7c8b perft 2712122
+785326 21318.144 <info currmovenumber 35 nodes 1173133 time 382 nps 3069790 currmove d7c8n perft 2522065
+785326 21323.447 <info currmovenumber 36 nodes 1188801 time 387 nps 3068210 currmove c2c3 perft 2090166
+785326 21328.160 <info currmovenumber 37 nodes 1202746 time 392 nps 3066902 currmove b2b4 perft 1990854
+785326 21332.371 <info currmovenumber 38 nodes 1215363 time 396 nps 3066138 currmove b2b3 perft 1904400
+785326 21336.031 <info currmovenumber 39 nodes 1226374 time 400 nps 3065611 currmove g2g4 perft 1830854
+785326 21338.915 <info currmovenumber 40 nodes 1234965 time 402 nps 3064993 currmove g2g3 perft 1779903
+785326 21343.063 <info currmovenumber 41 nodes 1247574 time 407 nps 3064729 currmove a2a4 perft 2101105
+785326 21346.393 <info currmovenumber 42 nodes 1257576 time 410 nps 3064246 currmove a2a3 perft 1936679
+785326 21349.580 <info currmovenumber 43 nodes 1267148 time 413 nps 3063774 currmove h2h4 perft 2015932
+785326 21352.028 <info currmovenumber 44 nodes 1274409 time 416 nps 3063234 currmove h2h3 perft 1926608
+785326 21352.038 <info depth 5 perft 89941194
+785326 21352.046 <bestmove 0000
+785326 21352.216 >position fen r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 25
+785326 21352.289 >perft 5
+785326 21379.555 <info currmovenumber 1 nodes 81885 time 27 nps 3006587 currmove e1d1 perft 3559113
+785326 21408.021 <info currmovenumber 2 nodes 159737 time 55 nps 2867539 currmove e1f1 perft 3377351
+785326 21438.000 <info currmovenumber 3 nodes 237002 time 85 nps 2766054 currmove f3f6 perft 3975992
+785326 21478.519 <info currmovenumber 4 nodes 340682 time 126 nps 2699524 currmove f3f5 perft 5271134
+785326 21511.939 <info currmovenumber 5 nodes 426349 time 159 nps 2670982 currmove f3h5 perft 4743335
+785326 21541.741 <info currmovenumber 6 nodes 503219 time 189 nps 2656501 currmove f3f4 perft 4327936
+785326 21569.980 <info currmovenumber 7 nodes 576172 time 217 nps 2647020 currmove f3g4 perft 4514010
+785326 21599.150 <info currmovenumber 8 nodes 651428 time 246 nps 2639094 currmove f3d3 perft 3949570
+785326 21629.570 <info currmovenumber 9 nodes 729729 time 277 nps 2631953 currmove f3e3 perft 4477772
+785326 21659.165 <info currmovenumber 10 nodes 806352 time 306 nps 2627810 currmove f3g3 perft 4669768
+785326 21697.277 <info currmovenumber 11 nodes 903861 time 344 nps 2620154 currmove f3h3 perft 5067173
+785326 21721.779 <info currmovenumber 12 nodes 969928 time 369 nps 2625208 currmove a1b1 perft 3827454
+785326 21744.894 <info currmovenumber 13 nodes 1032200 time 392 nps 2629255 currmove a1c1 perft 3814203
+785326 21766.697 <info currmovenumber 14 nodes 1090781 time 414 nps 2632281 currmove a1d1 perft 3568344
+785326 21789.031 <info currmovenumber 15 nodes 1157317 time 436 nps 2650045 currmove e1c1 perft 3551583
+785326 21811.999 <info currmovenumber 16 nodes 1226158 time 459 nps 2667378 currmove e1g1 perft 4119629
+785326 21833.980 <info currmovenumber 17 nodes 1284848 time 481 nps 2667497 currmove h1f1 perft 3685756
+785326 21855.914 <info currmovenumber 18 nodes 1343377 time 503 nps 2667533 currmove h1g1 perft 3989454
+785326 21878.990 <info currmovenumber 19 nodes 1402172 time 526 nps 2662296 currmove d2h6 perft 3967365
+785326 21901.484 <info currmovenumber 20 nodes 1458719 time 549 nps 2656213 currmove d2g5 perft 4370915
+785326 21922.326 <info currmovenumber 21 nodes 1512093 time 570 nps 2652758 currmove d2f4 perft 3941257
+785326 21944.083 <info currmovenumber 22 nodes 1567198 time 591 nps 2648339 currmove d2e3 perft 4407041
+785326 21963.285 <info currmovenumber 23 nodes 1617040 time 610 nps 2646664 currmove d2c1 perft 3793390
+785326 21980.749 <info currmovenumber 24 nodes 1661827 time 628 nps 2644378 currmove e2a6 perft 3553501
+785326 22000.582 <info currmovenumber 25 nodes 1711741 time 648 nps 2640478 currmove e2b5 perft 4032348
+785326 22019.326 <info currmovenumber 26 nodes 1759105 time 667 nps 2637282 currmove e2c4 perft 4182989
+785326 22036.422 <info currmovenumber 27 nodes 1802144 time 684 nps 2634297 currmove e2d3 perft 4066966
+785326 22052.990 <info currmovenumber 28 nodes 1845591 time 700 nps 2634002 currmove e2d1 perft 3074219
+785326 22072.253 <info currmovenumber 29 nodes 1893212 time 719 nps 2629690 currmove e2f1 perft 4095479
+785326 22090.603 <info currmovenumber 30 nodes 1940113 time 738 nps 2627841 currmove e5d7 perft 4404043
+785326 22107.337 <info currmovenumber 31 nodes 1982860 time 755 nps 2626216 currmove e5f7 perft 4164923
+785326 22123.194 <info currmovenumber 32 nodes 2023380 time 770 nps 2624756 currmove e5c6 perft 4083458
+785326 22138.824 <info currmovenumber 33 nodes 2063393 time 786 nps 2623472 currmove e5g6 perft 3949417
+785326 22153.055 <info currmovenumber 34 nodes 2099471 time 800 nps 2621901 currmove e5c4 perft 3494887
+785326 22165.853 <info currmovenumber 35 nodes 2131781 time 813 nps 2620373 currmove e5g4 perft 3415992
+785326 22179.644 <info currmovenumber 36 nodes 2166901 time 827 nps 2619140 currmove e5d3 perft 3288812
+785326 22193.197 <info currmovenumber 37 nodes 2200918 time 840 nps 2617373 currmove c3b5 perft 4317482
+785326 22206.965 <info currmovenumber 38 nodes 2235332 time 854 nps 2615481 currmove c3a4 perft 4628497
+785326 22219.232 <info currmovenumber 39 nodes 2266392 time 866 nps 2614301 currmove c3b1 perft 3996171
+785326 22232.603 <info currmovenumber 40 nodes 2300279 time 880 nps 2613092 currmove c3d1 perft 3995761
+785326 22242.983 <info currmovenumber 41 nodes 2326852 time 890 nps 2612463 currmove d5d6 perft 3835265
+785326 22255.902 <info currmovenumber 42 nodes 2359928 time 903 nps 2611729 currmove d5e6 perft 4727437
+785326 22262.006 <info currmovenumber 43 nodes 2375147 time 909 nps 2610920 currmove b2b3 perft 3768824
+785326 22268.704 <info currmovenumber 44 nodes 2392027 time 916 nps 2610260 currmove g2g4 perft 3338154
+785326 22273.981 <info currmovenumber 45 nodes 2405177 time 921 nps 2609581 currmove g2g3 perft 3472039
+785326 22280.465 <info currmovenumber 46 nodes 2421480 time 928 nps 2608923 currmove g2h3 perft 3819456
+785326 22315.301 <info currmovenumber 47 nodes 2511010 time 962 nps 2607526 currmove a2a4 perft 4387586
+785326 22321.138 <info currmovenumber 48 nodes 2525691 time 968 nps 2606955 currmove a2a3 perft 4627439
+785326 22321.149 <info depth 5 perft 193690690
+785326 22321.155 <bestmove 0000
+785326 22321.358 >isready
+785326 22321.405 <info score cp -133 fen r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 25
+785326 22321.405 <readyok
+785326 22321.502 >quit
