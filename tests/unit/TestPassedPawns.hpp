@@ -1,5 +1,5 @@
 #include "Hyperbola.hpp"
-#include "UciPosition.hpp"
+#include "Uci.hpp"
 
 Nnue nnue;
 void Nnue::setEmbeddedEval() {}

@@ -151,8 +151,6 @@ protected:
     template <Side::_t> void setLegalEnPassant(Square);
     void setZobrist() { zobrist_ = generateZobrist(); }
 
-    // number of halfmoves since last capture or pawn move
-    constexpr Rule50 rule50() const { return rule50_; }
     void setRule50(Rule50 rule50) { rule50_ = rule50; }
 
     // convert internal move to be printable in UCI format
@@ -178,11 +176,19 @@ public:
     bool afterDrop();
     bool setEnPassant(File);
 
+// output FEN:
+
+    // number of halfmoves since last capture or pawn move
+    constexpr Rule50 rule50() const { return rule50_; }
+
 // needed public for unit tests
     constexpr const PositionSide& positionSide(Side side) const { return positionSide_[side]; }
 
     // my passed pawns
     Bb bbPassedPawns() const;
 };
+
+// defined in Uci.cpp
+ostream& fen(ostream&, ChessVariant, const Position&, Color colorToMove, int fullMoveNumber);
 
 #endif

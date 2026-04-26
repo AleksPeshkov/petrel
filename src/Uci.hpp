@@ -5,57 +5,76 @@
 #include <mutex>
 #include "history.hpp"
 #include "io.hpp"
+#include "PositionMoves.hpp"
 #include "Thread.hpp"
 #include "Tt.hpp"
-#include "UciPosition.hpp"
 #include "UciSearchLimits.hpp"
 
-class UciOutput;
+class UciPosition : public PositionMoves {
+    int fullMoveNumber_{1}; // number of full moves from the beginning of the game
+    Color colorToMove_{White}; //root position side to move color
+
+    istream& readBoard(istream&);
+    istream& readCastling(istream&);
+    istream& readEnPassant(istream&);
+    istream& readMove(istream&, Square&, Square&) const;
+
+public:
+    void setStartpos();
+    void readFen(istream&);
+    void playMoves(istream&, Repetitions&);
+    void limitMoves(istream&);
+
+    constexpr Side sideOf(Color::_t color) const { return Side{colorToMove_.is(color) ? My : Op}; }
+    constexpr Color colorToMove(Ply ply) const { return Color{ ::distance(colorToMove_, ply) }; }
+    constexpr int fullMoveNumber() const { return fullMoveNumber_; }
+};
 
 /// Handling input and output of UCI (Universal Chess Interface)
 class Uci {
 public:
-    UciPosition position_; // result of parsing 'position' command
+// used by search:
+
     UciSearchLimits limits; // result of parsing 'go' command
     Repetitions repetitions;
     Tt tt; // main transposition table
 
+//TODO: per search thread
     mutable std::array<UciMove, 6> rootBestMoves;
     mutable PrincipalVariation pv;
     mutable HistoryMoves<4> counterMove;
     mutable HistoryMoves<4> followMove;
 
 private:
+    UciPosition position_; // result of parsing 'position' command
     Thread mainSearchThread;
 
-    // stream buffer for parsing current input line
-    io::istringstream inputLine;
-
-    // output stream
-    ostream& out;
+    ostream& out_; // UCI output stream
     mutable std::mutex outMutex;
 
     // if we are in infinite or ponder mode, we cannot send bestmove immediately
     mutable std::string bestmove_;
     mutable std::mutex bestmoveMutex;
 
-    // avoid race conditions betweeen Uci output and main search thread output
+    ChessVariant chessVariant_{Orthodox}; // castling moves and fen output format, engine accepts any castling input
 
-    std::string logFileName; // no log by default
     mutable std::ofstream logFile;
-    mutable std::mutex logMutex;
-    const int pid; // system process id (for debug output)
+    std::string logFileName; // no log by default
     TimePoint logStartTime;
+    const int pid_; // system process id (for debug output)
+
+    std::string evalFileName; // use embedded by default
 
 #ifndef NDEBUG
-    bool isDebugOn = true;
+    bool debugOn_ = true;
     std::string debugPosition;
     std::string debugGo;
 #else
-    bool isDebugOn = false;
+    bool debugOn_ = false;
 #endif
 
-    std::string evalFileName; // use embedded by default
+    // stream buffer for parsing current input line
+    io::istringstream inputLine;
 
     // try to consume the given token from the inputLine
     bool consume(io::czstring token) { return io::consume(inputLine, token); }
@@ -63,7 +82,7 @@ private:
     // something left unparsed
     bool hasMoreInput() { return io::hasMore(inputLine); }
 
-//UCI command handlers
+// UCI commands handlers:
 
     void uciok() const;
     void ucinewgame();
@@ -74,18 +93,15 @@ private:
     void setoption();
 
     void setHash();
-    void setdebug();
+    void setDebugOn();
     void loadEvalFile(const std::string&);
     void setEmbeddedEval();
 
     void goPerft();
     void bench();
 
-    // log messages to the logFile named by logFileName
-    void log(std::string_view) const;
-
-    ostream& info_fen(ostream&) const;
-    UciOutput& info_pv(UciOutput&) const;
+    void log(io::char_type tag, std::string_view) const; // log messages to the logFile named by logFileName
+    void _log(io::char_type tag, std::string_view) const; // log() without mutex
 
     void sendDelayedBestMove() const;
     void info_readyok() const;
@@ -98,7 +114,7 @@ public:
     // process UCI input commands
     void processInput(istream&);
 
-    // output to cout and (if isDebugOn) to log file
+    // output to cout and (if debugOn_) to log file
     void output(std::string_view) const;
 
     // output to cerr and log file
@@ -107,7 +123,7 @@ public:
     // output to log file
     void info(std::string_view) const;
 
-    constexpr ChessVariant chessVariant() const { return position_.chessVariant(); }
+    constexpr ChessVariant chessVariant() const { return chessVariant_; }
     constexpr Color colorToMove(Ply ply = 0_ply) const { return position_.colorToMove(ply); }
 
     void bench(std::string& goLimits);
