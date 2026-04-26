@@ -115,7 +115,7 @@ ostream& app_version(ostream& out) {
         out << ' ' << GIT_SHA;
 #endif
 
-#ifdef DEBUG
+#ifndef NDEBUG
         out << " DEBUG";
 #endif
 

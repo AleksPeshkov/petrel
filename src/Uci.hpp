@@ -31,12 +31,6 @@ private:
     // stream buffer for parsing current input line
     io::istringstream inputLine;
 
-#ifdef ENABLE_ASSERT_LOGGING
-    friend void assert_fail(const char*, const char*, unsigned, const char*);
-    std::string debugPosition;
-    std::string debugGo;
-#endif
-
     // output stream
     ostream& out;
     mutable std::mutex outMutex;
@@ -53,10 +47,12 @@ private:
     const int pid; // system process id (for debug output)
     TimePoint logStartTime;
 
-#ifdef NDEBUG
-    bool isDebugOn = false;
-#else
+#ifndef NDEBUG
     bool isDebugOn = true;
+    std::string debugPosition;
+    std::string debugGo;
+#else
+    bool isDebugOn = false;
 #endif
 
     std::string evalFileName; // use embedded by default

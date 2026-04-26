@@ -478,7 +478,7 @@ void Uci::position() {
 
     mainSearchThread.waitReady();
 
-#ifdef ENABLE_ASSERT_LOGGING
+#ifndef NDEBUG
     debugPosition = inputLine.str();
 #endif
 
@@ -502,7 +502,7 @@ void Uci::position() {
 void Uci::go() {
     newSearch();
 
-#ifdef ENABLE_ASSERT_LOGGING
+#ifndef NDEBUG
     debugGo = inputLine.str();
 #endif
 

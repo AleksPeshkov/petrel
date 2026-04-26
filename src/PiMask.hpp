@@ -191,10 +191,10 @@ public:
 
     constexpr bool isOk(Pi pi) const { return !none(pi) && this->pi(square[pi]) == pi; }
 
-    #ifdef NDEBUG
-        constexpr void assertOk(Pi) const {}
-    #else
+    #ifndef NDEBUG
         constexpr void assertOk(Pi pi) const { assert (isOk(pi)); }
+    #else
+        constexpr void assertOk(Pi) const {}
     #endif
 
     void drop(Pi pi, Square sq) { assert (none(pi)); assert (!has(sq)); set(pi, sq); }
@@ -298,10 +298,10 @@ public:
 
     constexpr bool isOk(Pi pi) const { return !none(pi) && ::isSingleton(static_cast<u8_t>(type[pi])); }
 
-    #ifdef NDEBUG
-        constexpr void assertOk(Pi) const {}
-    #else
+    #ifndef NDEBUG
         constexpr void assertOk(Pi pi) const { assert (isOk(pi)); }
+    #else
+        constexpr void assertOk(Pi) const {}
     #endif
 
     void drop(Pi pi, PieceType ty) { assert (none(pi)); assert (!pi.is(TheKing) || ty.is(King)); type[pi] = element(ty); }
