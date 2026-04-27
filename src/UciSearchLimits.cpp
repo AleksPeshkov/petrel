@@ -95,7 +95,7 @@ ReturnStatus UciSearchLimits::reachedTime() const {
 ReturnStatus UciSearchLimits::hardDeadlineReached() const { return reachedTime<HardDeadline>(); }
 ReturnStatus UciSearchLimits::iterationDeadlineReached() const { return reachedTime<IterationDeadline>(); }
 
-ReturnStatus UciSearchLimits::updateMoveComplexity(UciMove bestMove, Score rootScore) const {
+ReturnStatus UciSearchLimits::updateMoveComplexity(HistoryMove bestMove, Score rootScore) const {
     if (timeControl_ == ExactTime) { return ReturnStatus::Continue; }
 
     if (easyMove_.none()) {

@@ -8,10 +8,8 @@ TtSlot::TtSlot (const Node* n) : TtSlot{
     n->score,
     n->ply,
     n->bound,
-    n->depth,
-    n->currentMove.from(),
-    n->currentMove.to(),
-    n->canBeKiller
+    TtMove{n->currentMove.from(), n->currentMove.to(), n->canBeKiller ? CanBeKiller::Yes : CanBeKiller::No},
+    n->depth
 } {}
 
 Node::Node (const PositionMoves& p, const Uci& r) :
@@ -151,7 +149,9 @@ ReturnStatus Node::search() {
         ttSlot = *tt;
 
         ttHit = (ttSlot == z());
-        if (!ttHit) { break; }
+        if (!ttHit) {
+            break;
+        }
 
         Bound ttBound = ttSlot.bound();
         Score ttScore = ttSlot.score(ply);
@@ -161,10 +161,10 @@ ReturnStatus Node::search() {
             break;
         }
 
-        bool ttHasMove = ttSlot.hasMove();
-        Square ttFrom = ttSlot.from();
-        Square ttTo = ttSlot.to();
-        if (ttHasMove && !isPossibleMove(ttFrom, ttTo)) {
+        auto ttMove = ttSlot.ttMove();
+        Square ttFrom = ttMove.from();
+        Square ttTo = ttMove.to();
+        if (ttMove.any() && !isPossibleMove(ttFrom, ttTo)) {
             // collision
             ttHit = false;
             break;
@@ -181,10 +181,10 @@ ReturnStatus Node::search() {
         ) {
             score = ttScore;
             bound = ttBound;
-            if (ttHasMove) {
+            if (ttMove.any()) {
                 assert (isPossibleMove(ttFrom, ttTo));
-                canBeKiller = ttSlot.canBeKiller();
-                currentMove = HistoryMove{MY.typeAt(ttFrom), ttFrom, ttTo};
+                canBeKiller = ttMove.canBeKiller() == CanBeKiller::Yes;
+                currentMove = historyMove(ttMove);
             } else {
                 canBeKiller = false;
                 assert (currentMove.none());
@@ -246,16 +246,16 @@ ReturnStatus Node::search() {
         }
     }
 
-    if (ttHit && ttSlot.hasMove()) {
-        canBeKiller = ttSlot.canBeKiller();
-        RETURN_CUTOFF (child->searchMove(ttSlot.from(), ttSlot.to()));
+    if (ttHit && ttSlot.ttMove().any()) {
+        canBeKiller = ttSlot.ttMove().canBeKiller() == CanBeKiller::Yes;
+        RETURN_CUTOFF (child->searchMove(ttSlot.ttMove().from(), ttSlot.ttMove().to()));
     }
 
     if (isRoot()) {
         canBeKiller = false; // rootBestMoves can be anything
         for (auto move : root.rootBestMoves) {
             if (move.none()) { break; }
-            RETURN_CUTOFF (child->searchIfPossible(move.from(), move.to()));
+            RETURN_CUTOFF (child->searchIfPossible(historyMove(move.from(), move.to(), CanBeKiller::No)));
         }
     }
 
@@ -500,7 +500,7 @@ ReturnStatus Node::counterMove() {
             auto move = root.counterMove.get(i, parent->colorToMove(), parent->currentMove);
             if (move.none()) { break; }
             if (isPossibleMove(move)) {
-                return child->searchMove(move.from(), move.to());
+                return child->searchMove(move);
             }
         }
     }
@@ -514,7 +514,7 @@ ReturnStatus Node::followMove() {
             auto move = root.followMove.get(i, grandParent->colorToMove(), grandParent->currentMove);
             if (move.none()) { break; }
             if (isPossibleMove(move)) {
-                return child->searchMove(move.from(), move.to());
+                return child->searchMove(move);
             }
         }
     }
@@ -524,6 +524,7 @@ ReturnStatus Node::followMove() {
 ReturnStatus Node::searchNullMove(Ply R) {
     RETURN_IF_STOP (root.limits.countNode());
 
+    //TRICK: null move not counted as movesMade()
     parent->currentMove = {};
     makeNullMove(parent);
 
@@ -533,12 +534,20 @@ ReturnStatus Node::searchNullMove(Ply R) {
     return parent->negamax(R);
 }
 
-ReturnStatus Node::searchMove(Square from, Square to, Ply R) {
+ReturnStatus Node::searchMove(HistoryMove move, Ply R) {
     RETURN_IF_STOP (root.limits.countNode());
 
+    assert (move.any());
+    assert (parent->isPseudoLegal(move));
+    assert (parent->isPossibleMove(move));
+    parent->currentMove = move;
+
+    Square from{move.from()};
+    Square to{move.to()};
+
     parent->clearMove(from, to);
-    parent->currentMove = HistoryMove{parent->MY.typeAt(from), from, to};
     makeMove(parent, from, to);
+
     tt = root.tt.prefetch<TtSlot>(z());
     root.pv.clear(pvIndex);
 
@@ -591,17 +600,16 @@ ReturnStatus Node::updatePv() const {
         updateHistory(currentMove);
     }
 
-    auto bestMove = uciMove(currentMove.from(), currentMove.to());
     if (!isRoot()) {
-        child->pvIndex = root.pv.set(pvIndex, bestMove, child->pvIndex);
+        child->pvIndex = root.pv.set(pvIndex, currentMove, child->pvIndex);
     } else {
         // unfinished iteration, so report depth-1
-        pvIndex = root.pv.set(depth - 1_ply, score, bestMove, child->pvIndex);
+        pvIndex = root.pv.set(depth - 1_ply, score, currentMove, child->pvIndex);
         child->pvIndex = PrincipalVariation::Index{pvIndex.v() + 1};
 
-        RETURN_IF_STOP (root.limits.updateMoveComplexity(bestMove, score));
+        RETURN_IF_STOP (root.limits.updateMoveComplexity(currentMove, score));
 
-        ::insert_unique(root.rootBestMoves, bestMove);
+        ::insert_unique(root.rootBestMoves, currentMove);
         if (depth > 1_ply) { root.info_pv(); }
     }
 
@@ -689,12 +697,13 @@ void refreshTtPv(const PositionMoves& p, const PrincipalVariation& pv, const Tt&
     Score score = pv.score();
     auto  pmoves = pv.moves();
 
-    for (UciMove move; (move = *pmoves++).any();) {
+    for (HistoryMove move; (move = *pmoves++).any();) {
         assert (score.isOk(ply));
+        assert (pos.isPseudoLegal(move));
         assert ((pos.generateMoves(), pos.isPossibleMove(move.from(), move.to())));
 
         auto o = tt.addr<TtSlot>(pos.z());
-        *o = TtSlot{pos.z(), score, ply, ExactScore, depth, move.from(), move.to(), false};
+        *o = TtSlot{pos.z(), score, ply, ExactScore, TtMove{move.from(), move.to(), CanBeKiller::No}, depth};
         ++tt.writes;
 
         //we cannot use makeZobrist() because of en passant legality validation

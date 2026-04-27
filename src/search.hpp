@@ -10,18 +10,37 @@ class Node;
 class TtSlot {
     enum shift_t {
         ScoreShift = 0,
-        BoundShift = ScoreShift + 14,
+        BoundShift = ScoreShift + Score::Bits,
         ToShift = BoundShift + 2,
-        FromShift = ToShift + 6,
-        DraftShift = FromShift + 6,
-        KillerShift = DraftShift + 6,
-        TotalShift = KillerShift + 1, // total size of all data fields
-        ZobristBits = 64 - TotalShift, // size of zobrist bitfield
+        FromShift = ToShift + Square::Bits,
+        KillerShift = FromShift + Square::Bits,
+        MoveShift = BoundShift + 2,
+        DraftShift = MoveShift + TtMove::Bits,
+        TotalShift = DraftShift + Ply::Bits, // total size of all data fields
+        ZSlotBits = 64 - TotalShift, // size of zobrist bitfield
     };
 
     using _t = u64_t;
+
+#ifndef NDEBUG
+    union {
+        _t v_;
+        struct __attribute__((packed)) {
+            Score::_t score_ :Score::Bits;
+            Bound bound_ :2;
+            Square::_t to_ :Square::Bits;
+            Square::_t from_ :Square::Bits;
+            CanBeKiller killer_ :1;
+            Ply::_t draft_ :Ply::Bits;
+            Z::_t z_ :ZSlotBits;
+        } u;
+    };
+    static_assert (sizeof(u) == sizeof(v_));
+#else
     _t v_;
-    static constexpr _t HashMask{ U64(0xffff'ffff'ffff'ffff) << (64 - ZobristBits) };
+#endif
+
+    static constexpr _t ZSlotMask{ U64(0xffff'ffff'ffff'ffff) << (TotalShift) };
 
     static constexpr _t v(_t field, shift_t shift) { return field << shift; }
 
@@ -32,34 +51,33 @@ public:
     constexpr TtSlot () : v_{0} {}
 
     constexpr TtSlot (Z z,
-        Score score,
-        Ply ply,
-        Bound bound,
-        Ply draft,
-        Square from,
-        Square to,
-        bool canBeKiller
+        Score _score,
+        Ply _ply,
+        Bound _bound,
+        TtMove _ttMove,
+        Ply _draft
     ) : v_{
-        (z.v() & HashMask)
-        | v(score.tt(ply), ScoreShift)
-        | v(bound, BoundShift)
-        | v(draft.v(), DraftShift)
-        | v(from.v(), FromShift)
-        | v(to.v(), ToShift)
-        | v(canBeKiller, KillerShift)
-    } { static_assert (sizeof(TtSlot) == sizeof(u64_t)); }
+        (z.v() & ZSlotMask)
+        | v(_score.tt(_ply), ScoreShift)
+        | v(_bound, BoundShift)
+        | v(_ttMove.v(), MoveShift)
+        | v(_draft.v(), DraftShift)
+    } {
+        static_assert (sizeof(TtSlot) == sizeof(u64_t));
+
+        assert (score(_ply) == _score);
+        assert (bound() == _bound);
+        assert (ttMove() == _ttMove);
+        assert (draft() == _draft);
+    }
 
     TtSlot (const Node* node);
-    constexpr bool operator == (Z z) const { return (v_ & HashMask) == (z.v() & HashMask); }
+    constexpr bool operator == (Z z) const { return (v_ & ZSlotMask) == (z.v() & ZSlotMask); }
 
-    Score score(Ply ply) const { return Score::fromTt(get(ScoreShift, Score::Mask), ply); }
-    Bound bound() const { return get<Bound>(BoundShift, BoundMask); }
-    Ply draft() const { return Ply{get<Ply::_t>(DraftShift, Ply::Mask)}; }
-
-    bool hasMove() const { return !(from().v() == 0 && to().v() == 0); }
-    Square from() const { return Square{get<Square::_t>(FromShift, Square::Mask)}; }
-    Square to() const { return Square{get<Square::_t>(ToShift, Square::Mask)}; }
-    bool canBeKiller() const { return get(KillerShift, 1); }
+    constexpr Score score(Ply ply) const { return Score::fromTt(get(ScoreShift, Score::Mask), ply); }
+    constexpr Bound bound() const { return get<Bound>(BoundShift, BoundMask); }
+    constexpr TtMove ttMove() const { return TtMove{get<TtMove::_t>(MoveShift, TtMove::Mask)}; }
+    constexpr Ply draft() const { return Ply{get<Ply::_t>(DraftShift, Ply::Mask)}; }
 };
 
 class Uci;
@@ -115,15 +133,18 @@ protected:
     [[nodiscard]] ReturnStatus counterMove();
     [[nodiscard]] ReturnStatus followMove();
 
-    [[nodiscard]] ReturnStatus searchMove(Square, Square, Ply R = 1_ply);
     [[nodiscard]] ReturnStatus searchNullMove(Ply R);
-
-    [[nodiscard]] ReturnStatus searchIfPossible(Square from, Square to, Ply R = 1_ply) {
-        return parent->isPossibleMove(from, to) ? searchMove(from, to, R) : ReturnStatus::Continue;
+    [[nodiscard]] ReturnStatus searchMove(HistoryMove, Ply R = 1_ply);
+    [[nodiscard]] ReturnStatus searchIfPossible(HistoryMove move, Ply R = 1_ply) {
+        return parent->isPossibleMove(move) ? searchMove(move, R) : ReturnStatus::Continue;
     }
 
-    [[nodiscard]] ReturnStatus searchIfPossible(HistoryMove move, Ply R = 1_ply) {
-        return parent->isPossibleMove(move) ? searchMove(move.from(), move.to(), R) : ReturnStatus::Continue;
+    [[nodiscard]] ReturnStatus searchMove(Square from, Square to, Ply R, CanBeKiller _canBeKiller) {
+        return searchMove(parent->historyMove(from, to, _canBeKiller), R);
+    }
+
+    [[nodiscard]] ReturnStatus searchMove(Square from, Square to, Ply R = 1_ply) {
+        return searchMove(from, to, R, parent->canBeKiller ? CanBeKiller::Yes : CanBeKiller::No);
     }
 
     constexpr Color colorToMove() const; // current node's side to move color
@@ -138,10 +159,7 @@ protected:
     bool isRepetition() const;
 
     HistoryMove ttMove() const {
-        return ttHit && ttSlot.from() != ttSlot.to() && MY.has(ttSlot.from())
-            ? HistoryMove{MY.typeAt(ttSlot.from()), ttSlot.from(), ttSlot.to()}
-            : HistoryMove{}
-        ;
+        return ttHit && ttSlot.ttMove().any() ? historyMove(ttSlot.ttMove()) : HistoryMove{};
     }
 
 public:

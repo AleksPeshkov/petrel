@@ -48,20 +48,28 @@ public:
     using Slot = Index:: template arrayOf<HistoryMove>;
 
 private:
-    using _t = Color::arrayOf<HistoryMove::HistoryIndex::arrayOf<Slot>>;
+    using _t = Color::arrayOf<
+        HistoryType::arrayOf<
+            Square::arrayOf<
+                Square::arrayOf<
+                    typename Index:: template arrayOf<HistoryMove>
+                >
+            >
+        >
+    >;
     _t v_;
 
 public:
     void clear() {
-        std::memset(&v_, HistoryMove::None, sizeof(v_));
+        std::memset(&v_, 0, sizeof(v_)); //TRICK: HistoryMove{None} == uint16_t{0}
     }
 
     constexpr HistoryMove get(Index i, Color color, HistoryMove slot) const {
-        return v_[color][slot][i];
+        return v_[color][slot.historyType()][slot.from()][slot.to()][i];
     }
 
     constexpr void set(Color color, HistoryMove slot, HistoryMove historyMove) {
-        insert_unique(v_[color][slot], historyMove);
+        insert_unique(v_[color][slot.historyType()][slot.from()][slot.to()], historyMove);
     }
 };
 
@@ -70,7 +78,7 @@ class CACHE_ALIGN PrincipalVariation {
     static constexpr auto triangularArraySize = Ply::Last+1 + (Ply::Last+1)*(Ply::Last+2) / 2;
 public:
     struct Index; STRUCT_INDEX (Index, triangularArraySize);
-    using Move = UciMove;
+    using Move = HistoryMove;
 
 private:
     Index::arrayOf<Move> moves_;

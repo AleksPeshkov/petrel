@@ -111,7 +111,6 @@ class Position {
     // calculate Zobrist key from scratch
     Zobrist generateZobrist() const;
 
-    bool isSpecialMove(Square, Square) const;
     void copyParent(const Position* parent);
 
 protected:
@@ -152,9 +151,6 @@ protected:
     void setZobrist() { zobrist_ = generateZobrist(); }
 
     void setRule50(Rule50 rule50) { rule50_ = rule50; }
-
-    // convert internal move to be printable in UCI format
-    UciMove uciMove(Square from, Square to) const { return UciMove{from, to, isSpecialMove(from, to)}; }
 
 public:
     // position hash

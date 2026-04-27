@@ -208,7 +208,7 @@ UciOutput& operator << (UciOutput& ob, io::czstring message) {
 }
 
 // convert move to UCI format
-UciOutput& operator << (UciOutput& ob, UciMove move) {
+UciOutput& operator << (UciOutput& ob, HistoryMove move) {
     bool isWhite{ob.color().is(White)};
     ob.flipColor();
     ob << ' ';
@@ -225,30 +225,29 @@ UciOutput& operator << (UciOutput& ob, UciMove move) {
     Square uciFrom{isWhite ? from : ~from};
     Square uciTo{isWhite ? to : ~to};
 
-    if (!move.isSpecial()) {
+    if (!move.historyType().is(HistoryPawn)) {
         ob << uciFrom << uciTo;
         return ob;
     }
 
-    //pawn promotion
+    // pawn promotion
     if (from.on(Rank7)) {
-        //the type of a promoted pawn piece encoded in place of move to's rank
+        // the type of a promoted pawn piece encoded in place of move to's rank
         uciTo = Square{File{to}, isWhite ? Rank8 : Rank1};
         ob << uciFrom << uciTo << PromoType{::promoTypeFrom(Rank{to})};
         return ob;
     }
 
-    //en passant capture
-    if (from.on(Rank5)) {
-        //en passant capture move internally encoded as pawn captures pawn
-        assert (to.on(Rank5));
+    // en passant capture
+    if (from.on(Rank5) && to.on(Rank5)) {
+        // en passant capture move internally encoded as pawn captures pawn
         ob << uciFrom << Square{File{to}, isWhite ? Rank6 : Rank3};
         return ob;
     }
 
-    //castling
+    //TRICK: castling is "pawn" move as it needs special handling
     if (from.on(Rank1)) {
-        //castling move internally encoded as the rook captures the king
+        // castling move internally encoded as the rook captures own king
 
         if (ob.chessVariant().is(Orthodox)) {
             if (from.on(FileA)) { ob << uciTo << Square{File{FileC}, Rank{uciFrom}}; return ob; }
@@ -260,10 +259,8 @@ UciOutput& operator << (UciOutput& ob, UciMove move) {
         return ob;
     }
 
-    //should never happen
-    assert (false);
-    io::error("invalid move in UCI output");
-    ob << "0000";
+    // all the rest pawn moves have MoveType::Special
+    ob << uciFrom << uciTo;
     return ob;
 }
 
@@ -274,7 +271,7 @@ UciOutput& operator << (UciOutput& ob, const PrincipalVariation& pv) {
 
     {
         ob << " pv";
-        for (UciMove move; (move = *moves++).any(); ) {
+        for (HistoryMove move; (move = *moves++).any(); ) {
             ob << move;
         }
         ob.resetRootColor();
@@ -752,10 +749,10 @@ void UciPosition::setStartpos() {
 }
 
 // fast exit: return the first legal move found
-UciMove UciPosition::firstRootMove() const {
+HistoryMove UciPosition::firstRootMove() const {
     for (Pi pi : MY.pieces()) {
         if (bbMovesOf(pi).none()) { continue; }
-        return uciMove(MY.sq(pi), bbMovesOf(pi).first());
+        return historyMove(MY.sq(pi), bbMovesOf(pi).first(), CanBeKiller::No);
     }
     return {};
 }
@@ -1144,7 +1141,7 @@ void Uci::go() {
 
     if (position_.rootMoves() <= 1) {
         // fast return on 0 or 1 root legal moves
-        pv.set(position_.rootMoves() == 0 ? UciMove{} : position_.firstRootMove());
+        pv.set(position_.rootMoves() == 0 ? HistoryMove{} : position_.firstRootMove());
         info_bestmove();
         return;
     }
@@ -1265,7 +1262,7 @@ void Uci::info_perft_depth(Ply depth, node_count_t perft) const {
     ob << "info depth " << depth << " perft " << perft;
 }
 
-void Uci::info_perft_currmove(int moveCount, UciMove currentMove, node_count_t perft) const {
+void Uci::info_perft_currmove(int moveCount, HistoryMove currentMove, node_count_t perft) const {
     UciOutput ob{this};
     ob << "info currmovenumber " << moveCount;
     limits.nps(ob);

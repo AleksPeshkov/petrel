@@ -43,11 +43,12 @@ endif
 ifeq ($(CXX), g++)
 	BUILD_FLAGS += -flto=auto --param inline-unit-growth=1000
 	CXXFLAGS += -flax-vector-conversions
-	WARNINGS += -Wno-class-memaccess
+	WARNINGS += -Wno-class-memaccess -Wno-packed-bitfield-compat
 	WARNINGS += -Wuseless-cast -Wcast-align=strict -Wsuggest-final-types -Wsuggest-final-methods
 	WARNINGS += -Wnormalized -Wunsafe-loop-optimizations -Wvector-operation-performance
 else ifeq ($(CXX), clang++)
 	WARNINGS += -Winline -Wcast-align -Wconditional-uninitialized -Wmissing-prototypes
+	WARNINGS += -Wno-nested-anon-types
 endif
 
 GIT_DATE := $(shell git log -1 --date=short --pretty=format:%cd 2>/dev/null || true)

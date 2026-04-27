@@ -74,7 +74,7 @@ class UciSearchLimits {
     Ply maxDepth_{MaxPly};
 
     mutable move_control_t timeControl_{ExactTime}; // ExactTime = 0, EasyMove = 3, NormalMove = 5, HardMove = 8
-    mutable UciMove easyMove_{}; // previous root best move (for EasyMove / NormalMove / HardMove strategy)
+    mutable HistoryMove easyMove_{}; // previous root best move (for EasyMove / NormalMove / HardMove strategy)
     mutable Score easyScore_{}; // previous root score (for EasyMove / NormalMove / HardMove strategy)
     bool isNewGame_{true}; // the first move after ucinewgame will spend more thinking time
 
@@ -135,7 +135,7 @@ public:
 
     [[nodiscard]] ReturnStatus hardDeadlineReached() const;
     [[nodiscard]] ReturnStatus iterationDeadlineReached() const;
-    [[nodiscard]] ReturnStatus updateMoveComplexity(UciMove, Score) const;
+    [[nodiscard]] ReturnStatus updateMoveComplexity(HistoryMove, Score) const;
 };
 
 #endif

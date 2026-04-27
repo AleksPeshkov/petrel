@@ -27,7 +27,7 @@ public:
     void limitMoves(istream&);
 
     int countRootMoves() { rootMoves_ = moves().popcount(); return rootMoves_; }
-    UciMove firstRootMove() const;
+    HistoryMove firstRootMove() const;
 
     constexpr Side sideOf(Color::_t color) const { return Side{colorToMove_.is(color) ? My : Op}; }
     constexpr Color colorToMove(Ply ply) const { return Color{ ::distance(colorToMove_, ply) }; }
@@ -45,7 +45,7 @@ public:
     Tt tt; // main transposition table
 
 //TODO: per search thread
-    mutable std::array<UciMove, 6> rootBestMoves;
+    mutable std::array<HistoryMove, 6> rootBestMoves;
     mutable PrincipalVariation pv;
     mutable HistoryMoves<4> counterMove;
     mutable HistoryMoves<4> followMove;
@@ -140,7 +140,7 @@ public:
     void info_pv() const;
 
     void info_perft_depth(Ply, node_count_t) const;
-    void info_perft_currmove(int moveCount, UciMove currentMove, node_count_t) const;
+    void info_perft_currmove(int moveCount, HistoryMove currentMove, node_count_t) const;
 };
 
 #endif

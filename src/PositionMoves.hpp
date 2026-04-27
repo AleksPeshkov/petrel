@@ -36,22 +36,48 @@ public:
     // not yet made set of legal moves
     constexpr const PiBbMatrix& moves() const { return moves_; }
 
-    // already made moves count
+    // count of already made legal (non-null) moves
     constexpr MovesNumber movesMade() const { return movesMade_; }
 
+    constexpr HistoryType historyType(Square from, Square to) const {
+        // any pawn move or castling or null move
+        //TRICK: from == to can be either null move or rook underpromotion
+        if (from == to || MY.isPawn(from) || MY.isKing(to)) { return HistoryType{HistoryPawn}; }
+
+        constexpr HistoryType::_t fromPieceType[] = { HistoryQN, HistoryRB, HistoryRB, HistoryQN, HistoryPawn, HistoryKing };
+        return HistoryType{fromPieceType[MY.typeAt(from).v()]};
+    }
+
+    HistoryMove historyMove(TtMove ttMove) const {
+        return HistoryMove{ttMove, historyType(ttMove.from(), ttMove.to())};
+    }
+
+    HistoryMove historyMove(Square from, Square to, CanBeKiller _canBeKiller) const {
+        return historyMove(TtMove{from, to, _canBeKiller});
+    }
+
     // move is legal and not yet made
-    bool isPossibleMove(Square from, Square to) const {
+    constexpr bool isPossibleMove(Square from, Square to) const {
         return MY.has(from) && moves_.has(MY.pi(from), to);
     }
 
-    bool isPseudoLegal(HistoryMove move) const {
-        if (move.none() || !MY.has(move.from())) { return false; }
-        return move.historyType() == MY.typeAt(move.from());
+    // move is legal and not yet made
+    constexpr bool isPossibleMove(HistoryMove move) const {
+        if (move.none()) { return false; }
+
+        Square from{move.from()};
+        Square to{move.to()};
+
+        return isPossibleMove(from, to) && move.historyType() == historyType(from, to);
     }
 
-    // move is legal and not yet made
-    bool isPossibleMove(HistoryMove move) const {
-        return isPseudoLegal(move) && isPossibleMove(move.from(), move.to());
+    constexpr bool isPseudoLegal(HistoryMove move) const {
+        if (move.none()) { return false; }
+
+        Square from{move.from()};
+        Square to{move.to()};
+
+        return MY.has(from) && move.historyType() == historyType(from, to);
     }
 
     // non capture nor promotion move
