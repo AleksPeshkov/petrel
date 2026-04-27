@@ -27,7 +27,40 @@ public:
 
 namespace { // anonymous namespace
 
-void trimTrailingWhitespace(std::string& str) {
+static constexpr size_t mebibyte = 1024 * 1024;
+
+template <typename T> static T mebi(T bytes) { return bytes / mebibyte; }
+template <typename T> static constexpr T permil(T n, T m) { return (n * 1000) / m; }
+
+template <typename T> concept Formattable = requires(const T& t, ostream& os) { t.format(os); };
+template <Formattable F> ostream& operator<<(ostream& os, const F& formattable) { formattable.format(os); return os; }
+
+struct Sep {
+    u64_t v;
+    ostream& format(ostream& os) const {
+        if (v == 0) return os << '0';
+
+        char buf[28];
+        int idx = 27;
+        buf[idx--] = '\0';
+
+        int digitCount = 0;
+        u64_t n = v;
+        do {
+            if (digitCount != 0 && digitCount % 3 == 0) {
+                buf[idx--] = '\'';
+            }
+            buf[idx--] = '0' + (n % 10);
+            n /= 10;
+            ++digitCount;
+        } while (n);
+
+        return os << &buf[idx + 1];
+    }
+};
+
+// trim trailing whitespace
+void rtrim(std::string& str) {
     // Define the set of whitespace characters to remove (space, newline, carriage return, tab, etc.)
     const std::string whitespace = " \n\r\t\f\v";
 
@@ -122,14 +155,6 @@ UciOutput& operator << (UciOutput& out, const PrincipalVariation& pv) {
     }
     return out;
 }
-
-static constexpr size_t mebibyte = 1024 * 1024;
-
-template <typename T>
-static T mebi(T bytes) { return bytes / mebibyte; }
-
-template <typename T>
-static constexpr T permil(T n, T m) { return (n * 1000) / m; }
 
 } // anonymous namespace
 
@@ -274,7 +299,7 @@ void Uci::setoption() {
         inputLine >> std::ws;
         std::string newFileName;
         std::getline(inputLine, newFileName);
-        ::trimTrailingWhitespace(newFileName);
+        ::rtrim(newFileName);
 
         if (newFileName.empty() || newFileName == "<empty>") {
             if (logFile.is_open()) {
@@ -310,7 +335,7 @@ void Uci::setoption() {
         inputLine >> std::ws;
         std::string newFileName;
         std::getline(inputLine, newFileName);
-        ::trimTrailingWhitespace(newFileName);
+        ::rtrim(newFileName);
 
         if (newFileName.empty() || newFileName == "<empty>") {
             info("EvalFile set <empty>");
@@ -645,9 +670,8 @@ void Uci::bench(std::string& goLimits) {
 
     uciok();
 
-    node_count_t benchNodes = 0;
-    auto benchStart = ::timeNow();
-
+    node_count_t benchNodes{0};
+    auto benchStart{::timeNow()};
     for (auto pos : positions) {
         std::string fen{pos[0]};
         inputLine.clear();
@@ -676,7 +700,15 @@ void Uci::bench(std::string& goLimits) {
         benchNodes += limits.getNodes();
         info_bestmove();
     }
+    auto benchTime{::elapsedSince(benchStart)};
 
-    Output ob{this};
-    ob << "\n" << benchNodes << " nodes " << ::nps(benchNodes, elapsedSince(benchStart)) << " nps";
+    {
+        Output ob{this};
+        ob << '\n'
+            << Sep{tt.writes} << " tt-writes, "
+            << Sep{tt.hits} << " tt-hits, "
+            << Sep{tt.reads} << " tt-reads\n"
+            << Sep{benchNodes} << " nodes "
+            << Sep{::nps(benchNodes, benchTime)} << " nps";
+    }
 }
