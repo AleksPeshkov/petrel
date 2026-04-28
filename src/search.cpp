@@ -90,17 +90,20 @@ ReturnStatus Node::negamax(Ply R) const {
         bestMove = currentMove;
 
         if (!isRoot()) {
-            child->pvIndex = root.pv.set(pvIndex, currentMove, child->pvIndex);
+            child->pvIndex = root.pv.set(pvIndex, bestMove, child->pvIndex);
         } else {
             // unfinished iteration, so report depth-1
-            pvIndex = root.pv.set(depth - 1_ply, score, currentMove, child->pvIndex);
+            pvIndex = root.pv.set(depth - 1_ply, score, bestMove, child->pvIndex);
             child->pvIndex = PrincipalVariation::Index{pvIndex.v() + 1};
 
-            RETURN_IF_STOP (root.limits.updateMoveComplexity(currentMove, score));
+            RETURN_IF_STOP (root.limits.updateMoveComplexity(bestMove, score));
 
-            ::insert_unique(root.rootBestMoves, currentMove);
+            ::insert_unique(root.rootBestMoves, bestMove);
             if (depth > 1_ply) { root.info_pv(); }
         }
+
+        // intermediate PV update with depth -1 as iteration is not fully completed
+        updateHistory(depth - 1_ply);
     }
 
     // set zero window for the next sibling move search
