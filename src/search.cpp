@@ -3,13 +3,13 @@
 
 #define RETURN_CUTOFF(visitor) { ReturnStatus status = visitor; if (status != ReturnStatus::Continue) { return status; }} ((void)0)
 
-TtSlot::TtSlot (const Node* n) : TtSlot{
+TtSlot::TtSlot (const Node* n, Ply draft) : TtSlot{
     n->z(),
     n->score,
     n->ply,
     n->bound,
-    TtMove{n->currentMove},
-    n->depth
+    TtMove{n->bestMove},
+    draft
 } {}
 
 Node::Node (const PositionMoves& p, const Uci& r) :
@@ -61,8 +61,11 @@ ReturnStatus Node::negamax(Ply R) const {
         }
 
         if (beta <= childScore) {
+            bound = FailHigh;
             score = childScore;
-            failHigh();
+            // if currentMove is null (after NMP), write back previous TT move instead
+            if (currentMove.any()) { bestMove = currentMove; }
+            updateHistory(depth);
             return ReturnStatus::Cutoff;
         }
 
@@ -80,10 +83,24 @@ ReturnStatus Node::negamax(Ply R) const {
             return negamax();
         }
 
+        bound = ExactScore;
         score = childScore;
         alpha = childScore;
         child->beta = -alpha;
-        RETURN_IF_STOP (updatePv());
+        bestMove = currentMove;
+
+        if (!isRoot()) {
+            child->pvIndex = root.pv.set(pvIndex, currentMove, child->pvIndex);
+        } else {
+            // unfinished iteration, so report depth-1
+            pvIndex = root.pv.set(depth - 1_ply, score, currentMove, child->pvIndex);
+            child->pvIndex = PrincipalVariation::Index{pvIndex.v() + 1};
+
+            RETURN_IF_STOP (root.limits.updateMoveComplexity(currentMove, score));
+
+            ::insert_unique(root.rootBestMoves, currentMove);
+            if (depth > 1_ply) { root.info_pv(); }
+        }
     }
 
     // set zero window for the next sibling move search
@@ -96,6 +113,7 @@ ReturnStatus Node::negamax(Ply R) const {
 
 ReturnStatus Node::search() {
     currentMove = {};
+    bestMove = {};
     score = Score{NoScore};
     bound = FailLow;
     assertOk();
@@ -161,13 +179,17 @@ ReturnStatus Node::search() {
             break;
         }
 
-        auto ttMove = ttSlot.ttMove();
-        if (ttMove.any() && !isPossibleMove(ttMove.from(), ttMove.to())) {
-            // collision
-            ttHit = false;
-            ttMove = {};
-            break;
+        if (ttSlot.ttMove().any()) {
+            auto ttMove = ttSlot.ttMove();
+            if (!isPossibleMove(ttMove.from(), ttMove.to())) {
+                // unlikely collision
+                ttHit = false;
+                assert (bestMove.none());
+                break;
+            }
+            bestMove = historyMove(ttMove);
         }
+        assert (bestMove.none() || isPossibleMove(bestMove));
 
         ++root.tt.hits;
 
@@ -180,12 +202,6 @@ ReturnStatus Node::search() {
         ) {
             score = ttScore;
             bound = ttBound;
-            if (ttMove.any()) {
-                assert (isPossibleMove(ttMove.from(), ttMove.to()));
-                setCurrentTtMove();
-            } else {
-                assert (currentMove.none());
-            }
             return ReturnStatus::Cutoff;
         }
 
@@ -242,8 +258,9 @@ ReturnStatus Node::search() {
         }
     }
 
-    if (ttHit && ttSlot.ttMove().any()) {
-        RETURN_CUTOFF (child->searchMove( historyMove(ttSlot.ttMove()) ));
+    // trying TT move first
+    if (bestMove.any()) {
+        RETURN_CUTOFF (child->searchMove(bestMove));
     }
 
     if (isRoot()) {
@@ -370,17 +387,20 @@ ReturnStatus Node::search() {
 
     if (bound == FailLow) {
         if (movesMade() == 0) {
+            // not stalemate, all moves pruned
             assert (!inCheck());
+            assert (bestMove.none());
             assert (currentMove.none());
-            score = alpha;
+            if (score.none()) { score = alpha; } // !score.none() if null move happened (null move not counted in movesMade())
             return ReturnStatus::Continue;
         }
-        assert (score.isOk(ply));
-        // fail low, no good move found, write back previous TT move if any
-        setCurrentTtMove();
-        *tt = TtSlot{this};
-        ++root.tt.writes;
+        //TRICK: bestMove is TtMove if any, no better move found
+    } else {
+        assert (bound == ExactScore);
+        assert (isPseudoLegal(bestMove));
     }
+
+    updateHistory(depth);
     return ReturnStatus::Continue;
 }
 
@@ -561,67 +581,31 @@ Ply Node::adjustDepthR(Ply R) const {
     return R;
 }
 
-void Node::failHigh() const {
-    // currentMove is null (after NMP), write back previous TT move instead
-    if (currentMove.none()) {
-        setCurrentTtMove();
-    }
+void Node::updateHistory(Ply draft) const {
+    assert (bestMove.none() || isPseudoLegal(bestMove));
 
-    assert (score.isOk(ply));
-    if (depth > 0_ply) {
-        bound = FailHigh;
-        *tt = TtSlot{this};
+    if (draft > 0_ply) {
+        assert (score.isOk(ply));
+        *tt = TtSlot{this, draft};
         ++root.tt.writes;
     }
 
-    updateHistory(currentMove);
-}
-
-ReturnStatus Node::updatePv() const {
-    assert (isPseudoLegal(currentMove));
-
-    if (depth > 0_ply) {
-        bound = ExactScore;
-        *tt = TtSlot{this};
-        ++root.tt.writes;
-    }
-
-    updateHistory(currentMove);
-
-    if (!isRoot()) {
-        child->pvIndex = root.pv.set(pvIndex, currentMove, child->pvIndex);
-    } else {
-        // unfinished iteration, so report depth-1
-        pvIndex = root.pv.set(depth - 1_ply, score, currentMove, child->pvIndex);
-        child->pvIndex = PrincipalVariation::Index{pvIndex.v() + 1};
-
-        RETURN_IF_STOP (root.limits.updateMoveComplexity(currentMove, score));
-
-        ::insert_unique(root.rootBestMoves, currentMove);
-        if (depth > 1_ply) { root.info_pv(); }
-    }
-
-    return ReturnStatus::Continue;
-}
-
-void Node::updateHistory(HistoryMove historyMove) const {
-    if (historyMove.none()) { return; }
-    assert (isPseudoLegal(historyMove));
-    if (historyMove.canBeKiller() == CanBeKiller::No) { return; }
+    if (bestMove.none()) { return; }
+    if (bestMove.canBeKiller() == CanBeKiller::No) { return; }
     if (inCheck()) { return; }
     if (!parent) { return; }
 
-    insert_unique(parent->killer, historyMove);
+    insert_unique(parent->killer, bestMove);
     if (parent->grandParent) {
-        insert_unique<2>(parent->grandParent->killer, historyMove);
+        insert_unique<2>(parent->grandParent->killer, bestMove);
     }
 
     if (parent->currentMove.any()) {
-        root.counterMove.set(parent->colorToMove(), parent->currentMove, historyMove);
+        root.counterMove.set(parent->colorToMove(), parent->currentMove, bestMove);
     }
 
     if (grandParent && grandParent->currentMove.any()) {
-        root.followMove.set(grandParent->colorToMove(), grandParent->currentMove, historyMove);
+        root.followMove.set(grandParent->colorToMove(), grandParent->currentMove, bestMove);
     }
 }
 
@@ -684,7 +668,7 @@ void refreshTtPv(const PositionMoves& p, const PrincipalVariation& pv, const Tt&
     PositionMoves pos{p};
 
     Ply   ply   = 0_ply;
-    Ply   depth = pv.depth();
+    Ply   draft = pv.depth();
     Score score = pv.score();
     auto  pmoves = pv.moves();
 
@@ -694,16 +678,16 @@ void refreshTtPv(const PositionMoves& p, const PrincipalVariation& pv, const Tt&
         assert ((pos.generateMoves(), pos.isPossibleMove(move.from(), move.to())));
 
         auto o = tt.addr<TtSlot>(pos.z());
-        *o = TtSlot{pos.z(), score, ply, ExactScore, TtMove{move.from(), move.to(), CanBeKiller::No}, depth};
+        *o = TtSlot{pos.z(), score, ply, ExactScore, TtMove{move}, draft};
         ++tt.writes;
 
         //we cannot use makeZobrist() because of en passant legality validation
         pos.makeMoveNoEval(move.from(), move.to());
         score = -score;
-        depth = depth - 1_ply;
+        draft = draft - 1_ply;
         ply = ply + 1_ply;
 
-        if (depth == 0_ply) { break; }
+        if (draft == 0_ply) { break; }
     }
 }
 

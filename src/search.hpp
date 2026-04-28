@@ -71,7 +71,7 @@ public:
         assert (draft() == _draft);
     }
 
-    TtSlot (const Node* node);
+    TtSlot (const Node* node, Ply draft);
     constexpr bool operator == (Z z) const { return (v_ & ZSlotMask) == (z.v() & ZSlotMask); }
 
     constexpr Score score(Ply ply) const { return Score::fromTt(get(ScoreShift, Score::Mask), ply); }
@@ -109,17 +109,14 @@ protected:
 
     mutable HistoryMove currentMove = {}; // last move made from *this into *child
     mutable std::array<HistoryMove, 3> killer = {}; // Killer heuristic
+    mutable HistoryMove bestMove = {}; // TtMove or best PV move found
     mutable PrincipalVariation::Index pvIndex; // start of subPV for the current ply
 
     Node (const Node* parent); // prepare empty child node
 
-    // propagate child last move search result score
-    [[nodiscard]] ReturnStatus negamax(Ply R = 1_ply) const;
-    void failHigh() const;
-    void updateHistory(HistoryMove) const;
+    void updateHistory(Ply depth) const;
 
-    [[nodiscard]] ReturnStatus updatePv() const;
-
+    [[nodiscard]] ReturnStatus negamax(Ply R = 1_ply) const; // apply child score
     [[nodiscard]] ReturnStatus search();
     [[nodiscard]] ReturnStatus quiescence();
 
@@ -155,10 +152,6 @@ protected:
     bool isDrawMaterial() const;
     bool isRepetition() const;
 
-    void setCurrentTtMove() const {
-        currentMove = ttHit && ttSlot.ttMove().any() ? historyMove(ttSlot.ttMove()) : HistoryMove{};
-        assert (currentMove.none() || isPseudoLegal(currentMove));
-    }
 
 public:
     void assertOk() const {
