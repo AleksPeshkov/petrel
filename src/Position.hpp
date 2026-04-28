@@ -30,12 +30,12 @@ public:
     friend constexpr bool operator == (Rule50 rule50, Ply ply) { return rule50.v_ == ply.v(); }
     friend constexpr bool operator <  (Rule50 rule50, Ply ply) { return rule50.v_ < ply.v(); }
 
-    friend ostream& operator << (ostream& out, Rule50 rule50) { return out << rule50.v_; }
+    friend ostream& operator << (ostream& os, Rule50 rule50) { return os << rule50.v_; }
 
-    friend istream& operator >> (istream& in, Rule50& rule50) {
-        in >> rule50.v_;
-        if (in) { assert (0 <= rule50.v_ && rule50.v_ <= 100); }
-        return in;
+    friend istream& operator >> (istream& is, Rule50& rule50) {
+        is >> rule50.v_;
+        if (is) { assert (0 <= rule50.v_ && rule50.v_ <= 100); }
+        return is;
     }
 };
 

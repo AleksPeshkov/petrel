@@ -206,8 +206,8 @@ public:
     constexpr PieceSet begin() const { return PieceSet{v_}; }
     constexpr PieceSet end() const { return PieceSet{}; }
 
-    friend ostream& operator << (ostream& out, PiMask mask) {
-        return out << std::hex << PieceSet{mask}.v();
+    friend ostream& operator << (ostream& os, PiMask mask) {
+        return os << std::hex << PieceSet{mask}.v();
     }
 };
 

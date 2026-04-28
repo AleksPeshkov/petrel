@@ -76,18 +76,18 @@ public:
     friend constexpr Bb operator << (Bb bb, unsigned offset) { return Bb{bb.v_ << offset}; }
     friend constexpr Bb operator >> (Bb bb, unsigned offset) { return Bb{bb.v_ >> offset}; }
 
-    friend ostream& operator << (ostream& out, Bb bb) {
-        out << "    a b c d e f g h\n";
+    friend ostream& operator << (ostream& os, Bb bb) {
+        os << "    a b c d e f g h\n";
         for (auto rank : range<Rank>()) {
-            out << Rank{rank} << " |";
+            os << Rank{rank} << " |";
             for (auto file : range<File>()) {
                 Square sq{file, rank};
-                out << " " << (bb.has(sq) ? 'x'  : '.');
+                os << " " << (bb.has(sq) ? 'x'  : '.');
             }
-            out << '\n';
+            os << '\n';
         }
-        out << "    a b c d e f g h\n";
-        return out;
+        os << "    a b c d e f g h\n";
+        return os;
     }
 };
 

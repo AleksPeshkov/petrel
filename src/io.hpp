@@ -15,8 +15,9 @@ namespace io {
     using std::ostringstream;
 
     using char_type = ostream::char_type;
-    using czstring = const char_type* ;
+    using czstring = const char_type*;
 
+// defined in Uci.cpp
 
     istream& fail(istream&);
     istream& fail_char(istream&);

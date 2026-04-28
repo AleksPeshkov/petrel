@@ -4,12 +4,136 @@
 #include "System.hpp"
 #include "Uci.hpp"
 
+namespace io {
+
+ostream& app_version(ostream& os) {
+    os << "petrel";
+
+#ifdef VERSION
+        os << ' ' << VERSION;
+#endif
+
+#ifdef GIT_DATE
+    os << ' ' << GIT_DATE;
+#else
+    char year[] {__DATE__[7], __DATE__[8], __DATE__[9], __DATE__[10], '\0'};
+
+    char month[] {
+        (__DATE__[0] == 'O' && __DATE__[1] == 'c' && __DATE__[2] == 't') ? '1' :
+        (__DATE__[0] == 'N' && __DATE__[1] == 'o' && __DATE__[2] == 'v') ? '1' :
+        (__DATE__[0] == 'D' && __DATE__[1] == 'e' && __DATE__[2] == 'c') ? '1' : '0',
+
+        (__DATE__[0] == 'J' && __DATE__[1] == 'a' && __DATE__[2] == 'n') ? '1' :
+        (__DATE__[0] == 'F' && __DATE__[1] == 'e' && __DATE__[2] == 'b') ? '2' :
+        (__DATE__[0] == 'M' && __DATE__[1] == 'a' && __DATE__[2] == 'r') ? '3' :
+        (__DATE__[0] == 'A' && __DATE__[1] == 'p' && __DATE__[2] == 'r') ? '4' :
+        (__DATE__[0] == 'M' && __DATE__[1] == 'a' && __DATE__[2] == 'y') ? '5' :
+        (__DATE__[0] == 'J' && __DATE__[1] == 'u' && __DATE__[2] == 'n') ? '6' :
+        (__DATE__[0] == 'J' && __DATE__[1] == 'u' && __DATE__[2] == 'l') ? '7' :
+        (__DATE__[0] == 'A' && __DATE__[1] == 'u' && __DATE__[2] == 'g') ? '8' :
+        (__DATE__[0] == 'S' && __DATE__[1] == 'e' && __DATE__[2] == 'p') ? '9' :
+        (__DATE__[0] == 'O' && __DATE__[1] == 'c' && __DATE__[2] == 't') ? '0' :
+        (__DATE__[0] == 'N' && __DATE__[1] == 'o' && __DATE__[2] == 'v') ? '1' :
+        (__DATE__[0] == 'D' && __DATE__[1] == 'e' && __DATE__[2] == 'c') ? '2' : '0',
+
+        '\0'
+    };
+
+    char day[] {((__DATE__[4] == ' ') ? '0' : __DATE__[4]), __DATE__[5], '\0'};
+
+    os << ' ' << year << '-' << month << '-' << day;
+#endif
+
+#ifdef GIT_ORIGIN
+        os << ' ' << GIT_ORIGIN;
+#endif
+
+#ifdef GIT_SHA
+        os << ' ' << GIT_SHA;
+#endif
+
+#ifndef NDEBUG
+        os << " DEBUG";
+#endif
+
+    return os;
+}
+
+istream& fail(istream& is) {
+    is.setstate(std::ios::failbit);
+    return is;
+}
+
+istream& fail_char(istream& is) {
+    is.unget();
+    return fail(is);
+}
+
+istream& fail_pos(istream& is, std::streampos here) {
+    is.clear();
+    is.seekg(here);
+    return fail(is);
+}
+
+istream& fail_rewind(istream& is) {
+    return fail_pos(is, 0);
+}
+
+/// @brief Matches a case-insensitive token pattern in the input stream, ignoring whitespace.
+/// @param in Input stream to read from.
+/// @param token Token pattern to match (case-insensitive). May contain multi-word tokens
+///              (e.g., "setoption name UCI_Chess960 value true").
+/// @retval true Fully matches the token pattern, advancing the stream past the matched tokens.
+/// @retval false Fails to match. Leaves the stream unchanged. Does not change the failbit.
+bool consume(istream& is, czstring token) {
+    if (token == nullptr) { token = ""; }
+
+    auto state = is.rdstate();
+    auto before = is.tellg();
+
+    using std::isspace;
+    do {
+        // skip leading whitespace
+        while (isspace(*token)) { ++token; }
+        is >> std::ws;
+
+        // case insensitive match each character until end of token string (whitespace or \0)
+        while (!isspace(*token)
+            && std::tolower(*token) == std::tolower(is.peek())
+        ) {
+            ++token;
+            is.ignore();
+        }
+    // continue matching the next word in the token (if present)
+    } while (isspace(*token) && isspace(is.peek()));
+
+    // ensure the token and the last stream word ended at the same time
+    if (*token == '\0'
+        && (isspace(is.peek()) || is.eof())
+    ) {
+        // success: stream is advanced past the matched token
+        return true;
+    }
+
+    // failure: restore stream state
+    is.seekg(before);
+    is.clear(state);
+    return false;
+}
+
+bool hasMore(istream& is) {
+    is >> std::ws;
+    return !is.eof();
+}
+
+} // namespace io
+
 // std::ostringstream output buffer, flushed on destruction
 class Output : public io::ostringstream {
 protected:
     const Uci& uci;
 public:
-    Output (const Uci* u) : io::ostringstream{}, uci{*u} {}
+    Output (const Uci* _uci) : io::ostringstream{}, uci{*_uci} {}
     io::ostringstream& flush() { uci.output(str()); str(""); return *this; }
     ~Output () { flush(); }
 };
@@ -18,7 +142,7 @@ public:
 class UciOutput : public Output {
     Color colorToMove;
 public:
-    UciOutput(const Uci* u) : Output{u}, colorToMove{uci.colorToMove()} {}
+    UciOutput(const Uci* _uci) : Output{_uci}, colorToMove{uci.colorToMove()} {}
     ChessVariant chessVariant() const { return uci.chessVariant(); }
     Color color() const { return colorToMove; }
     Color flipColor() { return Color{colorToMove.flip()}; }
@@ -77,20 +201,20 @@ void rtrim(std::string& str) {
 }
 
 // typesafe operator<< chaining
-UciOutput& operator << (UciOutput& out, io::czstring message) {
-    static_cast<ostream&>(out) << message; return out;
+UciOutput& operator << (UciOutput& ob, io::czstring message) {
+    static_cast<ostream&>(ob) << message; return ob;
 }
 
 // convert move to UCI format
-UciOutput& operator << (UciOutput& out, UciMove move) {
-    bool isWhite{out.color().is(White)};
-    out.flipColor();
-    out << ' ';
+UciOutput& operator << (UciOutput& ob, UciMove move) {
+    bool isWhite{ob.color().is(White)};
+    ob.flipColor();
+    ob << ' ';
 
     if (move.none()) {
         io::info("illegal move 0000 printed");
-        out << "0000";
-        return out;
+        ob << "0000";
+        return ob;
     }
 
     Square from{move.from()};
@@ -100,68 +224,68 @@ UciOutput& operator << (UciOutput& out, UciMove move) {
     Square uciTo{isWhite ? to : ~to};
 
     if (!move.isSpecial()) {
-        out << uciFrom << uciTo;
-        return out;
+        ob << uciFrom << uciTo;
+        return ob;
     }
 
     //pawn promotion
     if (from.on(Rank7)) {
         //the type of a promoted pawn piece encoded in place of move to's rank
         uciTo = Square{File{to}, isWhite ? Rank8 : Rank1};
-        out << uciFrom << uciTo << PromoType{::promoTypeFrom(Rank{to})};
-        return out;
+        ob << uciFrom << uciTo << PromoType{::promoTypeFrom(Rank{to})};
+        return ob;
     }
 
     //en passant capture
     if (from.on(Rank5)) {
         //en passant capture move internally encoded as pawn captures pawn
         assert (to.on(Rank5));
-        out << uciFrom << Square{File{to}, isWhite ? Rank6 : Rank3};
-        return out;
+        ob << uciFrom << Square{File{to}, isWhite ? Rank6 : Rank3};
+        return ob;
     }
 
     //castling
     if (from.on(Rank1)) {
         //castling move internally encoded as the rook captures the king
 
-        if (out.chessVariant().is(Orthodox)) {
-            if (from.on(FileA)) { out << uciTo << Square{File{FileC}, Rank{uciFrom}}; return out; }
-            if (from.on(FileH)) { out << uciTo << Square{File{FileG}, Rank{uciFrom}}; return out; }
+        if (ob.chessVariant().is(Orthodox)) {
+            if (from.on(FileA)) { ob << uciTo << Square{File{FileC}, Rank{uciFrom}}; return ob; }
+            if (from.on(FileH)) { ob << uciTo << Square{File{FileG}, Rank{uciFrom}}; return ob; }
         }
 
         // Chess960:
-        out << uciTo << uciFrom;
-        return out;
+        ob << uciTo << uciFrom;
+        return ob;
     }
 
     //should never happen
     assert (false);
     io::error("invalid move in UCI output");
-    out << "0000";
-    return out;
+    ob << "0000";
+    return ob;
 }
 
-UciOutput& operator << (UciOutput& out, const PrincipalVariation& pv) {
-    out << pv.score();
+UciOutput& operator << (UciOutput& ob, const PrincipalVariation& pv) {
+    ob << pv.score();
     auto moves = pv.moves();
-    if (moves->none()) { return out; } // empty PV (no legal moves at root)
+    if (moves->none()) { return ob; } // empty PV (no legal moves at root)
 
     {
-        out << " pv";
+        ob << " pv";
         for (UciMove move; (move = *moves++).any(); ) {
-            out << move;
+            ob << move;
         }
-        out.resetRootColor();
+        ob.resetRootColor();
     }
-    return out;
+    return ob;
 }
 
 } // anonymous namespace
 
-Uci::Uci(ostream &o) :
+Uci::Uci(ostream& os) :
     tt(16 * mebibyte),
     inputLine{std::string(2048, '\0')}, // preallocate 2048 bytes (~200 full moves)
-    out{o},
+    out{os},
     bestmove_(sizeof("bestmove a7a8q ponder h2h1q"), '\0'),
     pid{System::getPid()},
     logStartTime{::timeNow()}
@@ -241,9 +365,9 @@ void Uci::info(std::string_view message) const {
     log('*' + std::string(message));
 }
 
-void Uci::processInput(istream& in) {
+void Uci::processInput(istream& is) {
     std::string currentLine(2048, '\0'); // preallocate 2048 bytes (~200 full moves)
-    while (std::getline(in, currentLine)) {
+    while (std::getline(is, currentLine)) {
         if (isDebugOn) { log('>' + currentLine); }
 
         inputLine.clear(); //clear previous errors
@@ -590,9 +714,9 @@ void Uci::info_bestmove() const {
     }
 }
 
-ostream& Uci::info_fen(ostream& o) const {
-    o << "info" << position_.evaluate() << " fen " << position_;
-    return o;
+ostream& Uci::info_fen(ostream& os) const {
+    os << "info" << position_.evaluate() << " fen " << position_;
+    return os;
 }
 
 void Uci::info_readyok() const {

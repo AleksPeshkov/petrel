@@ -156,81 +156,81 @@ void UciSearchLimits::setSearchDeadlines(const Position* p) {
 }
 
 namespace {
-    istream& operator >> (istream& in, TimeInterval& timeInterval) {
+    istream& operator >> (istream& is, TimeInterval& timeInterval) {
         int msecs;
-        if (in >> msecs) {
+        if (is >> msecs) {
             timeInterval = std::chrono::duration_cast<TimeInterval>(std::chrono::milliseconds{msecs} );
         }
-        return in;
+        return is;
     }
 
-    ostream& operator << (ostream& out, const TimeInterval& timeInterval) {
-        return out << std::chrono::duration_cast<std::chrono::milliseconds>(timeInterval).count();
+    ostream& operator << (ostream& os, const TimeInterval& timeInterval) {
+        return os << std::chrono::duration_cast<std::chrono::milliseconds>(timeInterval).count();
     }
 }
 
-void UciSearchLimits::go(istream& in, Side white, const Position* p) {
+void UciSearchLimits::go(istream& is, Side white, const Position* p) {
     const Side black{~white};
-    while (in >> std::ws, !in.eof()) {
-        if      (io::consume(in, "depth"))    { in >> maxDepth_; }
-        else if (io::consume(in, "nodes"))    { in >> nodesLimit_;  if (nodesLimit_  <= 0)  { nodesLimit_  = 0; } }
-        else if (io::consume(in, "movetime")) { in >> movetime_;    if (movetime_    < 0ms) { movetime_    = 0ms; } }
-        else if (io::consume(in, "wtime"))    { in >> time_[white]; if (time_[white] < 0ms) { time_[white] = 0ms; } }
-        else if (io::consume(in, "btime"))    { in >> time_[black]; if (time_[black] < 0ms) { time_[black] = 0ms; } }
-        else if (io::consume(in, "winc"))     { in >> inc_[white];  if (inc_[white]  < 0ms) { inc_[white]  = 0ms; }; }
-        else if (io::consume(in, "binc"))     { in >> inc_[black];  if (inc_[black]  < 0ms) { inc_[black]  = 0ms; } }
-        else if (io::consume(in, "movestogo")){ in >> movestogo_;   if (movestogo_   < 0)   { movestogo_   = 0; } }
-        else if (io::consume(in, "mate"))     { in >> maxDepth_; maxDepth_ = Ply{std::abs(maxDepth_.v()) * 2 + 1}; } // TODO: implement mate in n moves
-        else if (io::consume(in, "ponder"))   { pondering_.store(true, std::memory_order_relaxed); }
-        else if (io::consume(in, "infinite")) { infinite_ =  true; }
+    while (is >> std::ws, !is.eof()) {
+        if      (io::consume(is, "depth"))    { is >> maxDepth_; }
+        else if (io::consume(is, "nodes"))    { is >> nodesLimit_;  if (nodesLimit_  <= 0)  { nodesLimit_  = 0; } }
+        else if (io::consume(is, "movetime")) { is >> movetime_;    if (movetime_    < 0ms) { movetime_    = 0ms; } }
+        else if (io::consume(is, "wtime"))    { is >> time_[white]; if (time_[white] < 0ms) { time_[white] = 0ms; } }
+        else if (io::consume(is, "btime"))    { is >> time_[black]; if (time_[black] < 0ms) { time_[black] = 0ms; } }
+        else if (io::consume(is, "winc"))     { is >> inc_[white];  if (inc_[white]  < 0ms) { inc_[white]  = 0ms; }; }
+        else if (io::consume(is, "binc"))     { is >> inc_[black];  if (inc_[black]  < 0ms) { inc_[black]  = 0ms; } }
+        else if (io::consume(is, "movestogo")){ is >> movestogo_;   if (movestogo_   < 0)   { movestogo_   = 0; } }
+        else if (io::consume(is, "mate"))     { is >> maxDepth_; maxDepth_ = Ply{std::abs(maxDepth_.v()) * 2 + 1}; } // TODO: implement mate in n moves
+        else if (io::consume(is, "ponder"))   { pondering_.store(true, std::memory_order_relaxed); }
+        else if (io::consume(is, "infinite")) { infinite_ =  true; }
         else { break; }
     }
 
     setSearchDeadlines(p);
 }
 
-void UciSearchLimits::setoption(istream& in) {
-    if (io::consume(in, "Move Overhead")) {
-        io::consume(in, "value");
+void UciSearchLimits::setoption(istream& is) {
+    if (io::consume(is, "Move Overhead")) {
+        io::consume(is, "value");
 
-        in >> moveOverhead_;
+        is >> moveOverhead_;
         if (moveOverhead_ < 0ms) { moveOverhead_ = UciSearchLimits::MoveOverheadDefault; }
 
-        if (!in) { io::fail_rewind(in); }
+        if (!is) { io::fail_rewind(is); }
         return;
     }
 
-    if (io::consume(in, "Ponder")) {
-        io::consume(in, "value");
+    if (io::consume(is, "Ponder")) {
+        io::consume(is, "value");
 
-        if (io::consume(in, "true"))  { canPonder_ = true; return; }
-        if (io::consume(in, "false")) { canPonder_ = false; return; }
+        if (io::consume(is, "true"))  { canPonder_ = true; return; }
+        if (io::consume(is, "false")) { canPonder_ = false; return; }
 
-        io::fail_rewind(in);
+        io::fail_rewind(is);
         return;
     }
 }
 
-ostream& UciSearchLimits::uciok(ostream& out) const {
-    out << "option name Move Overhead type spin min 0 max 10000 default " << moveOverhead_ << '\n';
-    out << "option name Ponder type check default " << (canPonder_ ? "true" : "false") << '\n';
-    return out;
+ostream& UciSearchLimits::uciok(ostream& os) const {
+    os << "option name Move Overhead type spin min 0 max 10000 default " << moveOverhead_ << '\n';
+    os << "option name Ponder type check default " << (canPonder_ ? "true" : "false") << '\n';
+    return os;
 }
 
-ostream& UciSearchLimits::nps(ostream& out) const {
+ostream& UciSearchLimits::nps(ostream& os) const {
     lastInfoNodes_ = getNodes();
-    out << " nodes " << lastInfoNodes_;
+    os << " nodes " << lastInfoNodes_;
 
     auto elapsedTime = elapsedSinceStart();
     if (elapsedTime >= 1ms) {
-        out << " time " << elapsedTime << " nps " << ::nps(lastInfoNodes_, elapsedTime);
+        os << " time " << elapsedTime << " nps " << ::nps(lastInfoNodes_, elapsedTime);
     }
-    return out;
+    return os;
 }
 
-ostream& UciSearchLimits::info_nps(ostream& out) const {
+ostream& UciSearchLimits::info_nps(ostream& os) const {
     if (hasNewNodes()) {
-        out << "info"; nps(out) << '\n';
+        os << "info"; nps(os) << '\n';
     }
-    return out;
+    return os;
 }

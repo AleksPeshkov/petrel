@@ -87,25 +87,25 @@ public:
         return score;
     }
 
-    friend ostream& operator << (ostream& out, Score score) {
-        out << " score ";
+    friend ostream& operator << (ostream& os, Score score) {
+        os << " score ";
 
         if (score.v_ == NoScore) {
-            return out << "none";
+            return os << "none";
         }
 
         score.assertOk();
 
         if (score.v_ < MinEval) {
-            return out << "mate " << (MateLoss - score.v_) / 2;
+            return os << "mate " << (MateLoss - score.v_) / 2;
         }
 
         if (MaxEval < score.v_) {
-            return out << "mate " << (MateWin - score.v_ + 1) / 2;
+            return os << "mate " << (MateWin - score.v_ + 1) / 2;
         }
 
         score.assertEval();
-        return out << "cp " << static_cast<signed>(score.v_);
+        return os << "cp " << static_cast<signed>(score.v_);
     }
 };
 
