@@ -40,6 +40,12 @@ ReturnStatus Node::negamax(Ply R) const {
 
     auto childScore = -child->score;
 
+    if (bestMove.none() && currentMove.any()) {
+        assert (movesMade() == 1);
+        // better to have any TtMove in TT at least for additional collision detection
+        bestMove = currentMove;
+    }
+
     if (childScore <= alpha) {
         if (score.none() || score < childScore) {
             score = childScore;
@@ -65,7 +71,12 @@ ReturnStatus Node::negamax(Ply R) const {
             score = childScore;
             // if currentMove is null (after NMP), write back previous TT move instead
             if (currentMove.any()) { bestMove = currentMove; }
-            updateHistory(depth);
+            if (bestMove.any()) {
+                updateHistory(depth);
+            } else {
+                assert (movesMade() == 0);
+                //TODO: null move verification here?
+            }
             return ReturnStatus::Cutoff;
         }
 
@@ -87,6 +98,7 @@ ReturnStatus Node::negamax(Ply R) const {
         score = childScore;
         alpha = childScore;
         child->beta = -alpha;
+        assert (currentMove.any()); // null move in PV is not allowed
         bestMove = currentMove;
 
         if (!isRoot()) {
@@ -624,7 +636,7 @@ Ply Node::adjustDepthR(Ply R) const {
 }
 
 void Node::updateHistory(Ply draft) const {
-    assert (bestMove.none() || isPseudoLegal(bestMove));
+    assert (isPseudoLegal(bestMove));
 
     if (draft > 0_ply) {
         assert (score.isOk(ply));
