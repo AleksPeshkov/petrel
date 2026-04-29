@@ -249,7 +249,7 @@ ReturnStatus Node::search() {
 
     if (ttHit && ttSlot.ttMove().any()) {
         canBeKiller = ttSlot.ttMove().canBeKiller() == CanBeKiller::Yes;
-        RETURN_CUTOFF (child->searchMove(ttSlot.ttMove().from(), ttSlot.ttMove().to()));
+        RETURN_CUTOFF (child->searchMove( historyMove(ttSlot.ttMove()) ));
     }
 
     if (isRoot()) {

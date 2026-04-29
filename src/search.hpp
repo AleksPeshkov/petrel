@@ -144,7 +144,7 @@ protected:
     }
 
     [[nodiscard]] ReturnStatus searchMove(Square from, Square to, Ply R = 1_ply) {
-        return searchMove(from, to, R, parent->canBeKiller ? CanBeKiller::Yes : CanBeKiller::No);
+        return searchMove(from, to, R, !parent->inCheck() ? CanBeKiller::Yes : CanBeKiller::No);
     }
 
     constexpr Color colorToMove() const; // current node's side to move color
