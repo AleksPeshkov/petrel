@@ -457,7 +457,7 @@ ReturnStatus Node::goodCaptures(PiMask victims) {
         for (Square to : queenPromos) {
             if (!safeForOp(to) || OP.bbSide().has(~to)) {
                 // move to safe square or always good promotion with capture
-                RETURN_CUTOFF (child->searchMove(from, to));
+                RETURN_CUTOFF (child->searchMove(from, to, 1_ply, CanBeKiller::No));
             }
         }
     }
@@ -487,7 +487,7 @@ ReturnStatus Node::goodCaptures(PiMask victims) {
             // LVA (least valuable attacker) order
             Pi pi = attackers.piLast(); attackers -= pi;
             Square from{MY.sq(pi)};
-            RETURN_CUTOFF (child->searchMove(from, to));
+            RETURN_CUTOFF (child->searchMove(from, to, 1_ply, CanBeKiller::No));
         }
     }
 
