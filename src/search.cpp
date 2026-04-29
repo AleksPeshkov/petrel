@@ -96,6 +96,7 @@ ReturnStatus Node::negamax(Ply R) const {
 
 ReturnStatus Node::search() {
     currentMove = {};
+    canBeKiller = false;
     score = Score{NoScore};
     bound = FailLow;
     assertOk();
@@ -422,6 +423,7 @@ ReturnStatus Node::goodNonCaptures(Pi pi, Bb moves, Ply R) {
 ReturnStatus Node::quiescence() {
     assertOk();
     assert (!inCheck());
+    assert (!canBeKiller);
 
     assert (child);
 
