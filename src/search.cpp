@@ -8,7 +8,7 @@ TtSlot::TtSlot (const Node* n) : TtSlot{
     n->score,
     n->ply,
     n->bound,
-    TtMove{n->currentMove.from(), n->currentMove.to(), n->canBeKiller ? CanBeKiller::Yes : CanBeKiller::No},
+    TtMove{n->currentMove},
     n->depth
 } {}
 
@@ -96,7 +96,6 @@ ReturnStatus Node::negamax(Ply R) const {
 
 ReturnStatus Node::search() {
     currentMove = {};
-    canBeKiller = false;
     score = Score{NoScore};
     bound = FailLow;
     assertOk();
@@ -163,11 +162,10 @@ ReturnStatus Node::search() {
         }
 
         auto ttMove = ttSlot.ttMove();
-        Square ttFrom = ttMove.from();
-        Square ttTo = ttMove.to();
-        if (ttMove.any() && !isPossibleMove(ttFrom, ttTo)) {
+        if (ttMove.any() && !isPossibleMove(ttMove.from(), ttMove.to())) {
             // collision
             ttHit = false;
+            ttMove = {};
             break;
         }
 
@@ -183,11 +181,9 @@ ReturnStatus Node::search() {
             score = ttScore;
             bound = ttBound;
             if (ttMove.any()) {
-                assert (isPossibleMove(ttFrom, ttTo));
-                canBeKiller = ttMove.canBeKiller() == CanBeKiller::Yes;
-                currentMove = historyMove(ttMove);
+                assert (isPossibleMove(ttMove.from(), ttMove.to()));
+                setCurrentTtMove();
             } else {
-                canBeKiller = false;
                 assert (currentMove.none());
             }
             return ReturnStatus::Cutoff;
@@ -242,27 +238,22 @@ ReturnStatus Node::search() {
             && MY.material().canNullMove() // avoid null move in late endgame
             && Score{MinEval} <= beta && beta <= eval
         ) {
-            canBeKiller = false;
             RETURN_CUTOFF (child->searchNullMove(4_ply + (depth-2_ply)/4));
         }
     }
 
     if (ttHit && ttSlot.ttMove().any()) {
-        canBeKiller = ttSlot.ttMove().canBeKiller() == CanBeKiller::Yes;
         RETURN_CUTOFF (child->searchMove( historyMove(ttSlot.ttMove()) ));
     }
 
     if (isRoot()) {
-        canBeKiller = false; // rootBestMoves can be anything
         for (auto move : root.rootBestMoves) {
             if (move.none()) { break; }
             RETURN_CUTOFF (child->searchIfPossible(historyMove(move.from(), move.to(), CanBeKiller::No)));
         }
     }
 
-    canBeKiller = false;
     RETURN_CUTOFF (goodCaptures(OP.nonKing()));
-    canBeKiller = !inCheck();
 
     if (parent && !inCheck()) {
         RETURN_CUTOFF (child->searchIfPossible(parent->killer[0]));
@@ -386,7 +377,7 @@ ReturnStatus Node::search() {
         }
         assert (score.isOk(ply));
         // fail low, no good move found, write back previous TT move if any
-        currentMove = ttMove();
+        setCurrentTtMove();
         *tt = TtSlot{this};
         ++root.tt.writes;
     }
@@ -423,7 +414,6 @@ ReturnStatus Node::goodNonCaptures(Pi pi, Bb moves, Ply R) {
 ReturnStatus Node::quiescence() {
     assertOk();
     assert (!inCheck());
-    assert (!canBeKiller);
 
     assert (child);
 
@@ -574,7 +564,7 @@ Ply Node::adjustDepthR(Ply R) const {
 void Node::failHigh() const {
     // currentMove is null (after NMP), write back previous TT move instead
     if (currentMove.none()) {
-        currentMove = ttMove();
+        setCurrentTtMove();
     }
 
     assert (score.isOk(ply));
@@ -584,9 +574,7 @@ void Node::failHigh() const {
         ++root.tt.writes;
     }
 
-    if (canBeKiller) {
-        updateHistory(currentMove);
-    }
+    updateHistory(currentMove);
 }
 
 ReturnStatus Node::updatePv() const {
@@ -598,9 +586,7 @@ ReturnStatus Node::updatePv() const {
         ++root.tt.writes;
     }
 
-    if (canBeKiller) {
-        updateHistory(currentMove);
-    }
+    updateHistory(currentMove);
 
     if (!isRoot()) {
         child->pvIndex = root.pv.set(pvIndex, currentMove, child->pvIndex);
@@ -619,7 +605,10 @@ ReturnStatus Node::updatePv() const {
 }
 
 void Node::updateHistory(HistoryMove historyMove) const {
+    if (historyMove.none()) { return; }
     assert (isPseudoLegal(historyMove));
+    if (historyMove.canBeKiller() == CanBeKiller::No) { return; }
+    if (inCheck()) { return; }
     if (!parent) { return; }
 
     insert_unique(parent->killer, historyMove);

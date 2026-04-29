@@ -108,11 +108,8 @@ protected:
     mutable Bound bound{FailLow}; // FailLow is default unless have found Exact or FailHigh move later
 
     mutable HistoryMove currentMove = {}; // last move made from *this into *child
+    mutable std::array<HistoryMove, 3> killer = {}; // Killer heuristic
     mutable PrincipalVariation::Index pvIndex; // start of subPV for the current ply
-
-    // Killer heuristic
-    mutable std::array<HistoryMove, 3> killer = {};
-    bool canBeKiller{false};  // good captures and check evasions should not waste killer slots
 
     Node (const Node* parent); // prepare empty child node
 
@@ -158,8 +155,9 @@ protected:
     bool isDrawMaterial() const;
     bool isRepetition() const;
 
-    HistoryMove ttMove() const {
-        return ttHit && ttSlot.ttMove().any() ? historyMove(ttSlot.ttMove()) : HistoryMove{};
+    void setCurrentTtMove() const {
+        currentMove = ttHit && ttSlot.ttMove().any() ? historyMove(ttSlot.ttMove()) : HistoryMove{};
+        assert (currentMove.none() || isPseudoLegal(currentMove));
     }
 
 public:
