@@ -150,9 +150,11 @@ ReturnStatus Node::negamax(Ply R) {
         if (beta <= childScore) {
             score = childScore;
             bound = FailHigh;
-            // if currentMove.none() after NMP, write back TT move instead
-            if (currentMove.any()) { bestMove = currentMove; }
-            updateHistory();
+            // currentMove.none() after NMP
+            if (currentMove.any()) {
+                bestMove = currentMove;
+                updateHistory();
+            }
             return ReturnStatus::Cutoff;
         }
 
