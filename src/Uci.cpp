@@ -4,6 +4,7 @@
 #include "search.hpp"
 #include "System.hpp"
 #include "Uci.hpp"
+#include "Position_impl.hpp"
 
 namespace io {
 
