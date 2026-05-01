@@ -62,95 +62,78 @@ protected:
     friend class TtSlot;
 
     const Uci& root; // common search thread data
-    const Node* const parent; // previous (ply-1) opposite side to move node or nullptr
-    const Node* const grandParent; // previous side to move node (ply-2) or nullptr
-    Node* child = nullptr; // child node to make moves into, created in search()
+    Node* const parent{nullptr}; // previous (ply-1) opposite side to move node or nullptr
+    const Node* const grandParent{nullptr}; // previous side to move node (ply-2) or nullptr
+    Node* child{nullptr}; // child node to make moves into, created in search()
 
-    RepHash repHash; // mini-hash of all previous reversible positions zobrist keys
-
-    Ply ply; // distance from root (root is ply == 0)
-    Ply depth{0}; // remaining depth to horizon (should be set before search)
-    Ply plyPv; // ply of nearest PV node, if plyPv == ply, this is PV node
-
-    TtSlot* tt; // pointer to the slot in TT
-    TtSlot  ttSlot;
+    RepHash repHash{}; // mini-hash of all previous reversible positions zobrist keys
+    TtSlot* tt{nullptr}; // pointer to the slot in TT
     bool ttHit{false}; // this node found in TT
+    TtSlot ttSlot; //TODO: remove me
+
+    Ply ply{0}; // distance from root (root is ply == 0)
+    Ply pvPly{0}; // ply of nearest PV node, if pvPly == ply, this is PV node
+    PrincipalVariation::Index pvIndex{0}; // start of subPV for the current ply
+    Ply depth{0}; // remaining depth to horizon (should be set before search)
+
     Score eval{NoScore}; // static evaluation of the current position
+    Score alpha{MateLoss}; // alpha-beta window lower margin
+    Score beta{MateWin}; // alpha-beta window upper margin
+    Score score{NoScore}; // best score found, alpha <= score < beta
+    Bound bound{FailLow}; // default FailLow, until Exact or FailHigh move will be found later
 
-    mutable Score alpha; // alpha-beta window lower margin
-    Score beta; // alpha-beta window upper margin
-    mutable Score score{NoScore}; // best score found so far
-    mutable Bound bound{FailLow}; // FailLow is default unless have found Exact or FailHigh move later
-
-    mutable HistoryMove currentMove = {}; // last move made from *this into *child
-    PrincipalVariation::Index pvIndex; // start of subPV for the current ply
-
-    // Killer heuristic
-    mutable std::array<HistoryMove, 3> killer = {};
+    HistoryMove currentMove{}; // last move made from *this into *child
+    mutable std::array<HistoryMove, 3> killer{}; // Killer heuristic, mutable to update from const* grandParent
     bool canBeKiller{false};  // good captures and check evasions should not waste killer slots
 
-    Node (const Node* parent); // prepare empty child node
+    Node (Node* parent); // prepare empty child node
+    void assertOk() const;
 
-    // propagate child last move search result score
-    [[nodiscard]] ReturnStatus negamax(Ply R = 1_ply) const;
-    void failHigh() const;
-    void updateHistory(HistoryMove) const;
-
-    [[nodiscard]] ReturnStatus updatePv() const;
-
+    [[nodiscard]] ReturnStatus negamax(Ply R = 1_ply); // search with child->depth = depth - R, then apply child search score
     [[nodiscard]] ReturnStatus search();
     [[nodiscard]] ReturnStatus quiescence();
 
-    // promotions to queen, winning or equal captures, plus complex SEE captures
-    [[nodiscard]] ReturnStatus goodCaptures(PiMask);
-    [[nodiscard]] ReturnStatus goodNonCaptures(Pi, Bb moves, Ply R);
-
-    [[nodiscard]] ReturnStatus counterMove();
-    [[nodiscard]] ReturnStatus followMove();
-
+    [[nodiscard]] ReturnStatus searchNullMove();
     [[nodiscard]] ReturnStatus searchMove(Square, Square, Ply R = 1_ply);
-    [[nodiscard]] ReturnStatus searchNullMove(Ply R);
-
-    [[nodiscard]] ReturnStatus searchIfPossible(Square from, Square to, Ply R = 1_ply) {
-        return parent->isPossibleMove(from, to) ? searchMove(from, to, R) : ReturnStatus::Continue;
-    }
 
     [[nodiscard]] ReturnStatus searchIfPossible(HistoryMove move, Ply R = 1_ply) {
         return parent->isPossibleMove(move) ? searchMove(move.from(), move.to(), R) : ReturnStatus::Continue;
     }
 
-    constexpr bool isRoot() const { assert (parent == nullptr || ply > 0_ply); return parent == nullptr; } // ply == 0
-    constexpr bool isPv() const { return ply == plyPv; } // ply == plyPv
-    constexpr bool isCutNode() const { return (+ply - +plyPv) & 1; } // odd (ply - plyPv)
-    constexpr bool isAllNode() const { return !isPv() && !isCutNode(); } // even (plv - plyPv)
-    constexpr Ply depthR() const { assert (!isRoot()); return parent->depth - depth; } // parent->depth - depth
-    Ply adjustDepthR(Ply) const;
+    [[nodiscard]] ReturnStatus searchIfPossible(Square from, Square to, Ply R = 1_ply) {
+        return parent->isPossibleMove(from, to) ? searchMove(from, to, R) : ReturnStatus::Continue;
+    }
 
-    // current node's side to move color
-    constexpr Color colorToMove() const;
+    [[nodiscard]] ReturnStatus goodCaptures(PiMask); // winning promotions to queen, winning or equal captures
+    [[nodiscard]] ReturnStatus goodNonCaptures(Pi, Bb moves, Ply R);
+
+    [[nodiscard]] ReturnStatus counterMove();
+    [[nodiscard]] ReturnStatus followMove();
+    [[nodiscard]] ReturnStatus updatePv();
+
+    void failHigh();
+    void updateHistory(HistoryMove) const;
+
+    constexpr Color colorToMove() const; // current node's side to move color
+    constexpr bool isRoot() const { assert (parent == nullptr || ply > 0_ply); return parent == nullptr; } // ply == 0
+    constexpr bool isPv() const { return ply == pvPly; } // ply == pvPly
+    constexpr bool isCutNode() const { return (+ply - +pvPly) & 1; } // odd (ply - pvPly)
+    constexpr bool isAllNode() const { return !isPv() && !isCutNode(); } // even (plv - pvPly)
+    constexpr Ply currentR() const { assert (!isRoot()); return parent->depth - depth; } // parent->depth - depth
+    Ply finalR(Ply) const;
 
     bool isDrawMaterial() const;
     bool isRepetition() const;
 
     HistoryMove ttMove() const {
-        return ttHit && ttSlot.from() != ttSlot.to() && MY.has(ttSlot.from())
+        return ttHit && ttSlot.hasMove() && MY.has(ttSlot.from())
             ? HistoryMove{MY.typeAt(ttSlot.from()), ttSlot.from(), ttSlot.to()}
             : HistoryMove{}
         ;
     }
 
 public:
-    void assertOk() const {
-        assert (alpha < beta);
-        if (score.any()) {
-            assert (score < beta || bound == FailHigh);
-            assert (alpha <= score || bound == FailLow);
-        }
-        assert (Score{MateLoss} <= alpha);
-        assert (beta <= Score{MateWin});
-    }
-
-    Node (const PositionMoves&, const Uci&);
+    Node (const PositionMoves& _position, const Uci& _uci) : PositionMoves{_position}, root{_uci} {}
     ReturnStatus searchRoot();
 };
 
