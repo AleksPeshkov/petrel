@@ -4,7 +4,7 @@
 #include <atomic>
 #include <chrono>
 #include "io.hpp"
-#include "Index.hpp"
+#include "Score.hpp"
 
 #define RETURN_IF_STOP(visitor) { if (visitor == ReturnStatus::Stop) { return ReturnStatus::Stop; } } ((void)0)
 
