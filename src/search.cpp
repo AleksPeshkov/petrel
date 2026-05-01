@@ -15,15 +15,10 @@ TtSlot::TtSlot (const Node* n) : TtSlot{
     n->canBeKiller
 } {}
 
-Node::Node (const PositionMoves& p, const Uci& r) :
-    PositionMoves{p}, root{r}, parent{nullptr}, grandParent{nullptr}, ply{0}, plyPv{0_ply},
-    alpha{MateLoss}, beta{MateWin}, pvIndex{0}
-{}
-
-Node::Node (const Node* p) :
+Node::Node (Node* p) :
     PositionMoves{}, root{p->root}, parent{p}, grandParent{p->parent},
-    ply{p->ply + 1_ply}, plyPv{p->isPv() ? ply : p->plyPv},
-    alpha{-p->beta}, beta{-p->alpha}, pvIndex{+p->pvIndex+1}
+    ply{p->ply + 1_ply}, pvPly{p->isPv() ? ply : p->pvPly}, pvIndex{+p->pvIndex+1},
+    alpha{-p->beta}, beta{-p->alpha}
 {
     if (grandParent) {
         killer[0] = grandParent->killer[0];
@@ -31,7 +26,17 @@ Node::Node (const Node* p) :
     }
 }
 
-ReturnStatus Node::negamax(Ply R) const {
+void Node::assertOk() const {
+    assert (alpha < beta);
+    if (score.any()) {
+        assert (score < beta || bound == FailHigh);
+        assert (alpha <= score || bound == FailLow);
+    }
+    assert (Score{MateLoss} <= alpha);
+    assert (beta <= Score{MateWin});
+}
+
+ReturnStatus Node::negamax(Ply R) {
     assert (child);
     child->depth = depth - R; //TRICK: Ply >= 0
     /* assert (child->depth >= 0); */
@@ -46,9 +51,10 @@ ReturnStatus Node::negamax(Ply R) const {
             score = childScore;
         }
     } else {
-        // do not use R param as real reduction can be adjusted later
-        auto childR = child->depthR();
+        // do not use R param as actual reduction can differ
+        auto childR = child->currentR();
 
+        // full depth research (unless it was a null move search)
         if (currentMove.any() && childR >= 2_ply) {
             if (child->isPv()) {
                 // rare case (the first move from PV with reduced depth)
@@ -57,7 +63,6 @@ ReturnStatus Node::negamax(Ply R) const {
             } else {
                 assert (child->alpha == child->beta.minus1());
             }
-            // full depth research (unless it was a null move search or leaf node)
             return negamax();
         }
 
@@ -73,7 +78,7 @@ ReturnStatus Node::negamax(Ply R) const {
         assert (currentMove.any()); // null move in PV is not allowed
 
         if (!child->isPv()) {
-            child->plyPv = child->ply;
+            child->pvPly = child->ply;
             assert (child->isPv());
             child->alpha = -beta;
             assert (child->beta == -alpha);
@@ -89,16 +94,16 @@ ReturnStatus Node::negamax(Ply R) const {
 
     // set zero window for the next sibling move search
     child->alpha = child->beta.minus1(); // can be either 1 centipawn or 1 mate distance ply
-    child->plyPv = plyPv;
+    child->pvPly = pvPly;
 
     assert (child->beta == -alpha);
     return ReturnStatus::Continue;
 }
 
 ReturnStatus Node::search() {
-    currentMove = {};
     score = Score{NoScore};
     bound = FailLow;
+    currentMove = {};
     assertOk();
 
     if (moves().popcount() == 0) {
@@ -236,7 +241,7 @@ ReturnStatus Node::search() {
         && MY.material().canNullMove() // avoid null move in late endgame
     ) {
         canBeKiller = false;
-        RETURN_CUTOFF (child->searchNullMove(4_ply + (depth-2_ply)/4));
+        RETURN_CUTOFF (child->searchNullMove());
     }
 
     if (ttHit && ttSlot.hasMove()) {
@@ -377,7 +382,7 @@ ReturnStatus Node::search() {
         }
         // fail low, no good move found, write back previous TT move if any
         currentMove = ttMove();
-        *tt = TtSlot(this);
+        *tt = TtSlot{this};
         ++root.tt.writes;
     }
     return ReturnStatus::Continue;
@@ -488,7 +493,7 @@ ReturnStatus Node::counterMove() {
     assert (parent);
     if (parent->currentMove.any()) {
         for (auto i : range<decltype(root.counterMove)::Index>()) {
-            auto move = root.counterMove.get(i, parent->colorToMove(), parent->currentMove);
+            auto move = root.counterMove.get(i, colorToMove(), parent->currentMove);
             if (move.none()) { break; }
             if (isPossibleMove(move)) {
                 return child->searchMove(move.from(), move.to());
@@ -502,7 +507,7 @@ ReturnStatus Node::counterMove() {
 ReturnStatus Node::followMove() {
     if (grandParent && grandParent->currentMove.any()) {
         for (auto i : range<decltype(root.followMove)::Index>()) {
-            auto move = root.followMove.get(i, grandParent->colorToMove(), grandParent->currentMove);
+            auto move = root.followMove.get(i, colorToMove(), grandParent->currentMove);
             if (move.none()) { break; }
             if (isPossibleMove(move)) {
                 return child->searchMove(move.from(), move.to());
@@ -512,7 +517,7 @@ ReturnStatus Node::followMove() {
     return ReturnStatus::Continue;
 }
 
-ReturnStatus Node::searchNullMove(Ply R) {
+ReturnStatus Node::searchNullMove() {
     RETURN_IF_STOP (root.limits.countNode());
 
     parent->currentMove = {};
@@ -521,7 +526,7 @@ ReturnStatus Node::searchNullMove(Ply R) {
     tt = root.tt.prefetch<TtSlot>(z());
     repHash = {};
 
-    return parent->negamax(R);
+    return parent->negamax(4_ply + (parent->depth-2_ply)/4);
 }
 
 ReturnStatus Node::searchMove(Square from, Square to, Ply R) {
@@ -536,11 +541,10 @@ ReturnStatus Node::searchMove(Square from, Square to, Ply R) {
     else if (grandParent) { repHash = RepHash{grandParent->repHash, grandParent->z()}; }
     else { repHash = root.repetitions.repHash(colorToMove()); }
 
-    R = parent->adjustDepthR(R);
-    return parent->negamax(R);
+    return parent->negamax(parent->finalR(R));
 }
 
-Ply Node::adjustDepthR(Ply R) const {
+Ply Node::finalR(Ply R) const {
     if (R <= 1_ply) { return R; }
     if (inCheck()) { return 1_ply; }
 
@@ -550,7 +554,7 @@ Ply Node::adjustDepthR(Ply R) const {
     return R;
 }
 
-void Node::failHigh() const {
+void Node::failHigh() {
     // currentMove is null (after NMP), write back previous TT move instead
     if (currentMove.none()) {
         currentMove = ttMove();
@@ -567,9 +571,7 @@ void Node::failHigh() const {
     }
 }
 
-ReturnStatus Node::updatePv() const {
-    root.pv.set(pvIndex, uciMove(currentMove.from(), currentMove.to()), &child->pvIndex);
-
+ReturnStatus Node::updatePv() {
     if (depth > 0_ply) {
         bound = ExactScore;
         *tt = TtSlot{this};
@@ -580,7 +582,8 @@ ReturnStatus Node::updatePv() const {
         updateHistory(currentMove);
     }
 
-    if (ply == 0_ply) {
+    root.pv.set(pvIndex, uciMove(currentMove.from(), currentMove.to()), &child->pvIndex);
+    if (isRoot()) {
         const auto& bestMove = root.pv.move(0_ply);
         root.pv.set(depth, score);
 
@@ -603,11 +606,11 @@ void Node::updateHistory(HistoryMove historyMove) const {
     }
 
     if (parent->currentMove.any()) {
-        root.counterMove.set(parent->colorToMove(), parent->currentMove, historyMove);
+        root.counterMove.set(colorToMove(), parent->currentMove, historyMove);
     }
 
     if (grandParent && grandParent->currentMove.any()) {
-        root.followMove.set(grandParent->colorToMove(), grandParent->currentMove, historyMove);
+        root.followMove.set(colorToMove(), grandParent->currentMove, historyMove);
     }
 }
 
