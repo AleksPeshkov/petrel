@@ -100,13 +100,10 @@ class Position {
     template <Side::_t> void updateSliderAttacks(PiMask);
     template <Side::_t> void updateSliderAttacks(PiMask, PiMask);
 
-    enum MakeMoveFlags { WithZobrist = 0b01, WithEval = 0b10, ZobristAndEval = WithZobrist | WithEval };
-    template <Side::_t, MakeMoveFlags> void makeMove(Square, Square);
+    enum MakeMoveFlags { None = 0, WithZobrist = 0b01, WithEval = 0b10, Full = WithZobrist | WithEval };
+    template <Side::_t, MakeMoveFlags> void makeMove(Square, Square, auto&& prefetch);
 
     template <Side::_t> Zobrist generateZobrist() const;
-
-    // update Zobrist key incrementally
-    Zobrist createZobrist(Square, Square) const;
 
     // calculate Zobrist key from scratch
     Zobrist generateZobrist() const;
@@ -134,9 +131,6 @@ protected:
         return opAttackers > myAttackers;
     }
 
-    // update the zobrist hash of incoming move
-    void makeZobrist(const Position* parent, Square from, Square to) { zobrist_ = parent->createZobrist(from, to); }
-
     // update the position without updating the zobrist hash (because it already updated)
     void makeMoveNoZobrist(const Position*, Square, Square);
 
@@ -144,7 +138,8 @@ protected:
     void makeMove(Square, Square);
 
     // update the position and its zobrist hash
-    void makeMove(const Position*, Square, Square);
+    void makeMove(const Position*, Square, Square, auto&& prefetch);
+    void makeMoveNoEval(const Position*, Square, Square, auto&& prefetch);
 
     void makeNullMove(const Position*);
 

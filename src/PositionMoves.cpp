@@ -180,12 +180,6 @@ void PositionMoves::generateMoves() {
     movesMade_ = 0;
 }
 
-void PositionMoves::makeMoveNoZobrist(const PositionMoves* parent, Square from, Square to) {
-    parent->clearMove(from, to);
-    Position::makeMoveNoZobrist(parent, from, to);
-    generateMoves();
-}
-
 bool PositionMoves::isNonCapture(Pi pi, Square to) const {
     // any promotion move, with or without capture (including underpromotion)
     if (MY.isPromotable(pi)) { return false; }
