@@ -2,6 +2,7 @@
 
 #include "bitops128.hpp"
 #include "Uci.hpp"
+#include "Position_impl.hpp"
 
 // unpractical overengineered transposition table replacement scheme only for experiments
 
@@ -313,16 +314,17 @@ ReturnStatus NodePerft::visitMove(Square from, Square to) {
         case 1:
             RETURN_IF_STOP (root.limits.countNode());
             makeMoveNoZobrist(parent, from, to);
+            parent->clearMove(from, to);
+            generateMoves();
             perft = moves().popcount();
             break;
 
         default: {
             assert (depth >= 2_ply);
-            makeZobrist(parent, from, to);
-            root.tt.prefetch(z(), 64);
-
             RETURN_IF_STOP (root.limits.countNode());
-            makeMoveNoZobrist(parent, from, to);
+            makeMoveNoEval(parent, from, to, [&](Z z){ root.tt.prefetch<64>(z); });
+            parent->clearMove(from, to);
+            generateMoves();
 
             perft = static_cast<TtPerft&>(root.tt).get(z(), depth - 2_ply);
 

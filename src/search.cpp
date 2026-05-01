@@ -1,5 +1,6 @@
 #include "search.hpp"
 #include "Uci.hpp"
+#include "Position_impl.hpp"
 
 #define RETURN_CUTOFF(visitor) { ReturnStatus status = visitor; if (status != ReturnStatus::Continue) { return status; }} ((void)0)
 
@@ -528,8 +529,7 @@ ReturnStatus Node::searchMove(Square from, Square to, Ply R) {
 
     parent->clearMove(from, to);
     parent->currentMove = HistoryMove{parent->MY.typeAt(from), from, to};
-    makeMove(parent, from, to);
-    tt = root.tt.prefetch<TtSlot>(z());
+    makeMove(parent, from, to, [&](Z z){ tt = root.tt.prefetch<TtSlot>(z); });
     root.pv.clear(pvIndex);
 
     if (rule50() < 2_ply) { repHash = {}; }

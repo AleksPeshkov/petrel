@@ -28,8 +28,6 @@ protected:
     void setMoves(const PiBbMatrix& moves) { moves_ = moves; movesMade_ = 0; }
     void clearMove(Square from, Square to) const { moves_.clear(MY.pi(from), to); ++movesMade_; }
 
-    void makeMoveNoZobrist(const PositionMoves* parent, Square from, Square to);
-
 public:
     void generateMoves();
 
