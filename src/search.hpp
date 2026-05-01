@@ -6,14 +6,6 @@
 
 class Node;
 
-enum Bound : u8_t {
-    NoBound = 0,
-    FailLow = 0b01, // upper bound
-    FailHigh = 0b10, // lower bound
-    ExactScore = FailLow | FailHigh,
-    BoundMask = 0b11,
-};
-
 // 8 byte, always replace slot, so no age field, only one score, depth and bound flags
 class TtSlot {
     enum {

@@ -169,29 +169,6 @@ public:
     }
 };
 
-// search tree distance in halfmoves
-struct Ply : Index<Ply, 64> {
-    constexpr explicit Ply(_t n) : Index{n > 0 ? n : 0} { assertOk(); }
-    friend constexpr Ply operator""_ply(unsigned long long);
-    friend constexpr Ply operator + (Ply a, Ply b) { return Ply{a.v_ + b.v_}; }
-    friend constexpr Ply operator - (Ply a, Ply b) { return Ply{a.v_ - b.v_}; }
-    friend constexpr Ply operator * (Ply a, int n) { return Ply{a.v_ * n}; }
-    friend constexpr Ply operator / (Ply a, int n) { return Ply{a.v_ / n}; }
-
-    friend ostream& operator << (ostream& os, Ply ply) { return os << ply.v_; }
-
-    friend istream& operator >> (istream& is, Ply& ply) {
-        _t n;
-        auto before = is.tellg();
-        is >> n;
-        if (!isOk(n)) { return io::fail_pos(is, before); }
-        ply = Ply{n};
-        return is;
-    }
-};
-constexpr Ply MaxPly{Ply::last()}; // Ply is limited to [0 .. MaxPly]
-constexpr Ply operator""_ply(unsigned long long n) { return Ply{static_cast<Ply::_t>(n)}; }
-
 enum file_t { FileA, FileB, FileC, FileD, FileE, FileF, FileG, FileH, };
 struct File : Index<File, 8, file_t> {
     using Index::Index;
@@ -305,9 +282,6 @@ public:
     using IndexChar::IndexChar;
     constexpr Color operator ~ () const { return Color{~v_}; }
 };
-
-// color to move of the given ply
-constexpr Color::_t distance(Color c, Ply ply) { return static_cast<Color::_t>((+ply ^ +c) & Color::mask()); }
 
 enum side_to_move_t {
     My, // side to move
