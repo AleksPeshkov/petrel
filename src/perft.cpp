@@ -35,7 +35,7 @@ public:
     void nextAge() { hashAge.nextAge(); }
 
     void newGame() { Tt::newGame(); hashAge = {}; }
-    void newIteration() { Tt::newIteration(); hashAge.nextAge(); }
+    void newIteration() { hashAge.nextAge(); }
 
     node_count_t get(Z, Ply);
     void set(Z, Ply, node_count_t);

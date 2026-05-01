@@ -67,7 +67,6 @@ public:
     void setSize(size_t bytes) { allocate(bytes); }
     void newGame() { zeroFill(); }
     void newSearch() { reads = 0; writes = 0; hits = 0; }
-    void newIteration() const {}
 
     template <size_t Align>
     constexpr void* addr(Z z) const {
