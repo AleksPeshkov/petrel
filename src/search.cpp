@@ -348,10 +348,10 @@ ReturnStatus Node::search() {
     }
 
     if (isRoot()) {
-        canBeKiller = false; // rootBestMoves can be anything
         for (auto move : root.rootBestMoves) {
             if (move.none()) { break; }
-            RETURN_CUTOFF (searchIfPossible(historyMove(move.from(), move.to())));
+            canBeKiller = move.canBeKiller() == CanBeKiller::Yes;
+            RETURN_CUTOFF (searchIfPossible(move));
         }
     }
 
@@ -699,7 +699,7 @@ ReturnStatus Node::updatePv() {
         updateHistory(currentMove);
     }
 
-    auto bestMove = historyMove(currentMove.from(), currentMove.to());
+    auto bestMove = currentMove;
     if (!isRoot()) {
         child->pvIndex = root.pv.set(pvIndex, bestMove, child->pvIndex);
     } else {
@@ -805,7 +805,7 @@ void refreshTtPv(const PositionMoves& p, const PrincipalVariation& pv, const Tt&
         assert ((pos.generateMoves(), pos.isPossibleMove(move)));
 
         auto o = tt.addr<TtSlot>(pos.z());
-        *o = TtSlot{pos.z(), score, ply, ExactScore, depth, TtMove{move.from(), move.to(), CanBeKiller::No}};
+        *o = TtSlot{pos.z(), score, ply, ExactScore, depth, move.ttMove()};
         ++tt.writes;
 
         //we cannot use makeZobrist() because of en passant legality validation
