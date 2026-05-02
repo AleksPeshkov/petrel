@@ -104,6 +104,7 @@ ReturnStatus Node::search() {
     score = Score{NoScore};
     bound = FailLow;
     currentMove = {};
+    canBeKiller = false;
     assertOk();
 
     if (!isRoot()) {
@@ -391,7 +392,7 @@ ReturnStatus Node::search() {
         }
         assert (score.isOk(ply));
         // fail low, no good move found, write back previous TT move if any
-        currentMove = ttMove();
+        setTtMove();
         *tt = TtSlot{this};
         ++root.tt.writes;
     }
@@ -566,7 +567,7 @@ Ply Node::finalR(Ply R) const {
 void Node::failHigh() {
     // currentMove is null (after NMP), write back previous TT move instead
     if (currentMove.none()) {
-        currentMove = ttMove();
+        setTtMove();
     }
 
     assert (score.isOk(ply));
