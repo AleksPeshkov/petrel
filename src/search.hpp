@@ -129,11 +129,16 @@ protected:
     bool isDrawMaterial() const;
     bool isRepetition() const;
 
-    HistoryMove ttMove() const {
-        return ttHit && ttSlot.hasMove() && MY.has(ttSlot.from())
-            ? historyMove(ttSlot.from(), ttSlot.to())
-            : HistoryMove{}
-        ;
+    void setTtMove() {
+        if (ttHit && ttSlot.hasMove()) {
+            assert (MY.has(ttSlot.from()));
+            currentMove = historyMove(ttSlot.from(), ttSlot.to());
+            canBeKiller = ttSlot.canBeKiller();
+        } else {
+            currentMove = {};
+            canBeKiller = false;
+        }
+        assert (currentMove.none() || isPseudoLegal(currentMove));
     }
 
 public:
