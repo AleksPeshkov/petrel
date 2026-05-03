@@ -37,6 +37,19 @@ public:
     // already made moves count
     constexpr MovesNumber movesMade() const { return movesMade_; }
 
+    constexpr HistoryType historyType(Square from, Square to) const {
+        // any pawn move or castling or null move
+        //TRICK: from == to can be either null move or rook underpromotion
+        if (from == to || MY.isPawn(from) || MY.isKing(to)) { return HistoryType{HistoryPawn}; }
+
+        constexpr HistoryType::_t fromPieceType[] = { HistoryQN, HistoryRB, HistoryRB, HistoryQN, HistoryPawn, HistoryKing };
+        return HistoryType{fromPieceType[+MY.typeAt(from)]};
+    }
+
+    constexpr HistoryMove historyMove(Square from, Square to) const {
+        return HistoryMove{from, to, historyType(from, to)};
+    }
+
     // move is legal and not yet made
     bool isPossibleMove(Square from, Square to) const {
         return MY.has(from) && moves_.has(MY.pi(from), to);
@@ -44,7 +57,7 @@ public:
 
     bool isPseudoLegal(HistoryMove move) const {
         if (move.none() || !MY.has(move.from())) { return false; }
-        return move.historyType() == MY.typeAt(move.from());
+        return move.historyType() == historyType(move.from(), move.to());
     }
 
     // move is legal and not yet made

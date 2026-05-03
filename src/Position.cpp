@@ -107,12 +107,7 @@ bool Position::isSpecialMove(Square from, Square to) const {
     }
 
     if (MY.isPawn(MY.pi(from))) {
-        if (from.on(Rank7)) {
-            return true; // pawn promotion
-        }
-        if (from.on(Rank5) && to.on(Rank5)) {
-            return true; // en passant
-        }
+        return true; // pawn promotion
     }
 
     return false; // normal move

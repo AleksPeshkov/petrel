@@ -2,11 +2,17 @@
 
 void test_history_moves() {
     Color c{White};
-    PieceType ty{Knight};
 
     HistoryMoves<2> hm;
-    hm.set(c, HistoryMove{ty, Square{B8}, Square{C6}}, HistoryMove{Pawn, Square{E2}, Square{E4}});
-    assert (( hm.get(HistoryMoves<2>::Index{0}, c, HistoryMove{ty, Square{B8}, Square{C6}}) == HistoryMove{Pawn, Square{E2}, Square{E4}} ));
+    HistoryMove move1{Square{B8}, Square{C6}, HistoryType{HistoryQN}};
+    HistoryMove move2{Square{E2}, Square{E4}, HistoryType{HistoryPawn}};
+    HistoryMove move3{Square{H1}, Square{E1}, HistoryType{HistoryRB}};
+
+    hm.set(c, move1, move2);
+    assert ( hm.get(HistoryMoves<2>::Index{0}, c, move1) == move2);
+    hm.set(c, move1, move3);
+    assert ( hm.get(HistoryMoves<2>::Index{0}, c, move1) == move3);
+    assert ( hm.get(HistoryMoves<2>::Index{1}, c, move1) == move2);
 }
 
 namespace TestHistoryMoves {

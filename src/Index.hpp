@@ -349,15 +349,8 @@ enum class ReturnStatus {
     Cutoff,   // prune current node search (futility or beta cutoff)
 };
 
-enum history_type_t { HistoryRBN, HistoryQueen, HistoryPawn, HistoryKing };
+enum history_type_t { HistoryPawn, HistoryRB, HistoryQN, HistoryKing };
 struct HistoryType; STRUCT_INDEX_ENUM (HistoryType, 4, history_type_t);
-
-constexpr HistoryType historyType(PieceType ty) {
-    constexpr HistoryType::_t fromPieceType[] = { HistoryQueen, HistoryRBN, HistoryRBN, HistoryRBN, HistoryPawn, HistoryKing };
-    return HistoryType{fromPieceType[*ty]};
-}
-
-constexpr bool operator == (PieceType ty, HistoryType ht) { return ::historyType(ty) == ht; }
 
 // HistoryMove { Square to; Square from; HistoryType } (14 bits)
 // Castling encoded as the castling rook moves over own king source square.
@@ -374,16 +367,16 @@ class HistoryMove {
 
 public:
     constexpr HistoryMove() : v_{None} {} // null move
-    constexpr HistoryMove (PieceType ty, Square from, Square to)
-        : v_ {static_cast<_t>(::historyType(ty).pack(ShiftType) | from.pack(ShiftFrom) | to.pack(ShiftTo))}
-    {}
+    constexpr HistoryMove (Square from, Square to, HistoryType historyType)
+        : v_ {static_cast<_t>(from.pack(ShiftFrom) | to.pack(ShiftTo) | historyType.pack(ShiftType))}
+    { assert (v_ == None || +from != 0 || +to != 0); } // check for canonical null move
 
     constexpr bool none() const { return v_ == None; }
     constexpr bool any() const { return !none(); }
 
     constexpr Square from() const { return Square::unpack(v_, ShiftFrom); }
     constexpr Square to() const { return Square::unpack(v_, ShiftTo); }
-    constexpr HistoryType historyType() const { return HistoryType::unpack(v_, ShiftType); }
+    constexpr HistoryType historyType() const { assert (any()); return HistoryType::unpack(v_, ShiftType); }
 
     friend constexpr bool operator == (HistoryMove a, HistoryMove b) { return a.v_ == b.v_; }
 };

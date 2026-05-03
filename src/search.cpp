@@ -182,7 +182,7 @@ ReturnStatus Node::search() {
                 if (ttHasMove) {
                     assert (isPossibleMove(ttFrom, ttTo));
                     canBeKiller = ttSlot.canBeKiller();
-                    currentMove = HistoryMove{MY.typeAt(ttFrom), ttFrom, ttTo};
+                    currentMove = historyMove(ttFrom, ttTo);
                 } else {
                     canBeKiller = false;
                     assert (currentMove.none());
@@ -543,7 +543,7 @@ ReturnStatus Node::searchMove(Square from, Square to, Ply R) {
     RETURN_IF_STOP (root.limits.countNode());
 
     parent->clearMove(from, to);
-    parent->currentMove = HistoryMove{parent->MY.typeAt(from), from, to};
+    parent->currentMove = parent->historyMove(from, to);
     makeMove(parent, from, to, [&](Z z){ tt = root.tt.prefetch<TtSlot>(z); });
     root.pv.clear(pvIndex);
 
