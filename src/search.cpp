@@ -93,10 +93,8 @@ TtSlot::TtSlot (const Node* n) : TtSlot{
     n->ply,
     n->bound,
     n->depth,
-    n->currentMove.from(),
-    n->currentMove.to(),
-    n->canBeKiller
-} {}
+    n->currentMove.ttMove()
+} { assert (n->canBeKiller == (n->currentMove.any() && n->currentMove.canBeKiller() == CanBeKiller::Yes)); }
 
 Node::Node (Node* p) :
     PositionMoves{}, root{p->root}, parent{p}, grandParent{p->parent},
@@ -249,10 +247,8 @@ ReturnStatus Node::search() {
             break;
         }
 
-        bool ttHasMove = ttSlot.hasMove();
-        Square ttFrom = ttSlot.from();
-        Square ttTo = ttSlot.to();
-        if (ttHasMove && !isPossibleMove(ttFrom, ttTo)) {
+        auto ttMove = ttSlot.ttMove();
+        if (ttMove.any() && !isPossibleMove(ttMove.from(), ttMove.to())) {
             // collision
             ttHit = false;
             break;
@@ -267,12 +263,12 @@ ReturnStatus Node::search() {
             ) {
                 score = ttScore;
                 bound = ttBound;
-                if (ttHasMove) {
-                    assert (isPossibleMove(ttFrom, ttTo));
-                    canBeKiller = ttSlot.canBeKiller();
-                    currentMove = historyMove(ttFrom, ttTo);
+                if (ttMove.any()) {
+                    assert (isPossibleMove( ttMove.from(), ttMove.to() ));
+                    canBeKiller = ttMove.canBeKiller() == CanBeKiller::Yes;
+                    currentMove = historyMove(ttMove);
                 } else {
-                    canBeKiller = false;
+                    assert (!canBeKiller);
                     assert (currentMove.none());
                 }
                 return ReturnStatus::Cutoff;
@@ -346,16 +342,16 @@ ReturnStatus Node::search() {
         }
     }
 
-    if (ttHit && ttSlot.hasMove()) {
-        canBeKiller = ttSlot.canBeKiller();
-        RETURN_CUTOFF (searchMove(ttSlot.from(), ttSlot.to()));
+    if (ttHit && ttSlot.ttMove().any()) {
+        canBeKiller = ttSlot.ttMove().canBeKiller() == CanBeKiller::Yes;
+        RETURN_CUTOFF (searchMove( historyMove(ttSlot.ttMove()) ));
     }
 
     if (isRoot()) {
         canBeKiller = false; // rootBestMoves can be anything
         for (auto move : root.rootBestMoves) {
             if (move.none()) { break; }
-            RETURN_CUTOFF (searchIfPossible(move.from(), move.to()));
+            RETURN_CUTOFF (searchIfPossible(historyMove(move.from(), move.to())));
         }
     }
 
@@ -555,7 +551,7 @@ ReturnStatus Node::goodCaptures(PiMask victims) {
         for (Square to : queenPromos) {
             if (!safeForOp(to) || OP.bbSide().has(~to)) {
                 // move to safe square or always good promotion with capture
-                RETURN_CUTOFF (searchMove(from, to));
+                RETURN_CUTOFF (searchMove(from, to, 1_ply, CanBeKiller::No));
             }
         }
     }
@@ -585,7 +581,7 @@ ReturnStatus Node::goodCaptures(PiMask victims) {
             // LVA (least valuable attacker) order
             Pi pi = attackers.piLast(); attackers -= PiMask{pi};
             Square from{MY.sq(pi)};
-            RETURN_CUTOFF (searchMove(from, to));
+            RETURN_CUTOFF (searchMove(from, to, 1_ply, CanBeKiller::No));
         }
     }
 
@@ -600,7 +596,7 @@ ReturnStatus Node::counterMove() {
             auto move = root.counterMove.get(i, colorToMove(), parent->currentMove);
             if (move.none()) { break; }
             if (isPossibleMove(move)) {
-                return searchMove(move.from(), move.to());
+                return searchMove(move);
             }
         }
     }
@@ -614,7 +610,7 @@ ReturnStatus Node::followMove() {
             auto move = root.followMove.get(i, colorToMove(), grandParent->currentMove);
             if (move.none()) { break; }
             if (isPossibleMove(move)) {
-                return searchMove(move.from(), move.to());
+                return searchMove(move);
             }
         }
     }
@@ -624,6 +620,7 @@ ReturnStatus Node::followMove() {
 ReturnStatus Node::searchNullMove() {
     RETURN_IF_STOP (root.limits.countNode());
 
+    //TRICK: null move not counted as movesMade()
     currentMove = {};
     child->childNullMove();
 
@@ -636,10 +633,17 @@ void Node::childNullMove() {
     zHash = {};
 }
 
-ReturnStatus Node::searchMove(Square from, Square to, Ply R) {
+ReturnStatus Node::searchMove(HistoryMove move, Ply R) {
     RETURN_IF_STOP (root.limits.countNode());
 
-    currentMove = historyMove(from, to);
+    assert (move.any());
+    assert (isPseudoLegal(move));
+    assert (isPossibleMove(move));
+
+    Square from{move.from()};
+    Square to{move.to()};
+
+    currentMove = move;
     clearMove(from, to);
     child->childMove(from, to);
 
@@ -797,10 +801,11 @@ void refreshTtPv(const PositionMoves& p, const PrincipalVariation& pv, const Tt&
 
     for (HistoryMove move; (move = *pmoves++).any();) {
         assert (score.isOk(ply));
+        assert (pos.isPseudoLegal(move));
         assert ((pos.generateMoves(), pos.isPossibleMove(move)));
 
         auto o = tt.addr<TtSlot>(pos.z());
-        *o = TtSlot{pos.z(), score, ply, ExactScore, depth, move.from(), move.to(), false};
+        *o = TtSlot{pos.z(), score, ply, ExactScore, depth, TtMove{move.from(), move.to(), CanBeKiller::No}};
         ++tt.writes;
 
         //we cannot use makeZobrist() because of en passant legality validation

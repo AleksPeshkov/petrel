@@ -43,7 +43,8 @@ public:
     constexpr MovesNumber movesMade() const { return movesMade_; }
 
     constexpr HistoryType historyType(Square from, Square to) const { return MY.historyType(from, to); }
-    constexpr HistoryMove historyMove(Square from, Square to) const { return HistoryMove{from, to, historyType(from, to)}; }
+    constexpr HistoryMove historyMove(TtMove ttMove) const { return HistoryMove{ttMove, historyType(ttMove.from(), ttMove.to())}; }
+    constexpr HistoryMove historyMove(Square from, Square to, CanBeKiller _canBeKiller = CanBeKiller::No) const { return historyMove(TtMove{from, to, _canBeKiller}); }
     constexpr bool isPseudoLegal(HistoryMove move) const { return MY.isPseudoLegal(move); }
 
     // move is legal and not yet made

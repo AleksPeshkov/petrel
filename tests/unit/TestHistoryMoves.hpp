@@ -17,7 +17,7 @@ HistoryMove randomMove() {
         int ht = std::uniform_int_distribution<int>(0, 3)(seed);
         return HistoryType{static_cast<HistoryType::_t>(ht)};
     };
-    return HistoryMove{sq(), sq(), ht()};
+    return HistoryMove{TtMove{sq(), sq(), CanBeKiller::Yes}, ht()};
 }
 
 // -----------------------------------------------------------------------------
