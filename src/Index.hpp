@@ -371,41 +371,13 @@ public:
     constexpr Square from() const { return Square::unpack(v_, ShiftFrom); }
     constexpr Square to() const { return Square::unpack(v_, ShiftTo); }
     constexpr HistoryType historyType() const { assert (any()); return HistoryType::unpack(v_, ShiftType); }
+    constexpr bool isSpecial() const { return historyType().is(HistorySpecial); }
 
     constexpr explicit operator bool() const { return any(); }
     friend constexpr bool operator == (HistoryMove a, HistoryMove b) { return a.v_ == b.v_; }
 };
 
 static_assert (sizeof(HistoryMove) == sizeof(u16_t));
-
-// Position independent move is 13 bits with the special move type flag to mark either castling, promotion or en passant move
-// Any move's squares coordinates are relative to its side. Black side's move should flip squares before printing.
-class UciMove {
-    using _t = u16_t;
-
-    enum { ShiftTo = 0, ShiftFrom = ShiftTo + Square::bit_width(), ShiftSpecial = ShiftFrom + Square::bit_width()};
-    static constexpr _t NoMove{0};
-
-    _t v_;
-
-public:
-    constexpr UciMove() : v_{NoMove} {} // null move
-    constexpr UciMove (Square from, Square to, bool special)
-        : v_ {static_cast<_t>(from.pack(ShiftFrom) | to.pack(ShiftTo) | ::pack(special, ShiftSpecial))}
-    {}
-
-    constexpr bool none() const { return v_ == NoMove; }
-    constexpr bool any() const { return !none(); }
-
-    constexpr Square from() const { return Square::unpack(v_, ShiftFrom); }
-    constexpr Square to() const { return Square::unpack(v_, ShiftTo); }
-    constexpr bool isSpecial() const { return ::unpack(v_, ShiftSpecial, true); }
-
-    constexpr explicit operator bool() const { return any(); }
-    friend constexpr bool operator == (UciMove a, UciMove b) { return a.v_ == b.v_; }
-};
-
-static_assert (sizeof(UciMove) == sizeof(u16_t));
 
 class Z {
 public:

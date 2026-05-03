@@ -40,8 +40,9 @@ Abbreviations in the code:
 * `Bb bb`: BitBoard – a well-known 64-bit bitset representing squares on the chessboard.
 * Variables of type `Bb` and functions that return `Bb` often have `bb` prefix, example: `Bb bb = bbPawns()`
 * `Side side`: `{My, Op}` – side to move and opposite side.
-* `Color color`: `{White, Black}` – rarely used, but required for correct output of internal moves in standard chess notation.
-* `PieceType ty`: `{Queen = 0, Rook = 1, Bishop = 2, Knight = 3, Pawn = 4, King = 5}` – type of possible chess piece.
+* `Color color`: `{White, Black}` – rarely internally used, required for correct output of internal moves in standard chess notation.
+* `PieceType ty`: `{Queen = 0, Rook = 1, Bishop = 2, Knight = 3, Pawn = 4, King = 5}` chess pieces types.
+* `HistoryType ht`: encoding of both PieceType and MoveType: `HistorySpecial` tag used for any pawn move, castling and null move.
 * `Pi pi`: Piece Index – one of 16 piece slots in a byte vector; `{TheKing = 0}` is the slot dedicated to the king.
 * Variables of type `Square` functions that return type `Square` generally named `sq()` or have `sq` prefix.
 * Variables of type `Pi` and functions that return type `Pi` generally named `pi()` or have `pi` prefix, example: `Pi pi = this->pi(Square sq)`
@@ -52,14 +53,6 @@ Abbreviations in the code:
 * `PiType`: each piece type is represented as a separate bit, enabling quick grouping by criteria.
 * `PiTrait`: castling and en passant statuses, plus temporary information like currently checking pieces.
 * `PiBb`: vector of Bb x Pi, for incremental attacks and moves generated from attacks.
-
-Move Encoding
--------------
-
-* Internal minimal move representation tied to current Node: `{Pi, Square to}`
-* Transposition friendly minimal encoding: `{Square from, Square to}`
-* `class HistoryMove`: extra field to distinguish minimal encoded moves: {PieceType, Square from, Square to}
-* `classUciMove`: encoding to convert internal move to UCI format independend from Position it is possible to make
 
 Universal Chess Interface (UCI) Extensions
 ------------------------------------------
