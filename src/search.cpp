@@ -10,7 +10,7 @@ TtSlot::TtSlot (const Node* n) : TtSlot{
     n->ply,
     n->bound,
     n->depth,
-    TtMove{n->currentMove}
+    TtMove{n->bestMove}
 } {}
 
 Node::Node (Node* p) :
@@ -87,6 +87,7 @@ ReturnStatus Node::negamax(Ply R) {
         score = childScore;
         alpha = childScore;
         child->beta = -alpha;
+        bestMove = currentMove;
         RETURN_IF_STOP (updatePv());
     }
 
@@ -102,6 +103,7 @@ ReturnStatus Node::search() {
     score = Score{NoScore};
     bound = FailLow;
     currentMove = {};
+    bestMove = {};
     assertOk();
 
     if (!isRoot()) {
@@ -144,7 +146,7 @@ ReturnStatus Node::search() {
         }
 
         ++root.tt.reads;
-        ttSlot = *tt;
+        auto ttSlot = *tt; // copy full TT entry
 
         ttHit = (ttSlot == z());
         if (!ttHit) {
@@ -159,12 +161,17 @@ ReturnStatus Node::search() {
             break;
         }
 
-        auto ttMove = ttSlot.ttMove();
-        if (ttMove.any() && !isPossibleMove(ttMove.from(), ttMove.to())) {
-            // collision
-            ttHit = false;
-            break;
+        if (ttSlot.ttMove().any()) {
+            auto ttMove = ttSlot.ttMove();
+            if (!isPossibleMove(ttMove.from(), ttMove.to())) {
+                // unlikely collision
+                ttHit = false;
+                assert (bestMove.none());
+                break;
+            }
+            bestMove = historyMove(ttMove);
         }
+        assert (bestMove.none() || isPossibleMove(bestMove));
 
         ++root.tt.hits;
 
@@ -175,12 +182,6 @@ ReturnStatus Node::search() {
             ) {
                 score = ttScore;
                 bound = ttBound;
-                if (ttMove.any()) {
-                    assert (isPossibleMove( ttMove.from(), ttMove.to() ));
-                    currentMove = historyMove(ttMove);
-                } else {
-                    assert (currentMove.none());
-                }
                 return ReturnStatus::Cutoff;
             }
         }
@@ -245,8 +246,9 @@ ReturnStatus Node::search() {
         }
     }
 
-    if (ttHit && ttSlot.ttMove().any()) {
-        RETURN_CUTOFF (child->searchMove( historyMove(ttSlot.ttMove()) ));
+    // trying TT move first
+    if (bestMove.any()) {
+        RETURN_CUTOFF (child->searchMove(bestMove));
     }
 
     if (isRoot()) {
@@ -379,8 +381,6 @@ ReturnStatus Node::search() {
             return ReturnStatus::Continue;
         }
         assert (score.isOk(ply));
-        // fail low, no good move found, write back previous TT move if any
-        setTtMove();
         *tt = TtSlot{this};
         ++root.tt.writes;
     }
@@ -561,9 +561,9 @@ Ply Node::finalR(Ply R) const {
 }
 
 void Node::failHigh() {
-    // currentMove is null (after NMP), write back previous TT move instead
-    if (currentMove.none()) {
-        setTtMove();
+    if (currentMove.any()) {
+        // currentMove is null (after NMP), write back previous TT move instead
+        bestMove = currentMove;
     }
 
     assert (score.isOk(ply));
@@ -573,13 +573,13 @@ void Node::failHigh() {
         ++root.tt.writes;
     }
 
-    if (currentMove.any()) {
-        updateHistory(currentMove);
+    if (bestMove.any()) {
+        updateHistory(bestMove);
     }
 }
 
 ReturnStatus Node::updatePv() {
-    assert (isPseudoLegal(currentMove));
+    assert (isPseudoLegal(bestMove));
 
     if (depth > 0_ply) {
         bound = ExactScore;
@@ -587,9 +587,8 @@ ReturnStatus Node::updatePv() {
         ++root.tt.writes;
     }
 
-    updateHistory(currentMove);
+    updateHistory(bestMove);
 
-    auto bestMove = currentMove;
     if (!isRoot()) {
         child->pvIndex = root.pv.set(pvIndex, bestMove, child->pvIndex);
     } else {

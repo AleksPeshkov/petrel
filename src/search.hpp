@@ -89,7 +89,6 @@ protected:
     ZHash zHash{}; // mini-hash of all previous reversible positions zobrist keys
     TtSlot* tt{nullptr}; // pointer to the slot in TT
     bool ttHit{false}; // this node found in TT
-    TtSlot ttSlot; //TODO: remove me
 
     Ply ply{0}; // distance from root (root is ply == 0)
     Ply pvPly{0}; // ply of nearest PV node, if pvPly == ply, this is PV node
@@ -103,6 +102,7 @@ protected:
     Bound bound{FailLow}; // default FailLow, until Exact or FailHigh move will be found later
 
     HistoryMove currentMove{}; // last move made from *this into *child
+    HistoryMove bestMove{}; // TtMove or best move found
     mutable std::array<HistoryMove, 3> killer{}; // Killer heuristic, mutable to update from const* grandParent
 
 public:
@@ -150,16 +150,6 @@ protected:
 
     bool isDrawMaterial() const;
     bool isRepetition() const;
-
-    void setTtMove() {
-        if (ttHit && ttSlot.ttMove().any()) {
-            assert (MY.has(ttSlot.ttMove().from()));
-            currentMove = historyMove(ttSlot.ttMove());
-        } else {
-            currentMove = {};
-        }
-        assert (currentMove.none() || isPseudoLegal(currentMove));
-    }
 };
 
 class Tt;
