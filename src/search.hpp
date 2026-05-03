@@ -119,11 +119,8 @@ protected:
 
     [[nodiscard]] ReturnStatus searchNullMove();
     [[nodiscard]] ReturnStatus searchMove(HistoryMove, Ply R = 1_ply);
-    [[nodiscard]] ReturnStatus searchMove(Square from, Square to, Ply R, CanBeKiller _canBeKiller) {
+    [[nodiscard]] ReturnStatus searchMove(Square from, Square to, Ply R, CanBeKiller _canBeKiller = CanBeKiller::Yes) {
         return searchMove(parent->historyMove(from, to, _canBeKiller), R);
-    }
-    [[nodiscard]] ReturnStatus searchMove(Square from, Square to, Ply R) {
-        return searchMove(from, to, R, !parent->inCheck() ? CanBeKiller::Yes : CanBeKiller::No);
     }
 
     [[nodiscard]] ReturnStatus searchIfPossible(HistoryMove move, Ply R = 1_ply) {
