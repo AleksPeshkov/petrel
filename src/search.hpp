@@ -131,7 +131,7 @@ protected:
 
     HistoryMove ttMove() const {
         return ttHit && ttSlot.hasMove() && MY.has(ttSlot.from())
-            ? HistoryMove{MY.typeAt(ttSlot.from()), ttSlot.from(), ttSlot.to()}
+            ? historyMove(ttSlot.from(), ttSlot.to())
             : HistoryMove{}
         ;
     }

@@ -40,20 +40,15 @@ public:
     // count of already made legal (non-null) moves
     constexpr MovesNumber movesMade() const { return movesMade_; }
 
-    // move is legal and not yet made
-    bool isPossibleMove(Square from, Square to) const {
-        return MY.has(from) && moves_.has(MY.pi(from), to);
-    }
-
-    bool isPseudoLegal(HistoryMove move) const {
-        if (move.none() || !MY.has(move.from())) { return false; }
-        return move.historyType() == MY.typeAt(move.from());
-    }
+    constexpr HistoryType historyType(Square from, Square to) const { return MY.historyType(from, to); }
+    constexpr HistoryMove historyMove(Square from, Square to) const { return HistoryMove{from, to, historyType(from, to)}; }
+    constexpr bool isPseudoLegal(HistoryMove move) const { return MY.isPseudoLegal(move); }
 
     // move is legal and not yet made
-    bool isPossibleMove(HistoryMove move) const {
-        return isPseudoLegal(move) && isPossibleMove(move.from(), move.to());
-    }
+    constexpr bool isPossibleMove(Square from, Square to) const { return MY.has(from) && moves_.has(MY.pi(from), to); }
+
+    // move is legal and not yet made
+    constexpr bool isPossibleMove(HistoryMove move) const { return isPseudoLegal(move) && isPossibleMove(move.from(), move.to()); }
 
     // nor capture nor promotion move
     constexpr bool isQuietMove(Pi pi, Square to) const { return !MY.isPromotable(pi) && !OP.bbSide().has(~to); }

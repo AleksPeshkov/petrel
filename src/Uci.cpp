@@ -200,14 +200,13 @@ UciOutput& operator << (UciOutput& ob, UciMove move) {
     }
 
     // en passant capture
-    if (from.on(Rank5)) {
+    if (from.on(Rank5) && to.on(Rank5)) {
         // en passant capture move internally encoded as pawn captures pawn
-        assert (to.on(Rank5));
         ob << uciFrom << Square{to.file(), isWhite ? Rank6 : Rank3};
         return ob;
     }
 
-    // castling
+    //TRICK: castling is "pawn" move as it needs special handling
     if (from.on(Rank1)) {
         // castling move internally encoded as the rook captures own king
 
@@ -221,10 +220,8 @@ UciOutput& operator << (UciOutput& ob, UciMove move) {
         return ob;
     }
 
-    // should never happen
-    assert (false);
-    io::error("invalid move in UCI output");
-    ob << "0000";
+    // all the rest pawn moves have MoveType::Special
+    ob << uciFrom << uciTo;
     return ob;
 }
 

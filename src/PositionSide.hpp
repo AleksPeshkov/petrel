@@ -119,6 +119,24 @@ public:
     constexpr PiMask pinners() const { return traits.pinners(); }
     bool isPinned(Bb) const;
 
+    constexpr HistoryType historyType(Square from, Square to) const {
+        // any pawn move or castling or null move
+        //TRICK: from == to can be either null move or rook underpromotion
+        if (from == to || isPawn(from) || isKing(to)) { return HistoryType{HistorySpecial}; }
+
+        constexpr HistoryType::_t fromPieceType[] = { HistoryQN, HistoryRB, HistoryRB, HistoryQN, HistorySpecial, HistoryKing };
+        return HistoryType{fromPieceType[+typeAt(from)]};
+    }
+
+    constexpr bool isPseudoLegal(HistoryMove move) const {
+        if (move.none()) { return false; }
+
+        Square from{move.from()};
+        Square to{move.to()};
+
+        return has(from) && move.historyType() == historyType(from, to);
+    }
+
 //friend class Position;
     static void swap(PositionSide&, PositionSide&);
 
