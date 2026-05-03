@@ -346,28 +346,97 @@ enum class ReturnStatus {
 enum history_type_t { HistorySpecial, HistoryRB, HistoryQN, HistoryKing };
 struct HistoryType : Index<HistoryType, 4, history_type_t> { using Index::Index; };
 
-// HistoryMove { Square to; Square from; HistoryType } (14 bits)
+enum class CanBeKiller { No, Yes }; // No = 0, Yes = 1
+
+// 13 bits
+struct TtMove {
+public:
+    using _t = u16_t;
+
+private:
+    enum { ShiftTo = 0, ShiftFrom = ShiftTo + Square::bit_width(), ShiftKiller = ShiftFrom + Square::bit_width()};
+
+#ifndef NDEBUG
+    union {
+        _t v_;
+        struct PACKED {
+            Square::_t to_ : Square::bit_width();
+            Square::_t from_ : Square::bit_width();
+            CanBeKiller canBeKiller_ : 1;
+        } u;
+    };
+#else
+    _t v_;
+#endif
+
+public:
+    static constexpr _t null() { return 0; } // null move
+    static constexpr int bit_width() { return 13; }
+    static constexpr _t mask() { return static_cast<_t>(::singleton<unsigned>(bit_width()) - 1u); }
+
+    constexpr TtMove () : v_{null()} {} // null move
+    constexpr explicit TtMove (int n) : v_{static_cast<_t>(n & mask())} { assertOk(); }
+
+    constexpr TtMove (Square from, Square to, CanBeKiller canBeKiller)
+        : v_ {static_cast<_t>(to.pack(ShiftTo) | from.pack(ShiftFrom) | ::pack(canBeKiller, ShiftKiller))}
+    { assertOk(); }
+
+    constexpr _t operator * () const { return v_; }
+
+    constexpr void assertOk() const { assert (v_ == null() || +from() != 0 || +to() != 0); } // check for canonical null move
+    constexpr bool none() const { return v_ == null(); }
+    constexpr bool any() const { return !none(); }
+
+    constexpr Square from() const { assert (any()); return Square::unpack(v_, ShiftFrom); }
+    constexpr Square to() const { assert (any()); return Square::unpack(v_, ShiftTo); }
+    constexpr CanBeKiller canBeKiller() const { assert (any()); return ::unpack(v_, ShiftKiller, CanBeKiller::Yes); }
+
+    friend constexpr bool operator == (TtMove a, TtMove b) { return a.v_ == b.v_; }
+};
+
+static_assert (sizeof(TtMove) == sizeof(u16_t));
+
+// HistoryMove { Square to:6; Square from:6; CanBeKiller:1; HistoryType:2; MoveType:1 } (15 bits)
+// Any move's squares coordinates are relative to its side. Black side's move should flip squares before printing.
+// moveType == Special for castling moves and for any pawn move
 // Castling encoded as the castling rook moves over own king source square.
 // Pawn promotion piece type encoded in place of destination square rank.
 // En passant capture encoded as the pawn moves over captured pawn square.
 // Null move is encoded as 0 {A8A8}
 class HistoryMove {
-    enum { ShiftTo = 0, ShiftFrom = ShiftTo + Square::bit_width(), ShiftType = ShiftFrom + Square::bit_width()};
+    enum { ShiftTo = 0, ShiftFrom = ShiftTo + Square::bit_width(), ShiftKiller = ShiftFrom + Square::bit_width(), ShiftType = ShiftKiller + 1};
     using _t = u16_t;
 
+#ifndef NDEBUG
+    union {
+        _t v_;
+        struct PACKED {
+            Square::_t to_ : Square::bit_width();
+            Square::_t from_ : Square::bit_width();
+            CanBeKiller canBeKiller_ : 1;
+            history_type_t historyType_ : HistoryType::bit_width();
+        } u;
+    };
+#else
     _t v_;
+#endif
+
 public:
     static constexpr _t null() { return 0; } // null move
     constexpr HistoryMove() : v_{null()} {}
-    constexpr HistoryMove (Square from, Square to, HistoryType historyType)
-        : v_ {static_cast<_t>(from.pack(ShiftFrom) | to.pack(ShiftTo) | historyType.pack(ShiftType))}
-    { assert (v_ == null() || +from != 0 || +to != 0); } // check for canonical null move
+    constexpr HistoryMove (TtMove ttMove, HistoryType historyType)
+        : v_{static_cast<_t>(*ttMove | historyType.pack(ShiftType))}
+    { assertOk(); }
 
+    constexpr TtMove ttMove() const { return TtMove{v_}; }
+
+    constexpr void assertOk() const { assert (v_ == null() || +from() != 0 || +to() != 0); } // check for canonical null move
     constexpr bool none() const { return v_ == null(); }
     constexpr bool any() const { return !none(); }
 
-    constexpr Square from() const { return Square::unpack(v_, ShiftFrom); }
-    constexpr Square to() const { return Square::unpack(v_, ShiftTo); }
+    constexpr Square from() const { assert (any()); return Square::unpack(v_, ShiftFrom); }
+    constexpr Square to() const { assert (any()); return Square::unpack(v_, ShiftTo); }
+    constexpr CanBeKiller canBeKiller() const { assert (any()); return ::unpack(v_, ShiftKiller, CanBeKiller::Yes); }
     constexpr HistoryType historyType() const { assert (any()); return HistoryType::unpack(v_, ShiftType); }
     constexpr bool isSpecial() const { return historyType().is(HistorySpecial); }
 

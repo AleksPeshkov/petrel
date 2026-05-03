@@ -15,34 +15,56 @@ class TtSlot {
         ShiftTo = ShiftDraft + Ply::bit_width(),
         ShiftFrom = ShiftTo + Square::bit_width(),
         ShiftKiller = ShiftFrom + Square::bit_width(),
+        ShiftMove = ShiftTo,
         TotalBits = ShiftKiller + 1, // total size of all data fields
         ZBits = 64 - TotalBits, // size of zobrist bitfield
     };
 
     using _t = u64_t;
+
+#ifndef NDEBUG
+    union {
+        _t v_;
+        struct PACKED {
+            Score::_t score_ :Score::bit_width();
+            Bound bound_ : 2;
+            Ply::_t draft_ : Ply::bit_width();
+            Square::_t to_ : Square::bit_width();
+            Square::_t from_ : Square::bit_width();
+            CanBeKiller killer_ : 1;
+            Z::_t z_ : ZBits;
+        } u;
+    };
+    static_assert (sizeof(u) == sizeof(v_));
+#else
     _t v_;
+#endif
+
     static constexpr _t ZMask{ U64(0xffff'ffff'ffff'ffff) << (64 - ZBits) };
 
 public:
     constexpr TtSlot () : v_{0} {}
 
     constexpr TtSlot (Z z,
-        Score score,
-        Ply ply,
-        Bound bound,
-        Ply draft,
-        Square from,
-        Square to,
-        bool canBeKiller
+        Score _score,
+        Ply _ply,
+        Bound _bound,
+        Ply _draft,
+        TtMove _ttMove
     ) : v_{
         (z & ZMask)
-        | pack<_t>(score.tt(ply), ShiftScore)
-        | pack<_t>(bound, ShiftBound)
-        | draft.pack<_t>(ShiftDraft)
-        | from.pack<_t>(ShiftFrom)
-        | to.pack<_t>(ShiftTo)
-        | pack<_t>(canBeKiller, ShiftKiller)
-    } { static_assert (sizeof(TtSlot) == sizeof(u64_t)); }
+        | pack<_t>(_score.tt(_ply), ShiftScore)
+        | pack<_t>(_bound, ShiftBound)
+        | _draft.pack<_t>(ShiftDraft)
+        | pack<_t>(*_ttMove, ShiftMove)
+    } {
+        static_assert (sizeof(TtSlot) == sizeof(u64_t));
+
+        assert (score(_ply) == _score);
+        assert (bound() == _bound);
+        assert (draft() == _draft);
+        assert (ttMove() == _ttMove);
+    }
 
     TtSlot (const Node* node);
     constexpr bool operator == (Z z) const { return (v_ & ZMask) == (z & ZMask); }
@@ -50,11 +72,7 @@ public:
     constexpr Score score(Ply ply) const { return Score::fromTt(::unpack(v_, ShiftScore, Score::mask()), ply); }
     constexpr Bound bound() const { return ::unpack(v_, ShiftBound, BoundMask); }
     constexpr Ply draft() const { return Ply::unpack(v_, ShiftDraft); }
-
-    constexpr bool hasMove() const { return !(+from() == 0 && +to() == 0); }
-    constexpr Square from() const { return Square::unpack(v_, ShiftFrom); }
-    constexpr Square to() const { return Square::unpack(v_, ShiftTo); }
-    constexpr bool canBeKiller() const { return ::unpack(v_, ShiftKiller, true); }
+    constexpr TtMove ttMove() const { return TtMove{::unpack(v_, ShiftMove, TtMove::mask())}; }
 };
 
 class Uci;
@@ -96,14 +114,18 @@ protected:
     [[nodiscard]] ReturnStatus quiescence();
 
     [[nodiscard]] ReturnStatus searchNullMove();
-    [[nodiscard]] ReturnStatus searchMove(Square, Square, Ply R = 1_ply);
-
-    [[nodiscard]] ReturnStatus searchIfPossible(HistoryMove move, Ply R = 1_ply) {
-        return isPossibleMove(move) ? searchMove(move.from(), move.to(), R) : ReturnStatus::Continue;
+    [[nodiscard]] ReturnStatus searchMove(HistoryMove, Ply R = 1_ply);
+    [[nodiscard]] ReturnStatus searchMove(Square from, Square to, Ply R, CanBeKiller _canBeKiller) {
+        assert (canBeKiller == (_canBeKiller == CanBeKiller::Yes));
+        return searchMove(historyMove(from, to, _canBeKiller), R);
+    }
+    [[nodiscard]] ReturnStatus searchMove(Square from, Square to, Ply R) {
+        assert (canBeKiller == !inCheck());
+        return searchMove(from, to, R, !inCheck() ? CanBeKiller::Yes : CanBeKiller::No);
     }
 
-    [[nodiscard]] ReturnStatus searchIfPossible(Square from, Square to, Ply R = 1_ply) {
-        return isPossibleMove(from, to) ? searchMove(from, to, R) : ReturnStatus::Continue;
+    [[nodiscard]] ReturnStatus searchIfPossible(HistoryMove move, Ply R = 1_ply) {
+        return isPossibleMove(move) ? searchMove(move, R) : ReturnStatus::Continue;
     }
 
     [[nodiscard]] ReturnStatus goodCaptures(PiMask); // winning promotions to queen, winning or equal captures
@@ -130,10 +152,10 @@ protected:
     bool isRepetition() const;
 
     void setTtMove() {
-        if (ttHit && ttSlot.hasMove()) {
-            assert (MY.has(ttSlot.from()));
-            currentMove = historyMove(ttSlot.from(), ttSlot.to());
-            canBeKiller = ttSlot.canBeKiller();
+        if (ttHit && ttSlot.ttMove().any()) {
+            assert (MY.has(ttSlot.ttMove().from()));
+            currentMove = historyMove(ttSlot.ttMove());
+            canBeKiller = ttSlot.ttMove().canBeKiller() == CanBeKiller::Yes;
         } else {
             currentMove = {};
             canBeKiller = false;

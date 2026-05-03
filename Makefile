@@ -49,11 +49,11 @@ endif
 
 ifeq ($(CXX), clang++)
 	BUILD_FLAGS += -fconstexpr-steps=10000000 -Winline
-	WARNINGS += -Wcast-align -Wconditional-uninitialized -Wmissing-prototypes
+	WARNINGS += -Wcast-align -Wconditional-uninitialized -Wmissing-prototypes -Wno-nested-anon-types
 else ifeq ($(CXX), g++)
 	BUILD_FLAGS += -flto=auto --param inline-unit-growth=100 --param max-inline-insns-single=1000
 	CXXFLAGS += -flax-vector-conversions
-	WARNINGS += -Wno-class-memaccess
+	WARNINGS += -Wno-class-memaccess -Wno-packed-bitfield-compat
 	WARNINGS += -Wuseless-cast -Wcast-align=strict -Wsuggest-final-types -Wsuggest-final-methods -Wlogical-op
 	WARNINGS += -Wnormalized -Wunsafe-loop-optimizations -Wvector-operation-performance
 endif

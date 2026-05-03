@@ -8,6 +8,7 @@
 #include "common.hpp"
 
 #define CACHE_ALIGN alignas(64)
+#define PACKED __attribute__((packed))
 
 #if defined _WIN32
 #   define U64(number) number##ull
