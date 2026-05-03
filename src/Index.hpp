@@ -352,26 +352,19 @@ struct HistoryType : Index<HistoryType, 4, history_type_t> { using Index::Index;
 // En passant capture encoded as the pawn moves over captured pawn square.
 // Null move is encoded as 0 {A8A8}
 class HistoryMove {
+    enum { ShiftTo = 0, ShiftFrom = ShiftTo + Square::bit_width(), ShiftType = ShiftFrom + Square::bit_width()};
     using _t = u16_t;
 
-    enum { ShiftTo = 0, ShiftFrom = ShiftTo + Square::bit_width(), ShiftType = ShiftFrom + Square::bit_width()};
-    static constexpr _t None{0};
-
     _t v_;
-
 public:
-    static constexpr int Size = HistoryType::size() * Square::size() * Square::size();
-    struct HistoryIndex : Index<HistoryIndex, Size> { using Index::Index; };
-
-    constexpr HistoryMove() : v_{None} {} // null move
+    static constexpr _t null() { return 0; } // null move
+    constexpr HistoryMove() : v_{null()} {}
     constexpr HistoryMove (Square from, Square to, HistoryType historyType)
         : v_ {static_cast<_t>(from.pack(ShiftFrom) | to.pack(ShiftTo) | historyType.pack(ShiftType))}
-    { assert (v_ == None || +from != 0 || +to != 0); } // check for canonical null move
+    { assert (v_ == null() || +from != 0 || +to != 0); } // check for canonical null move
 
-    constexpr bool none() const { return v_ == None; }
+    constexpr bool none() const { return v_ == null(); }
     constexpr bool any() const { return !none(); }
-
-    constexpr operator HistoryIndex () const { return HistoryIndex{v_}; }
 
     constexpr Square from() const { return Square::unpack(v_, ShiftFrom); }
     constexpr Square to() const { return Square::unpack(v_, ShiftTo); }

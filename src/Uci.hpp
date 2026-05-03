@@ -95,8 +95,8 @@ public: // used by search:
     Tt tt; // main transposition table
 
 //TODO: per search thread
-    mutable HistoryMoves<4> counterMove;
-    mutable HistoryMoves<4> followMove;
+    mutable ContinuationMoves<4> counterMove;
+    mutable ContinuationMoves<4> followMove;
     mutable PrincipalVariation pv;
     mutable std::array<UciMove, 6> rootBestMoves;
 
