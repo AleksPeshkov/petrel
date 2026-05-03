@@ -47,20 +47,22 @@ public:
     struct Index; STRUCT_INDEX (Index, Size);
 
 private:
-    using _t = array<HistoryMove, Color, HistoryMove::HistoryIndex, Index>;
+    using _t = array<HistoryMove, Color, HistoryType, Square, Square, Index>;
     _t v_;
 
 public:
     void clear() {
-        std::memset(&v_, 0, sizeof(v_)); //TRICK: HistoryMove::None == 0
+        std::memset(&v_, 0, sizeof(v_)); //TRICK: HistoryMove{None} == uint16_t{0}
     }
 
     constexpr HistoryMove get(Index i, Color color, HistoryMove move) const {
-        return v_[color][move][i];
+        assert (move.any());
+        return v_[color][move.historyType()][move.from()][move.to()][i];
     }
 
     constexpr void set(Color color, HistoryMove move, HistoryMove bestMove) {
-        insert_unique(v_[color][move], bestMove);
+        assert (move.any()); assert (bestMove.any());
+        insert_unique(v_[color][move.historyType()][move.from()][move.to()], bestMove);
     }
 };
 

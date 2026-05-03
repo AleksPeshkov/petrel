@@ -373,9 +373,6 @@ class HistoryMove {
     _t v_;
 
 public:
-    static constexpr int Size = HistoryType::size() * Square::size() * Square::size();
-    struct HistoryIndex; STRUCT_INDEX (HistoryIndex, Size);
-
     constexpr HistoryMove() : v_{None} {} // null move
     constexpr HistoryMove (PieceType ty, Square from, Square to)
         : v_ {static_cast<_t>(::historyType(ty).pack(ShiftType) | from.pack(ShiftFrom) | to.pack(ShiftTo))}
@@ -383,8 +380,6 @@ public:
 
     constexpr bool none() const { return v_ == None; }
     constexpr bool any() const { return !none(); }
-
-    constexpr operator HistoryIndex () const { return HistoryIndex{v_}; }
 
     constexpr Square from() const { return Square::unpack(v_, ShiftFrom); }
     constexpr Square to() const { return Square::unpack(v_, ShiftTo); }
