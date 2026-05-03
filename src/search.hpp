@@ -104,7 +104,6 @@ protected:
 
     HistoryMove currentMove{}; // last move made from *this into *child
     mutable std::array<HistoryMove, 3> killer{}; // Killer heuristic, mutable to update from const* grandParent
-    bool canBeKiller{false};  // good captures and check evasions should not waste killer slots
 
 public:
     Node (const PositionMoves& _position, const Uci& _uci) : PositionMoves{_position}, root{_uci} {}
@@ -121,11 +120,9 @@ protected:
     [[nodiscard]] ReturnStatus searchNullMove();
     [[nodiscard]] ReturnStatus searchMove(HistoryMove, Ply R = 1_ply);
     [[nodiscard]] ReturnStatus searchMove(Square from, Square to, Ply R, CanBeKiller _canBeKiller) {
-        assert (parent->canBeKiller == (_canBeKiller == CanBeKiller::Yes));
         return searchMove(parent->historyMove(from, to, _canBeKiller), R);
     }
     [[nodiscard]] ReturnStatus searchMove(Square from, Square to, Ply R) {
-        assert (parent->canBeKiller == !parent->inCheck());
         return searchMove(from, to, R, !parent->inCheck() ? CanBeKiller::Yes : CanBeKiller::No);
     }
 
@@ -158,10 +155,8 @@ protected:
         if (ttHit && ttSlot.ttMove().any()) {
             assert (MY.has(ttSlot.ttMove().from()));
             currentMove = historyMove(ttSlot.ttMove());
-            canBeKiller = ttSlot.ttMove().canBeKiller() == CanBeKiller::Yes;
         } else {
             currentMove = {};
-            canBeKiller = false;
         }
         assert (currentMove.none() || isPseudoLegal(currentMove));
     }
