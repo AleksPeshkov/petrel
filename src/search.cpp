@@ -94,7 +94,7 @@ TtSlot::TtSlot (const Node* n) : TtSlot{
     n->bound,
     n->depth,
     n->currentMove.ttMove()
-} { assert (n->canBeKiller == (n->currentMove.any() && n->currentMove.canBeKiller() == CanBeKiller::Yes)); }
+} {}
 
 Node::Node (Node* p) :
     //TRICK: no need to clean up PositionMoves{}
@@ -187,7 +187,6 @@ ReturnStatus Node::search() {
     eval  = Score{NoScore};
     bound = FailLow;
     currentMove = {};
-    canBeKiller = false;
     assertOk();
 
     if (!isRoot()) {
@@ -266,10 +265,8 @@ ReturnStatus Node::search() {
                 bound = ttBound;
                 if (ttMove.any()) {
                     assert (isPossibleMove( ttMove.from(), ttMove.to() ));
-                    canBeKiller = ttMove.canBeKiller() == CanBeKiller::Yes;
                     currentMove = historyMove(ttMove);
                 } else {
-                    assert (!canBeKiller);
                     assert (currentMove.none());
                 }
                 return ReturnStatus::Cutoff;
@@ -338,27 +335,22 @@ ReturnStatus Node::search() {
             && MY.material().canNullMove() // avoid null move in late endgame
             && Score{MinEval} <= beta && beta <= eval
         ) {
-            canBeKiller = false;
             RETURN_CUTOFF (searchNullMove());
         }
     }
 
     if (ttHit && ttSlot.ttMove().any()) {
-        canBeKiller = ttSlot.ttMove().canBeKiller() == CanBeKiller::Yes;
         RETURN_CUTOFF (searchMove( historyMove(ttSlot.ttMove()) ));
     }
 
     if (isRoot()) {
         for (auto move : root.rootBestMoves) {
             if (move.none()) { break; }
-            canBeKiller = move.canBeKiller() == CanBeKiller::Yes;
             RETURN_CUTOFF (searchIfPossible(move));
         }
     }
 
-    canBeKiller = false;
     RETURN_CUTOFF (goodCaptures(OP.nonKing()));
-    canBeKiller = !inCheck();
 
     if (parent && !inCheck()) {
         RETURN_CUTOFF (searchIfPossible(parent->killer[0]));
@@ -682,7 +674,7 @@ void Node::failHigh() {
         ++root.tt.writes;
     }
 
-    if (canBeKiller) {
+    if (currentMove.any()) {
         updateHistory(currentMove);
     }
 }
@@ -696,9 +688,7 @@ ReturnStatus Node::updatePv() {
         ++root.tt.writes;
     }
 
-    if (canBeKiller) {
-        updateHistory(currentMove);
-    }
+    updateHistory(currentMove);
 
     auto bestMove = currentMove;
     if (!isRoot()) {
@@ -718,7 +708,10 @@ ReturnStatus Node::updatePv() {
 }
 
 void Node::updateHistory(HistoryMove historyMove) const {
+    assert (historyMove.any());
     assert (isPseudoLegal(historyMove));
+
+    if (historyMove.canBeKiller() == CanBeKiller::No) { return; }
     if (!parent) { return; }
 
     ::insert_unique_pos(parent->killer, historyMove);
