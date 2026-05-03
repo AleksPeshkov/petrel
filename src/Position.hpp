@@ -110,7 +110,6 @@ class Position {
     template <Side::_t, MakeMoveFlags> void makeMove(Square, Square, auto&& prefetch);
 
     Zobrist generateZobrist() const; // calculate Zobrist key from scratch
-    bool isSpecialMove(Square, Square) const;
 
     template <Side::_t> Zobrist generateZobrist() const;
     template <Side::_t> void updateSliderAttacks(PiMask);
@@ -152,9 +151,6 @@ protected:
     void setZobrist() { zobrist_ = generateZobrist(); }
 
     void setRule50(Rule50 rule50) { rule50_ = rule50; }
-
-    // convert internal move to be printable in UCI format
-    UciMove uciMove(Square from, Square to) const { return UciMove{from, to, isSpecialMove(from, to)}; }
 
 public:
     // position hash
