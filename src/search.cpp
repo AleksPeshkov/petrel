@@ -595,7 +595,7 @@ ReturnStatus Node::updatePv() {
         updateHistory(currentMove);
     }
 
-    auto bestMove = uciMove(currentMove.from(), currentMove.to());
+    auto bestMove = historyMove(currentMove.from(), currentMove.to());
     if (!isRoot()) {
         child->pvIndex = root.pv.set(pvIndex, bestMove, child->pvIndex);
     } else {
@@ -695,7 +695,7 @@ void refreshTtPv(const PositionMoves& p, const PrincipalVariation& pv, const Tt&
     Score score = pv.score();
     auto  pmoves = pv.moves();
 
-    for (UciMove move; (move = *pmoves++).any();) {
+    for (HistoryMove move; (move = *pmoves++).any();) {
         assert (score.isOk(ply));
         assert ((pos.generateMoves(), pos.isPossibleMove(move.from(), move.to())));
 

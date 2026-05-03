@@ -71,7 +71,7 @@ class CACHE_ALIGN PrincipalVariation {
     static constexpr auto triangularArraySize = Ply::size() + Ply::size()*(Ply::size()+1) / 2;
 public:
     struct Index; STRUCT_INDEX (Index, triangularArraySize);
-    using Move = UciMove;
+    using Move = HistoryMove;
 
 private:
     array<Move, Index> moves_;

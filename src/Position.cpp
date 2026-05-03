@@ -101,18 +101,6 @@ Bb Position::bbPassedPawns() const {
     return MY.bbPawns() % blockers;
 }
 
-bool Position::isSpecialMove(Square from, Square to) const {
-    if (MY.isKing(to)) {
-        return true; // castling
-    }
-
-    if (MY.isPawn(MY.pi(from))) {
-        return true; // pawn promotion
-    }
-
-    return false; // normal move
-}
-
 template <Side::_t My>
 Zobrist Position::generateZobrist() const {
     Zobrist z{};
