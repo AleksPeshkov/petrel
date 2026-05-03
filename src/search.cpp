@@ -687,6 +687,11 @@ void Node::updateHistory() {
     assert (bestMove.none() || isPseudoLegal(bestMove));
     assert (score.isOk(ply));
 
+    if (bestMove.any() && inCheck()) {
+        // reset canBeKiller when inCheck()
+        bestMove = HistoryMove{TtMove{bestMove.from(), bestMove.to(), CanBeKiller::No}, bestMove.historyType()};
+    }
+
     saveNode();
 
     if (bestMove.none() || bestMove.canBeKiller() == CanBeKiller::No) { return; }
