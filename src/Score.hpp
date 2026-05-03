@@ -71,7 +71,9 @@ enum score_enum : i16_t {
 
 // position evaluation score, fits in 14 bits
 class Score {
+public:
     using _t = score_enum;
+private:
     using Arg = Score;
     _t v_;
 public:

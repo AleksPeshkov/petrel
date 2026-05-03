@@ -34,7 +34,7 @@ public:
     // not yet made set of legal moves
     constexpr const PiBbMatrix& moves() const { return moves_; }
 
-    // already made moves count
+    // count of already made legal (non-null) moves
     constexpr MovesNumber movesMade() const { return movesMade_; }
 
     constexpr HistoryType historyType(Square from, Square to) const {
@@ -46,23 +46,36 @@ public:
         return HistoryType{fromPieceType[+MY.typeAt(from)]};
     }
 
-    constexpr HistoryMove historyMove(Square from, Square to) const {
-        return HistoryMove{from, to, historyType(from, to)};
+    HistoryMove historyMove(TtMove ttMove) const {
+        return HistoryMove{ttMove, historyType(ttMove.from(), ttMove.to())};
+    }
+
+    HistoryMove historyMove(Square from, Square to, CanBeKiller _canBeKiller = CanBeKiller::No) const {
+        return historyMove(TtMove{from, to, _canBeKiller});
     }
 
     // move is legal and not yet made
-    bool isPossibleMove(Square from, Square to) const {
+    constexpr bool isPossibleMove(Square from, Square to) const {
         return MY.has(from) && moves_.has(MY.pi(from), to);
     }
 
-    bool isPseudoLegal(HistoryMove move) const {
-        if (move.none() || !MY.has(move.from())) { return false; }
-        return move.historyType() == historyType(move.from(), move.to());
+    // move is legal and not yet made
+    constexpr bool isPossibleMove(HistoryMove move) const {
+        if (move.none()) { return false; }
+
+        Square from{move.from()};
+        Square to{move.to()};
+
+        return isPossibleMove(from, to) && move.historyType() == historyType(from, to);
     }
 
-    // move is legal and not yet made
-    bool isPossibleMove(HistoryMove move) const {
-        return isPseudoLegal(move) && isPossibleMove(move.from(), move.to());
+    constexpr bool isPseudoLegal(HistoryMove move) const {
+        if (move.none()) { return false; }
+
+        Square from{move.from()};
+        Square to{move.to()};
+
+        return MY.has(from) && move.historyType() == historyType(from, to);
     }
 
     // non capture nor promotion move

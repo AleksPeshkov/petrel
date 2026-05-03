@@ -10,6 +10,7 @@
 #include "common.hpp"
 
 #define CACHE_ALIGN alignas(64)
+#define PACKED __attribute__((packed))
 
 using std::size_t;
 using i8_t = std::int8_t;
