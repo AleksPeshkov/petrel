@@ -50,7 +50,7 @@ public:
 
 /// array of 8 PiRank
 class CACHE_ALIGN PiBbMatrix {
-    Rank::arrayOf<PiRank> v_;
+    array<PiRank, Rank> v_;
 
 public:
     constexpr void clear() {
@@ -106,7 +106,7 @@ public:
 
     // bitboard of the given piece
     constexpr Bb bb(Pi pi) const {
-        Rank::arrayOf<BitRank> br;
+        array<BitRank, Rank> br;
         for (auto rank : range<Rank>()) {
             br[rank] = v_[rank].bitRank(pi);
         }
@@ -115,7 +115,7 @@ public:
 
     // bitboard of squares affected by all pieces
     constexpr Bb bb() const {
-        Rank::arrayOf<BitRank> br;
+        array<BitRank, Rank> br;
         for (auto rank : range<Rank>()) {
             br[rank] = v_[rank].reduce();
         }

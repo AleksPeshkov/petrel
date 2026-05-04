@@ -63,11 +63,11 @@ struct CACHE_ALIGN Nnue {
 
     struct FeatureIndex; STRUCT_INDEX (FeatureIndex, 768);
     struct HalfAccumulatorIndex; STRUCT_INDEX (HalfAccumulatorIndex, HIDDEN_SIZE / VECTOR_SIZE);
-    struct AccumulatorIndex; STRUCT_INDEX (AccumulatorIndex, 2*HalfAccumulatorIndex::Size);
+    struct AccumulatorIndex; STRUCT_INDEX (AccumulatorIndex, 2*HalfAccumulatorIndex::size());
 
-    using L0b = HalfAccumulatorIndex::arrayOf<_t>;
-    using L0w = FeatureIndex::arrayOf<L0b>;
-    using L1w = AccumulatorIndex::arrayOf<_t>;
+    using L0b = array<_t, HalfAccumulatorIndex>;
+    using L0w = array<L0b, FeatureIndex>;
+    using L1w = array<_t, AccumulatorIndex>;
 
     L0w l0w;   // 768*(8*32) = 196608 bytes
     L0b l0b;   // (8*32) = 256 bytes
@@ -106,7 +106,7 @@ class CACHE_ALIGN Accumulator {
 
         //TODO: reshape feauture indexing during net loading
         static constexpr Nnue::FeatureIndex fi(Side si, PieceType ty, Square sq) {
-            constexpr PieceType::arrayOf<PieceType::_t> pieceType = {Pawn, Knight, Bishop, Rook, Queen, King};
+            constexpr array<PieceType::_t, PieceType> pieceType = {Pawn, Knight, Bishop, Rook, Queen, King};
             return Nnue::FeatureIndex{ 6*64*si.v() + 64*pieceType[ty] + (~sq).v() };
         }
 
@@ -124,7 +124,8 @@ class CACHE_ALIGN Accumulator {
             v_[i] -= w[fi(~si, captured, to)][i];
         }
 
-        Index::arrayOf<Nnue::_t> v_;
+        using _t = Nnue::_t;
+        array<_t, Index> v_;
 
     public:
         constexpr void clear() {
@@ -181,7 +182,7 @@ class CACHE_ALIGN Accumulator {
     };
 
     union {
-        Side::arrayOf<AccumulatorSide> side;
+        array<AccumulatorSide, Side> side;
         Nnue::L1w accumulator;
     };
     static_assert(sizeof(side) == sizeof(accumulator));

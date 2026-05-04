@@ -89,7 +89,7 @@ public:
 
 // line (file, rank, diagonal) in between two squares (excluding both ends) or 0 (32k)
 class CACHE_ALIGN InBetween {
-    Square::arrayOf< Square::arrayOf<Bb> > inBetween;
+    array<Bb, Square, Square> inBetween;
 
     static constexpr Bb areaInBetween(Square from, Square to) {
         Bb areaFrom{ Bb{from}.v() - 1 };
@@ -132,7 +132,7 @@ extern const InBetween inBetween;
 
 //attack bitboards of the piece types on the empty board (3k)
 class CACHE_ALIGN AttacksFrom {
-    PieceType::arrayOf< Square::arrayOf<Bb> > attack;
+    array<Bb, PieceType, Square> attack;
 public:
     consteval AttacksFrom () {
         for (auto sq: range<Square>()) {
@@ -163,7 +163,7 @@ class CastlingRules {
         Bb unattacked;
     };
 
-    File::arrayOf< File::arrayOf<Rules> > castlingRules;
+    array<Rules, File, File> castlingRules;
 
     static constexpr Bb exBetween(Square king, Square rook) { return ::inBetween(king, rook) | Bb{rook}; }
 

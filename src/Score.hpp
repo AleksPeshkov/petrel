@@ -3,18 +3,18 @@
 
 #include "Index.hpp"
 
-static constexpr int ScoreBitSize = 14;
+static constexpr int ScoreBitWidth = 14;
 
 // position evaluation score, fits in 14 bits
 enum score_enum : i16_t {
-    NoScore = -singleton(ScoreBitSize-1), //-8192 TRICK: assume two's complement
+    NoScore = -singleton(ScoreBitWidth-1), //-8192 TRICK: assume two's complement
     MinusInfinity = NoScore + 1, // no position should eval to it
 
     MateLoss = MinusInfinity + 1, // -8190, mated in 0, only even negative values for mated positions
 
     // ... negative mate range of scores (loss) ...
 
-    MinEval = MateLoss + Ply::Size, // minimal (negative) non mate score
+    MinEval = MateLoss + Ply::size(), // -8126, minimal (negative) non mate score
 
     // ... negative position static evaluation range of scores ...
 
@@ -38,7 +38,8 @@ class Score {
     using Arg = Score;
     _t v_;
 public:
-    static constexpr int Mask = singleton(ScoreBitSize) - 1;
+    static constexpr int bit_width() { return ScoreBitWidth; }
+    static constexpr unsigned mask() { return singleton<unsigned>(bit_width()) - 1u; }
 
     constexpr explicit Score (_t e) : v_{e} {}
     friend constexpr Score operator""_cp(unsigned long long);
@@ -116,20 +117,20 @@ class PieceCountTable {
         struct {
             u16_t centipawns; // material evaluation (pawn = 80)
             u8_t officers; // sum of Q = 12, R = 6, B/N = 4 (startpos total PieceMatMax = 40)
-            NonKingType::arrayOf<u8_t> count; // number of pieces of the given type
+            array<u8_t, NonKingType> count; // number of pieces of the given type
         } s;
         u64_t n;
         static_assert (sizeof(s) == sizeof(n));
     };
 
-    PieceType::arrayOf<element_type> v_;
+    array<element_type, PieceType> v_;
 
 public:
     using _t = element_type;
 
     consteval PieceCountTable () {
-        constexpr PieceType::arrayOf<u16_t> centipawns = { 960, 480, 320, 320, 80, 0 }; // material eval: 12/6/4/4/1 * 80cp
-        constexpr PieceType::arrayOf<u8_t> officers = { 12, 6, 4, 4, 0, 0 }; // non pawn pieces values
+        constexpr array<u16_t, PieceType> centipawns = { 960, 480, 320, 320, 80, 0 }; // material eval: 12/6/4/4/1 * 80cp
+        constexpr array<u8_t, PieceType> officers = { 12, 6, 4, 4, 0, 0 }; // non pawn pieces values
 
         for (auto ty : range<PieceType>()) {
             v_[ty].s.centipawns = centipawns[ty];

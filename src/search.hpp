@@ -6,28 +6,30 @@
 
 class Node;
 
-enum Bound : u8_t { NoBound,
+enum Bound : u8_t {
+    NoBound = 0,
     FailLow = 0b01, // upper bound
     FailHigh = 0b10, // lower bound
-    ExactScore = FailLow | FailHigh
+    ExactScore = FailLow | FailHigh,
+    BoundMask = 0b11,
 };
 
 // 8 byte, always replace slot, so no age field, only one score, depth and bound flags
 class TtSlot {
     enum {
-        ScoreShift = 0,
-        BoundShift = ScoreShift + 14,
-        ToShift = BoundShift + 2,
-        FromShift = ToShift + 6,
-        DraftShift = FromShift + 6,
-        KillerShift = DraftShift + 6,
-        TotalShift = KillerShift + 1, // total size of all data fields
-        ZobristBits = 64 - TotalShift, // size of zobrist bitfield
+        ShiftScore = 0,
+        ShiftBound = ShiftScore + Score::bit_width(),
+        ShiftDraft = ShiftBound + 2,
+        ShiftTo = ShiftDraft + Ply::bit_width(),
+        ShiftFrom = ShiftTo + Square::bit_width(),
+        ShiftKiller = ShiftFrom + Square::bit_width(),
+        TotalBits = ShiftKiller + 1, // total size of all data fields
+        ZBits = 64 - TotalBits, // size of zobrist bitfield
     };
 
     using _t = u64_t;
     _t v_;
-    static constexpr _t HashMask{ U64(0xffff'ffff'ffff'ffff) << (64 - ZobristBits) };
+    static constexpr _t ZMask{ U64(0xffff'ffff'ffff'ffff) << (64 - ZBits) };
 
 public:
     constexpr TtSlot (Z z = {},
@@ -39,27 +41,26 @@ public:
         Square to = Square{static_cast<Square::_t>(0)},
         bool canBeKiller = false
     ) : v_{
-        (z.v() & HashMask)
-        | (static_cast<_t>(score.toTt(ply)) << ScoreShift)
-        | (static_cast<_t>(bound) << BoundShift)
-        | (static_cast<_t>(from.v()) << FromShift)
-        | (static_cast<_t>(to.v()) << ToShift)
-        | (static_cast<_t>(draft.v()) << DraftShift)
-        | (static_cast<_t>(canBeKiller) << KillerShift)
+        (z.v() & ZMask)
+        | pack<_t>(score.toTt(ply), ShiftScore)
+        | pack<_t>(bound, ShiftBound)
+        | draft.pack<_t>(ShiftDraft)
+        | from.pack<_t>(ShiftFrom)
+        | to.pack<_t>(ShiftTo)
+        | pack<_t>(canBeKiller, ShiftKiller)
     } { static_assert (sizeof(TtSlot) == sizeof(u64_t)); }
 
     TtSlot (const Node* node);
-    constexpr bool operator == (Z z) const { return (v_ & HashMask) == (z.v() & HashMask); }
+    constexpr bool operator == (Z z) const { return (v_ & ZMask) == (z.v() & ZMask); }
 
-    bool hasMove() const { return !(from().v() == 0 && to().v() == 0); }
-    Square from() const { return Square{static_cast<Square::_t>(v_ >> FromShift & Square::Mask)}; }
-    Square to() const { return Square{static_cast<Square::_t>(v_ >> ToShift & Square::Mask)}; }
+    constexpr Score score(Ply ply) const { return Score::fromTt(::unpack(v_, ShiftScore, Score::mask()), ply); }
+    constexpr Bound bound() const { return ::unpack(v_, ShiftBound, BoundMask); }
+    constexpr Ply draft() const { return Ply::unpack(v_, ShiftDraft); }
 
-    Bound bound() const { return static_cast<Bound>(v_ >> BoundShift & 0b11); }
-    Ply draft() const { return Ply{static_cast<Ply::_t>(v_ >> DraftShift & Ply::Mask)}; }
-    bool canBeKiller() const { return v_ >> KillerShift & 1; }
-
-    Score score(Ply ply) const { return Score::fromTt(v_ >> ScoreShift & Score::Mask, ply); }
+    constexpr bool hasMove() const { return !(from().v() == 0 && to().v() == 0); }
+    constexpr Square from() const { return Square::unpack(v_, ShiftFrom); }
+    constexpr Square to() const { return Square::unpack(v_, ShiftTo); }
+    constexpr bool canBeKiller() const { return ::unpack(v_, ShiftKiller, true); }
 };
 
 class Uci;

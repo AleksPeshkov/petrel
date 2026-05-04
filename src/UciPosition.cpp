@@ -26,15 +26,15 @@ class FenToBoard {
             else {
                 // FileD > FileE > FileC > FileF > FileB > FileG > FileA > FileH
                 // order gains a few Elo
-                constexpr File::arrayOf<int> order{6, 4, 2, 0, 1, 3, 5, 7};
+                constexpr array<int, File> order{6, 4, 2, 0, 1, 3, 5, 7};
                 return order[File{sq1}] < order[File{sq2}];
             }
         }
     };
     using Squares = std::set<Square, SquareImportance>;
 
-    Color::arrayOf< PieceType::arrayOf<Squares> > pieces;
-    Color::arrayOf<int> pieceCount = {{0, 0}};
+    array<Squares, Color, PieceType> pieces;
+    array<int, Color> pieceCount = {{0, 0}};
 
     bool drop(Color, PieceType, Square);
 
@@ -62,8 +62,8 @@ istream& read(istream& in, FenToBoard& board) {
 
         if ('1' <= c && c <= '8' && rank.isOk() && file.isOk()) {
             //convert digit symbol to offset and skip blank squares
-            auto  f = file.v() + (c - '0');
-            if (f > static_cast<int>(File::Size)) {
+            auto f = file.v() + (c - '0');
+            if (f > File::size()) {
                 return io::fail_char(in);
             }
 
@@ -93,7 +93,7 @@ istream& read(istream& in, FenToBoard& board) {
 
 bool FenToBoard::drop(Color color, PieceType ty, Square sq) {
     //the position representaion cannot hold more then 16 total pieces per color
-    if (pieceCount[color] == Pi::Size) {
+    if (pieceCount[color] == Pi::size()) {
         io::error("invalid fen: too many total pieces");
         return false;
     }
@@ -258,7 +258,7 @@ istream& UciPosition::readMove(istream& in, Square& from, Square& to) const {
     in >> from >> to;
     if (!in) { return io::fail_pos(in, before); }
 
-    if (colorToMove_.is(Black)) { from.flip(); to.flip(); }
+    if (colorToMove_.is(Black)) { from = ~from; to = ~to; }
 
     if (!MY.has(from)) { return io::fail_pos(in, before); }
     Pi pi = MY.pi(from);
@@ -354,7 +354,7 @@ void UciPosition::playMoves(istream& in, Repetitions& repetitions) {
 
         Position::makeMove(from, to);
         generateMoves();
-        colorToMove_.flip();
+        colorToMove_ = ~colorToMove_;
 
         if (rule50() == 0_ply) { repetitions.clear(); }
         repetitions.push(colorToMove_, z());

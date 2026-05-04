@@ -172,7 +172,7 @@ class PiSquare {
 
     // defined to make debugging clear
     union {
-        Pi::arrayOf<_t> square;
+        array<_t, Pi> square;
         vu8x16_t vu8x16;
     };
 
@@ -226,7 +226,7 @@ public:
 
     constexpr PiMask piecesOn(Rank::_t rank) const {
         return PiMask{
-            (vu8x16 & ::vu8x16x( static_cast<_t>(None ^ static_cast<_t>(File::Mask)) ))
+            (vu8x16 & ::vu8x16x( static_cast<_t>(None ^ static_cast<_t>(File::mask())) ))
             == ::vu8x16x( Square{static_cast<File::_t>(0), rank}.v() )
         };
     }
@@ -253,7 +253,7 @@ class PiType {
 
     using element_type = pieces_t;
 
-    static constexpr PieceType::arrayOf<element_type> LessOrEqualValue = {
+    static constexpr array<element_type, PieceType> LessOrEqualValue = {
         NonK,  // Queen
         NonQK, // Rook
         PNB,   // Bishop
@@ -262,7 +262,7 @@ class PiType {
         All,   // King
     };
 
-    static constexpr PieceType::arrayOf<element_type> LessValue = {
+    static constexpr array<element_type, PieceType> LessValue = {
         NonQK, // Queen
         PNB,   // Rook
         Pawns, // Bishop
@@ -273,7 +273,7 @@ class PiType {
 
     // defined to make debugging clear
     union {
-        Pi::arrayOf<pieces_t> type;
+        array<pieces_t, Pi> type;
         vu8x16_t vu8x16;
     };
 
@@ -349,7 +349,7 @@ class PiTrait {
 
     // defined to make debugging clear
     union {
-        Pi::arrayOf<element_type> trait;
+        array<element_type, Pi> trait;
         vu8x16_t vu8x16;
     };
 
@@ -431,10 +431,8 @@ public:
 };
 
 class PiOrder {
-    using PiArray = Pi::arrayOf<Pi>;
-
     union {
-        PiArray order;
+        array<Pi, Pi> order;
         vu8x16_t vu8x16;
     };
 
