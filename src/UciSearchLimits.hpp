@@ -79,6 +79,8 @@ class UciSearchLimits {
 
     mutable time_strategy_t timeStrategy_{ExactTime}; // ExactTime = 0, EasyMove = 3, NormalMove = 5, HardMove = 8
     mutable UciMove lastMove_{}; // last best root move (for updating timeStrategy_)
+    mutable Score lastScore_{NoScore}; // last best root move score (for updating timeStrategy_)
+    mutable Ply hardMoveDepth_{0}; // iteration when HardMove triggered
 
 private:
     int lookAheadMoves() const; // unify sudden death, increment and cyclic time controls
@@ -118,7 +120,7 @@ public:
 
 // used in search.cpp:
     // checks for search stop reasons
-    ReturnStatus countNode() const {
+    [[nodiscard]] ReturnStatus countNode() const {
         assertNodesOk();
 
         if (nodesQuota_ <= 0) {
