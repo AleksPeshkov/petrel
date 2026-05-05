@@ -23,6 +23,8 @@ void UciSearchLimits::newSearch() {
 
     timeStrategy_ = ExactTime;
     lastMove_ = {};
+    lastScore_ = Score{NoScore};
+    hardMoveDepth_ = 0_ply;
 
     maxDepth_ = MaxPly;
 }
@@ -95,18 +97,25 @@ ReturnStatus UciSearchLimits::updateTimeStrategy(const PrincipalVariation& pv) c
     if (timeStrategy_ == ExactTime) { return ReturnStatus::Continue; }
 
     auto bestMove = pv.move(0_ply);
+    auto score = pv.score();
+    auto depth = pv.depth();
 
-    if (lastMove_.none()) {
-        // Easy Move: root best move never changed
+    if (depth <= 1_ply) {
         lastMove_ = bestMove;
-    } else if (lastMove_ != bestMove) {
-        lastMove_ = bestMove;
-        // Hard Move: root best move just have changed
-        timeStrategy_ = HardMove;
-    } else if (timeStrategy_ == HardMove) {
-        // Normal Move: root best move have not changed during last two iterations
-        timeStrategy_ = NormalMove;
+    } else {
+        if (lastMove_ != bestMove) {
+            lastMove_ = bestMove;
+            hardMoveDepth_ = depth;
+            timeStrategy_ = HardMove; // best root move just have changed
+        } else if (lastScore_.isEval() && score.isEval() && score + 40_cp <= lastScore_) {
+            hardMoveDepth_ = depth;
+            timeStrategy_ = HardMove; // root score have dropped
+        } else if (timeStrategy_ == HardMove && hardMoveDepth_ + 2_ply <= depth) {
+            timeStrategy_ = NormalMove; // no negative factors during full iteration
+        }
     }
+
+    lastScore_ = score;
 
     // good place to check time as there are no wasted search nodes
     // and timeStrategy_ just possibly changed
