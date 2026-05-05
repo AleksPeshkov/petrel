@@ -127,12 +127,10 @@ protected:
 
     [[nodiscard]] ReturnStatus counterMove();
     [[nodiscard]] ReturnStatus followMove();
-    [[nodiscard]] ReturnStatus updatePv();
 
     void childNullMove();
     void childMove(Square, Square);
-    void failHigh();
-    void updateHistory(HistoryMove) const;
+    void updateHistory();
     void saveNode(); // write search result into TT
     Ply finalR(Ply) const;
 
