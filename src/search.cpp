@@ -66,7 +66,10 @@ ReturnStatus Node::negamax(Ply R) {
 
         if (beta <= childScore) {
             score = childScore;
-            failHigh();
+            bound = FailHigh;
+            // if currentMove.none() after NMP, write back TT move instead
+            if (currentMove.any()) { bestMove = currentMove; }
+            updateHistory();
             return ReturnStatus::Cutoff;
         }
 
@@ -85,10 +88,26 @@ ReturnStatus Node::negamax(Ply R) {
         }
 
         score = childScore;
+        bound = ExactScore;
+        assert (currentMove.any()); // null move in PV is not allowed
+        bestMove = currentMove;
+        updateHistory();
+
+        if (!isRoot()) {
+            child->pvIndex = root.pv.set(pvIndex, bestMove, child->pvIndex);
+        } else {
+            // unfinished iteration, so report depth-1
+            pvIndex = root.pv.set(depth - 1_ply, score, bestMove, child->pvIndex);
+            child->pvIndex = PrincipalVariation::Index{+pvIndex+1};
+
+            RETURN_IF_STOP (root.limits.updateTimeStrategy(root.pv));
+
+            ::insert_unique(root.rootBestMoves, bestMove);
+            if (depth > 1_ply) { root.info_pv(); }
+        }
+
         alpha = childScore;
         child->beta = -alpha;
-        bestMove = currentMove;
-        RETURN_IF_STOP (updatePv());
     }
 
     // set zero window for the next sibling move search
@@ -373,13 +392,18 @@ ReturnStatus Node::search() {
         }
     } while (false);
 
+    if (movesMade() == 0) {
+        // not stalemate, all moves pruned
+        assert (!inCheck());
+        assert (bound == FailLow);
+        assert (bestMove.none());
+        assert (currentMove.none());
+        if (score.none()) { score = alpha; } // !score.none() if null move happened (null move not counted in movesMade())
+        return ReturnStatus::Continue;
+    }
+
     if (bound == FailLow) {
-        if (movesMade() == 0) {
-            assert (!inCheck());
-            assert (currentMove.none());
-            score = alpha;
-            return ReturnStatus::Continue;
-        }
+        assert (depth > 0_ply);
         assert (score.isOk(ply));
         *tt = TtSlot{this};
         ++root.tt.writes;
@@ -560,69 +584,31 @@ Ply Node::finalR(Ply R) const {
     return R;
 }
 
-void Node::failHigh() {
-    if (currentMove.any()) {
-        // currentMove is null (after NMP), write back previous TT move instead
-        bestMove = currentMove;
-    }
-
+void Node::updateHistory() {
+    assert (bestMove.none() || isPseudoLegal(bestMove));
     assert (score.isOk(ply));
+
     if (depth > 0_ply) {
-        bound = FailHigh;
         *tt = TtSlot{this};
         ++root.tt.writes;
     }
 
-    if (bestMove.any()) {
-        updateHistory(bestMove);
-    }
-}
-
-ReturnStatus Node::updatePv() {
-    assert (isPseudoLegal(bestMove));
-
-    if (depth > 0_ply) {
-        bound = ExactScore;
-        *tt = TtSlot{this};
-        ++root.tt.writes;
-    }
-
-    updateHistory(bestMove);
-
-    if (!isRoot()) {
-        child->pvIndex = root.pv.set(pvIndex, bestMove, child->pvIndex);
-    } else {
-        // unfinished iteration, so report depth-1
-        pvIndex = root.pv.set(depth - 1_ply, score, bestMove, child->pvIndex);
-        child->pvIndex = PrincipalVariation::Index{+pvIndex+1};
-
-        RETURN_IF_STOP (root.limits.updateTimeStrategy(root.pv));
-
-        ::insert_unique(root.rootBestMoves, bestMove);
-        if (depth > 1_ply) { root.info_pv(); }
-    }
-
-    return ReturnStatus::Continue;
-}
-
-void Node::updateHistory(HistoryMove historyMove) const {
-    assert (historyMove.any());
-    assert (isPseudoLegal(historyMove));
-
-    if (historyMove.canBeKiller() == CanBeKiller::No) { return; }
+    if (bestMove.none() || bestMove.canBeKiller() == CanBeKiller::No) { return; }
     if (!parent) { return; }
 
-    insert_unique(parent->killer, historyMove);
+    assert (!inCheck());
+
+    insert_unique(parent->killer, bestMove);
     if (parent->grandParent) {
-        insert_unique<2>(parent->grandParent->killer, historyMove);
+        insert_unique<2>(parent->grandParent->killer, bestMove);
     }
 
     if (parent->currentMove.any()) {
-        root.counterMove.set(colorToMove(), parent->currentMove, historyMove);
+        root.counterMove.set(colorToMove(), parent->currentMove, bestMove);
     }
 
     if (grandParent && grandParent->currentMove.any()) {
-        root.followMove.set(colorToMove(), grandParent->currentMove, historyMove);
+        root.followMove.set(colorToMove(), grandParent->currentMove, bestMove);
     }
 }
 

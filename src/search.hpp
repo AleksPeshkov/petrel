@@ -135,10 +135,8 @@ protected:
 
     [[nodiscard]] ReturnStatus counterMove();
     [[nodiscard]] ReturnStatus followMove();
-    [[nodiscard]] ReturnStatus updatePv();
 
-    void failHigh();
-    void updateHistory(HistoryMove) const;
+    void updateHistory();
 
     constexpr Color colorToMove() const; // current node's side to move color
     constexpr bool isRoot() const { assert (parent == nullptr || ply > 0_ply); return parent == nullptr; } // ply == 0
