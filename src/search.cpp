@@ -176,7 +176,6 @@ ReturnStatus Node::negamax(Ply R) {
         bound = ExactScore;
         assert (currentMove.any()); // null move in PV is not allowed
         bestMove = currentMove;
-        updateHistory();
 
         if (!isRoot()) {
             child->pvIndex = root.pv.set(pvIndex, bestMove, child->pvIndex);
@@ -187,7 +186,6 @@ ReturnStatus Node::negamax(Ply R) {
 
             RETURN_IF_STOP (root.limits.updateTimeStrategy(root.pv));
 
-            ::insert_unique_compact(root.rootBestMoves, bestMove);
             if (depth > 1_ply) { root.info_pv(); }
         }
 
@@ -495,11 +493,16 @@ ReturnStatus Node::search() {
         return ReturnStatus::Continue;
     }
 
-    if (bound == FailLow) {
-        assert (depth > 0_ply);
-        assert (score.isOk(ply));
-        *tt = TtSlot{this};
-        ++root.tt.writes;
+    assert (bound == FailLow || bound == ExactScore);
+    assert (bestMove.none() || isPseudoLegal(bestMove));
+    if (bound == ExactScore) {
+        updateHistory();
+        if (isRoot()) { ::insert_unique_compact(root.rootBestMoves, bestMove); }
+    } else {
+        if (depth > 0_ply) {
+            *tt = TtSlot{this};
+            ++root.tt.writes;
+        }
     }
     return ReturnStatus::Continue;
 }
