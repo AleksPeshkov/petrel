@@ -130,134 +130,155 @@ public:
 };
 
 // https://www.talkchess.com/forum/viewtopic.php?p=554664#p554664
-class RepHash {
+class ZHash {
     using _t = u64_t;
-    _t v{0};
-
+    _t v_;
     static constexpr _t hash(Z z) { return ::singleton<_t>(z & 077); }
+
 public:
-    constexpr RepHash () : v{0} {}
-    constexpr RepHash (RepHash m, Z z) : v{m.v | hash(z)} {}
-    constexpr bool has(Z z) const { return (v & hash(z)) != 0; }
+    constexpr ZHash () : v_{0} {}
+    constexpr ZHash (ZHash zHash, Z z) : v_{zHash.v_ | hash(z)} {}
+    constexpr bool none(Z z) const { return (v_ & hash(z)) == 0; }
 };
 
-class RepSide {
-    struct Index : ::Index<Index, 50> { using ::Index<Index, 50>::Index; };
+template <int Size>
+class RingIndex {
+public:
+    using _t = int;
+private:
+    _t v_;
+public:
+    static constexpr int size() { static_assert (Size >= 1); return Size; }
+    static constexpr _t last() { return size() - 1; }
+
+    constexpr RingIndex (_t v) : v_{v} { assertOk(); }
+    constexpr int operator + () const { return v_; }
+
+    constexpr bool isOk() const { return 0 <= v_ && v_ < size(); }
+    constexpr void assertOk() const { assert (isOk()); }
+
+    constexpr RingIndex operator + (int d) const { assert (d >= 0); _t r = v_ + d; return RingIndex{r < size() ? r : r - size()}; }
+    constexpr RingIndex operator - (int d) const { assert (d >= 0); _t r = v_ - d; return RingIndex{r >= 0 ? r : r + size()}; }
+
+    constexpr RingIndex& operator ++ () { v_ = v_ < last() ? v_ + 1 : 0; return *this; }
+    constexpr RingIndex& operator -- () { v_ = v_ > 0 ? v_ - 1 : last(); return *this; }
+    constexpr RingIndex operator ++ (int) { auto r = *this; ++(*this); return r; }
+    constexpr RingIndex operator -- (int) { auto r = *this; --(*this); return r; }
+
+    friend constexpr bool operator == (RingIndex a, RingIndex b) { return a.v_ == b.v_; }
+};
+
+class CACHE_ALIGN RepSide {
+    friend class TestRepSide; // unit test version
 
     struct _t {
         Z z;
-        RepHash hash;
+        ZHash zHash;
     };
 
-    static constexpr Index Last{Index::last()};
+    struct DupIndex : Index<DupIndex, 25> { using Index::Index; };
+    array<_t, DupIndex> dup; // only duplicate positions for true 3-fold repetition detection
+    ZHash dupZHash_{};
+    int dupCount_ = 0; // number of duplicants (only for unit tests)
 
-    array<_t, Index> reps;
-    int count = 0; // number of entries
-    Index last{Index::last()}; // last added entry index
-
-    static constexpr int prev(int i) { return i > 0 ? i-1 : +Last; }
+    using RingIndex = ::RingIndex<50>; // 50 because of 50-move draw rule
+    static constexpr RingIndex Last{RingIndex::last()};
+    array<_t, RingIndex> ring; // ring buffer of all game history positions of the same side to move
+    ZHash ringZHash_{};
+    int ringCount_ = 0; // number of all game history positions (max 50)
+    RingIndex last_{Last}; // last added position index
 
 public:
-    constexpr RepSide () { reps[last].hash = {}; }
-
     constexpr void clear() {
-        last = Last;
-        count = 0;
+        dupZHash_ = {};
+        dupCount_ = 0;
+        ringZHash_ = {};
+        ringCount_ = 0;
+        last_ = Last; //TRICK: ring buffer overflow will add first position to Index{0}
     }
 
-    constexpr void push(Z z) {
-        auto prevHash{(count == 0) ? RepHash{} : RepHash{reps[last].hash, reps[last].z}};
-        last = Index{last < Last ? +last+1 : 0};
-        reps[last].z = z;
-        reps[last].hash = prevHash;
-        count = count < Index::size() ? count+1 : count;
+    void push(Z z) {
+        ++last_;
+        ringCount_ = std::min(ringCount_+1, RingIndex::size());
+        ring[last_].z = z;
+        ring[last_].zHash = ringZHash_;
+        ringZHash_ = ZHash{ringZHash_, z};
     }
 
     constexpr void dropLast() {
-        if (count == 0) { assert (false); return; }
-        last  = +last > 0 ? Index{+last-1} : Last;
-        count = count-1;
+        if (ringCount_ == 0) { return; }
+        ringZHash_ = ring[last_].zHash;
+        --last_;
+        --ringCount_;
     }
 
     void normalize() {
-        std::array<Z, 25> duplicates;
-        int duplicateCount = 0;
+        dupZHash_ = {};
+        dupCount_ = 0;
+        if (ringCount_ <= 2) { return; } // no space for any repetition
 
-        // find duplicates
-        for (int c = 0, i = +last; c < count; ++c, i = prev(i)) {
-            auto z = reps[Index{i}].z;
+        int dupFound = 0;
+        {
+            ZHash dupZHash{}; // zHash of the last duplicant
+            for (int i = 0; i < ringCount_ - 2; ++i) {
+                Z z = ring[last_ - i].z;
 
-            for (int d = 0; d < duplicateCount; ++d) {
-                // already found
-                if (duplicates[d] == z) { goto NEXT; };
-            }
+                // test if already present in duplicant array
+                if (!dupZHash.none(z)) {
+                    bool already = false;
+                    for (int d = dupFound-1; true; --d) {
+                        if (dup[DupIndex{d}].z == z) { already = true; break; }
+                        if (dup[DupIndex{d}].zHash.none(z)) { break; }
+                        assert (d > 0);
+                    }
+                    if (already) { continue; }
+                }
 
-            // not found
-            {
-                // i and i-1 cannot be repetitions
-                int j = prev(i); j = prev(j);
-                for (int cc = c+2; cc < count; ++cc) {
-                    if (z == reps[Index{j}].z) {
-                        // found
-                        duplicates[duplicateCount++] = z;
+                // test for repetition (i and i+1 cannot be chess repetitions)
+                for (int j = i + 2; j < ringCount_; ++j) {
+                    if (ring[last_ - j].z == z) {
+                        // append to duplicant array
+                        dup[DupIndex{dupFound}].z = z;
+                        dup[DupIndex{dupFound}].zHash = dupZHash;
+                        dupZHash = ZHash{dupZHash, z};
+                        ++dupFound;
                         break;
                     }
-
-                    if (!reps[Index{j}].hash.has(z)) {
-                        // not found
-                        break;
-                    }
-
-                    j = prev(j);
+                    if (ring[last_ - j].zHash.none(z)) { break; }
                 }
             }
+        }
+        if (dupFound == 0) { return; } // no repetitions found, already cleared
 
-        NEXT:
-            continue;
+        // rehash in opposite direction
+        ZHash dupZHash{};
+        for (int d = dupFound-1; d >= 0; --d) {
+            dup[DupIndex{d}].zHash = dupZHash;
+            dupZHash = ZHash{dupZHash, dup[DupIndex{d}].z};
         }
 
-        RepHash hash{};
-
-        // push back in reversed order, creating correct hash
-        for (int d = duplicateCount-1; d >= 0; --d) {
-            auto z = duplicates[d];
-            reps[Index{d}].z = z;
-            reps[Index{d}].hash = hash;
-            hash = {hash, z};
-        }
-
-        count = duplicateCount;
-        last = Last; // new push() should be from the very beginning
+        dupZHash_ = dupZHash;
+        dupCount_ = dupFound;
     }
 
-    constexpr bool has(Z z) const {
-        if (count == 0) { return false; }
+    bool has(Z z) const {
+        if (zHash().none(z)) { return false; }
 
-        Index i{0};
-        while (true) {
-            if (z == reps[i].z) {
-                return true;
-            }
-            if (!reps[i].hash.has(z)) {
-                return false;
-            }
-            ++i;
+        for (int d{0}; true; ++d) {
+            if (dup[DupIndex{d}].z == z) { return true; }
+            if (dup[DupIndex{d}].zHash.none(z)) { return false; }
+            assert (d < dupCount_);
         }
     }
 
-    constexpr RepHash repHash() const {
-        return (count == 0) ?  RepHash{} : RepHash{reps[Index{0}].hash, reps[Index{0}].z};
-    }
-
-    // used for unit testing
-    constexpr auto size() const { return count; }
+    constexpr ZHash zHash() const { return dupZHash_; }
 };
 
 class Repetitions {
     array<RepSide, Color> v_;
 
 public:
-    void clear() {
+    constexpr void clear() {
         for (auto& repSide : v_) {
             repSide.clear();
         }
@@ -279,8 +300,8 @@ public:
         return v_[color].has(z);
     }
 
-    RepHash repHash(Color color) const {
-        return v_[color].repHash();
+    constexpr ZHash zHash(Color color) const {
+        return v_[color].zHash();
     }
 };
 
