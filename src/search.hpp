@@ -68,7 +68,7 @@ protected:
     const Node* const grandParent{nullptr}; // previous side to move node (ply-2) or nullptr
     Node* child{nullptr}; // child node to make moves into, created in search()
 
-    RepHash repHash{}; // mini-hash of all previous reversible positions zobrist keys
+    ZHash zHash{}; // mini-hash of all previous reversible positions zobrist keys
     TtSlot* tt{nullptr}; // pointer to the slot in TT
     bool ttHit{false}; // this node found in TT
     TtSlot ttSlot; //TODO: remove me

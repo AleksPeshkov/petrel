@@ -534,7 +534,7 @@ ReturnStatus Node::searchNullMove() {
     makeNullMove(parent);
 
     tt = root.tt.prefetch<TtSlot>(z());
-    repHash = {};
+    zHash = {};
 
     return parent->negamax(4_ply + (parent->depth-2_ply)/4);
 }
@@ -547,9 +547,9 @@ ReturnStatus Node::searchMove(Square from, Square to, Ply R) {
     makeMove(parent, from, to, [&](Z z){ tt = root.tt.prefetch<TtSlot>(z); });
     root.pv.clear(pvIndex);
 
-    if (rule50() < 2_ply) { repHash = {}; }
-    else if (grandParent) { repHash = RepHash{grandParent->repHash, grandParent->z()}; }
-    else { repHash = root.repetitions.repHash(colorToMove()); }
+    if (rule50() < 2_ply) { zHash = {}; }
+    else if (grandParent) { zHash = ZHash{grandParent->zHash, grandParent->z()}; }
+    else { zHash = root.repetitions.zHash(colorToMove()); }
 
     return parent->negamax(parent->finalR(R));
 }
@@ -672,12 +672,8 @@ bool Node::isRepetition() const {
     if (grandParent) {
         auto next = grandParent;
         while ((next = next->grandParent)) {
-            if (next->z() == z()) {
-                return true;
-            }
-            if (!next->repHash.has(z())) {
-                return false;
-            }
+            if (next->z() == z()) { return true; }
+            if (next->zHash.none(z())) { return false; }
         }
     }
 
@@ -713,7 +709,7 @@ void refreshTtPv(const PositionMoves& p, const PrincipalVariation& pv, const Tt&
 
 ReturnStatus Node::searchRoot() {
     auto rootMovesClone = moves();
-    repHash = root.repetitions.repHash(colorToMove());
+    zHash = root.repetitions.zHash(colorToMove());
 
     for (depth = 1_ply; depth.isOk() && depth <= root.limits.maxDepth(); ++depth) {
         tt = root.tt.prefetch<TtSlot>(z());
