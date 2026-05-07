@@ -1,14 +1,19 @@
 # Simple Makefile for unit tests in tests/unit/
 BUILD_DIR ?= ../../build/unit
-TARGET = $(BUILD_DIR)/test
+TARGET ?= $(BUILD_DIR)/test
 
-RM = rm -rf
-MKDIR = mkdir -p
+RM := rm -rf
+MKDIR := mkdir -p
 
 # Compiler and flags
-CXX = clang++
-CXXFLAGS = -MMD -MP -std=c++20 -Wall -Wextra -g -I../../src -O0 -ggdb -DDEBUG -fsanitize=address,undefined
+CXX := clang++
+#CXX := g++
+CXXFLAGS := -MMD -MP -std=c++20 -Wall -Wextra -g -I../../src -O0 -ggdb -DDEBUG -fsanitize=address,undefined
 CXXFLAGS += -mavx2
+
+ifeq ($(CXX), g++)
+	CXXFLAGS += -flax-vector-conversions -Wno-class-memaccess
+endif
 
 # Source files
 TEST_SOURCES = $(wildcard *.cpp)
