@@ -583,17 +583,12 @@ ReturnStatus Node::updatePv() const {
 
     if (ply == 0_ply) {
         const auto& bestMove = root.pv.move(0_ply);
-        root.limits.updateMoveComplexity(bestMove);
-        ::insert_unique(root.rootBestMoves, bestMove);
-
         root.pv.set(depth, score);
-        root.info_pv();
 
-        // good place to check as there are no wasted search nodes
-        // and HardDeadline just possibly changed
-        if (root.limits.hardDeadlineReached()) {
-            return ReturnStatus::Stop;
-        }
+        RETURN_IF_STOP (root.limits.updateTimeStrategy(root.pv));
+
+        ::insert_unique(root.rootBestMoves, bestMove);
+        root.info_pv();
     }
 
     return ReturnStatus::Continue;
@@ -720,14 +715,12 @@ ReturnStatus Node::searchRoot() {
         setMoves(rootMovesClone);
         alpha = Score{MateLoss};
         beta = Score{MateWin};
-        auto returnStatus = search();
+
+        RETURN_IF_STOP (search());
+        RETURN_IF_STOP (root.limits.iterationDeadlineReached());
 
         root.newIteration();
         ::refreshTtPv(*this, root.pv, root.tt);
-
-        RETURN_IF_STOP (returnStatus);
-
-        if (root.limits.iterationDeadlineReached()) { return ReturnStatus::Stop; }
     }
 
     return ReturnStatus::Continue;
