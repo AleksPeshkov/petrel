@@ -9,6 +9,7 @@ class PositionMoves : public Position {
     PiBb moves_; // generated strictly legal moves
 
     Bb bbAttacked_; // bitboard of squares attacked by any opponent (not side to move) piece (set during moves generation)
+    MovesNumber movesTotal_; // total number of moves in the position (set during moves generation)
     MovesNumber movesMade_; // number of moves already made in this node (set to 0 during moves generation)
     bool inCheck_; // king of current side to move is under attack (set during moves generation)
 
@@ -35,7 +36,10 @@ public:
     // not yet made set of legal moves
     constexpr const auto& moves() const { return moves_; }
 
-    // already made moves count
+    // total count of legal moves
+    constexpr MovesNumber movesTotal() const { return movesTotal_; }
+
+    // count of already made legal (non-null) moves
     constexpr MovesNumber movesMade() const { return movesMade_; }
 
     // move is legal and not yet made

@@ -316,7 +316,7 @@ ReturnStatus NodePerft::visitMove(Square from, Square to) {
             makeMoveFast(parent, from, to);
             parent->clearMove(from, to);
             generateMoves();
-            perft = moves().popcount();
+            perft = movesTotal();
             break;
 
         default: {

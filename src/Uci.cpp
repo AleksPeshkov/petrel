@@ -538,38 +538,6 @@ istream& UciPosition::readMove(istream& is, Square& from, Square& to) const {
     return is;
 }
 
-void UciPosition::limitMoves(istream& is) {
-    PiBb moves;
-    moves.clear();
-    int n = 0;
-
-    while (is >> std::ws && !is.eof()) {
-        auto before = is.tellg();
-
-        Square from; Square to;
-
-        if (!readMove(is, from, to) || !isPossibleMove(from, to)) {
-            io::error("invalid move");
-            io::fail_pos(is, before);
-            return;
-        }
-
-        Pi pi = MY.pi(from);
-        if (!moves.has(pi, to)) {
-            moves.add(pi, to);
-            ++n;
-        }
-    }
-
-    if (n) {
-        setMoves(moves);
-        is.clear();
-        return;
-    }
-
-    io::fail_rewind(is);
-}
-
 void UciPosition::playMoves(istream& is, Repetitions& repetitions) {
     while (is >> std::ws && !is.eof()) {
         auto before = is.tellg();
@@ -675,6 +643,15 @@ void UciPosition::readFen(istream& is) {
 
     setZobrist();
     generateMoves();
+}
+
+// fast exit: return the first legal move found
+UciMove UciPosition::firstRootMove() const {
+    for (Pi pi : MY.pieces()) {
+        if (bbMovesOf(pi).none()) { continue; }
+        return uciMove(MY.sq(pi), bbMovesOf(pi).first());
+    }
+    return {};
 }
 
 Uci::Uci(ostream& os) :
@@ -1061,13 +1038,19 @@ void Uci::go() {
 
     limits.go(inputLine, position_);
 
-    auto started = mainSearchThread.start([this] {
-        Node{position_, *this}.searchRoot();
+    if (hasMoreInput() || position_.movesTotal() == 0) {
+    } else if (position_.movesTotal() == 1) {
+        // immediate move, not an error case, optimization
+        //TODO: add ponder move
+        pv.set(position_.firstRootMove());
         info_bestmove();
-    });
-    if (started) {
-        std::this_thread::yield();
         return;
+    } else {
+        auto started = mainSearchThread.start([this] {
+            Node{position_, *this}.searchRoot();
+            info_bestmove();
+        });
+        if (started) { std::this_thread::yield(); return; }
     }
 
     // error: search not started
