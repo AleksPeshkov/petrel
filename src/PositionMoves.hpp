@@ -4,8 +4,6 @@
 #include "Position.hpp"
 #include "PiBbMatrix.hpp"
 
-#define RETURN_IF_STOP(visitor) { if (visitor == ReturnStatus::Stop) { return ReturnStatus::Stop; } } ((void)0)
-
 using MovesNumber = int; // number of (legal) moves in the position
 
 class PositionMoves : public Position {
