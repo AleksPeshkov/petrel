@@ -41,10 +41,6 @@ void io::error(std::string_view message) {
     The_uci.error(message);
 }
 
-void io::info(std::string_view message) {
-    The_uci.info(message);
-}
-
 #ifndef NDEBUG
 void assert_fail(const char* assertion, const char* file, unsigned int line, const char* func) {
     io::error( std::string("Assertion failed (") + file + ":" + std::to_string(line) + "): " + func + ": " + assertion);

@@ -34,7 +34,6 @@ public:
 
     // bidirectional signed rank shift
     constexpr Bb shiftRank(signed r) { return Bb{ r >= 0 ? (v_ << 8*r) : (v_ >> -8*r) }; }
-
 };
 
 constexpr Bb Square::bbRank() const { return Bb{rank()} - Bb{*this}; }

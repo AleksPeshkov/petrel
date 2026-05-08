@@ -147,7 +147,7 @@ public:
     using Base::assertOk;
 
     constexpr io::char_type to_char() const { return The_string[v_]; }
-    friend ostream& operator << (ostream& out, Self index) { return out << index.to_char(); }
+    friend ostream& operator << (ostream& os, Self index) { return os << index.to_char(); }
 
     constexpr bool from_char(io::char_type c) {
         const auto* begin = The_string;
@@ -160,12 +160,12 @@ public:
         return true;
     }
 
-    friend istream& operator >> (istream& in, Self& index) {
+    friend istream& operator >> (istream& is, Self& index) {
         io::char_type c{};
-        if (in.get(c)) {
-            if (!index.from_char(c)) { io::fail_char(in); }
+        if (is.get(c)) {
+            if (!index.from_char(c)) { io::fail_char(is); }
         }
-        return in;
+        return is;
     }
 };
 
@@ -178,15 +178,15 @@ struct Ply : Index<Ply, 64> {
     friend constexpr Ply operator * (Ply a, int n) { return Ply{a.v_ * n}; }
     friend constexpr Ply operator / (Ply a, int n) { return Ply{a.v_ / n}; }
 
-    friend ostream& operator << (ostream& out, Ply ply) { return out << ply.v_; }
+    friend ostream& operator << (ostream& os, Ply ply) { return os << ply.v_; }
 
-    friend istream& operator >> (istream& in, Ply& ply) {
+    friend istream& operator >> (istream& is, Ply& ply) {
         _t n;
-        auto before = in.tellg();
-        in >> n;
-        if (!isOk(n)) { return io::fail_pos(in, before); }
+        auto before = is.tellg();
+        is >> n;
+        if (!isOk(n)) { return io::fail_pos(is, before); }
         ply = Ply{n};
-        return in;
+        return is;
     }
 };
 constexpr Ply MaxPly{Ply::last()}; // Ply is limited to [0 .. MaxPly]
@@ -197,7 +197,7 @@ struct File : Index<File, 8, file_t> {
     using Index::Index;
 
     constexpr io::char_type to_char() const { return static_cast<io::char_type>('a' + v_); }
-    friend ostream& operator << (ostream& out, File file) { return out << file.to_char(); }
+    friend ostream& operator << (ostream& os, File file) { return os << file.to_char(); }
 
     bool from_char(io::char_type c) {
         if (!('a' <= c && c <= 'h')) { return false; }
@@ -206,12 +206,12 @@ struct File : Index<File, 8, file_t> {
         return true;
     }
 
-    friend istream& operator >> (istream& in, File& file) {
+    friend istream& operator >> (istream& is, File& file) {
         io::char_type c{};
-        if (in.get(c)) {
-            if (!file.from_char(c)) { io::fail_char(in); }
+        if (is.get(c)) {
+            if (!file.from_char(c)) { io::fail_char(is); }
         }
-        return in;
+        return is;
     }
 };
 
@@ -222,7 +222,7 @@ struct Rank : Index<Rank, 8, rank_t> {
     constexpr Rank forward() const { return Rank{static_cast<Rank::_t>(v_ + Rank2 - Rank1)}; }
 
     constexpr io::char_type to_char() const { return static_cast<io::char_type>('8' - v_); }
-    friend ostream& operator << (ostream& out, Rank rank) { return out << rank.to_char(); }
+    friend ostream& operator << (ostream& os, Rank rank) { return os << rank.to_char(); }
 
     bool from_char(io::char_type c) {
         if (!('1' <= c && c <= '8')) { return false; }
@@ -231,12 +231,12 @@ struct Rank : Index<Rank, 8, rank_t> {
         return true;
     }
 
-    friend istream& operator >> (istream& in, Rank& rank) {
+    friend istream& operator >> (istream& is, Rank& rank) {
         io::char_type c{};
-        if (in.get(c)) {
-            if (!rank.from_char(c)) { io::fail_char(in); }
+        if (is.get(c)) {
+            if (!rank.from_char(c)) { io::fail_char(is); }
         }
-        return in;
+        return is;
     }
 };
 
@@ -293,7 +293,7 @@ public:
     constexpr Bb bbAntidiag() const; // BitBoard of the antidiagonal of the square (excluding the square itself)
     constexpr Bb bbDirection(Direction) const; // BitBoard of the direction of the square (excluding the square itself)
 
-    friend ostream& operator << (ostream& out, Square sq) { return out << sq.file() << sq.rank(); }
+    friend ostream& operator << (ostream& os, Square sq) { return os << sq.file() << sq.rank(); }
 };
 
 enum color_t { White, Black };
@@ -492,14 +492,14 @@ public:
 
     [[nodiscard]] friend constexpr bool operator == (Z a, Z b) { return a.v_ == b.v_; }
 
-    friend ostream& operator << (ostream& out, Z z) {
-        auto flags = out.flags();
+    friend ostream& operator << (ostream& os, Z z) {
+        auto flags = os.flags();
 
-        out << " [" << std::hex << std::setw(16) << std::setfill('0') << "]";
-        out << z.v_;
+        os << " [" << std::hex << std::setw(16) << std::setfill('0') << "]";
+        os << z.v_;
 
-        out.flags(flags);
-        return out;
+        os.flags(flags);
+        return os;
     }
 };
 
