@@ -197,7 +197,6 @@ void UciSearchLimits::go(istream& is, UciPosition& position) {
         else if (io::consume(is, "depth"))    { is >> maxDepth_; }
         else if (io::consume(is, "ponder"))   { pondering_.store(true, std::memory_order_relaxed); }
         else if (io::consume(is, "infinite")) { infinite_ =  true; }
-        else if (io::consume(is, "searchmoves")) { position.limitMoves(is); break; }
         else { break; }
     }
 

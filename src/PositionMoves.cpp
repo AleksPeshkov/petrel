@@ -172,5 +172,6 @@ void PositionMoves::generateMoves() {
 
 void PositionMoves::generateMoves() {
     generateMoves<My>();
+    movesTotal_ = moves().popcount();
     movesMade_ = 0;
 }

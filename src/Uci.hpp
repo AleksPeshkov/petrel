@@ -11,8 +11,8 @@
 #include "UciSearchLimits.hpp"
 
 class UciPosition : public PositionMoves {
-    int fullMoveNumber_{1}; // number of full moves from the beginning of the game
     Color colorToMove_{White}; //root position side to move color
+    int fullMoveNumber_{1}; // number of played full moves from the beginning of the game
 
     istream& readBoard(istream&);
     istream& readCastling(istream&);
@@ -22,7 +22,8 @@ class UciPosition : public PositionMoves {
 public:
     void readFen(istream&);
     void playMoves(istream&, Repetitions&);
-    void limitMoves(istream&);
+
+    UciMove firstRootMove() const;
 
     constexpr Side sideOf(Color::_t color) const { return Side{colorToMove_.is(color) ? My : Op}; }
     constexpr Color colorToMove(Ply ply = 0_ply) const { return Color{ ::distance(colorToMove_, ply) }; }
@@ -127,6 +128,7 @@ public:
 
     constexpr ChessVariant chessVariant() const { return chessVariant_; }
     constexpr Color colorToMove(Ply ply = 0_ply) const { return position_.colorToMove(ply); }
+    constexpr const auto& moves() const { return position_.moves(); }
 
     void info_pv() const;
     void info_perft_depth(Ply, node_count_t) const;

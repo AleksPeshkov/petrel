@@ -110,7 +110,7 @@ ReturnStatus Node::search() {
 
     if (!isRoot()) {
         if (inCheck()) {
-            if (moves().popcount() == 0) {
+            if (movesTotal() == 0) {
                 // checkmate
                 score = Score::mateLoss(ply);
                 assert (currentMove.none());
@@ -120,7 +120,7 @@ ReturnStatus Node::search() {
             // check extension
             depth = depth + 1_ply;
         } else {
-            if (moves().popcount() == 0) {
+            if (movesTotal() == 0) {
                 // stalemate
                 assert (!inCheck());
                 score = Score{DrawScore};
@@ -730,22 +730,10 @@ void refreshTtPv(const PositionMoves& p, const PrincipalVariation& pv, const Tt&
 }
 
 ReturnStatus Node::searchRoot() {
-    auto rootMovesClone = moves();
     repHash = root.repetitions.repHash(colorToMove());
 
-    Ply maxDepth = root.limits.maxDepth();
-
-    auto moveCount = rootMovesClone.popcount();
-    if (moveCount == 0) {
-        maxDepth = 1_ply;
-    } else if (moveCount == 1) {
-        // minimal search to get score and ponder move
-        maxDepth = root.limits.canPonder() ? 2_ply : 1_ply;
-    }
-
-    for (depth = 1_ply; depth.isOk() && depth <= maxDepth; ++depth) {
+    for (depth = 1_ply; depth.isOk(); ++depth) {
         tt = root.tt.prefetch<TtSlot>(z());
-        setMoves(rootMovesClone);
         alpha = Score{MateLoss};
         beta = Score{MateWin};
 
@@ -756,6 +744,7 @@ ReturnStatus Node::searchRoot() {
         if (depth >= root.limits.maxDepth()) { return ReturnStatus::Continue; }
 
         root.info_pv();
+        setMoves(root.moves()); // refresh moves for next iteration
         ::refreshTtPv(*this, root.pv, root.tt);
     }
 
