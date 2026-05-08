@@ -115,6 +115,12 @@ public:
         return set(Index{0}, bestRootMove, childPv);
     }
 
+    void set(Move bestRootMove) {
+        clear();
+        moves_[Index{0}] = bestRootMove;
+        moves_[Index{1}] = {};
+    }
+
     void set(Ply depth) { depth_ = depth; }
 
     const auto* moves() const { return &moves_[Index{0}]; }

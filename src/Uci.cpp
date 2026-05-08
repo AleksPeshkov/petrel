@@ -546,7 +546,7 @@ istream& UciPosition::readMove(istream& is, Square& from, Square& to) const {
 void UciPosition::limitMoves(istream& is) {
     PiBbMatrix movesMatrix;
     movesMatrix.clear();
-    int n = 0;
+    int rootMoves = 0;
 
     while (is >> std::ws && !is.eof()) {
         auto before = is.tellg();
@@ -562,17 +562,19 @@ void UciPosition::limitMoves(istream& is) {
         Pi pi = MY.pi(from);
         if (!movesMatrix.has(pi, to)) {
             movesMatrix.add(pi, to);
-            ++n;
+            ++rootMoves;
         }
     }
+    rootMoves_ = rootMoves;
 
-    if (n) {
-        setMoves(movesMatrix);
-        is.clear();
+    if (rootMoves == 0) {
+        io::error("go searchmoves: 0 moves");
+        io::fail_rewind(is);
         return;
     }
 
-    io::fail_rewind(is);
+    setMoves(movesMatrix);
+    is.clear();
 }
 
 void UciPosition::playMoves(istream& is, Repetitions& repetitions) {
@@ -685,6 +687,16 @@ void UciPosition::readFen(istream& is) {
 void UciPosition::setStartpos() {
     std::istringstream startpos{"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"};
     readFen(startpos);
+    rootMoves_ = 20;
+}
+
+// fast exit: return the first legal move found
+UciMove UciPosition::firstRootMove() const {
+    for (Pi pi : MY.pieces()) {
+        if (bbMovesOf(pi).none()) { continue; }
+        return uciMove(MY.sq(pi), bbMovesOf(pi).first());
+    }
+    return {};
 }
 
 Uci::Uci(ostream& os) :
@@ -1065,13 +1077,19 @@ void Uci::go() {
 
     limits.go(inputLine, position_);
 
-    auto started = mainSearchThread.start([this] {
-        Node{position_, *this}.searchRoot();
+    if (hasMoreInput() || position_.rootMoves() == 0) {
+    } else if (position_.rootMoves() == 1) {
+        // immediate move, not an error case, optimization
+        //TODO: add ponder move
+        pv.set(position_.firstRootMove());
         info_bestmove();
-    });
-    if (started) {
-        std::this_thread::yield();
         return;
+    } else {
+        auto started = mainSearchThread.start([this] {
+            Node{position_, *this}.searchRoot();
+            info_bestmove();
+        });
+        if (started) { std::this_thread::yield(); return; }
     }
 
     // error: search not started

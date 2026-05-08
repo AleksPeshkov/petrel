@@ -106,32 +106,26 @@ ReturnStatus Node::search() {
     currentMove = {};
     assertOk();
 
-    if (moves().none()) {
-        // checkmate or stalemate
-        score = inCheck() ? Score::mateLoss(ply) : Score{DrawScore};
-        assert (currentMove.none());
-        return ReturnStatus::Continue;
-    }
-    if (ply == MaxPly) {
-        // no room to search deeper
-        score = evaluate();
-        assert (currentMove.none());
-        return ReturnStatus::Continue;
-    }
-
     if (!isRoot()) {
-        // mate-distance pruning
-        alpha = std::max(alpha, Score::mateLoss(ply));
-        if (!(alpha < std::min(beta, Score::mateWin(ply + 1_ply)))) {
-            score = alpha;
+        if (moves().none()) {
+            // checkmate or stalemate
+            score = inCheck() ? Score::mateLoss(ply) : Score{DrawScore};
             assert (currentMove.none());
-            return ReturnStatus::Cutoff;
+            return ReturnStatus::Continue;
         }
 
         if (rule50().isDraw() || isRepetition() || isDrawMaterial()) {
             score = Score{DrawScore};
             assert (currentMove.none());
             return ReturnStatus::Continue;
+        }
+
+        // mate-distance pruning
+        alpha = std::max(alpha, Score::mateLoss(ply));
+        if (!(alpha < std::min(beta, Score::mateWin(ply + 1_ply)))) {
+            score = alpha;
+            assert (currentMove.none());
+            return ReturnStatus::Cutoff;
         }
     }
 
@@ -208,6 +202,14 @@ ReturnStatus Node::search() {
     } while(false);
 
     assert ((inCheck() && eval.none()) || (!inCheck() && eval.isEval()));
+
+    if (ply == MaxPly) {
+        // no room to search deeper
+        score = inCheck() ? Score::mateLoss(ply) : eval;
+        assert (currentMove.none());
+        return ReturnStatus::Continue;
+    }
+
 // search all moves:
 
     // prepare empty child node to make moves into
@@ -713,17 +715,7 @@ ReturnStatus Node::searchRoot() {
     auto rootMovesClone = moves();
     repHash = root.repetitions.repHash(colorToMove());
 
-    Ply maxDepth = root.limits.maxDepth();
-
-    auto moveCount = rootMovesClone.popcount();
-    if (moveCount == 0) {
-        maxDepth = 1_ply;
-    } else if (moveCount == 1) {
-        // minimal search to get score and ponder move
-        maxDepth = root.limits.canPonder() ? 2_ply : 1_ply;
-    }
-
-    for (depth = 1_ply; depth.isOk() && depth <= maxDepth; ++depth) {
+    for (depth = 1_ply; depth.isOk() && depth <= root.limits.maxDepth(); ++depth) {
         tt = root.tt.prefetch<TtSlot>(z());
         setMoves(rootMovesClone);
         alpha = Score{MateLoss};
