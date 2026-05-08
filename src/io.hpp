@@ -12,11 +12,9 @@
 namespace io {
     using std::ostream;
     using std::istream;
-    using std::istringstream;
-    using std::ostringstream;
 
     using char_type = ostream::char_type;
-    using czstring = const char_type* ;
+    using czstring = const char_type*;
 
 // defined in Uci.cpp
 
@@ -26,13 +24,11 @@ namespace io {
     COLD istream& fail_rewind(istream&);
 
     bool consume(istream&, czstring);
-    bool hasMore(istream&);
 
 // defined in main.cpp
 
     ostream& app_version(ostream&);
     COLD void error(std::string_view);
-    COLD void info(std::string_view);
 }
 
 using io::ostream;

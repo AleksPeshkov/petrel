@@ -7,7 +7,6 @@
 /* mocks */
 
 void io::error(std::string_view) {}
-void io::info(std::string_view) {}
 
 void assert_fail(const char* assertion, const char* file, unsigned int line, const char* func) {
     std::cerr << "Assertion failed: " << func << ": " << assertion << " (" << file << ":" << line << ")";
