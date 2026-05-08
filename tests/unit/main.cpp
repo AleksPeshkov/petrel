@@ -14,6 +14,8 @@ void assert_fail(const char* assertion, const char* file, unsigned int line, con
     std::exit(EXIT_FAILURE); // graceful exit without core dump
 }
 
+ostream& io::app_version(ostream& os) { return os << "petrel unit tests"; }
+
 int main() {
     try {
         TestPassedPawns::test();

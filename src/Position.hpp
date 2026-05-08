@@ -148,7 +148,7 @@ protected:
 
     void makeNullMove(const Position*);
 
-    template <Side::_t> void setLegalEnPassant(Pi, Square);
+    template <Side::_t> void setLegalEnPassant(Square);
     void setZobrist() { zobrist_ = generateZobrist(); }
 
     // number of halfmoves since last capture or pawn move
@@ -176,6 +176,7 @@ public:
     void clear(); // init accumulators
     bool dropValid(Side, PieceType, Square);
     bool afterDrop();
+    bool setEnPassant(File);
 
 // needed public for unit tests
     constexpr const PositionSide& positionSide(Side side) const { return positionSide_[side]; }
