@@ -70,11 +70,6 @@ bool consume(istream& is, czstring token) {
     return false;
 }
 
-bool hasMore(istream& is) {
-    is >> std::ws;
-    return !is.eof();
-}
-
 } // namespace io
 
 namespace { // anonymous namespace
@@ -87,12 +82,12 @@ template <typename T> static constexpr T permil(T n, T m) { return (n * 1000) / 
 } // anonymous namespace
 
 // std::ostringstream output buffer, flushed on destruction
-class Output : public io::ostringstream {
+class Output : public std::ostringstream {
 protected:
     const Uci& uci;
 public:
-    Output (const Uci* u) : io::ostringstream{}, uci{*u} {}
-    io::ostringstream& flush() { uci.output(str()); str(""); return *this; }
+    Output (const Uci* u) : std::ostringstream{}, uci{*u} {}
+    std::ostringstream& flush() { uci.output(str()); str(""); return *this; }
     ~Output () { flush(); }
 };
 
@@ -126,20 +121,20 @@ void trimTrailingWhitespace(std::string& str) {
 }
 
 // typesafe operator<< chaining
-UciOutput& operator << (UciOutput& out, io::czstring message) {
-    static_cast<ostream&>(out) << message; return out;
+UciOutput& operator << (UciOutput& ob, io::czstring message) {
+    static_cast<ostream&>(ob) << message; return ob;
 }
 
 // convert move to UCI format
-UciOutput& operator << (UciOutput& out, UciMove move) {
-    bool isWhite{out.color().is(White)};
-    out.flipColor();
-    out << ' ';
+UciOutput& operator << (UciOutput& ob, UciMove move) {
+    bool isWhite{ob.color().is(White)};
+    ob.flipColor();
+    ob << ' ';
 
     if (move.none()) {
-        io::info("illegal move 0000 printed");
-        out << "0000";
-        return out;
+        io::error("illegal move 0000 printed");
+        ob << "0000";
+        return ob;
     }
 
     Square from{move.from()};
@@ -149,72 +144,72 @@ UciOutput& operator << (UciOutput& out, UciMove move) {
     Square uciTo{isWhite ? to : ~to};
 
     if (!move.isSpecial()) {
-        out << uciFrom << uciTo;
-        return out;
+        ob << uciFrom << uciTo;
+        return ob;
     }
 
     //pawn promotion
     if (from.on(Rank7)) {
         //the type of a promoted pawn piece encoded in place of move to's rank
         uciTo = Square{to.file(), isWhite ? Rank8 : Rank1};
-        out << uciFrom << uciTo << PromoType{::promoTypeFrom(to.rank())};
-        return out;
+        ob << uciFrom << uciTo << PromoType{::promoTypeFrom(to.rank())};
+        return ob;
     }
 
     //en passant capture
     if (from.on(Rank5)) {
         //en passant capture move internally encoded as pawn captures pawn
         assert (to.on(Rank5));
-        out << uciFrom << Square{to.file(), isWhite ? Rank6 : Rank3};
-        return out;
+        ob << uciFrom << Square{to.file(), isWhite ? Rank6 : Rank3};
+        return ob;
     }
 
     //castling
     if (from.on(Rank1)) {
         //castling move internally encoded as the rook captures the king
 
-        if (out.chessVariant().is(Orthodox)) {
-            if (from.on(FileA)) { out << uciTo << Square{File{FileC}, uciFrom.rank()}; return out; }
-            if (from.on(FileH)) { out << uciTo << Square{File{FileG}, uciFrom.rank()}; return out; }
+        if (ob.chessVariant().is(Orthodox)) {
+            if (from.on(FileA)) { ob << uciTo << Square{File{FileC}, uciFrom.rank()}; return ob; }
+            if (from.on(FileH)) { ob << uciTo << Square{File{FileG}, uciFrom.rank()}; return ob; }
         }
 
         // Chess960:
-        out << uciTo << uciFrom;
-        return out;
+        ob << uciTo << uciFrom;
+        return ob;
     }
 
     //should never happen
     assert (false);
     io::error("invalid move in UCI output");
-    out << "0000";
-    return out;
+    ob << "0000";
+    return ob;
 }
 
-UciOutput& operator << (UciOutput& out, const PrincipalVariation& pv) {
-    out << pv.score();
+UciOutput& operator << (UciOutput& ob, const PrincipalVariation& pv) {
+    ob << pv.score();
     auto moves = pv.moves();
-    if (moves->none()) { return out; } // empty PV (no legal moves at root)
+    if (moves->none()) { return ob; } // empty PV (no legal moves at root)
 
     {
-        out << " pv";
+        ob << " pv";
         for (UciMove move; (move = *moves++).any(); ) {
-            out << move;
+            ob << move;
         }
-        out.resetRootColor();
+        ob.resetRootColor();
     }
-    return out;
+    return ob;
 }
 
-istream& operator >> (istream& in, Square& sq) {
-    auto before = in.tellg();
+istream& operator >> (istream& is, Square& sq) {
+    auto before = is.tellg();
 
     File file; Rank rank;
-    in >> file >> rank;
+    is >> file >> rank;
 
-    if (!in) { return io::fail_pos(in, before); }
+    if (!is) { return io::fail_pos(is, before); }
 
     sq = Square{file, rank};
-    return in;
+    return is;
 }
 
 /** Setup a chess position from a FEN string with chess legality validation */
@@ -244,17 +239,17 @@ public:
     bool dropPieces(Position& pos, Color colorToMove_);
 };
 
-istream& read(istream& in, FenToBoard& board) {
+istream& read(istream& is, FenToBoard& board) {
     File file{FileA}; Rank rank{Rank8};
 
-    for (io::char_type c{}; in.get(c); ) {
+    for (io::char_type c{}; is.get(c); ) {
         if (std::isalpha(c) && rank.isOk() && file.isOk()) {
             Color color{std::isupper(c) ? White : Black};
             c = static_cast<io::char_type>(std::tolower(c));
 
             PieceType ty{Queen};
             if (!ty.from_char(c) || !board.drop(color, ty, Square{file, rank})) {
-                return io::fail_char(in);
+                return io::fail_char(is);
             }
 
             ++file;
@@ -265,7 +260,7 @@ istream& read(istream& in, FenToBoard& board) {
             //convert digit symbol to offset and skip blank squares
             auto f = +file + (c - '1');
             if (!File::isOk(f)) {
-                return io::fail_char(in);
+                return io::fail_char(is);
             }
 
             //avoid out of range initialization check
@@ -286,10 +281,10 @@ istream& read(istream& in, FenToBoard& board) {
         }
 
         //parsing error
-        return io::fail_char(in);
+        return io::fail_char(is);
     }
 
-    return in;
+    return is;
 }
 
 bool FenToBoard::drop(Color color, PieceType ty, Square sq) {
@@ -355,7 +350,7 @@ public:
         blackPieces{b}
         {}
 
-    friend ostream& operator << (ostream& out, const BoardToFen& board) {
+    friend ostream& operator << (ostream& os, const BoardToFen& board) {
         for (auto rank : range<Rank>()) {
             int emptySqCount = 0;
 
@@ -363,25 +358,25 @@ public:
                 Square sq{file, rank};
 
                 if (board.whitePieces.has(sq)) {
-                    if (emptySqCount != 0) { out << emptySqCount; emptySqCount = 0; }
-                    out << static_cast<io::char_type>(std::toupper( PieceType{board.whitePieces.typeAt(sq)}.to_char() ));
+                    if (emptySqCount != 0) { os << emptySqCount; emptySqCount = 0; }
+                    os << static_cast<io::char_type>(std::toupper( PieceType{board.whitePieces.typeAt(sq)}.to_char() ));
                     continue;
                 }
 
                 if (board.blackPieces.has(~sq)) {
-                    if (emptySqCount != 0) { out << emptySqCount; emptySqCount = 0; }
-                    out << board.blackPieces.typeAt(~sq);
+                    if (emptySqCount != 0) { os << emptySqCount; emptySqCount = 0; }
+                    os << board.blackPieces.typeAt(~sq);
                     continue;
                 }
 
                 ++emptySqCount;
             }
 
-            if (emptySqCount != 0) { out << emptySqCount; }
-            if (!rank.is(Rank1)) { out << '/'; }
+            if (emptySqCount != 0) { os << emptySqCount; }
+            if (!rank.is(Rank1)) { os << '/'; }
         }
 
-        return out;
+        return os;
     }
 };
 
@@ -414,13 +409,13 @@ public:
         insert(blackPieces, Black, chessVariant);
     }
 
-    friend ostream& operator << (ostream& out, const CastlingToFen& castling) {
-        if (castling.castlingSet.empty()) { return out << '-'; }
+    friend ostream& operator << (ostream& os, const CastlingToFen& castling) {
+        if (castling.castlingSet.empty()) { return os << '-'; }
 
         for (auto castlingSymbol : castling.castlingSet) {
-            out << castlingSymbol;
+            os << castlingSymbol;
         }
-        return out;
+        return os;
     }
 };
 
@@ -432,20 +427,20 @@ public:
     EnPassantToFen (const PositionSide& side, Color colorToMove_):
         op{side}, enPassantRank{colorToMove_.is(White) ? Rank6 : Rank3} {}
 
-    friend ostream& operator << (ostream& out, const EnPassantToFen& enPassant) {
-        if (!enPassant.op.hasEnPassant()) { return out << '-'; }
+    friend ostream& operator << (ostream& os, const EnPassantToFen& enPassant) {
+        if (!enPassant.op.hasEnPassant()) { return os << '-'; }
 
-        return out << Square{enPassant.op.fileEnPassant(), enPassant.enPassantRank};
+        return os << Square{enPassant.op.fileEnPassant(), enPassant.enPassantRank};
     }
 };
 
 } //end of anonymous namespace
 
-ostream& UciPosition::fen(ostream& out) const {
+ostream& UciPosition::fen(ostream& os) const {
     const auto& whiteSidePieces = positionSide(sideOf(White));
     const auto& blackSidePieces = positionSide(sideOf(Black));
 
-    return out << BoardToFen(whiteSidePieces, blackSidePieces)
+    return os << BoardToFen(whiteSidePieces, blackSidePieces)
         << ' ' << colorToMove_
         << ' ' << CastlingToFen{whiteSidePieces, blackSidePieces, chessVariant_}
         << ' ' << EnPassantToFen{OP, colorToMove_}
@@ -453,71 +448,71 @@ ostream& UciPosition::fen(ostream& out) const {
         << ' ' << fullMoveNumber;
 }
 
-istream& UciPosition::readMove(istream& in, Square& from, Square& to) const {
-    auto before = in.tellg();
-    in >> from >> to;
-    if (!in) { return io::fail_pos(in, before); }
+istream& UciPosition::readMove(istream& is, Square& from, Square& to) const {
+    auto before = is.tellg();
+    is >> from >> to;
+    if (!is) { return io::fail_pos(is, before); }
 
     if (colorToMove_.is(Black)) { from = ~from; to = ~to; }
 
-    if (!MY.has(from)) { return io::fail_pos(in, before); }
+    if (!MY.has(from)) { return io::fail_pos(is, before); }
 
     //convert special moves (castling, promotion, ep) to the internal move format
     if (MY.isPawn(from)) {
         if (from.on(Rank7)) {
             PromoType promo{Queen};
-            in >> promo;
-            in.clear(); //promotion piece is optional
+            is >> promo;
+            is.clear(); //promotion piece is optional
             to = Square{to.file(), ::rankOf(promo)};
-            return in;
+            return is;
         }
 
         if (from.on(Rank5) && OP.hasEnPassant() && OP.fileEnPassant().is(to.file())) {
             to = Square{to.file(), Rank5};
-            return in;
+            return is;
         }
 
         //else is normal pawn move
-        return in;
+        return is;
     }
 
     if (MY.isKing(from)) {
         if (MY.has(to)) { //Chess960 castling encoding
-            if (!MY.isCastling(to)) { return io::fail_pos(in, before); }
+            if (!MY.isCastling(to)) { return io::fail_pos(is, before); }
 
             std::swap(from, to);
-            return in;
+            return is;
         }
         if (from.is(E1) && to.is(G1)) {
-            if (!MY.has(Square{H1}) || !MY.isCastling(Square{H1})) { return io::fail_pos(in, before); }
+            if (!MY.has(Square{H1}) || !MY.isCastling(Square{H1})) { return io::fail_pos(is, before); }
 
             from = Square{H1}; to = Square{E1};
-            return in;
+            return is;
         }
         if (from.is(E1) && to.is(C1)) {
-            if (!MY.has(Square{A1}) || !MY.isCastling(Square{A1})) { return io::fail_pos(in, before); }
+            if (!MY.has(Square{A1}) || !MY.isCastling(Square{A1})) { return io::fail_pos(is, before); }
 
             from = Square{A1}; to = Square{E1};
-            return in;
+            return is;
         }
         //else is normal king move
     }
 
-    return in;
+    return is;
 }
 
-void UciPosition::limitMoves(istream& in) {
+void UciPosition::limitMoves(istream& is) {
     PiBb moves;
     int n = 0;
 
-    while (in >> std::ws && !in.eof()) {
-        auto before = in.tellg();
+    while (is >> std::ws && !is.eof()) {
+        auto before = is.tellg();
 
         Square from; Square to;
 
-        if (!readMove(in, from, to) || !isPossibleMove(from, to)) {
+        if (!readMove(is, from, to) || !isPossibleMove(from, to)) {
             io::error("invalid move");
-            io::fail_pos(in, before);
+            io::fail_pos(is, before);
             return;
         }
 
@@ -530,21 +525,21 @@ void UciPosition::limitMoves(istream& in) {
 
     if (n) {
         setMoves(moves);
-        in.clear();
+        is.clear();
         return;
     }
 
-    io::fail_rewind(in);
+    io::fail_rewind(is);
 }
 
-void UciPosition::playMoves(istream& in, Repetitions& repetitions) {
-    while (in >> std::ws && !in.eof()) {
-        auto before = in.tellg();
+void UciPosition::playMoves(istream& is, Repetitions& repetitions) {
+    while (is >> std::ws && !is.eof()) {
+        auto before = is.tellg();
 
         Square from; Square to;
 
-        if (!readMove(in, from, to) || !isPossibleMove(from, to)) {
-            io::fail_pos(in, before);
+        if (!readMove(is, from, to) || !isPossibleMove(from, to)) {
+            io::fail_pos(is, before);
             return;
         }
 
@@ -561,32 +556,32 @@ void UciPosition::playMoves(istream& in, Repetitions& repetitions) {
     repetitions.normalize(colorToMove_);
 }
 
-istream& UciPosition::readBoard(istream& in) {
+istream& UciPosition::readBoard(istream& is) {
     FenToBoard board;
-    if (!read(in, board)) { return in; };
+    if (!read(is, board)) { return is; };
 
-    in >> std::ws;
-    if (in.eof()) {
+    is >> std::ws;
+    if (is.eof()) {
         //missing board data
-        return io::fail_rewind(in);
+        return io::fail_rewind(is);
     }
 
-    auto beforeColor = in.tellg();
-    in >> colorToMove_;
-    if (!in) { return in; }
+    auto beforeColor = is.tellg();
+    is >> colorToMove_;
+    if (!is) { return is; }
 
     Position pos;
-    if (!board.dropPieces(pos, colorToMove_)) { return io::fail_pos(in, beforeColor); }
-    if (!pos.afterDrop()) { return io::fail_pos(in, beforeColor); }
+    if (!board.dropPieces(pos, colorToMove_)) { return io::fail_pos(is, beforeColor); }
+    if (!pos.afterDrop()) { return io::fail_pos(is, beforeColor); }
 
     static_cast<Position&>(*this) = pos;
-    return in;
+    return is;
 }
 
-istream& UciPosition::readCastling(istream& in) {
-    if (in.peek() == '-') { return in.ignore(); }
+istream& UciPosition::readCastling(istream& is) {
+    if (is.peek() == '-') { return is.ignore(); }
 
-    for (io::char_type c{}; in.get(c) && !std::isblank(c); ) {
+    for (io::char_type c{}; is.get(c) && !std::isblank(c); ) {
         if (std::isalpha(c)) {
             Color color{std::isupper(c) ? White : Black};
             Side side = sideOf(*color);
@@ -604,40 +599,40 @@ istream& UciPosition::readCastling(istream& in) {
                 }
             }
         }
-        io::fail_char(in);
+        io::fail_char(is);
     }
-    return in;
+    return is;
 }
 
-istream& UciPosition::readEnPassant(istream& in) {
-    if (in.peek() == '-') { return in.ignore(); }
+istream& UciPosition::readEnPassant(istream& is) {
+    if (is.peek() == '-') { return is.ignore(); }
 
     Square ep;
 
-    auto beforeSquare = in.tellg();
-    if (in >> ep) {
+    auto beforeSquare = is.tellg();
+    if (is >> ep) {
         if (!ep.on(colorToMove_.is(White) ? Rank6 : Rank3) || !setEnPassant(ep.file())) {
-            return io::fail_pos(in, beforeSquare);
+            return io::fail_pos(is, beforeSquare);
         }
     }
-    return in;
+    return is;
 }
 
-void UciPosition::readFen(istream& in) {
-    in >> std::ws;
-    readBoard(in);
-    in >> std::ws;
-    readCastling(in);
-    in >> std::ws;
-    readEnPassant(in);
+void UciPosition::readFen(istream& is) {
+    is >> std::ws;
+    readBoard(is);
+    is >> std::ws;
+    readCastling(is);
+    is >> std::ws;
+    readEnPassant(is);
 
-    if (in && !in.eof()) {
+    if (is && !is.eof()) {
         Rule50 rule50;
-        in >> rule50;
-        if (in) { setRule50(rule50); }
+        is >> rule50;
+        if (is) { setRule50(rule50); }
 
-        in >> fullMoveNumber;
-        in.clear(); // ignore possibly missing 'halfmove clock' and 'fullmove number' fen fields
+        is >> fullMoveNumber;
+        is.clear(); // ignore possibly missing 'halfmove clock' and 'fullmove number' fen fields
     }
 
     setZobrist();
@@ -649,10 +644,10 @@ void UciPosition::setStartpos() {
     readFen(startpos);
 }
 
-Uci::Uci(ostream &o) :
+Uci::Uci(ostream &os) :
     tt(64 * mebibyte),
     inputLine{std::string(2048, '\0')}, // preallocate 2048 bytes (~200 full moves)
-    out{o},
+    out{os},
     bestmove_(sizeof("bestmove a7a8q ponder h2h1q"), '\0'),
     pid{System::getPid()},
     logStartTime{::timeNow()}
@@ -732,9 +727,9 @@ void Uci::info(std::string_view message) const {
     log('*' + std::string(message));
 }
 
-void Uci::processInput(istream& in) {
+void Uci::processInput(istream& is) {
     std::string currentLine(2048, '\0'); // preallocate 2048 bytes (~200 full moves)
-    while (std::getline(in, currentLine)) {
+    while (std::getline(is, currentLine)) {
         if (isDebugOn) { log('>' + currentLine); }
 
         inputLine.clear(); //clear previous errors
@@ -1084,9 +1079,9 @@ void Uci::info_bestmove() const {
     }
 }
 
-ostream& Uci::info_fen(ostream& o) const {
-    o << "info" << position_.evaluate() << " fen " << position_;
-    return o;
+ostream& Uci::info_fen(ostream& os) const {
+    os << "info" << position_.evaluate() << " fen " << position_;
+    return os;
 }
 
 void Uci::info_readyok() const {

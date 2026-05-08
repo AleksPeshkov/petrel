@@ -34,7 +34,7 @@ public:
     constexpr ChessVariant chessVariant() const { return chessVariant_; }
     constexpr void setChessVariant(ChessVariant chessVariant) { chessVariant_ = chessVariant; }
 
-    friend ostream& operator << (ostream& out, const UciPosition& pos) { return pos.fen(out); }
+    friend ostream& operator << (ostream& os, const UciPosition& pos) { return pos.fen(os); }
 };
 
 class UciOutput;
@@ -56,7 +56,7 @@ private:
     Thread mainSearchThread;
 
     // stream buffer for parsing current input line
-    io::istringstream inputLine;
+    std::istringstream inputLine;
 
     // output stream
     ostream& out;
@@ -87,8 +87,8 @@ private:
     // try to consume the given token from the inputLine
     bool consume(io::czstring token) { return io::consume(inputLine, token); }
 
-    // something left unparsed
-    bool hasMoreInput() { return io::hasMore(inputLine); }
+    // if something left unparsed usually means error
+    bool hasMoreInput() { inputLine >> std::ws; return !inputLine.eof(); }
 
 //UCI command handlers
 
