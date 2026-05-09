@@ -84,6 +84,7 @@ private:
 
     void goPerft();
     void bench();
+    void wait();
 
     // log messages to the logFile named by logFileName
     void log(std::string_view) const;
@@ -98,6 +99,7 @@ private:
 
 public:
     Uci (ostream&);
+   ~Uci () { stop(); wait(); }
 
     // process UCI input commands
     void processInput(istream&);
