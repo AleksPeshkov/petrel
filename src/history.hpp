@@ -208,13 +208,6 @@ public:
         ringZHash_ = ZHash{ringZHash_, z};
     }
 
-    constexpr void dropLast() {
-        if (ringCount_ == 0) { return; }
-        ringZHash_ = ring[last_].zHash;
-        --last_;
-        --ringCount_;
-    }
-
     void normalize() {
         dupZHash_ = {};
         dupCount_ = 0;
@@ -265,7 +258,7 @@ public:
     }
 
     bool has(Z z) const {
-        if (zHash().none(z)) { return false; }
+        if (dupZHash_.none(z)) { return false; }
 
         for (int d{0}; true; ++d) {
             if (dup[DupIndex{d}].z == z) { return true; }
@@ -273,8 +266,6 @@ public:
             assert (d < dupCount_);
         }
     }
-
-    constexpr ZHash zHash() const { return dupZHash_; }
 };
 
 class Repetitions {
@@ -291,9 +282,7 @@ public:
         return v_[color].push(z);
     }
 
-    void normalize(Color color) {
-        // the very last position is search root and should be removed from history
-        v_[color].dropLast();
+    void normalize(Color) {
         for (auto& repSide : v_) {
             repSide.normalize();
         }
@@ -301,10 +290,6 @@ public:
 
     bool has(Color color, Z z) const {
         return v_[color].has(z);
-    }
-
-    constexpr ZHash zHash(Color color) const {
-        return v_[color].zHash();
     }
 };
 

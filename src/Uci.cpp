@@ -1035,7 +1035,9 @@ void Uci::setHash() {
 
 void Uci::ucinewgame() {
     newGame();
-    position_.setStartpos();
+    position_.setStartpos(); //TRICK: also counts root moves
+    repetitions.clear();
+    repetitions.push(colorToMove(), position_.z());
 }
 
 void Uci::position() {
@@ -1063,8 +1065,10 @@ void Uci::position() {
         repetitions.push(colorToMove(), position_.z());
     }
 
-    consume("moves");
-    position_.playMoves(inputLine, repetitions);
+    if (consume("moves")) {
+        position_.playMoves(inputLine, repetitions);
+    }
+
     tt.prefetch<TtSlot>(position_.z());
 }
 
