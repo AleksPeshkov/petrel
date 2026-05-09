@@ -40,7 +40,7 @@ public:
         if (stdThread.joinable()) { stdThread.join(); }
     }
 
-    void waitReady() {
+    void waitNotBusy() {
         while (true) {
             auto current = getStatus();
             if (current != Status::Busy) { break; }

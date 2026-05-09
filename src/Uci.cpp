@@ -237,8 +237,9 @@ void Uci::processInput(istream& in) {
         else if (consume("debug"))     { setdebug(); }
         else if (consume("perft"))     { goPerft(); }
         else if (consume("bench"))     { bench(); }
-        else if (consume("quit"))      { stop(); break; }
-        else if (consume("exit"))      { stop(); break; }
+        else if (consume("wait"))      { wait(); }
+        else if (consume("quit"))      { break; }
+        else if (consume("exit"))      { break; }
 
         if (hasMoreInput()) {
             std::string unparsedInput;
@@ -450,7 +451,7 @@ void Uci::position() {
         return;
     }
 
-    mainSearchThread.waitReady();
+    wait();
 
 #ifdef ENABLE_ASSERT_LOGGING
     debugPosition = inputLine.str();
@@ -524,6 +525,10 @@ void Uci::ponderhit() {
     sendDelayedBestMove();
     limits.ponderhit();
     std::this_thread::yield();
+}
+
+void Uci::wait() {
+    mainSearchThread.waitNotBusy();
 }
 
 void Uci::info_pv() const {
