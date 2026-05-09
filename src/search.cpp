@@ -650,9 +650,8 @@ void Node::childMove(Square from, Square to) {
     makeMove(parent, from, to, [&](Z z){ tt = root.tt.prefetch<TtSlot>(z); });
     root.pv.clear(pvIndex);
 
-    if (rule50() < 2_ply) { zHash = {}; }
-    else if (grandParent) { zHash = ZHash{grandParent->zHash, grandParent->z()}; }
-    else { zHash = root.repetitions.zHash(colorToMove()); }
+    if (rule50() < 2_ply || ply <= 2_ply) { zHash = {}; }
+    else { zHash = ZHash{grandParent->zHash, grandParent->z()}; }
 }
 
 Ply Node::finalR(Ply R) const {
@@ -770,15 +769,21 @@ bool Node::isDrawMaterial() const {
 bool Node::isRepetition() const {
     if (rule50() < 4_ply) { return false; }
 
-    if (grandParent) {
+    Z z{ this->z() };
+
+    if (ply > 4_ply) {
+        // search tree repetitions (2-fold is draw); ply and ply-2 cannot be chess position repetitions
         auto next = grandParent;
-        while ((next = next->grandParent)) {
-            if (next->z() == z()) { return true; }
-            if (next->zHash.none(z())) { return false; }
+        while (!next->zHash.none(z)) {
+            next = next->grandParent;
+            assert (next);
+            if (next->z() == z) { return true; }
         }
+        assert (next->ply > 0_ply);
     }
 
-    return root.repetitions.has(colorToMove(), z());
+    // game history repetitions
+    return rule50() >= ply && root.repetitions.has(colorToMove(), z);
 }
 
 void refreshTtPv(const PositionMoves& p, const PrincipalVariation& pv, const Tt& tt) {
@@ -809,8 +814,6 @@ void refreshTtPv(const PositionMoves& p, const PrincipalVariation& pv, const Tt&
 }
 
 ReturnStatus Node::searchRoot() {
-    zHash = root.repetitions.zHash(colorToMove());
-
     for (depth = 1_ply; depth.isOk(); ++depth) {
         tt = root.tt.prefetch<TtSlot>(z());
         alpha = Score{MateLoss};

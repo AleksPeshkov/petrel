@@ -2,11 +2,7 @@
 
 class TestRepSide : public RepSide {
 public:
-    bool has(Z z) const {
-        if (zHash().none(z)) { return false; }
-        return RepSide::has(z);
-    }
-
+    constexpr ZHash zHash() const { return dupZHash_; }
     constexpr auto ringCount() const { return ringCount_; }
     constexpr auto dupCount() const { return dupCount_; }
 };
