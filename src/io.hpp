@@ -7,6 +7,7 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+#include "common.hpp"
 
 namespace io {
     using std::ostream;
@@ -17,11 +18,10 @@ namespace io {
     using char_type = ostream::char_type;
     using czstring = const char_type* ;
 
-
-    istream& fail(istream&);
-    istream& fail_char(istream&);
-    istream& fail_pos(istream&, std::streampos);
-    istream& fail_rewind(istream&);
+    COLD istream& fail(istream&);
+    COLD istream& fail_char(istream&);
+    COLD istream& fail_pos(istream&, std::streampos);
+    COLD istream& fail_rewind(istream&);
 
     bool consume(istream&, czstring);
     bool hasMore(istream&);
@@ -30,8 +30,8 @@ namespace io {
 
 // defined in main.cpp
 
-    void error(std::string_view);
-    void info(std::string_view);
+    COLD void error(std::string_view);
+    COLD void info(std::string_view);
 }
 
 using io::ostream;
