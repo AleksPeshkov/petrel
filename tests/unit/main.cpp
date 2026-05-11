@@ -1,4 +1,4 @@
-#include "assert.hpp"
+#include "common.hpp"
 #include "TestPassedPawns.hpp"
 #include "TestHyperbola.hpp"
 #include "TestHistoryMoves.hpp"

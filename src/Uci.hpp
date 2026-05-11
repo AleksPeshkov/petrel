@@ -75,8 +75,8 @@ private:
 
     void setHash();
     void setdebug();
-    void loadEvalFile(const std::string&);
     void setEmbeddedEval();
+    COLD void loadEvalFile(const std::string&);
 
     void goPerft();
     void bench();
@@ -104,10 +104,10 @@ public:
     void output(std::string_view) const;
 
     // output to cerr and log file
-    void error(std::string_view) const;
+    COLD void error(std::string_view) const;
 
     // output to log file
-    void info(std::string_view) const;
+    COLD void info(std::string_view) const;
 
     constexpr ChessVariant chessVariant() const { return position_.chessVariant(); }
     constexpr Color colorToMove(Ply ply = 0_ply) const { return position_.colorToMove(ply); }

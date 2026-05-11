@@ -1,3 +1,4 @@
+#include "common.hpp"
 #include "io.hpp"
 #include "nnue.hpp"
 #include "Bb.hpp"
