@@ -783,7 +783,7 @@ bool Node::isRepetition() const {
     }
 
     // game history repetitions
-    return rule50() >= ply && root.repetitions.has(colorToMove(), z);
+    return rule50() >= ply && (isPv() ? root.repetitions.has3(colorToMove(), z) : root.repetitions.has2(colorToMove(), z));
 }
 
 void refreshTtPv(const PositionMoves& p, const PrincipalVariation& pv, const Tt& tt) {
