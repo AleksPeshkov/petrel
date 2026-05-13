@@ -179,6 +179,11 @@ class CACHE_ALIGN RepSide {
         ZHash zHash;
     };
 
+    struct HisIndex; STRUCT_INDEX (HisIndex, 50);
+    array<_t, HisIndex> his; // game history with duplicates removed to avoid redundant checks for 2-fold repetition
+    ZHash hisZHash_{};
+    int hisCount_ = 0; // number of history without duplicates ((only for unit tests)
+
     struct DupIndex; STRUCT_INDEX (DupIndex, 25);
     array<_t, DupIndex> dup; // only duplicate positions for true 3-fold repetition detection
     ZHash dupZHash_{};
@@ -193,6 +198,8 @@ class CACHE_ALIGN RepSide {
 
 public:
     constexpr void clear() {
+        hisZHash_ = {};
+        hisCount_ = 0;
         dupZHash_ = {};
         dupCount_ = 0;
         ringZHash_ = {};
@@ -209,14 +216,18 @@ public:
     }
 
     void normalize() {
+        hisZHash_ = {};
+        hisCount_ = 0;
         dupZHash_ = {};
         dupCount_ = 0;
-        if (ringCount_ <= 2) { return; } // no space for any repetition
+        if (ringCount_ == 0) { return; }
 
+        int hisFound = 0;
         int dupFound = 0;
         {
-            ZHash dupZHash{}; // zHash of the last duplicant
-            for (int i = 0; i < ringCount_ - 2; ++i) {
+            ZHash hisZHash{};
+            ZHash dupZHash{};
+            for (int i = 0; i < ringCount_; ++i) {
                 Z z = ring[last_ - i].z;
 
                 // test if already present in duplicant array
@@ -242,9 +253,33 @@ public:
                     }
                     if (ring[last_ - j].zHash.none(z)) { break; }
                 }
+
+                if (!hisZHash.none(z)) {
+                    bool already = false;
+                    for (int h = hisFound-1; true; --h) {
+                        if (his[HisIndex{h}].z == z) { already = true; break; }
+                        if (his[HisIndex{h}].zHash.none(z)) { break; }
+                        assert (h > 0);
+                    }
+                    if (already) { continue; }
+                }
+
+                // append to history array
+                his[HisIndex{hisFound}].z = z;
+                his[HisIndex{hisFound}].zHash = hisZHash;
+                hisZHash = ZHash{hisZHash, z};
+                ++hisFound;
             }
         }
-        if (dupFound == 0) { return; } // no repetitions found, already cleared
+
+        // rehash in opposite direction
+        ZHash hisZHash{};
+        for (int h = hisFound-1; h >= 0; --h) {
+            his[HisIndex{h}].zHash = hisZHash;
+            hisZHash = ZHash{hisZHash, his[HisIndex{h}].z};
+        }
+        hisZHash_ = hisZHash;
+        hisCount_ = hisFound;
 
         // rehash in opposite direction
         ZHash dupZHash{};
@@ -257,9 +292,23 @@ public:
         dupCount_ = dupFound;
     }
 
-    bool has(Z z) const {
+    // 2-fold repetition check
+    bool has2(Z z) const {
+        if (hisZHash_.none(z)) { return false; }
+
+        // search for repetition in non-duplicate positions
+        for (int h{0}; true; ++h) {
+            if (his[HisIndex{h}].z == z) { return true; }
+            if (his[HisIndex{h}].zHash.none(z)) { return false; }
+            assert (h < hisCount_);
+        }
+    }
+
+    // 3-fold repetition check
+    bool has3(Z z) const {
         if (dupZHash_.none(z)) { return false; }
 
+        // search for repetition in duplicate positions
         for (int d{0}; true; ++d) {
             if (dup[DupIndex{d}].z == z) { return true; }
             if (dup[DupIndex{d}].zHash.none(z)) { return false; }
@@ -288,8 +337,14 @@ public:
         }
     }
 
-    bool has(Color color, Z z) const {
-        return v_[color].has(z);
+    // 2-fold repetition check
+    bool has2(Color color, Z z) const {
+        return v_[color].has2(z);
+    }
+
+    // 3-fold repetition check
+    bool has3(Color color, Z z) const {
+        return v_[color].has3(z);
     }
 };
 
