@@ -2,8 +2,10 @@
 
 class TestRepSide : public RepSide {
 public:
-    constexpr ZHash zHash() const { return dupZHash_; }
+    constexpr ZHash zHash2() const { return hisZHash_; }
+    constexpr ZHash zHash3() const { return dupZHash_; }
     constexpr auto ringCount() const { return ringCount_; }
+    constexpr auto hisCount() const { return hisCount_; }
     constexpr auto dupCount() const { return dupCount_; }
 };
 
@@ -42,14 +44,14 @@ void test_no_repetition() {
 
     assert (reps.ringCount() == 4 && "Invalid count of repetitions");
     assert (reps.dupCount() == 0 && "Invalid count of repetitions");
-    assert (!reps.has(Zt{1}) && "Invalid repetition detected");
-    assert (!reps.has(Zt{2}) && "Invalid repetition detected");
+    assert (!reps.has3(Zt{1}) && "Invalid repetition detected");
+    assert (!reps.has3(Zt{2}) && "Invalid repetition detected");
 }
 
 void test_basic_repetition() {
     TestRepSide reps;
     assert (reps.ringCount() == 0 && "Invalid count of repetitions");
-    assert (reps.dupCount() == 0 && "Invalid count of repetitions");
+    assert (reps.hisCount() == 0 && "Invalid count of repetitions");
 
     reps.push(Zt{1});
     reps.push(Zt{2});
@@ -57,15 +59,15 @@ void test_basic_repetition() {
     reps.push(Zt{3});
 
     assert (reps.ringCount() == 4 && "Invalid count of repetitions");
-    assert (reps.dupCount() == 0 && "Invalid count of repetitions");
+    assert (reps.hisCount() == 0 && "Invalid count of repetitions");
 
     reps.normalize();
 
     assert (reps.ringCount() == 4 && "Invalid count of repetitions");
     assert (reps.dupCount() == 1 && "Invalid count of repetitions");
-    assert (reps.has(Zt{1}) && "Valid repetition not detected");
-    assert (!reps.has(Zt{2}) && "Invalid repetition detected");
-    assert (!reps.has(Zt{3}) && "Invalid repetition detected");
+    assert (reps.has3(Zt{1}) && "Valid repetition not detected");
+    assert (!reps.has3(Zt{2}) && "Invalid repetition detected");
+    assert (!reps.has3(Zt{3}) && "Invalid repetition detected");
 }
 
 void test_multiple_repetitions() {
@@ -82,22 +84,22 @@ void test_multiple_repetitions() {
     reps.normalize();
 
     assert (reps.dupCount() == 3 && "Invalid count of repetitions");
-    assert (reps.has(Zt{1}) && "Valid repetition not detected");
-    assert (reps.has(Zt{65}) && "Valid repetition not detected");
-    assert (reps.has(Zt{3}) && "Valid repetition not detected");
-    assert (!reps.has(Zt{4}) && "Invalid repetition detected");
+    assert (reps.has3(Zt{1}) && "Valid repetition not detected");
+    assert (reps.has3(Zt{65}) && "Valid repetition not detected");
+    assert (reps.has3(Zt{3}) && "Valid repetition not detected");
+    assert (!reps.has3(Zt{4}) && "Invalid repetition detected");
 }
 
 void test_edge_cases() {
     TestRepSide reps;
 
     // Zero entries
-    assert (!reps.has(Zt{1}) && "Invalid repetition detected");
+    assert (!reps.has2(Zt{1}) && "Invalid repetition detected");
 
     // One entry
     reps.push(Zt{1});
     reps.normalize();
-    assert (!reps.has(Zt{1}) && "Invalid repetition detected");
+    assert (!reps.has3(Zt{1}) && "Invalid repetition detected");
 
     // Max entries (50)
     for (int i = 0; i < 50; ++i) {
@@ -105,10 +107,10 @@ void test_edge_cases() {
     }
     reps.normalize();
     assert (reps.ringCount() == 50 && "Invalid count of repetitions");
-    assert (reps.dupCount() == 2 && "Invalid count of repetitions");
-    assert (reps.has(Zt{1}) && "Valid repetition not detected");
-    assert (!reps.has(Zt{2}) && "Invalid repetition detected");
-    assert (reps.has(Zt{65}) && "Valid repetition not detected");
+    assert (reps.hisCount() == 2 && "Invalid count of repetitions");
+    assert (reps.has2(Zt{1}) && "Valid repetition not detected");
+    assert (!reps.has2(Zt{2}) && "Invalid repetition detected");
+    assert (reps.has2(Zt{65}) && "Valid repetition not detected");
 
     // Buffer wrap-around
     reps.clear();
@@ -117,10 +119,11 @@ void test_edge_cases() {
     }
     reps.normalize();
     assert (reps.ringCount() == 50 && "Invalid count of repetitions");
+    assert (reps.hisCount() == 40 && "Invalid count of repetitions");
     assert (reps.dupCount() == 10 && "Invalid count of repetitions");
-    assert (!reps.has(Zt{1}) && "Valid repetition not detected");
-    assert (reps.has(Zt{11}) && "Valid repetition not detected");
-    assert (!reps.has(Zt{21}) && "Invalid repetition detected");
+    assert (!reps.has3(Zt{1}) && "Valid repetition not detected");
+    assert (reps.has3(Zt{11}) && "Valid repetition not detected");
+    assert (!reps.has3(Zt{21}) && "Invalid repetition detected");
 }
 
 void test_zhash_early_exit() {
@@ -132,8 +135,8 @@ void test_zhash_early_exit() {
     reps.normalize();
 
     Zt z4{4};
-    assert(reps.zHash().none(z4) && "zHash should not contain Zt{4}");
-    assert(!reps.has(z4) && "Search should exit early and not find Zt{4}");
+    assert(reps.zHash2().none(z4) && "zHash should not contain Zt{4}");
+    assert(!reps.has2(z4) && "Search should exit early and not find Zt{4}");
 }
 
 void test_no_false_positive_in_zhash() {
@@ -145,8 +148,8 @@ void test_no_false_positive_in_zhash() {
     reps.normalize();
 
     Zt z_fake{1 + (1ULL << 30)}; // same hash, not in list
-    if (!reps.zHash().none(z_fake)) {
-        assert(!reps.has(z_fake) && "False positive in has()");
+    if (!reps.zHash2().none(z_fake)) {
+        assert(!reps.has2(z_fake) && "False positive in has()");
     }
 }
 
@@ -159,7 +162,7 @@ void test_push_wraparound_consistency() {
 
     reps.normalize();
 
-    auto h = reps.zHash();
+    auto h = reps.zHash2();
     assert(h.none(Zt{5}) && "Zt{5} should not be in hash");
     assert(!h.none(Zt{0}) && "Zt{0} should be in hash");
     assert(!h.none(Zt{4}) && "Zt{4} should be in hash");
@@ -177,10 +180,10 @@ void test_normalize_order() {
 
     reps.normalize();
 
-    assert(reps.has(Zt{1}) && "Zt{1} should be detected");
-    assert(reps.has(Zt{2}) && "Zt{2} should be detected");
-    assert(!reps.has(Zt{3}) && "Zt{3} should not repeat");
-    assert(!reps.has(Zt{4}) && "Zt{4} should not repeat");
+    assert(reps.has2(Zt{1}) && "Zt{1} should be detected");
+    assert(reps.has2(Zt{2}) && "Zt{2} should be detected");
+    assert(!reps.has3(Zt{3}) && "Zt{3} should not repeat");
+    assert(!reps.has3(Zt{4}) && "Zt{4} should not repeat");
 }
 
 void test_rotate_with_repetition() {
@@ -196,9 +199,9 @@ void test_rotate_with_repetition() {
     reps.normalize();
 
     assert(reps.ringCount() == 50 && "Repetitions should be found after rotation");
-    assert(reps.dupCount() == 2 && "Repetitions should be found after rotation");
-    assert(reps.has(Zt{1}) && "repetition should be detected");
-    assert(reps.has(Zt{2}) && "repetition should be detected");
+    assert(reps.hisCount() == 2 && "Repetitions should be found after rotation");
+    assert(reps.has2(Zt{1}) && "repetition should be detected");
+    assert(reps.has2(Zt{2}) && "repetition should be detected");
 }
 
 namespace TestRepetitions {
