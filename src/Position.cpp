@@ -25,7 +25,7 @@ void Position::makeMove(Square from, Square to) {
     // the position just swapped its sides, so we make the move for the Op
     makeMove<Op, ZobristAndEval>(from, to);
     zobrist_.flip();
-    //assert (zobrist() == generateZobrist()); // true, but slow to compute
+    //assert (z() == *generateZobrist()); // true, but slow to compute
 }
 
 void Position::makeMoveNoEval(Square from, Square to) {
@@ -35,7 +35,7 @@ void Position::makeMoveNoEval(Square from, Square to) {
     // the position just swapped its sides, so we make the move for the Op
     makeMove<Op, WithZobrist>(from, to);
     zobrist_.flip();
-    //assert (z() == generateZobrist().v()); // true, but slow to compute
+    //assert (z() == *generateZobrist()); // true, but slow to compute
 }
 
 void Position::makeNullMove(const Position* parent) {
@@ -54,7 +54,7 @@ void Position::makeNullMove(const Position* parent) {
     }
 
     zobrist_.flip();
-    //assert (z() == generateZobrist().v()); // true, but slow to compute
+    //assert (z() == *generateZobrist()); // true, but slow to compute
 }
 
 void Position::makeMove(const Position* parent, Square from, Square to) {
@@ -65,8 +65,8 @@ void Position::makeMove(const Position* parent, Square from, Square to) {
     makeMove<Op, ZobristAndEval>(from, to);
     zobrist_.flip();
 
-    //assert (z() == parent->createZobrist(from, to).v()); // true, but slow to compute
-    //assert (z() == generateZobrist().v()); // true, but slow to compute
+    //assert (z() == *(parent->createZobrist(from, to))); // true, but slow to compute
+    //assert (z() == *generateZobrist()); // true, but slow to compute
 }
 
 void Position::makeMoveNoZobrist(const Position* parent, Square from, Square to) {
@@ -75,7 +75,7 @@ void Position::makeMoveNoZobrist(const Position* parent, Square from, Square to)
     // current position flipped its sides relative to parent, so we make the move inplace for the Op
     makeMove<Op, WithEval>(from, to);
 
-    //assert (z() == Z{} || z() == generateZobrist().v()); // true, but slow to compute
+    //assert (z() == Z{} || z() == *generateZobrist()); // true, but slow to compute
 }
 
 template <Side::_t My, Position::MakeMoveFlags Flags>

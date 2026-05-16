@@ -41,7 +41,7 @@ public:
         Square to = Square{static_cast<Square::_t>(0)},
         bool canBeKiller = false
     ) : v_{
-        (z.v() & ZMask)
+        (z & ZMask)
         | pack<_t>(score.toTt(ply), ShiftScore)
         | pack<_t>(bound, ShiftBound)
         | draft.pack<_t>(ShiftDraft)
@@ -51,7 +51,7 @@ public:
     } { static_assert (sizeof(TtSlot) == sizeof(u64_t)); }
 
     TtSlot (const Node* node);
-    constexpr bool operator == (Z z) const { return (v_ & ZMask) == (z.v() & ZMask); }
+    constexpr bool operator == (Z z) const { return (v_ & ZMask) == (z & ZMask); }
 
     constexpr Score score(Ply ply) const { return Score::fromTt(::unpack(v_, ShiftScore, Score::mask()), ply); }
     constexpr Bound bound() const { return ::unpack(v_, ShiftBound, BoundMask); }
