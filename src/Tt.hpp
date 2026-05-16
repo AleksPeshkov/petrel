@@ -66,7 +66,7 @@ public:
     void newIteration() const {}
 
     constexpr void* addr(Z z, size_t align) const {
-        return static_cast<void*>(static_cast<char*>(memory) + (z.v() & mask(align)));
+        return static_cast<void*>(static_cast<char*>(memory) + (z & mask(align)));
     }
 
     template <typename T>

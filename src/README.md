@@ -30,8 +30,10 @@ Overloaded operators:
 
 - operator `~` is used to flip squares, bitboards, zobrist hashes, and other data structures to convert data from the opposite side point of view.
    The flip operation reverses the byte order inside bitboards and zobrist hashes, switches ranks within squares.
-- operators `+` and `-` for bitsets with assertions ensuring disjoint sets;
+- operators `+` and `-` are XOR operation with assertions ensuring disjoint sets;
 - operator `%` is used as a shortcut for "AND NOT" bitset operations;
+- unary operator `*` to convert value of Index<enum> and similar classes into enum type;
+- unary operator `+` to convert value of Index<> and similar classes into int;
 
 Abbreviations in the code:
 

@@ -15,7 +15,7 @@ private:
 
 public:
     constexpr HashAge () : v_(1) {}
-    constexpr operator _t () { return v_; }
+    constexpr int operator + () { return v_; }
 
     void nextAge() {
         //there are "AgeMask" ages, not "1 << AgeBits", because of:
@@ -72,7 +72,7 @@ class PerftRecordSmall {
 public:
     static constexpr u32_t makeKey(Z z, Ply d) {
         assert (+d == (+d & 0xf));
-        return ((static_cast<decltype(key)>(z.v() >> 32) | 0xf) ^ 0xf) | (+d & 0xf);
+        return ((static_cast<decltype(key)>(+z >> 32) | 0xf) ^ 0xf) | (+d & 0xf);
     }
 
     constexpr void set(Z z, Ply d, node_count_t n) {
@@ -109,9 +109,9 @@ class PerftRecord {
     static const node_count_t AgeMask = static_cast<node_count_t>((1 << HashAge::AgeBits)-1) << AgeShift;
     static const node_count_t NodesMask = DepthMask | AgeMask;
 
-    static constexpr node_count_t createNodes(node_count_t n, Ply d, HashAge::_t age) {
+    static constexpr node_count_t createNodes(node_count_t n, Ply d, HashAge age) {
         //assert (n == (n & ~NodesMask));
-        return (n & ~NodesMask) | (static_cast<decltype(nodes)>(age) << AgeShift) | (static_cast<decltype(nodes)>(+d) << DepthShift);
+        return (n & ~NodesMask) | (static_cast<decltype(nodes)>(+age) << AgeShift) | (static_cast<decltype(nodes)>(+d) << DepthShift);
     }
 
 public:
@@ -119,8 +119,8 @@ public:
         return (key == z) && (getDepth() == d);
     }
 
-    constexpr bool isAgeMatch(HashAge::_t age) const {
-        return ((nodes & AgeMask) >> AgeShift) == static_cast<decltype(nodes)>(age);
+    constexpr bool isAgeMatch(HashAge age) const {
+        return ((nodes & AgeMask) >> AgeShift) == static_cast<decltype(nodes)>(+age);
     }
 
     constexpr Z getKey() const {
@@ -135,13 +135,13 @@ public:
         return nodes & ~NodesMask;
     }
 
-    constexpr void set(Z z, Ply d, node_count_t n, HashAge::_t age) {
+    constexpr void set(Z z, Ply d, node_count_t n, HashAge age) {
         key = z;
         nodes = createNodes(n, d, age);
     }
 
-    constexpr void setAge(HashAge::_t age) {
-        nodes = (nodes & ~AgeMask) | (static_cast<decltype(nodes)>(age) << AgeShift);
+    constexpr void setAge(HashAge age) {
+        nodes = (nodes & ~AgeMask) | (static_cast<decltype(nodes)>(+age) << AgeShift);
     }
 
 };
