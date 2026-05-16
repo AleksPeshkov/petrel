@@ -137,7 +137,7 @@ void Position::makeMove(Square from, Square to) {
             pi = MY.piPromoted(pi, from, promo, to);
 
             if (OP.has(~to)) {
-                NonKingType captured{OP.typeAt(~to).v()};
+                NonKingType captured{*OP.typeAt(~to)};
                 if constexpr (Flags & WithZobrist) {
                     if (OP.isCastling(~to)) { zobrist_.opCastling(~to); } // captured the rook with castling right
                     zobrist_.opCapture(captured, ~to);
@@ -165,7 +165,7 @@ void Position::makeMove(Square from, Square to) {
 
         // possible en passant capture and capture with promotion already treated
         if (OP.has(~to)) {
-            NonKingType captured{OP.typeAt(~to).v()};
+            NonKingType captured{*OP.typeAt(~to)};
             if constexpr (Flags & WithZobrist) {
                 zobrist_.opCapture(captured, ~to);
             }
@@ -203,7 +203,7 @@ void Position::makeMove(Square from, Square to) {
 
         if (OP.has(~to)) {
             rule50_.clear();
-            NonKingType captured{OP.typeAt(~to).v()};
+            NonKingType captured{*OP.typeAt(~to)};
             if constexpr (Flags & WithZobrist) {
                 if (OP.isCastling(~to)) { zobrist_.opCastling(~to); } // captured the rook with castling right
                 zobrist_.opCapture(captured, ~to);
@@ -259,7 +259,7 @@ void Position::makeMove(Square from, Square to) {
 
     if (OP.has(~to)) {
         rule50_.clear();
-        NonKingType captured{OP.typeAt(~to).v()};
+        NonKingType captured{*OP.typeAt(~to)};
         if constexpr (Flags & WithZobrist) {
             if (OP.isCastling(~to)) { zobrist_.opCastling(~to); } // captured the rook with castling right
             zobrist_.opCapture(captured, ~to);

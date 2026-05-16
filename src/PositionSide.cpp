@@ -78,7 +78,7 @@ void PositionSide::setLeaperAttacks() {
 
 void PositionSide::capture(Square from) {
     Pi pi = this->pi(from);
-    NonKingType ty{typeOf(pi).v()};
+    NonKingType ty{*typeOf(pi)};
     assert (!ty.is(King));
 
     assertOk(pi, ty, from);
@@ -118,7 +118,7 @@ void PositionSide::move(Pi pi, Square from, Square to) {
     }
     else {
         traits.clear(pi);
-        setPinner(pi, SliderType{ty.v()}, to);
+        setPinner(pi, SliderType{*ty}, to);
     }
 
     assertOk(pi, ty, to);
@@ -171,7 +171,7 @@ Pi PositionSide::piPromoted(Pi pawn, Square from, PromoType ty, Square to) {
         setLeaperAttack(promo, Knight, to);
     }
     else {
-        setPinner(promo, SliderType{ty.v()}, to);
+        setPinner(promo, SliderType{*ty}, to);
     }
 
     assertOk(promo, ty, to);
@@ -208,7 +208,7 @@ void PositionSide::castle(Square kingFrom, Square kingTo, Pi rook, Square rookFr
 
 void PositionSide::setLeaperAttack(Pi pi, PieceType ty, Square sq) {
     assertOk(pi, ty, sq);
-    assert (::isLeaper(ty.v()));
+    assert (::isLeaper(*ty));
     assert (traits.none(pi) || traits.isPromotable(pi));
 
     attacks_.set(pi, ::attacksFrom(ty, sq));
@@ -245,7 +245,7 @@ void PositionSide::updateSliders(PiMask affectedSliders, Bb occupiedBb) {
     Hyperbola blockers{ occupiedBb };
 
     for (Pi pi : affectedSliders) {
-        Bb attack = blockers.attack(SliderType{typeOf(pi).v()}, sq(pi));
+        Bb attack = blockers.attack(SliderType{*typeOf(pi)}, sq(pi));
         attacks_.set(pi, attack);
 
         assert (!attack.has(opKing)); // king cannot be left in check
@@ -260,7 +260,7 @@ void PositionSide::updateSlidersCheckers(PiMask affectedSliders, Bb occupiedBb) 
     Hyperbola blockers{ occupiedBb - Bb{opKing} };
 
     for (Pi pi : affectedSliders) {
-        Bb attack = blockers.attack(SliderType{typeOf(pi).v()}, sq(pi));
+        Bb attack = blockers.attack(SliderType{*typeOf(pi)}, sq(pi));
         attacks_.set(pi, attack);
 
         if (attack.has(opKing)) {
@@ -342,7 +342,7 @@ bool PositionSide::setValidCastling(CastlingSide castlingSide) {
 
     Square sqOuter{sqKing()};
     for (Pi rook : piecesOfType(Rook) & piecesOn(Rank1)) {
-        if (CastlingRules::castlingSide(sqOuter, sq(rook)).is(castlingSide.v())) {
+        if (CastlingRules::castlingSide(sqOuter, sq(rook)).is(*castlingSide)) {
             sqOuter = sq(rook);
         }
     }

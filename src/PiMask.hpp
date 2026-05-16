@@ -72,10 +72,10 @@ struct BitArrayOps<vu8x16_t> {
 
 class PieceSet : public BitSet<PieceSet, Pi> {
 public:
-    constexpr PieceSet () : BitSet{0} {}
+    constexpr PieceSet () : BitSet{} {}
     constexpr explicit PieceSet (_t n) : BitSet{n} {}
     constexpr explicit PieceSet (vu8x16_t v) : BitSet{static_cast<_t>(::mask(v))} {}
-    constexpr explicit PieceSet (Pi pi) : BitSet{::singleton<_t>(pi.v())} {}
+    constexpr explicit PieceSet (Pi pi) : BitSet{::singleton<_t>(+pi)} {}
 
     constexpr Pi piFirstVacant() const {
         for (Pi pi : range<Pi>()) {
@@ -95,7 +95,7 @@ public:
     constexpr PieceSet () : BitSet{0} {}
     constexpr explicit PieceSet (_t n) : BitSet{n & U64(0x8888'8888'8888'8888)} {}
     constexpr explicit PieceSet (vu8x16_t v) : PieceSet{static_cast<_t>(::mask4(v))} {}
-    constexpr explicit PieceSet (Pi pi) : BitSet{::singleton<_t>((pi.v() << 2) + 3)} {}
+    constexpr explicit PieceSet (Pi pi) : BitSet{::singleton<_t>((+pi << 2) + 3)} {}
 
     // get the first (lowest) bit set
     constexpr Pi first() const {
@@ -124,7 +124,7 @@ public:
 class PiMask : public BitArray<PiMask, vu8x16_t> {
 public:
     constexpr PiMask () : BitArray{zero()} {}
-    constexpr PiMask (Pi pi) : PiMask{} { v_[pi._int()] = 0xff; }
+    constexpr PiMask (Pi pi) : PiMask{} { v_[+pi] = 0xff; }
     constexpr explicit PiMask (_t a) : BitArray{a} { assertOk(); }
 
     static constexpr _t zero() { return ::vu8x16x(0); }
@@ -177,7 +177,7 @@ class PiSquare {
     };
 
     constexpr void set(Pi pi, _t sq) { square[pi] = sq; }
-    constexpr void set(Pi pi, Square sq) { square[pi] = sq.v(); }
+    constexpr void set(Pi pi, Square sq) { square[pi] = *sq; }
 
 public:
     constexpr PiSquare () {
@@ -217,9 +217,9 @@ public:
     constexpr Square sq(Pi pi) const { assertOk(pi); return Square{square[pi]}; }
 
     constexpr bool has(_t sq) const { return piecesAt(sq).any(); }
-    constexpr bool has(Square sq) const { return has(sq.v()); }
+    constexpr bool has(Square sq) const { return has(*sq); }
     constexpr Pi pi(_t sq) const { assert (has(sq)); return piecesAt(sq).pi(); }
-    constexpr Pi pi(Square sq) const { return pi(sq.v()); }
+    constexpr Pi pi(Square sq) const { return pi(*sq); }
 
     constexpr PiMask pieces() const { return PiMask{vu8x16 != ::vu8x16x(None)}; }
     constexpr PiMask piecesAt(_t sq) const { return PiMask{vu8x16 == ::vu8x16x(sq)}; }
@@ -227,7 +227,7 @@ public:
     constexpr PiMask piecesOn(Rank::_t rank) const {
         return PiMask{
             (vu8x16 & ::vu8x16x( static_cast<_t>(None ^ static_cast<_t>(File::mask())) ))
-            == ::vu8x16x( Square{static_cast<File::_t>(0), rank}.v() )
+            == ::vu8x16x( +Square{static_cast<File::_t>(0), rank} )
         };
     }
 };
@@ -298,7 +298,7 @@ public:
         constexpr void assertOk(Pi pi) const { assert (isOk(pi)); }
     #endif
 
-    void drop(Pi pi, PieceType ty) { assert (none(pi)); assert (!pi.is(TheKing) || ty.is(King)); type[pi] = element(ty.v()); }
+    void drop(Pi pi, PieceType ty) { assert (none(pi)); assert (!pi.is(TheKing) || ty.is(King)); type[pi] = element(*ty); }
     void clear(Pi pi) { assertOk(pi); assert (!pi.is(TheKing)); assert (!is(pi, King)); type[pi] = None; }
     void promote(Pi pi, PromoType::_t ty) { assert (isPawn(pi)); type[pi] = element(ty); }
 
@@ -310,7 +310,7 @@ public:
 
     constexpr PiMask pieces() const { return PiMask::any(vu8x16); }
     constexpr PiMask piecesOfType(PieceType::_t ty) const { assert (!PieceType{ty}.is(King)); return any(element(ty)); }
-    constexpr PiMask piecesOfType(PieceType ty) const { return piecesOfType(ty.v()); }
+    constexpr PiMask piecesOfType(PieceType ty) const { return piecesOfType(*ty); }
 
     // Queens, Rooks, Bishops
     constexpr PiMask sliders() const { return any(Sliders); }
@@ -427,7 +427,7 @@ public:
         {15,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14},
     }} {}
 
-    constexpr vu8x16_t operator[] (Pi pi) const { return shuffle[pi.v()]; }
+    constexpr vu8x16_t operator[] (Pi pi) const { return shuffle[+pi]; }
 };
 
 class PiOrder {
@@ -461,7 +461,7 @@ public:
 
     PiOrder& forward(Pi pi) {
         // find index of pi in the shuffled vector
-        PiMask mask = PiMask{vu8x16 == ::vu8x16x(pi.v())};
+        PiMask mask = PiMask{vu8x16 == ::vu8x16x(+pi)};
         // shuffle selected pi to the first position
         vu8x16 = ::shufflevector(vu8x16, std::bit_cast<vu8x16_t>(shuffleToFront[mask.pi()]));
         assertOk();

@@ -91,8 +91,8 @@ public:
 
     // set PV as child move plus child PV, update child PV index
     void set(Index parent, UciMove move, Index* child) {
-        auto from = (*child).v();
-        auto to   = parent.v();
+        auto from = +(*child);
+        auto to   = +parent;
         assert (to < from);
 
         moves_[Index{to++}] = move;
@@ -103,7 +103,7 @@ public:
     }
 
     const UciMove* moves() const { return &moves_[Index{0}]; }
-    UciMove move(Ply ply) const { return moves_[Index{ply.v()}]; }
+    UciMove move(Ply ply) const { return moves_[Index{+ply}]; }
 };
 
 // https://www.talkchess.com/forum/viewtopic.php?p=554664#p554664
@@ -132,7 +132,7 @@ class RepSide {
     int count = 0; // number of entries
     Index last{Index::last()}; // last added entry index
 
-    static constexpr int prev(int i) { return i > 0 ? i-1 : Last.v(); }
+    static constexpr int prev(int i) { return i > 0 ? i-1 : +Last; }
 
 public:
     constexpr RepSide () { reps[last].hash = {}; }
@@ -144,7 +144,7 @@ public:
 
     constexpr void push(Z z) {
         auto prevHash{(count == 0) ? RepHash{} : RepHash{reps[last].hash, reps[last].z}};
-        last = Index{last < Last ? last.v()+1 : 0};
+        last = Index{last < Last ? +last+1 : 0};
         reps[last].z = z;
         reps[last].hash = prevHash;
         count = count < Index::size() ? count+1 : count;
@@ -152,7 +152,7 @@ public:
 
     constexpr void dropLast() {
         if (count == 0) { assert (false); return; }
-        last  = last.v() > 0 ? Index{last.v()-1} : Last;
+        last  = +last > 0 ? Index{+last-1} : Last;
         count = count-1;
     }
 
@@ -161,7 +161,7 @@ public:
         int duplicateCount = 0;
 
         // find duplicates
-        for (int c = 0, i = last.v(); c < count; ++c, i = prev(i)) {
+        for (int c = 0, i = +last; c < count; ++c, i = prev(i)) {
             auto z = reps[Index{i}].z;
 
             for (int d = 0; d < duplicateCount; ++d) {

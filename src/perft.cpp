@@ -71,8 +71,8 @@ class PerftRecordSmall {
 
 public:
     static constexpr u32_t makeKey(Z z, Ply d) {
-        assert (d.v() == (d.v() & 0xf));
-        return ((static_cast<decltype(key)>(z.v() >> 32) | 0xf) ^ 0xf) | (d.v() & 0xf);
+        assert (+d == (+d & 0xf));
+        return ((static_cast<decltype(key)>(z.v() >> 32) | 0xf) ^ 0xf) | (+d & 0xf);
     }
 
     constexpr void set(Z z, Ply d, node_count_t n) {
@@ -111,7 +111,7 @@ class PerftRecord {
 
     static constexpr node_count_t createNodes(node_count_t n, Ply d, HashAge::_t age) {
         //assert (n == (n & ~NodesMask));
-        return (n & ~NodesMask) | (static_cast<decltype(nodes)>(age) << AgeShift) | (static_cast<decltype(nodes)>(d.v()) << DepthShift);
+        return (n & ~NodesMask) | (static_cast<decltype(nodes)>(age) << AgeShift) | (static_cast<decltype(nodes)>(+d) << DepthShift);
     }
 
 public:
@@ -208,7 +208,7 @@ void TtPerft::set(Z z, Ply d, node_count_t n) {
 
     auto b0d = u.u.b[0].getDepth();
 
-    if (u.u.b[0].isAgeMatch(hashAge) && d < b0d && n <= std::numeric_limits<u32_t>::max() && d.v() <= 0xf) {
+    if (u.u.b[0].isAgeMatch(hashAge) && d < b0d && n <= std::numeric_limits<u32_t>::max() && +d <= 0xf) {
         //deep slots are occupied, update only short slot if possible
 
         if (d == 0_ply) {
@@ -305,7 +305,7 @@ ReturnStatus NodePerft::visit() {
 }
 
 ReturnStatus NodePerft::visitMove(Square from, Square to) {
-    switch (depth.v()) {
+    switch (+depth) {
         case 0:
             perft = 1;
             break;

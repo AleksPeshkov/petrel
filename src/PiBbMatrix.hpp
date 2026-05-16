@@ -29,7 +29,7 @@ public:
     }
 
     constexpr BitRank bitRank(Pi pi) const {
-        return BitRank{ ::u8(v_, pi.v()) };
+        return BitRank{ ::u8(v_, +pi) };
     }
 
     constexpr PiMask piMask(File file) const {

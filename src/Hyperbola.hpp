@@ -84,7 +84,7 @@ public:
         Direction dir{ ty.is(Bishop) ? DiagonalDir : FileDir };
 
         auto d0 = hyperbolaDir[from][dir];
-        auto d1 = hyperbolaDir[from][Direction{static_cast<Direction::_t>(dir.v()+1)}];
+        auto d1 = hyperbolaDir[from][Direction{static_cast<Direction::_t>(+dir+1)}];
 
         // bishop attacks for Bishops, rooks attacks for Rooks and Queens
         auto result = ((occupied & d0) - sq) & d0;
