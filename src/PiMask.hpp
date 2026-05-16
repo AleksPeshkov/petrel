@@ -78,12 +78,12 @@ class CACHE_ALIGN VectorOfAll {
 public:
     consteval VectorOfAll () {
         for (auto i : range<Index>()) {
-            v_[i] = ::all(i.v());
+            v_[i] = ::all(+i);
         }
     }
 
     constexpr _t operator[] (u8_t i) const { return v_[Index{i}]; }
-    constexpr _t operator[] (Pi pi) const { return v_[Index{pi.v()}]; }
+    constexpr _t operator[] (Pi pi) const { return v_[Index{+pi}]; }
 };
 
 extern const VectorOfAll vectorOfAll;
@@ -96,10 +96,10 @@ extern const VectorOfAll vectorOfAll;
 
 class PieceSet : public BitSet<PieceSet, Pi> {
 public:
-    constexpr PieceSet () : BitSet{0} {}
+    constexpr PieceSet () : BitSet{} {}
     constexpr explicit PieceSet (_t n) : BitSet{n} {}
     constexpr explicit PieceSet (u8x16_t v) : BitSet{static_cast<_t>(::mask(v))} {}
-    constexpr explicit PieceSet (Pi pi) : BitSet{::singleton<_t>(pi.v())} {}
+    constexpr explicit PieceSet (Pi pi) : BitSet{::singleton<_t>(+pi)} {}
 
     constexpr Pi piFirstVacant() const {
         for (Pi pi : range<Pi>()) {
@@ -119,7 +119,7 @@ public:
     constexpr PieceSet () : BitSet{0} {}
     constexpr explicit PieceSet (_t n) : BitSet{n & U64(0x8888'8888'8888'8888)} {}
     constexpr explicit PieceSet (u8x16_t v) : PieceSet{static_cast<_t>(::mask4(v))} {}
-    constexpr explicit PieceSet (Pi pi) : BitSet{::singleton<_t>((pi.v() << 2) + 3)} {}
+    constexpr explicit PieceSet (Pi pi) : BitSet{::singleton<_t>((+pi << 2) + 3)} {}
 
     // get the first (lowest) bit set
     constexpr Pi first() const {
@@ -152,7 +152,7 @@ public:
     consteval PiSingle() {
         for (auto pi : range<Pi>()) {
             std::array<uint8_t, 16> vec = {}; // zero
-            vec[pi.v()] = 0xff;
+            vec[+pi] = 0xff;
             v_[pi] = std::bit_cast<u8x16_t>(vec);
         }
     }
@@ -222,7 +222,7 @@ class PiSquare {
     };
 
     constexpr void set(Pi pi, _t sq) { square[pi] = sq; }
-    constexpr void set(Pi pi, Square sq) { square[pi] = sq.v(); }
+    constexpr void set(Pi pi, Square sq) { square[pi] = *sq; }
     constexpr u8x16_t vector(_t e) const { return ::vectorOfAll[e]; }
 
 public:
@@ -263,18 +263,18 @@ public:
     constexpr Square sq(Pi pi) const { assertOk(pi); return Square{square[pi]}; }
 
     constexpr bool has(_t sq) const { return piecesAt(sq).any(); }
-    constexpr bool has(Square sq) const { return has(sq.v()); }
+    constexpr bool has(Square sq) const { return has(*sq); }
     constexpr Pi pi(_t sq) const { assert (has(sq)); return piecesAt(sq).pi(); }
-    constexpr Pi pi(Square sq) const { return pi(sq.v()); }
+    constexpr Pi pi(Square sq) const { return pi(*sq); }
 
     constexpr PiMask pieces() const { return PiMask::notEquals(u8x16, ::all(None)); }
     constexpr PiMask piecesAt(_t sq) const { return PiMask::equals(u8x16, vector(sq)); }
 
     constexpr PiMask piecesOn(Rank::_t rank) const {
-        return PiMask::equals(
-            u8x16 & vector(static_cast<_t>(None ^ static_cast<_t>(File::mask()))),
-            vector(Square{static_cast<File::_t>(0), rank}.v())
-        );
+        return PiMask{
+            (u8x16 & vector( static_cast<_t>(None ^ static_cast<_t>(File::mask())) ))
+            == vector( *Square{static_cast<File::_t>(0), rank} )
+        };
     }
 };
 
@@ -324,7 +324,7 @@ class PiType {
     };
 
     constexpr element_type element(PieceType::_t ty) const { return static_cast<element_type>(::singleton<u8_t>(ty)); }
-    constexpr element_type element(PieceType ty) const { return element(ty.v()); }
+    constexpr element_type element(PieceType ty) const { return element(*ty); }
     constexpr u8x16_t vector(element_type e) const { return ::vectorOfAll[static_cast<u8_t>(e)]; }
     constexpr u8x16_t vector(PieceType::_t ty) const { return vector(element(ty)); }
 
@@ -347,7 +347,7 @@ public:
         constexpr void assertOk(Pi pi) const { assert (isOk(pi)); }
     #endif
 
-    void drop(Pi pi, PieceType ty) { assert (none(pi)); assert (!pi.is(TheKing) || ty.is(King)); type[pi] = element(ty); }
+    void drop(Pi pi, PieceType ty) { assert (none(pi)); assert (!pi.is(TheKing) || ty.is(King)); type[pi] = element(*ty); }
     void clear(Pi pi) { assertOk(pi); assert (!pi.is(TheKing)); assert (!is(pi, King)); type[pi] = None; }
     void promote(Pi pi, PromoType::_t ty) { assert (isPawn(pi)); type[pi] = element(ty); }
 
@@ -359,7 +359,7 @@ public:
 
     constexpr PiMask pieces() const { return PiMask::any(u8x16); }
     constexpr PiMask piecesOfType(PieceType::_t ty) const { assert (!PieceType{ty}.is(King)); return any(element(ty)); }
-    constexpr PiMask piecesOfType(PieceType ty) const { return piecesOfType(ty.v()); }
+    constexpr PiMask piecesOfType(PieceType ty) const { return piecesOfType(*ty); }
 
     // Queens, Rooks, Bishops
     constexpr PiMask sliders() const { return any(Sliders); }
@@ -476,7 +476,7 @@ public:
         {15,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14},
     }} {}
 
-    constexpr u8x16_t operator[] (Pi pi) const { return shuffle[pi.v()]; }
+    constexpr u8x16_t operator[] (Pi pi) const { return shuffle[+pi]; }
 };
 
 class PiOrder {
@@ -510,7 +510,7 @@ public:
 
     PiOrder& forward(Pi pi) {
         // find index of pi in the shuffled vector
-        PiMask mask = PiMask::equals(u8x16, ::vectorOfAll[pi]);
+        PiMask mask = PiMask{u8x16 == ::vectorOfAll[pi]};
         // shuffle selected pi to the first position
         u8x16 = ::shuffle(u8x16, std::bit_cast<u8x16_t>(shuffleToFront[mask.pi()]));
         assertOk();

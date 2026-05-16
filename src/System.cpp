@@ -61,7 +61,7 @@ namespace System {
         pid_t pid = getpid();
 #endif
 
-        return static_cast<int>(pid);
+        return pid;
     }
 
 } // end of namespace sys

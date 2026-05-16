@@ -8,11 +8,18 @@
 #include "bitops.hpp"
 #include "io.hpp"
 
-template <typename Index> concept IndexLike =
-    requires { Index::size(); } && std::is_integral_v<std::remove_cv_t<decltype(Index::size())>> && (Index::size() >= 1)
-    && requires { typename Index::_t; } && (std::is_integral_v<typename Index::_t> || std::is_enum_v<typename Index::_t>)
-    && std::is_constructible_v<Index, typename Index::_t>
-    && requires(Index i) { { i.v() } -> std::convertible_to<typename Index::_t>; };
+template <typename T>
+concept enum_or_integral = std::is_enum_v<T> || std::is_integral_v<T>;
+
+template <typename Index>
+concept IndexLike = requires {
+    { Index::size() } -> std::integral; requires Index::size() >= 1;
+
+    typename Index::_t; requires enum_or_integral<typename Index::_t>;
+    requires std::is_constructible_v<Index, typename Index::_t>;
+
+    requires requires (Index i) { { +i } -> std::convertible_to<int>; };
+};
 
 template <IndexLike Index> constexpr auto range() {
     return std::views::iota(0, Index::size()) | std::views::transform(
@@ -32,8 +39,8 @@ class array : public std::array<array<V, Indices...>, Index::size()> {
     template <typename N> requires std::integral<N> const auto& operator[](N) const = delete;
 
 public:
-    constexpr auto& operator[](Index i) { return Base::operator[](i.v()); }
-    constexpr const auto& operator[](Index i) const { return Base::operator[](i.v()); }
+    constexpr auto& operator[](Index i) { return Base::operator[](+i); }
+    constexpr const auto& operator[](Index i) const { return Base::operator[](+i); }
 };
 
 // Partial specialization for single dimension
@@ -46,8 +53,8 @@ class array<V, Index> : public std::array<V, Index::size()> {
     template <typename N> requires std::integral<N> const auto& operator[](N) const = delete;
 
 public:
-    constexpr auto& operator[](Index i) { return Base::operator[](i.v()); }
-    constexpr const auto& operator[](Index i) const { return Base::operator[](i.v()); }
+    constexpr auto& operator[](Index i) { return Base::operator[](+i); }
+    constexpr const auto& operator[](Index i) const { return Base::operator[](+i); }
 };
 
 // Typesafe implementation using "curiously recurring template pattern"
@@ -65,10 +72,7 @@ protected:
 public:
     static constexpr int size() { static_assert (Size >= 1); return Size; }
     static constexpr int bit_width() { return std::bit_width(size() - 1u); }
-    static constexpr _t mask() {
-        static_assert (std::has_single_bit(static_cast<unsigned>(size())) && size() >= 2, "Index:mask() only defined when Index::Size is a power of 2");
-        return static_cast<_t>(::singleton<unsigned>(bit_width()) - 1u);
-    }
+    static constexpr _t mask() { return static_cast<_t>(::singleton<unsigned>(bit_width()) - 1u); }
     static constexpr _t last() { return static_cast<_t>(size() - 1); }
 
     static constexpr bool isOk(int n) { return 0 <= n && n < size(); }
@@ -78,9 +82,11 @@ public:
     constexpr Index () : v_{} {}
     constexpr explicit Index (_t i) : v_{i} {} // can be invalid default value
 
-    constexpr _t v() const { assertOk(); return v_; } // _t v() const { return v_; }
+    constexpr int operator + () const { assertOk(); return +v_; } // static_cast<int>
+    constexpr _t  operator * () const requires std::is_enum_v<_t> { assertOk(); return v_; } // static_cast<_t>(v_)
+
     constexpr bool is(_t i) const { return v_ == i; }
-    constexpr bool is(Self i) const { return v_ == i.v(); }
+    constexpr bool is(Self i) const { return is(*i); }
 
     template <typename S> constexpr int pack(S shift) { return ::pack(v_, shift); }
     template <typename P, typename S> constexpr P pack(S shift) { return ::pack<P>(v_, shift); }
@@ -94,8 +100,8 @@ public:
 
     constexpr Self operator ~ () const { assertOk(); return Self{static_cast<_t>(v_ ^ mask())}; }
 
-    friend constexpr bool operator == (Arg a, Arg b) { return a.v() == b.v(); }
-    friend constexpr bool operator <  (Arg a, Arg b) { return a.v() < b.v(); }
+    friend constexpr bool operator == (Arg a, Arg b) { return +a == +b; }
+    friend constexpr bool operator <  (Arg a, Arg b) { return +a < +b; }
 };
 
 template <typename Enum>
@@ -201,7 +207,7 @@ struct File : Index<File, 8, file_t> {
     bool from_char(io::char_type c) {
         if (!('a' <= c && c <= 'h')) { return false; }
         File file{ static_cast<File::_t>(c - 'a') };
-        v_ = file.v();
+        v_ = *file;
         return true;
     }
 
@@ -226,7 +232,7 @@ struct Rank : Index<Rank, 8, rank_t> {
     bool from_char(io::char_type c) {
         if (!('1' <= c && c <= '8')) { return false; }
         Rank rank{ static_cast<Rank::_t>('8' - c) };
-        v_ = rank.v();
+        v_ = *rank;
         return true;
     }
 
@@ -306,7 +312,7 @@ public:
 };
 
 // color to move of the given ply
-constexpr Color::_t distance(Color c, Ply ply) { return static_cast<Color::_t>((ply.v() ^ static_cast<unsigned>(c.v())) & Color::mask()); }
+constexpr Color::_t distance(Color c, Ply ply) { return static_cast<Color::_t>((+ply ^ +c) & Color::mask()); }
 
 enum side_to_move_t {
     My, // side to move
@@ -347,19 +353,19 @@ struct NonKingType : Index<NonKingType, 5, piece_type_t> { using Index::Index; }
 // Queen, Rook, Bishop, Knight, Pawn, King
 struct PieceType : IndexChar<PieceType, 6, piece_type_t> {
     constexpr PieceType (PieceType::_t ty) : IndexChar{ty} {}
-    constexpr PieceType (SliderType ty) : IndexChar{ty.v()} {}
-    constexpr PieceType (PromoType ty) : IndexChar{ty.v()} {}
-    constexpr PieceType (NonKingType ty) : IndexChar{ty.v()} {}
+    constexpr PieceType (SliderType ty) : IndexChar{*ty} {}
+    constexpr PieceType (PromoType ty) : IndexChar{*ty} {}
+    constexpr PieceType (NonKingType ty) : IndexChar{*ty} {}
 };
 
 constexpr bool isSlider(piece_type_t ty) { return ty < Knight; } // Queen, Rook, Bishop
 constexpr bool isLeaper(piece_type_t ty) { return ty >= Knight; } // Knight, Pawn, King
 
 // encoding of the promoted piece type inside "to" square
-constexpr Rank rankOf(PromoType ty) { return Rank{static_cast<Rank::_t>(ty.v())}; }
+constexpr Rank rankOf(PromoType ty) { return Rank{static_cast<Rank::_t>(*ty)}; }
 
 // decoding promoted piece type from move destination square rank
-constexpr PromoType promoTypeFrom(Rank rank) { return PromoType{static_cast<PromoType::_t>(rank.v())}; }
+constexpr PromoType promoTypeFrom(Rank rank) { return PromoType{static_cast<PromoType::_t>(*rank)}; }
 
 // continue or stop search
 enum class ReturnStatus {
@@ -373,7 +379,7 @@ struct HistoryType : Index<HistoryType, 4, history_type_t> { using Index::Index;
 
 constexpr HistoryType historyType(PieceType ty) {
     constexpr HistoryType::_t fromPieceType[] = { HistoryQueen, HistoryRBN, HistoryRBN, HistoryRBN, HistoryPawn, HistoryKing };
-    return HistoryType{fromPieceType[ty.v()]};
+    return HistoryType{fromPieceType[*ty]};
 }
 
 constexpr bool operator == (PieceType ty, HistoryType ht) { return ::historyType(ty) == ht; }
@@ -451,9 +457,9 @@ public:
         using Base = ::Index<Index, 8>;
         constexpr Index (PieceType::_t ty) : Base{ty} {}
         constexpr Index (zobrist_index_t ty) : Base{ty} {}
-        constexpr Index (PieceType ty) : Base{ty.v()} {}
-        constexpr Index (NonKingType ty) : Base{ty.v()} {}
-        constexpr Index (PromoType ty) : Base{ty.v()} {}
+        constexpr Index (PieceType ty) : Base{*ty} {}
+        constexpr Index (NonKingType ty) : Base{*ty} {}
+        constexpr Index (PromoType ty) : Base{*ty} {}
     };
 
 private:
@@ -482,7 +488,7 @@ protected:
 
 public:
     constexpr Z () : v_{0} {}
-    constexpr Z(Index ty, Square sq) : v_{::rotateleft(zKey[ty.v()], sq.v())} {}
+    constexpr Z(Index ty, Square sq) : v_{::rotateleft(zKey[+ty], +sq)} {}
     constexpr _t v() const { return v_; }
 
     constexpr Z operator ~ () const { return Z{::byteswap(v_)}; }

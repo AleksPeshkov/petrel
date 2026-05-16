@@ -59,8 +59,8 @@ public:
     constexpr Score operator - () const { assertOk(); return Score{static_cast<_t>(-v_)}; }
     friend constexpr Score operator + (Arg a, Arg b) { a.assertEval(); b.assertEval(); return Score::clampEval(a.v_ + b.v_); }
     friend constexpr Score operator - (Arg a, Arg b) { a.assertEval(); b.assertEval(); return Score::clampEval(a.v_ - b.v_); }
-    friend constexpr Score operator + (Arg a, Ply p) { a.assertMate(); Score r{static_cast<_t>(a.v_ + p.v())}; r.assertMate(); return r; }
-    friend constexpr Score operator - (Arg a, Ply p) { a.assertMate(); Score r{static_cast<_t>(a.v_ - p.v())}; r.assertMate(); return r; }
+    friend constexpr Score operator + (Arg a, Ply p) { a.assertMate(); Score r{static_cast<_t>(a.v_ + +p)}; r.assertMate(); return r; }
+    friend constexpr Score operator - (Arg a, Ply p) { a.assertMate(); Score r{static_cast<_t>(a.v_ - +p)}; r.assertMate(); return r; }
 
     friend constexpr bool operator == (Arg a, Arg b) { a.assertOk(); b.assertOk(); return a.v_ == b.v_; }
     friend constexpr bool operator <  (Arg a, Arg b) { a.assertOk(); b.assertOk(); return a.v_ < b.v_; }
@@ -79,7 +79,7 @@ public:
 
     static constexpr Score fromTt(unsigned n, Ply ply) {
         // convert unsigned to signed
-        Score score{static_cast<_t>(static_cast<int>(n) + NoScore)};
+        Score score{static_cast<_t>(+n + NoScore)};
 
         if (score.v_ < MinEval) { score = score + ply; }
         else if (MaxEval < score.v_) { score = score - ply; }
@@ -137,7 +137,7 @@ public:
             v_[ty].s.officers = officers[ty];
 
             for (auto i : range<NonKingType>()) {
-                v_[ty].s.count[i] = (ty == PieceType{i.v()});
+                v_[ty].s.count[i] = (ty == PieceType{*i});
             }
         }
     }
