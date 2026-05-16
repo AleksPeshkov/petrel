@@ -490,10 +490,12 @@ protected:
 public:
     constexpr Z () : v_{0} {}
     constexpr Z(Index ty, Square sq) : v_{::rotateleft(zKey[+ty], +sq)} {}
-    constexpr _t v() const { return v_; }
 
+    constexpr _t operator + () const { return v_; }
     constexpr Z operator ~ () const { return Z{::byteswap(v_)}; }
     friend constexpr Z operator ^ (Z a, Z b) { return Z{a.v_ ^ b.v_}; }
+    friend constexpr _t operator & (Z a, _t b) { return a.v_ & b; }
+
     [[nodiscard]] friend constexpr bool operator == (Z a, Z b) { return a.v_ == b.v_; }
 
     friend ostream& operator << (ostream& out, Z z) {

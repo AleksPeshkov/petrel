@@ -111,7 +111,7 @@ class RepHash {
     using _t = u64_t;
     _t v{0};
 
-    static constexpr _t hash(Z z) { return ::singleton<_t>(z.v() & 077); }
+    static constexpr _t hash(Z z) { return ::singleton<_t>(z & 077); }
 public:
     constexpr RepHash () : v{0} {}
     constexpr RepHash (RepHash m, Z z) : v{m.v | hash(z)} {}

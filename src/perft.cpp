@@ -72,7 +72,7 @@ class PerftRecordSmall {
 public:
     static constexpr u32_t makeKey(Z z, Ply d) {
         assert (+d == (+d & 0xf));
-        return ((static_cast<decltype(key)>(z.v() >> 32) | 0xf) ^ 0xf) | (+d & 0xf);
+        return ((static_cast<decltype(key)>(+z >> 32) | 0xf) ^ 0xf) | (+d & 0xf);
     }
 
     constexpr void set(Z z, Ply d, node_count_t n) {

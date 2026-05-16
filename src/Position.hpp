@@ -50,7 +50,7 @@ public:
     constexpr explicit Zobrist (Z z) : v_{z} {}
     constexpr Zobrist (Zobrist my, Zobrist op) : v_{my.v_ ^ ~op.v_} {}
 
-    constexpr Z v() const { return v_; }
+    constexpr Z operator * () const { return v_; }
 
     constexpr Zobrist& flip() { v_ = ~v_; return *this; }
 
@@ -160,7 +160,7 @@ protected:
 
 public:
     // position hash
-    constexpr Z z() const { return zobrist_.v(); }
+    constexpr Z z() const { return *zobrist_; }
 
     // position static evaluation
     Score evaluate() const;
