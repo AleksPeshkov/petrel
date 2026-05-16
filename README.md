@@ -22,7 +22,7 @@ Petrel 2.2 rated `2775` Elo on the [Ultimate Bullet Classical](https://e4e6.com/
 ```
 option name EvalFile type string default <empty>
 option name Debug Log File type string default <empty>
-option name Hash type spin min 2 max 16384 default 16
+option name Hash type spin min 2 max 16384 default 64
 option name Move Overhead type spin min 0 max 10000 default 0
 option name Ponder type check default false
 option name UCI_Chess960 type check default false
