@@ -57,7 +57,7 @@ public:
     constexpr Bound bound() const { return ::unpack(v_, ShiftBound, BoundMask); }
     constexpr Ply draft() const { return Ply::unpack(v_, ShiftDraft); }
 
-    constexpr bool hasMove() const { return !(from().v() == 0 && to().v() == 0); }
+    constexpr bool hasMove() const { return !(+from() == 0 && +to() == 0); }
     constexpr Square from() const { return Square::unpack(v_, ShiftFrom); }
     constexpr Square to() const { return Square::unpack(v_, ShiftTo); }
     constexpr bool canBeKiller() const { return ::unpack(v_, ShiftKiller, true); }
@@ -129,7 +129,7 @@ protected:
 
     constexpr bool isRoot() const { assert (parent == nullptr || ply > 0_ply); return parent == nullptr; } // ply == 0
     constexpr bool isPv() const { return ply == plyPv; } // ply == plyPv
-    constexpr bool isCutNode() const { return (ply - plyPv).v() & 1; } // odd (ply - plyPv)
+    constexpr bool isCutNode() const { return (+ply - +plyPv) & 1; } // odd (ply - plyPv)
     constexpr bool isAllNode() const { return !isPv() && !isCutNode(); } // even (plv - plyPv)
     constexpr Ply depthR() const { assert (!isRoot()); return parent->depth - depth; } // parent->depth - depth
     Ply adjustDepthR(Ply) const;

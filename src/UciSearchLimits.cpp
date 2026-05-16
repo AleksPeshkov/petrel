@@ -86,8 +86,8 @@ bool UciSearchLimits::reachedTime() const {
         int deadlineRatio = Deadline;
         if (Deadline == IterationDeadline) { deadlineRatio += iterLowMaterialBonus_; }
 
-        timePool *= static_cast<int>(timeControl_) * deadlineRatio;
-        timePool /= static_cast<int>(HardMove) * HardDeadline;
+        timePool *= +timeControl_ * deadlineRatio;
+        timePool /= +HardMove * HardDeadline;
     }
 
     bool deadlineReached = timePool < elapsedSinceStart();
@@ -140,8 +140,8 @@ void UciSearchLimits::setSearchDeadlines(const Position* p) {
     // allocate more time for the first out of book move in the game (fill up empty TT)
     if (isNewGame_) { optimumTime *= 13; optimumTime /= 8; isNewGame_ = false; }
 
-    optimumTime *= static_cast<int>(HardMove) * HardDeadline;
-    optimumTime /= static_cast<int>(NormalMove) * AverageTimeScale;
+    optimumTime *= +HardMove * HardDeadline;
+    optimumTime /= +NormalMove * AverageTimeScale;
 
     auto maximumTime = lookAheadTime(Side{My});
 
@@ -180,7 +180,7 @@ void UciSearchLimits::go(istream& in, Side white, const Position* p) {
         else if (io::consume(in, "winc"))     { in >> inc_[white];  if (inc_[white]  < 0ms) { inc_[white]  = 0ms; }; }
         else if (io::consume(in, "binc"))     { in >> inc_[black];  if (inc_[black]  < 0ms) { inc_[black]  = 0ms; } }
         else if (io::consume(in, "movestogo")){ in >> movestogo_;   if (movestogo_   < 0)   { movestogo_   = 0; } }
-        else if (io::consume(in, "mate"))     { in >> maxDepth_; maxDepth_ = Ply{std::abs(maxDepth_.v()) * 2 + 1}; } // TODO: implement mate in n moves
+        else if (io::consume(in, "mate"))     { in >> maxDepth_; maxDepth_ = Ply{std::abs(+maxDepth_) * 2 + 1}; } // TODO: implement mate in n moves
         else if (io::consume(in, "ponder"))   { pondering_.store(true, std::memory_order_relaxed); }
         else if (io::consume(in, "infinite")) { infinite_ =  true; }
         else { break; }

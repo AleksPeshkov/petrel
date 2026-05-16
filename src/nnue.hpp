@@ -107,7 +107,7 @@ class CACHE_ALIGN Accumulator {
         //TODO: reshape feauture indexing during net loading
         static constexpr Nnue::FeatureIndex fi(Side si, PieceType ty, Square sq) {
             constexpr array<PieceType::_t, PieceType> pieceType = {Pawn, Knight, Bishop, Rook, Queen, King};
-            return Nnue::FeatureIndex{ 6*64*si.v() + 64*pieceType[ty] + (~sq).v() };
+            return Nnue::FeatureIndex{ 6*64*+si + 64*pieceType[ty] + +~sq };
         }
 
         constexpr void move(Index i, Side si, Square from, PromoType toType, Square to) {

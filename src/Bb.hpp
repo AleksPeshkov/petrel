@@ -14,11 +14,11 @@ public:
     constexpr explicit Bb (_t bb) : BitSet{bb} {}
 
     constexpr explicit Bb (Square::_t sq) : Bb{::singleton<_t>(sq)} {}
-    constexpr explicit Bb (Square sq) : Bb{sq.v()} {}
+    constexpr explicit Bb (Square sq) : Bb{*sq} {}
     constexpr explicit Bb (File::_t file) : Bb{U64(0x0101'0101'0101'0101) << file} {}
     constexpr explicit Bb (Rank::_t rank) : Bb{U64(0xff) << 8*rank} {}
-    constexpr explicit Bb (File file) : Bb{file.v()} {}
-    constexpr explicit Bb (Rank rank) : Bb{rank.v()} {}
+    constexpr explicit Bb (File file) : Bb{*file} {}
+    constexpr explicit Bb (Rank rank) : Bb{*rank} {}
 
     constexpr Bb operator ~ () const { return Bb{::byteswap(v_)}; }
 
@@ -50,14 +50,14 @@ public:
 constexpr Bb Square::bbRank() const { return Bb{Rank{*this}} - Bb{*this}; }
 constexpr Bb Square::bbFile() const { return Bb{File{*this}} - Bb{*this}; }
 constexpr Bb Square::bbDiagonal() const {
-    return Bb{U64(0x0102'0408'1020'4080)}.shiftRank(static_cast<signed>(Rank{*this}.v()) + File{*this}.v() - 7) - Bb{*this};
+    return Bb{U64(0x0102'0408'1020'4080)}.shiftRank(+Rank{*this} + +File{*this} - 7) - Bb{*this};
 }
 constexpr Bb Square::bbAntidiag() const {
-    return Bb{U64(0x8040'2010'0804'0201)}.shiftRank(static_cast<signed>(Rank{*this}.v()) - File{*this}.v()) - Bb{*this};
+    return Bb{U64(0x8040'2010'0804'0201)}.shiftRank(+Rank{*this} - +File{*this}) - Bb{*this};
 }
 
 constexpr Bb Square::bbDirection(Direction dir) const {
-    switch (dir.v()) {
+    switch (*dir) {
         case FileDir:     return bbFile();
         case RankDir:     return bbRank();
         case DiagonalDir: return bbDiagonal();
@@ -83,8 +83,8 @@ class BitRank : public BitArray<BitRank, u8_t> {
 public:
     constexpr BitRank () : BitArray{} {}
     constexpr explicit BitRank (_t v) : BitArray{v} {}
-    constexpr explicit BitRank (File file) : BitArray{static_cast<_t>(1 << file.v())} {}
-    constexpr BitRank (Bb bb, Rank rank) : BitArray{small_cast<_t>(bb.v() >> 8*rank.v())} {}
+    constexpr explicit BitRank (File file) : BitArray{static_cast<_t>(1 << +file)} {}
+    constexpr BitRank (Bb bb, Rank rank) : BitArray{small_cast<_t>(bb.v() >> 8*+rank)} {}
 };
 
 // line (file, rank, diagonal) in between two squares (excluding both ends) or 0 (32k)
@@ -92,9 +92,9 @@ class CACHE_ALIGN InBetween {
     array<Bb, Square, Square> inBetween;
 
     static constexpr Bb areaInBetween(Square from, Square to) {
-        Bb::_t belowFrom{ ::singleton<Bb::_t>(from.v()) - 1 };
-        Bb::_t belowTo{ ::singleton<Bb::_t>(to.v()) - 1 };
-        return Bb{((belowFrom ^ belowTo) | ::singleton<Bb::_t>(to.v())) ^ ::singleton<Bb::_t>(to.v())};
+        Bb::_t belowFrom{ ::singleton<Bb::_t>(+from) - 1 };
+        Bb::_t belowTo{ ::singleton<Bb::_t>(+to) - 1 };
+        return Bb{((belowFrom ^ belowTo) | ::singleton<Bb::_t>(+to)) ^ ::singleton<Bb::_t>(+to)};
     }
 
 public:
@@ -109,12 +109,10 @@ public:
                 else if (Rank{from} == Rank{to}) {
                     result = areaInBetween(from, to) & from.bbRank();
                 }
-                else if (static_cast<int>(File{from}.v()) + static_cast<int>(Rank{from}.v())
-                    == static_cast<int>(File{to}.v()) + static_cast<int>(Rank{to}.v())) {
+                else if (+File{from} + +Rank{from} == +File{to} + +Rank{to}) {
                     result = areaInBetween(from, to) & from.bbDiagonal();
                 }
-                else if (static_cast<int>(File{from}.v()) - static_cast<int>(Rank{from}.v())
-                    == static_cast<int>(File{to}.v()) - static_cast<int>(Rank{to}.v())) {
+                else if (+File{from} - +Rank{from} == +File{to} - +Rank{to}) {
                     result = areaInBetween(from, to) & from.bbAntidiag();
                 }
 
@@ -171,8 +169,8 @@ public:
     consteval CastlingRules () {
         for (auto kingFile : range<File>()) {
             for (auto rookFile : range<File>()) {
-                Square king{kingFile.v(), Rank1};
-                Square rook{rookFile.v(), Rank1};
+                Square king{kingFile, Rank1};
+                Square rook{rookFile, Rank1};
 
                 if (king == rook) {
                     castlingRules[kingFile][rookFile].unimpeded  = Bb{};
@@ -180,7 +178,7 @@ public:
                     continue;
                 }
 
-                switch (CastlingRules::castlingSide(king, rook).v()) {
+                switch (*CastlingRules::castlingSide(king, rook)) {
                     case QueenSide:
                         castlingRules[kingFile][rookFile].unimpeded  = (exBetween(king, Square{C1}) | exBetween(rook, Square{D1})) % (Bb{king} + Bb{rook});
                         castlingRules[kingFile][rookFile].unattacked = exBetween(king, Square{C1}) | Bb{king};
