@@ -86,6 +86,7 @@ protected:
     Ply ply{0}; // distance from root (root is ply == 0)
     Ply pvPly{0}; // ply of nearest PV node, if pvPly == ply, this is PV node
     Ply depth{0}; // remaining depth to horizon (should be set before search)
+    Ply baseR{0}; // base R (depth reduction), same for all child moves
 
     Score eval{NoScore}; // static evaluation of the current position
     Score alpha{MateLoss}; // alpha-beta window lower margin

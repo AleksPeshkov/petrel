@@ -201,6 +201,7 @@ ReturnStatus Node::negamax(Ply R) {
 }
 
 ReturnStatus Node::search() {
+    baseR = depth / 8;
     score = Score{NoScore};
     eval  = Score{NoScore};
     bound = FailLow;
@@ -468,7 +469,7 @@ ReturnStatus Node::search() {
             Pi pi{TheKing};
             Square from{MY.sqKing()};
             for (Square to : bbMovesOf(pi)) {
-                RETURN_CUTOFF (searchMove(from, to, 4_ply));
+                RETURN_CUTOFF (searchMove(from, to, 3_ply));
             }
         }
 
@@ -484,7 +485,7 @@ ReturnStatus Node::search() {
             Pi pi = pieces.piLast(); pieces -= PiMask{pi};
             Square from{MY.sq(pi)};
             for (Square to : bbMovesOf(pi) & ~OP.bbSide()) {
-                RETURN_CUTOFF (searchMove(from, to, 4_ply));
+                RETURN_CUTOFF (searchMove(from, to, 3_ply));
             }
         }
 
@@ -504,7 +505,7 @@ ReturnStatus Node::search() {
             Pi pi = pieces.piLast(); pieces -= PiMask{pi};
             Square from{MY.sq(pi)};
             for (Square to : bbMovesOf(pi)) {
-                RETURN_CUTOFF (searchMove(from, to, 5_ply));
+                RETURN_CUTOFF (searchMove(from, to, 4_ply));
             }
         }
     } while (false);
@@ -689,10 +690,7 @@ Ply Node::finalR(Ply R) const {
     if (R <= 1_ply) { return R; }
     if (inCheck()) { return depth >= 6_ply ? 2_ply : 1_ply; } // plus check extension
 
-    // depth adaptive reduction
-    if (depth <= 8_ply && R >= 4_ply) { R = R - 1_ply; }
-
-    return R;
+    return baseR + R;
 }
 
 void Node::updateHistory() {
