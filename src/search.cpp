@@ -610,7 +610,7 @@ ReturnStatus Node::searchMove(HistoryMove move, Ply R) {
 
 Ply Node::finalR(Ply R) const {
     if (R <= 1_ply) { return R; }
-    if (inCheck()) { return 1_ply; }
+    if (inCheck()) { return 2_ply; } // also 1_ply check extension
 
     // depth adaptive reduction
     if (depth <= 8_ply && R >= 4_ply) { R = R - 1_ply; }
