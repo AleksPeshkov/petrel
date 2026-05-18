@@ -685,7 +685,7 @@ void Node::childMove(Square from, Square to) {
 
 Ply Node::finalR(Ply R) const {
     if (R <= 1_ply) { return R; }
-    if (inCheck()) { return 1_ply; }
+    if (inCheck()) { return depth >= 6_ply ? 2_ply : 1_ply; } // plus check extension
 
     // depth adaptive reduction
     if (depth <= 8_ply && R >= 4_ply) { R = R - 1_ply; }
