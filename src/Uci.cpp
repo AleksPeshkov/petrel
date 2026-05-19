@@ -714,6 +714,7 @@ void Uci::newGame() {
     tt.newGame();
     counterMove.clear();
     followMove.clear();
+    counterCheck.clear();
 }
 
 void Uci::newSearch() {

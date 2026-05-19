@@ -66,6 +66,26 @@ public:
     }
 };
 
+class CACHE_ALIGN CheckMoves {
+    using _t = array<HistoryMove, Color, Square, Square>;
+    _t v_;
+
+public:
+    void clear() {
+        std::memset(&v_, 0, sizeof(v_)); //TRICK: HistoryMove{None} == uint16_t{0}
+    }
+
+    constexpr HistoryMove get(Color color, Square king, HistoryMove move) const {
+        assert (move.any());
+        return v_[color][king][move.to()];
+    }
+
+    constexpr void set(Color color, Square king, HistoryMove move, HistoryMove bestMove) {
+        assert (move.any()); assert (bestMove.any());
+        v_[color][king][move.to()] = bestMove;
+    }
+};
+
 class CACHE_ALIGN PrincipalVariation {
     // final PV size + triangular arrays of subPVs (including final null moves)
     static constexpr auto triangularArraySize = Ply::size() + Ply::size()*(Ply::size()+1) / 2;

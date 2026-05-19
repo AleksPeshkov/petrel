@@ -76,6 +76,7 @@ public: // used by search:
 //TODO: per search thread
     mutable HistoryMoves<4> counterMove;
     mutable HistoryMoves<4> followMove;
+    mutable CheckMoves counterCheck;
     mutable PrincipalVariation pv;
     mutable std::array<HistoryMove, 6> rootBestMoves;
 
