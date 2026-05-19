@@ -372,16 +372,22 @@ ReturnStatus Node::search() {
 
     RETURN_CUTOFF (goodCaptures(OP.nonKing()));
 
-    if (parent && !inCheck()) {
-        RETURN_CUTOFF (searchIfPossible(parent->killer[0]));
-        RETURN_CUTOFF (counterMove());
-        RETURN_CUTOFF (followMove());
+    if (parent) {
+        if (inCheck()) {
+            RETURN_CUTOFF (searchIfPossible(
+                root.counterCheck.get(colorToMove(), MY.sqKing(), parent->currentMove)
+            ));
+        } else {
+            RETURN_CUTOFF (searchIfPossible(parent->killer[0]));
+            RETURN_CUTOFF (counterMove());
+            RETURN_CUTOFF (followMove());
 
-        RETURN_CUTOFF (searchIfPossible(parent->killer[1]));
-        RETURN_CUTOFF (counterMove());
-        RETURN_CUTOFF (followMove());
+            RETURN_CUTOFF (searchIfPossible(parent->killer[1]));
+            RETURN_CUTOFF (counterMove());
+            RETURN_CUTOFF (followMove());
 
-        RETURN_CUTOFF (searchIfPossible(parent->killer[2]));
+            RETURN_CUTOFF (searchIfPossible(parent->killer[2]));
+        }
     }
 
     do {
@@ -687,9 +693,14 @@ void Node::updateHistory() {
     assert (bestMove.none() || isPseudoLegal(bestMove));
     assert (score.isOk(ply));
 
-    if (bestMove.any() && inCheck()) {
+    if (bestMove.any() && inCheck() && bestMove.canBeKiller() == CanBeKiller::Yes) {
         // reset canBeKiller when inCheck()
         bestMove = HistoryMove{TtMove{bestMove.from(), bestMove.to(), CanBeKiller::No}, bestMove.historyType()};
+
+        if (parent) {
+            assert (parent->currentMove.any());
+            root.counterCheck.set(colorToMove(), MY.sqKing(), parent->currentMove, bestMove);
+        }
     }
 
     saveNode();

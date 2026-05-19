@@ -766,6 +766,7 @@ void Uci::newGame() {
     tt.newGame();
     counterMove.clear();
     followMove.clear();
+    counterCheck.clear();
     go_.isNewGame = true;
 }
 
