@@ -1,3 +1,4 @@
+#include "assert.hpp"
 #include "TestPassedPawns.hpp"
 #include "TestHyperbola.hpp"
 #include "TestHistoryMoves.hpp"
@@ -7,6 +8,11 @@
 
 void io::error(std::string_view) {}
 void io::info(std::string_view) {}
+
+void assert_fail(const char* assertion, const char* file, unsigned int line, const char* func) {
+    std::cerr << "Assertion failed: " << func << ": " << assertion << " (" << file << ":" << line << ")";
+    std::exit(EXIT_FAILURE); // graceful exit without core dump
+}
 
 int main() {
     try {
