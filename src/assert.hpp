@@ -1,17 +1,11 @@
 #ifndef ASSERT_HPP
 #define ASSERT_HPP
 
-#ifdef NDEBUG
-#define assert(expr) (static_cast<void>(0))
-#define if_debug(expr) (static_cast<void>(0))
+#ifndef NDEBUG
 
-#else
+// custom assert() with logging, defined in main.cpp
+void assert_fail(const char* assertion, const char* file, unsigned int line, const char* function) __attribute__ ((__noreturn__));
 
-#define if_debug(expr) expr
-
-#ifdef ENABLE_ASSERT_LOGGING
-// custom assert fail with logging, defined in main.cpp
-void assert_fail(const char *assertion, const char *file, unsigned int line, const char *function) __attribute__ ((__noreturn__));
 #define assert(expr) \
     do { \
         if (!(expr)) { \
@@ -20,8 +14,7 @@ void assert_fail(const char *assertion, const char *file, unsigned int line, con
     } while (false)
 
 #else
-#include <cassert>
-#endif // ENABLE_ASSERT_LOGGING
-
+#define assert(expr) (static_cast<void>(0))
 #endif // NDEBUG
+
 #endif // ASSERT_HPP

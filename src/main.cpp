@@ -43,17 +43,9 @@ void io::info(std::string_view message) {
     The_uci.info(message);
 }
 
-#ifdef ENABLE_ASSERT_LOGGING
-void assert_fail(const char *assertion, const char *file, unsigned int line, const char* func) {
-    std::ostringstream oss;
-    oss << "Assertion failed: " << func << ": " << assertion << " (" << file << ":" << line << ")\n";
-    oss << "node " << The_uci.limits.getNodes() << " root fen " << The_uci.position_ << '\n';
-    if (!The_uci.debugPosition.empty()) { oss << The_uci.debugPosition << '\n'; }
-    if (!The_uci.debugGo.empty()) { oss << The_uci.debugGo << '\n'; }
-
-    std::string message = oss.str();
-    The_uci.error(message);
-
+#ifndef NDEBUG
+void assert_fail(const char* assertion, const char* file, unsigned int line, const char* func) {
+    io::error( std::string("Assertion failed (") + file + ":" + std::to_string(line) + "): " + func + ": " + assertion);
     std::exit(EXIT_FAILURE); // graceful exit without core dump
     __builtin_unreachable();
 }

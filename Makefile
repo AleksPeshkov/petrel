@@ -38,10 +38,8 @@ WARNINGS += -Wuninitialized -Wstrict-aliasing=1 -Wstrict-overflow=1 -Wpacked -Ws
 
 # === Set Flags Based on Tags ===
 ifeq ($(wildcard $(TAG_TEST)), $(TAG_TEST))
-	DEFINES := -DDEBUG -DENABLE_ASSERT_LOGGING
 	BUILD_FLAGS += -Og -ggdb
 else ifeq ($(wildcard $(TAG_DEBUG)), $(TAG_DEBUG))
-	DEFINES := -DDEBUG -DENABLE_ASSERT_LOGGING
 	BUILD_FLAGS += -O0 -ggdb -fsanitize=address,undefined
 else
 	DEFINES := -DNDEBUG
