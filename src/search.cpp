@@ -718,8 +718,8 @@ ReturnStatus Node::searchRoot() {
 
         RETURN_IF_STOP (search());
         RETURN_IF_STOP (root.limits.iterationDeadlineReached());
+        if (depth >= root.limits.maxDepth()) { return ReturnStatus::Continue; }
 
-        root.newIteration();
         ::refreshTtPv(*this, root.pv, root.tt);
     }
 
