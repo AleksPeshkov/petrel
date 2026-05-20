@@ -71,3 +71,5 @@ Engine accepts command option `--file` (`-f`) to pass UCI initial commands from 
 * `setoption` can be abbreviated to short forms like `set hash 1g`.
   `setoption Hash` accepts sizes in bytes `b`, kibibytes `k`, mebibytes `m`, UCI default), gibibytes `g`.
 * `perft N` performs PERFT to depth `N` using bulk counting and the transposition hash table.
+* `wait` can be used to block batch operations till running search finished
+* `isready` will send `info nodes ... time ... nps` during running search
