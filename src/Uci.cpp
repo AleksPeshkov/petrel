@@ -305,7 +305,6 @@ void Uci::setoption() {
         return;
     }
 
-
     if (consume("EvalFile")) {
         consume("value");
 
@@ -453,7 +452,7 @@ void Uci::position() {
 
     wait();
 
-#ifdef ENABLE_ASSERT_LOGGING
+#ifndef NDEBUG
     debugPosition = inputLine.str();
 #endif
 
@@ -477,7 +476,7 @@ void Uci::position() {
 void Uci::go() {
     newSearch();
 
-#ifdef ENABLE_ASSERT_LOGGING
+#ifndef NDEBUG
     debugGo = inputLine.str();
 #endif
 
@@ -576,9 +575,6 @@ ostream& Uci::info_fen(ostream& o) const {
 
 void Uci::info_readyok() const {
     Output ob{this};
-#ifndef NDEBUG
-    info_fen(ob) << '\n';
-#endif
     limits.info_nps(ob);
     ob << "readyok";
 }
