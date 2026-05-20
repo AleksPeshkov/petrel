@@ -11,7 +11,9 @@ CXX := clang++
 CXXFLAGS := -MMD -MP -std=c++20 -Wall -Wextra -g -I../../src -O0 -ggdb -DDEBUG -fsanitize=address,undefined
 CXXFLAGS += -mavx2
 
-ifeq ($(CXX), g++)
+ifeq ($(CXX), clang++)
+	CXXFLAGS += -fconstexpr-steps=10000000
+else ifeq ($(CXX), g++)
 	CXXFLAGS += -flax-vector-conversions -Wno-class-memaccess
 endif
 
