@@ -7,6 +7,7 @@ void UciSearchLimits::newSearch() {
     stop_.store(false, std::memory_order_release);
 
     searchStartTime_ = timeNow();
+    lastInfoTime_ = searchStartTime_;
 
     nodes_ = 0;
     nodesLimit_ = NodeCountMax;
@@ -241,13 +242,35 @@ ostream& UciSearchLimits::uciok(ostream& os) const {
     return os;
 }
 
-ostream& UciSearchLimits::nps(ostream& os) const {
-    lastInfoNodes_ = getNodes();
-    os << " nodes " << lastInfoNodes_;
+ostream& UciSearchLimits::average_nps(ostream& os) const {
+    auto nodes = getNodes();
+    auto time = ::timeNow();
+    auto elapsedTime = time - searchStartTime_;
 
-    auto elapsedTime = elapsedSinceStart();
+    os << " nodes " << nodes;
     if (elapsedTime >= 1ms) {
-        os << " time " << elapsedTime << " nps " << ::nps(lastInfoNodes_, elapsedTime);
+        os << " time " << elapsedTime << " nps " << ::nps(nodes, elapsedTime);
     }
+
+    lastInfoNodes_ = nodes;
+    lastInfoTime_ = time;
+    return os;
+}
+
+ostream& UciSearchLimits::instant_nps(ostream& os) const {
+    auto nodes = getNodes();
+    auto time = ::timeNow();
+    auto elapsedTime = time - searchStartTime_;
+
+    auto deltaNodes = nodes - lastInfoNodes_;
+    auto deltaTime = time - lastInfoTime_;
+
+    os << " nodes " << nodes;
+    if (elapsedTime >= 1ms) {
+        os << " time " << elapsedTime << " nps " << ::nps(deltaNodes, deltaTime);
+    }
+
+    lastInfoNodes_ = nodes;
+    lastInfoTime_ = time;
     return os;
 }
