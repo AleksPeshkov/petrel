@@ -15,7 +15,7 @@ public:
     constexpr PiRank(Pi pi, File file) : PiRank{PiRank{pi} & PiRank{file}} {}
     constexpr PiRank(Pi pi, BitRank br) : PiRank{PiRank{pi} & PiRank{br}} {}
 
-    BitRank bitRank() const {
+    BitRank reduce() const {
 #ifdef __clang__
         return BitRank{__builtin_reduce_or(v_)};
 #else
@@ -32,6 +32,16 @@ public:
     constexpr PiMask piMask(File file) const {
         _t file_vector = PiRank{file}.v();
         return PiMask{ (v_ & file_vector) == file_vector };
+    }
+
+    //_mm_blendv_epi8
+    constexpr PiRank& blend(Pi pi, BitRank br) {
+        v_ = PiMask{pi}.v() ? PiRank{br}.v() : v_;
+        return *this;
+    }
+
+    constexpr int popcount() const {
+        return ::popcount(::u64(v_, 0)) + ::popcount(::u64(v_, 1));
     }
 };
 
@@ -51,8 +61,7 @@ public:
     }
 
     constexpr void set(Pi pi, Rank rank, BitRank br) {
-        //_mm_blendv_epi8
-        v_[rank] = (v_[rank] % PiRank{pi}) + PiRank{pi, br};
+        v_[rank].blend(pi, br);
     }
 
     constexpr void set(Pi pi, Bb bb) {
@@ -99,7 +108,7 @@ public:
     constexpr Bb bb() const {
         array<BitRank, Rank> br;
         for (auto rank : range<Rank>()) {
-            br[rank] = v_[rank].bitRank();
+            br[rank] = v_[rank].reduce();
         }
         return Bb{std::bit_cast<Bb::_t>(br)};
     }
@@ -143,7 +152,7 @@ public:
     constexpr int popcount() const {
         int sum = 0;
         for (auto piRank : v_) {
-            sum += ::popcount(piRank.v());
+            sum += piRank.popcount();
         }
         return sum;
     }
