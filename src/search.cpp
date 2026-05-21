@@ -215,6 +215,9 @@ ReturnStatus Node::search() {
                 score = Score::mateLoss(ply);
                 assert (currentMove.none());
                 return ReturnStatus::Continue;
+            } else if (depth <= 3_ply && movesTotal() == 1) {
+                // single reply extension
+                depth = depth + 1_ply;
             }
 
             // check extension
