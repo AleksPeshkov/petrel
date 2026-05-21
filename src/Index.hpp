@@ -328,7 +328,10 @@ template <> struct CharMap<castling_side_t> { static constexpr io::czstring The_
 struct CastlingSide; STRUCT_INDEX_CHAR (CastlingSide, 2, castling_side_t);
 
 enum piece_index_t : u8_t { TheKing }; // king index is always 0
-struct Pi; STRUCT_INDEX_ENUM (Pi, 16, piece_index_t);
+struct Pi : ::Index<Pi, 16, piece_index_t> {
+    using Index::Index;
+    constexpr int _int() const { return static_cast<int>(v_); }
+};
 
 enum piece_type_t {
     Queen = 0,

@@ -24,14 +24,12 @@ void Nnue::setEmbeddedEval() {
 /**
 * Startup constant initialization
 */
-constexpr InBetween inBetween; // 32k 64*64*8, used by constexpr CastlingRules
-constinit HyperbolaDir hyperbolaDir; // 4k 64*4*16
-constinit HyperbolaSq hyperbolaSq; // 1k 64*16
-constinit AttacksFrom attacksFrom; // 3k 6*64*8
-constexpr VectorOfAll vectorOfAll; // 4k 256*16
-constexpr PiSingle piSingle; // 256
-constinit CastlingRules castlingRules; // 128
-constinit PieceCountTable pieceCountTable; // 48 6*8
+constexpr const InBetween inBetween; // 32k 64*64*8, used by constexpr CastlingRules
+constinit const HyperbolaDir hyperbolaDir; // 4k 64*4*16
+constinit const HyperbolaSq hyperbolaSq; // 1k 64*16
+constinit const AttacksFrom attacksFrom; // 3k 6*64*8
+constinit const CastlingRules castlingRules; // 128
+constinit const PieceCountTable pieceCountTable; // 48 6*8
 
 // global Uci instance
 Uci The_uci(std::cout);

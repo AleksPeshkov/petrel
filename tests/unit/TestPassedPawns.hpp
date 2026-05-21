@@ -4,12 +4,10 @@
 Nnue nnue;
 void Nnue::setEmbeddedEval() {}
 
-constexpr InBetween inBetween;
-constinit AttacksFrom attacksFrom;
-constexpr VectorOfAll vectorOfAll;
-constexpr PiSingle piSingle;
-constinit CastlingRules castlingRules;
-constinit PieceCountTable pieceCountTable; // 48 6*8
+constexpr const InBetween inBetween;
+constinit const AttacksFrom attacksFrom;
+constinit const CastlingRules castlingRules;
+constinit const PieceCountTable pieceCountTable; // 48 6*8
 
 void assertPassed(const char* fen, Square::_t sq, bool shouldBePassed, const char* msg) {
     UciPosition uciPosition;

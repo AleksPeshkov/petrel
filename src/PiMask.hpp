@@ -12,8 +12,6 @@
 #include "bitops128.hpp"
 #include "BitArray.hpp"
 
-constexpr vu8x16_t all(u8_t i) { return vu8x16_t{ i,i,i,i, i,i,i,i, i,i,i,i, i,i,i,i }; }
-
 constexpr u8_t u8(vu8x16_t v, int i) {
     return std::bit_cast<std::array<u8_t, 16>>(v)[i];
 }
@@ -39,9 +37,7 @@ constexpr int mask(vu8x16_t v) {
     }
 }
 
-constexpr bool equals(vu8x16_t a, vu8x16_t b) {
-    return mask(a == b) == 0xffffu;
-}
+constexpr bool all(vu8x16_t a) { return mask(a) == 0xffffu; }
 
 #else
 
@@ -58,35 +54,15 @@ constexpr u64_t mask4(vu8x16_t v) {
     }
 }
 
-constexpr bool equals(vu8x16_t a, vu8x16_t b) {
-    return mask4(a == b) == U64(0xffff'ffff'ffff'ffff);
-}
+constexpr bool all(vu8x16_t a) { return mask4(a) == U64(0xffff'ffff'ffff'ffff); }
 
 #endif // NEON_VECTOR
 
 template <>
 struct BitArrayOps<vu8x16_t> {
     using Arg = vu8x16_t;
-    static bool equals(Arg a, Arg b) { return ::equals(a, b); }
+    static bool equals(Arg a, Arg b) { return ::all(a == b); }
 };
-
-class CACHE_ALIGN VectorOfAll {
-    using _t = vu8x16_t;
-    struct Index; STRUCT_INDEX (Index, 0x100);
-    Index::arrayOf<_t> v_;
-
-public:
-    consteval VectorOfAll () {
-        for (auto i : range<Index>()) {
-            v_[i] = ::all(i.v());
-        }
-    }
-
-    constexpr _t operator[] (u8_t i) const { return v_[Index{i}]; }
-    constexpr _t operator[] (Pi pi) const { return v_[Index{pi.v()}]; }
-};
-
-extern const VectorOfAll vectorOfAll;
 
 /**
  * class used for enumeration of piece vectors
@@ -144,43 +120,22 @@ public:
 
 #endif // NEON_VECTOR
 
-class PiSingle {
-    using _t = vu8x16_t;
-    Pi::arrayOf<_t> v_;
-
-public:
-    consteval PiSingle() {
-        for (auto pi : range<Pi>()) {
-            std::array<uint8_t, 16> vec = {}; // zero
-            vec[pi.v()] = 0xff;
-            v_[pi] = std::bit_cast<vu8x16_t>(vec);
-        }
-    }
-
-    constexpr _t operator[] (Pi pi) const { return v_[pi]; }
-};
-
-extern const PiSingle piSingle;
-
-///piece vector of boolean values: false (0) or true (0xff)
+/// piece vector of boolean values: false (0) or true (0xff)
 class PiMask : public BitArray<PiMask, vu8x16_t> {
 public:
     constexpr PiMask () : BitArray{zero()} {}
-    constexpr PiMask (Pi pi) : BitArray( ::piSingle[pi] ) {}
+    constexpr PiMask (Pi pi) : PiMask{} { v_[pi._int()] = 0xff; }
     constexpr explicit PiMask (_t a) : BitArray{a} { assertOk(); }
 
-    static constexpr _t zero() { return ::all(0); }
-    static constexpr PiMask equals(_t a, _t b) { return PiMask{a == b}; }
-    static constexpr PiMask notEquals(_t a, _t b) { return PiMask{a != b}; }
+    static constexpr _t zero() { return ::vu8x16x(0); }
 
     using BitArray::any;
-    static constexpr PiMask any(_t a) { return notEquals(a, zero()); }
-    static constexpr PiMask all() { return PiMask{::all(0xff)}; }
+    static constexpr PiMask any(_t a) { return PiMask{a != zero()}; }
 
     constexpr _t v() const { return v_; } // _t v() const { return v_; }
 
     // check if either 0 or 0xff bytes are set
-    constexpr bool isOk() const { return ::equals(v_, v_ != zero()); }
+    constexpr bool isOk() const { return ::all(v_ == static_cast<_t>(v_ != zero())); }
 
     // assert if either 0 or 0xff bytes are set
     constexpr void assertOk() const { assert (isOk()); }
@@ -223,7 +178,6 @@ class PiSquare {
 
     constexpr void set(Pi pi, _t sq) { square[pi] = sq; }
     constexpr void set(Pi pi, Square sq) { square[pi] = sq.v(); }
-    constexpr vu8x16_t vector(_t e) const { return ::vectorOfAll[e]; }
 
 public:
     constexpr PiSquare () {
@@ -267,14 +221,14 @@ public:
     constexpr Pi pi(_t sq) const { assert (has(sq)); return piecesAt(sq).pi(); }
     constexpr Pi pi(Square sq) const { return pi(sq.v()); }
 
-    constexpr PiMask pieces() const { return PiMask::notEquals(vu8x16, ::all(None)); }
-    constexpr PiMask piecesAt(_t sq) const { return PiMask::equals(vu8x16, vector(sq)); }
+    constexpr PiMask pieces() const { return PiMask{vu8x16 != ::vu8x16x(None)}; }
+    constexpr PiMask piecesAt(_t sq) const { return PiMask{vu8x16 == ::vu8x16x(sq)}; }
 
     constexpr PiMask piecesOn(Rank::_t rank) const {
-        return PiMask::equals(
-            vu8x16 & vector(static_cast<_t>(None ^ static_cast<_t>(File::Mask))),
-            vector(Square{static_cast<File::_t>(0), rank}.v())
-        );
+        return PiMask{
+            (vu8x16 & ::vu8x16x( static_cast<_t>(None ^ static_cast<_t>(File::Mask)) ))
+            == ::vu8x16x( Square{static_cast<File::_t>(0), rank}.v() )
+        };
     }
 };
 
@@ -324,13 +278,10 @@ class PiType {
     };
 
     constexpr element_type element(PieceType::_t ty) const { return static_cast<element_type>(::singleton<u8_t>(ty)); }
-    constexpr element_type element(PieceType ty) const { return element(ty.v()); }
-    constexpr vu8x16_t vector(element_type e) const { return ::vectorOfAll[static_cast<u8_t>(e)]; }
-    constexpr vu8x16_t vector(PieceType::_t ty) const { return vector(element(ty)); }
 
     constexpr bool has(Pi pi, element_type e) const { assertOk(pi); return (static_cast<u8_t>(type[pi]) & static_cast<u8_t>(e)) != 0; }
     constexpr bool is(Pi pi, PieceType::_t ty) const { assertOk(pi); return has(pi, element(ty)); }
-    constexpr PiMask any(element_type e) const { return PiMask::any(vu8x16 & vector(e)); }
+    constexpr PiMask any(element_type e) const { return PiMask::any(vu8x16 & ::vu8x16x(e)); }
 
 public:
     constexpr PiType () {
@@ -347,7 +298,7 @@ public:
         constexpr void assertOk(Pi pi) const { assert (isOk(pi)); }
     #endif
 
-    void drop(Pi pi, PieceType ty) { assert (none(pi)); assert (!pi.is(TheKing) || ty.is(King)); type[pi] = element(ty); }
+    void drop(Pi pi, PieceType ty) { assert (none(pi)); assert (!pi.is(TheKing) || ty.is(King)); type[pi] = element(ty.v()); }
     void clear(Pi pi) { assertOk(pi); assert (!pi.is(TheKing)); assert (!is(pi, King)); type[pi] = None; }
     void promote(Pi pi, PromoType::_t ty) { assert (isPawn(pi)); type[pi] = element(ty); }
 
@@ -402,8 +353,8 @@ class PiTrait {
         vu8x16_t vu8x16;
     };
 
-    constexpr PiMask any(element_type e) const { return PiMask::any(vu8x16 & ::vectorOfAll[static_cast<u8_t>(e)]); }
-    constexpr void clear(element_type e) { vu8x16 &= ::vectorOfAll[0xff ^ static_cast<u8_t>(e)]; }
+    constexpr PiMask any(element_type e) const { return PiMask::any(vu8x16 & ::vu8x16x(e)); }
+    constexpr void clear(element_type e) { vu8x16 &= ::vu8x16x(0xff ^ static_cast<u8_t>(e)); }
 
     constexpr bool has(Pi pi, element_type e) const {
         return (static_cast<u8_t>(trait[pi]) & static_cast<u8_t>(e)) != 0;
@@ -512,7 +463,7 @@ public:
 
     PiOrder& forward(Pi pi) {
         // find index of pi in the shuffled vector
-        PiMask mask = PiMask::equals(vu8x16, ::vectorOfAll[pi]);
+        PiMask mask = PiMask{vu8x16 == ::vu8x16x(pi.v())};
         // shuffle selected pi to the first position
         vu8x16 = ::shufflevector(vu8x16, std::bit_cast<vu8x16_t>(shuffleToFront[mask.pi()]));
         assertOk();

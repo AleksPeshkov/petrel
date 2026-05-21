@@ -49,7 +49,7 @@ struct CACHE_ALIGN HyperbolaSq : Square::arrayOf<vu64x2_t> {
         }
     }
 };
-extern constinit HyperbolaSq hyperbolaSq;
+extern const HyperbolaSq hyperbolaSq;
 
 struct CACHE_ALIGN HyperbolaDir : Square::arrayOf<Direction::arrayOf<vu64x2_t>> {
     consteval HyperbolaDir () {
@@ -61,7 +61,7 @@ struct CACHE_ALIGN HyperbolaDir : Square::arrayOf<Direction::arrayOf<vu64x2_t>> 
         }
     }
 };
-extern constinit HyperbolaDir hyperbolaDir;
+extern const HyperbolaDir hyperbolaDir;
 
 /**
  * Vector of bitboard and its bitreversed complement

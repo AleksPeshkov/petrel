@@ -144,7 +144,7 @@ public:
     constexpr _t operator[] (PieceType ty) const { return v_[ty]; }
 };
 
-extern constinit PieceCountTable pieceCountTable;
+extern const PieceCountTable pieceCountTable;
 
 class Material {
     using _t = PieceCountTable::_t;
