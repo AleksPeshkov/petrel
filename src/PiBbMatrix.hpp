@@ -35,6 +35,10 @@ public:
         _t file_vector = PiRank{file}.v();
         return PiMask{ (v_ & file_vector) == file_vector };
     }
+
+    constexpr int popcount() const {
+        return ::popcount(::u64(v_, 0)) + ::popcount(::u64(v_, 1));
+    }
 };
 
 /// array of 8 PiRank
@@ -151,7 +155,7 @@ public:
     constexpr int popcount() const {
         int sum = 0;
         for (auto piRank : v_) {
-            sum += ::popcount(piRank.v());
+            sum += piRank.popcount();
         }
         return sum;
     }
