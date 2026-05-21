@@ -61,16 +61,16 @@ public:
     constexpr const PiBbMatrix& attacks() const { return attacks_; }
 
     // bitboard of squares occupied by the given side pieces
-    constexpr const Bb& bbSide() const { assert (bbPawns_ <= bbSide_); return bbSide_; }
+    constexpr Bb bbSide() const { assert (bbPawns_ <= bbSide_); return bbSide_; }
 
     // bitboard of squares occupied by the given side pawns
-    constexpr const Bb& bbPawns() const { return bbPawns_; }
+    constexpr Bb bbPawns() const { return bbPawns_; }
 
     // bitboard of squares attacked by the given side pawns
-    constexpr const Bb& bbPawnAttacks() const { assert (bbPawnAttacks_ == bbPawns_.pawnAttacks()); return bbPawnAttacks_; }
+    constexpr Bb bbPawnAttacks() const { assert (bbPawnAttacks_ == bbPawns_.pawnAttacks()); return bbPawnAttacks_; }
 
     // incremental piece count and material score for the given side to move
-    constexpr const Material& material() const { return material_; }
+    constexpr Material material() const { return material_; }
 
     constexpr bool has(Square sq) const { assert (bbSide_.has(sq) == squares.has(sq)); return bbSide_.has(sq); }
     constexpr Square sq(Pi pi) const { assertOk(pi); return squares.sq(pi); }

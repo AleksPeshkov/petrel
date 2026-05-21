@@ -5,23 +5,26 @@
 #include "PiMask.hpp"
 
 class PiRank : public BitArray<PiRank, vu8x16_t> {
-    using Base = BitArray<PiRank, vu8x16_t>;
-
 public:
-    using Base::Base;
-    constexpr PiRank () : Base{::all(0)} {}
-    constexpr explicit PiRank (BitRank br) : Base{::vectorOfAll[br.v()]} {}
-    constexpr explicit PiRank (PiMask m) : Base{m.v()} {}
+    constexpr PiRank () : BitArray{::all(0)} {}
+    constexpr explicit PiRank (BitRank br) : BitArray{::vectorOfAll[br.v()]} {}
+    constexpr explicit PiRank (PiMask m) : BitArray{m.v()} {}
     constexpr explicit PiRank (File file) : PiRank{BitRank{file}} {}
     constexpr explicit PiRank (Pi pi) : PiRank{PiMask{pi}} {}
     constexpr PiRank(Bb bb, Rank rank) : PiRank{BitRank{bb, rank}} {}
-    constexpr PiRank(Pi pi, File file) : PiRank{PiRank{file} & PiRank{pi}} {}
-    constexpr PiRank(Pi pi, BitRank br) : PiRank{PiRank{br} & PiRank{pi}} {}
+    constexpr PiRank(Pi pi, File file) : PiRank{PiRank{pi} & PiRank{file}} {}
+    constexpr PiRank(Pi pi, BitRank br) : PiRank{PiRank{pi} & PiRank{br}} {}
 
-    BitRank bb() const {
+    constexpr void clear() { *this = {}; }
+
+    BitRank bitRank() const {
+#ifdef __clang__
+        return BitRank{__builtin_reduce_or(v_)};
+#else
         u8_t r  = v_[0] | v_[1] | v_[2] | v_[3] | v_[4] | v_[5] | v_[6] | v_[7]
             | v_[8] | v_[9] | v_[10] | v_[11] | v_[12] | v_[13] | v_[14] | v_[15];
         return BitRank{r};
+#endif
     }
 
     constexpr BitRank bitRank(Pi pi) const {
@@ -45,14 +48,14 @@ public:
         }
     }
 
-    constexpr void clear(Pi pi, Square sq) {
-        v_[Rank{sq}] -= PiRank{pi, File{sq}};
-    }
-
     constexpr void clear(Pi pi) {
         for (auto& piRank : v_) {
             piRank %= PiRank{pi};
         }
+    }
+
+    constexpr void clear(Pi pi, Square sq) {
+        v_[Rank{sq}] -= PiRank{pi, File{sq}};
     }
 
     constexpr void set(Pi pi, Rank rank, BitRank br) {
@@ -78,7 +81,7 @@ public:
         return (v_[Rank{sq}] & PiRank{pi, File{sq}}).any();
     }
 
-    constexpr const PiRank& operator[] (Rank rank) const {
+    constexpr PiRank operator[] (Rank rank) const {
         return v_[rank];
     }
 
@@ -104,7 +107,7 @@ public:
     constexpr Bb bb() const {
         Rank::arrayOf<BitRank> br;
         for (auto rank : range<Rank>()) {
-            br[rank] = v_[rank].bb();
+            br[rank] = v_[rank].bitRank();
         }
         return Bb{std::bit_cast<Bb::_t>(br)};
     }

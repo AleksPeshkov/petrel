@@ -96,7 +96,7 @@ void PositionMoves::excludePinnedMoves(PiMask opPinners) {
 
         assert (::attacksFrom(OP.typeOf(pinner), pinFrom).has(MY.sqKing()));
 
-        const Bb& pinLine = ::inBetween(MY.sqKing(), pinFrom);
+        Bb pinLine = ::inBetween(MY.sqKing(), pinFrom);
         Bb piecesOnPinLine = pinLine & OCCUPIED;
         assert (piecesOnPinLine.any());
 
@@ -121,7 +121,7 @@ void PositionMoves::generateCheckEvasions() {
         Pi checker = checkers.pi();
         Square checkFrom{~OP.sq(checker)};
 
-        const Bb& checkLine = ::inBetween(MY.sqKing(), checkFrom);
+        Bb checkLine = ::inBetween(MY.sqKing(), checkFrom);
 
         //general case: check evasion moves of all pieces
         moves_ = MY.attacks() & (checkLine + Bb{checkFrom});
