@@ -6,7 +6,8 @@
 
 class PiRank : public BitArray<PiRank, vu8x16_t> {
 public:
-    constexpr PiRank () : BitArray{::vu8x16x(0)} {}
+    constexpr PiRank () : BitArray{} {}
+    constexpr explicit PiRank (_t v) : BitArray{v} {}
     constexpr explicit PiRank (BitRank br) : BitArray{::vu8x16x(br.v())} {}
     constexpr explicit PiRank (PiMask m) : BitArray{m.v()} {}
     constexpr explicit PiRank (File file) : PiRank{BitRank{file}} {}
@@ -17,7 +18,7 @@ public:
 
     constexpr void clear() { *this = {}; }
 
-    BitRank bitRank() const {
+    BitRank reduce() const {
 #ifdef __clang__
         return BitRank{__builtin_reduce_or(v_)};
 #else
@@ -34,6 +35,12 @@ public:
     constexpr PiMask piMask(File file) const {
         _t file_vector = PiRank{file}.v();
         return PiMask{ (v_ & file_vector) == file_vector };
+    }
+
+    //_mm_blendv_epi8
+    constexpr PiRank& set(Pi pi, BitRank br) {
+        v_ = PiMask{pi}.v() ? PiRank{br}.v() : v_;
+        return *this;
     }
 
     constexpr int popcount() const {
@@ -63,8 +70,7 @@ public:
     }
 
     constexpr void set(Pi pi, Rank rank, BitRank br) {
-        //_mm_blendv_epi8
-        v_[rank] = (v_[rank] % PiRank{pi}) + PiRank{pi, br};
+        v_[rank].set(pi, br);
     }
 
     constexpr void set(Pi pi, Bb bb) {
@@ -111,7 +117,7 @@ public:
     constexpr Bb bb() const {
         Rank::arrayOf<BitRank> br;
         for (auto rank : range<Rank>()) {
-            br[rank] = v_[rank].bitRank();
+            br[rank] = v_[rank].reduce();
         }
         return Bb{std::bit_cast<Bb::_t>(br)};
     }
