@@ -41,9 +41,7 @@ constexpr int mask(u8x16_t v) {
     }
 }
 
-constexpr bool equals(u8x16_t a, u8x16_t b) {
-    return mask(a == b) == 0xffffu;
-}
+constexpr bool all(u8x16_t a) { return mask(a) == 0xffffu; }
 
 class PieceSet : public BitSet<PieceSet, Pi> {
 public:
@@ -78,9 +76,7 @@ constexpr u64_t mask4(u8x16_t v) {
     }
 }
 
-constexpr bool equals(u8x16_t a, u8x16_t b) {
-    return mask4(a == b) == U64(0xffff'ffff'ffff'ffff);
-}
+constexpr bool all(u8x16_t a) { return mask4(a) == U64(0xffff'ffff'ffff'ffff); }
 
 class PieceSet : public BitSet<PieceSet, Pi, u64_t> {
 public:
@@ -132,7 +128,7 @@ extern const PiOneMask piOneMask;
 template <>
 struct BitArrayOps<u8x16_t> {
     using Arg = u8x16_t;
-    static bool equals(Arg a, Arg b) { return ::equals(a, b); }
+    static bool equals(Arg a, Arg b) { return ::all(a == b); }
 };
 
 ///piece vector of boolean values: false (0) or true (0xff)
@@ -143,17 +139,14 @@ public:
     constexpr explicit PiMask (Pi pi) : BitArray{piOneMask[pi]} {}
 
     static constexpr _t zero() { return ::x16(0); }
-    static constexpr PiMask equals(_t a, _t b) { return PiMask{a == b}; }
-    static constexpr PiMask notEquals(_t a, _t b) { return PiMask{a != b}; }
 
     using BitArray::any;
-    static constexpr PiMask any(_t a) { return notEquals(a, zero()); }
-    static constexpr PiMask all() { return PiMask{::x16(0xff)}; }
+    static constexpr PiMask any(_t a) { return PiMask{a != zero()}; }
 
     constexpr _t v() const { return v_; } // _t v() const { return v_; }
 
     // check if either 0 or 0xff bytes are set
-    constexpr bool isOk() const { return ::equals(v_, v_ != zero()); }
+    constexpr bool isOk() const { return ::all(v_ == static_cast<_t>(v_ != zero())); }
 
     // assert if either 0 or 0xff bytes are set
     constexpr void assertOk() const { assert (isOk()); }
@@ -196,6 +189,10 @@ class PiSquare {
     constexpr void set(Pi pi, _t sq) { square[pi] = sq; }
     constexpr void set(Pi pi, Square sq) { square[pi] = *sq; }
 
+    constexpr PiMask at(_t sq) const { return PiMask{u8x16 == ::x16(sq)}; }
+    constexpr bool has(_t sq) const { return at(sq).any(); }
+    constexpr Pi pi(_t sq) const { assert (has(sq)); return at(sq).pi(); }
+
 public:
     constexpr PiSquare () {
         for (auto pi : range<Pi>()) {
@@ -231,15 +228,11 @@ public:
     }
 
     constexpr bool none(Pi pi) const { return square[pi] == Square::null(); }
-    constexpr Square sq(Pi pi) const { assertOk(pi); return Square{square[pi]}; }
-
-    constexpr bool has(_t sq) const { return piecesAt(sq).any(); }
     constexpr bool has(Square sq) const { return has(*sq); }
-    constexpr Pi pi(_t sq) const { assert (has(sq)); return piecesAt(sq).pi(); }
+    constexpr Square sq(Pi pi) const { assertOk(pi); return Square{square[pi]}; }
     constexpr Pi pi(Square sq) const { return pi(*sq); }
 
-    constexpr PiMask pieces() const { return PiMask::notEquals(u8x16, ::x16(Square::null())); }
-    constexpr PiMask piecesAt(_t sq) const { return PiMask::equals(u8x16, ::x16(sq)); }
+    constexpr PiMask pieces() const { return PiMask{u8x16 != ::x16(Square::null())}; }
 
     constexpr PiMask piecesOn(Rank::_t rank) const {
         return PiMask{
@@ -318,7 +311,6 @@ public:
 
     void drop(Pi pi, PieceType ty) { assert (none(pi)); assert (!pi.is(TheKing) || ty.is(King)); type[pi] = element(*ty); }
     void clear(Pi pi) { assertOk(pi); assert (!pi.is(TheKing)); assert (!is(pi, King)); type[pi] = None; }
-    void promote(Pi pi, PromoType::_t ty) { assert (isPawn(pi)); type[pi] = element(ty); }
 
     constexpr bool none(Pi pi) const { return type[pi] == None; }
     constexpr bool isPawn(Pi pi) const { return is(pi, Pawn); }
