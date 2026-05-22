@@ -91,8 +91,8 @@ public:
 
 class Position {
     Accumulator accumulator; // NNUE evaluation accumulators (separate for each side)
-    Side::arrayOf<PositionSide> positionSide_; //copied from the parent, updated incrementally
-    Side::arrayOf<Bb> occupied_; // both color pieces combined, updated from positionSide[] after each move
+    array<PositionSide, Side> positionSide_; //copied from the parent, updated incrementally
+    array<Bb, Side> occupied_; // both color pieces combined, updated from positionSide[] after each move
 
     Zobrist zobrist_; // incrementally updated position hash
     Rule50 rule50_; // number of halfmoves since last capture or pawn move, incremented or reset by makeMove()

@@ -116,20 +116,20 @@ class PieceCountTable {
         struct {
             u16_t centipawns; // material evaluation (pawn = 80)
             u8_t officers; // sum of Q = 12, R = 6, B/N = 4 (startpos total PieceMatMax = 40)
-            NonKingType::arrayOf<u8_t> count; // number of pieces of the given type
+            array<u8_t, NonKingType> count; // number of pieces of the given type
         } s;
         u64_t n;
         static_assert (sizeof(s) == sizeof(n));
     };
 
-    PieceType::arrayOf<element_type> v_;
+    array<element_type, PieceType> v_;
 
 public:
     using _t = element_type;
 
     consteval PieceCountTable () {
-        constexpr PieceType::arrayOf<u16_t> centipawns = { 960, 480, 320, 320, 80, 0 }; // material eval: 12/6/4/4/1 * 80cp
-        constexpr PieceType::arrayOf<u8_t> officers = { 12, 6, 4, 4, 0, 0 }; // non pawn pieces values
+        constexpr array<u16_t, PieceType> centipawns = { 960, 480, 320, 320, 80, 0 }; // material eval: 12/6/4/4/1 * 80cp
+        constexpr array<u8_t, PieceType> officers = { 12, 6, 4, 4, 0, 0 }; // non pawn pieces values
 
         for (auto ty : range<PieceType>()) {
             v_[ty].s.centipawns = centipawns[ty];

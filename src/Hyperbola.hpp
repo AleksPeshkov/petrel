@@ -42,7 +42,7 @@ constexpr u64x2_t u64x2(Bb a, Bb b) {
 //TRICK: Square operator~ is different
 constexpr Square reverse(Square sq) { return Square{ ~File{sq}, ~Rank{sq} }; }
 
-struct CACHE_ALIGN HyperbolaSq : Square::arrayOf<u64x2_t> {
+struct CACHE_ALIGN HyperbolaSq : array<u64x2_t, Square> {
     consteval HyperbolaSq () {
         for (auto sq : range<Square>()) {
             (*this)[sq] = u64x2(Bb{sq}, Bb{::reverse(sq)});
@@ -51,7 +51,7 @@ struct CACHE_ALIGN HyperbolaSq : Square::arrayOf<u64x2_t> {
 };
 extern constinit HyperbolaSq hyperbolaSq;
 
-struct CACHE_ALIGN HyperbolaDir : Square::arrayOf<Direction::arrayOf<u64x2_t>> {
+struct CACHE_ALIGN HyperbolaDir : array<u64x2_t, Square, Direction> {
     consteval HyperbolaDir () {
         for (auto sq : range<Square>()) {
             Square rsq{::reverse(sq)};
