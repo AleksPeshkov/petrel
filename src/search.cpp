@@ -279,7 +279,7 @@ ReturnStatus Node::search() {
 
             if (!bbAttacked().has(from)) {
                 // piece is not attacked at all
-                safePieces += pi;
+                safePieces += PiMask{pi};
                 continue;
             }
 
@@ -290,7 +290,7 @@ ReturnStatus Node::search() {
 
                 if (MY.bbPawnAttacks().has(from) || safeForMe(from)) {
                     // piece is protected
-                    safePieces += pi;
+                    safePieces += PiMask{pi};
                     continue;
                 }
                 //TODO: try protecting moves of other pieces
@@ -322,7 +322,7 @@ ReturnStatus Node::search() {
 
         // safe officers moves
         while (safePieces.any()) {
-            Pi pi = safePieces.piLast(); safePieces -= pi;
+            Pi pi = safePieces.piLast(); safePieces -= PiMask{pi};
             RETURN_CUTOFF (goodNonCaptures(pi, bbMovesOf(pi) % bbAvoid, 3_ply));
         }
 
@@ -349,7 +349,7 @@ ReturnStatus Node::search() {
 
         // unsafe (losing) captures (N/B, R, Q order)
         for (PiMask pieces = MY.officers(); pieces.any(); ) {
-            Pi pi = pieces.piLast(); pieces -= pi;
+            Pi pi = pieces.piLast(); pieces -= PiMask{pi};
             Square from{MY.sq(pi)};
             for (Square to : bbMovesOf(pi) & ~OP.bbSide()) {
                 RETURN_CUTOFF (child->searchMove(from, to, 4_ply));
@@ -360,7 +360,7 @@ ReturnStatus Node::search() {
 
         // unsafe (losing) non-captures (N/B, R, Q order)
         for (PiMask pieces = MY.officers(); pieces.any(); ) {
-            Pi pi = pieces.piLast(); pieces -= pi;
+            Pi pi = pieces.piLast(); pieces -= PiMask{pi};
             Square from{MY.sq(pi)};
             for (Square to : bbMovesOf(pi)) {
                 RETURN_CUTOFF (child->searchMove(from, to, 5_ply));
@@ -473,7 +473,7 @@ ReturnStatus Node::goodCaptures(PiMask victims) {
 
         while (attackers.any()) {
             // LVA (least valuable attacker) order
-            Pi pi = attackers.piLast(); attackers -= pi;
+            Pi pi = attackers.piLast(); attackers -= PiMask{pi};
             Square from{MY.sq(pi)};
             RETURN_CUTOFF (child->searchMove(from, to));
         }

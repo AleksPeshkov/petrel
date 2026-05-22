@@ -6,8 +6,8 @@
 
 class PiRank : public BitArray<PiRank, u8x16_t> {
 public:
-    constexpr PiRank () : BitArray{::all(0)} {}
-    constexpr explicit PiRank (BitRank br) : BitArray{::vectorOfAll[br.v()]} {}
+    constexpr PiRank () : BitArray{::sameVector(0)} {}
+    constexpr explicit PiRank (BitRank br) : BitArray{::sameVector(br.v())} {}
     constexpr explicit PiRank (PiMask m) : BitArray{m.v()} {}
     constexpr explicit PiRank (File file) : PiRank{BitRank{file}} {}
     constexpr explicit PiRank (Pi pi) : PiRank{PiMask{pi}} {}

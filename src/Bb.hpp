@@ -92,9 +92,9 @@ class CACHE_ALIGN InBetween {
     array<Bb, Square, Square> inBetween;
 
     static constexpr Bb areaInBetween(Square from, Square to) {
-        Bb::_t belowFrom{ ::singleton<Bb::_t>(+from) - 1 };
-        Bb::_t belowTo{ ::singleton<Bb::_t>(+to) - 1 };
-        return Bb{((belowFrom ^ belowTo) | ::singleton<Bb::_t>(+to)) ^ ::singleton<Bb::_t>(+to)};
+        Bb areaFrom{ Bb{from}.v() - 1 };
+        Bb areaTo{ Bb{to}.v() - 1 };
+        return (areaFrom ^ areaTo) % Bb{to};
     }
 
 public:
@@ -152,8 +152,7 @@ public:
 
     constexpr Bb operator() (PieceType ty, Square sq) const { return attack[ty][sq]; }
 };
-
-extern constinit AttacksFrom attacksFrom;
+extern const AttacksFrom attacksFrom;
 
 class CastlingRules {
     struct Rules {
@@ -214,7 +213,6 @@ public:
     }
 
 };
-
-extern constinit CastlingRules castlingRules;
+extern const CastlingRules castlingRules;
 
 #endif
