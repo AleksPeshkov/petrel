@@ -258,7 +258,7 @@ istream& UciPosition::readMove(istream& in, Square& from, Square& to) const {
     in >> from >> to;
     if (!in) { return io::fail_pos(in, before); }
 
-    if (colorToMove_.is(Black)) { from.flip(); to.flip(); }
+    if (colorToMove_.is(Black)) { from = ~from; to = ~to; }
 
     if (!MY.has(from)) { return io::fail_pos(in, before); }
     Pi pi = MY.pi(from);
@@ -354,7 +354,7 @@ void UciPosition::playMoves(istream& in, Repetitions& repetitions) {
 
         Position::makeMove(from, to);
         generateMoves();
-        colorToMove_.flip();
+        colorToMove_ = ~colorToMove_;
 
         if (rule50() == 0_ply) { repetitions.clear(); }
         repetitions.push(colorToMove_, z());

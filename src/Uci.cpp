@@ -21,7 +21,7 @@ public:
     UciOutput(const Uci* u) : Output{u}, colorToMove{uci.colorToMove()} {}
     ChessVariant chessVariant() const { return uci.chessVariant(); }
     Color color() const { return colorToMove; }
-    Color flipColor() { return Color{colorToMove.flip()}; }
+    Color flipColor() { colorToMove = ~colorToMove; return colorToMove; }
     void resetRootColor() { colorToMove = uci.colorToMove(); }
 };
 

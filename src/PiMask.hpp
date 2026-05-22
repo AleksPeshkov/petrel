@@ -213,7 +213,6 @@ public:
 
 class PiSquare {
     using _t = Square::_t;
-    static constexpr _t None = Square::None; // captured piece
 
     // defined to make debugging clear
     union {
@@ -228,7 +227,7 @@ class PiSquare {
 public:
     constexpr PiSquare () {
         for (auto pi : range<Pi>()) {
-            square[pi] = None;
+            square[pi] = Square::null();
         }
     }
 
@@ -241,7 +240,7 @@ public:
     #endif
 
     void drop(Pi pi, Square sq) { assert (none(pi)); assert (!has(sq)); set(pi, sq); }
-    void clear(Pi pi) { assertOk(pi); square[pi] = None; }
+    void clear(Pi pi) { assertOk(pi); square[pi] = Square::null(); }
     void move(Pi pi, Square sq) { assertOk(pi); assert (!has(sq)); set(pi, sq); }
 
     void castle(Square kingTo, Pi theRook, Square rookTo) {
@@ -259,7 +258,7 @@ public:
         assertOk(theRook);
     }
 
-    constexpr bool none(Pi pi) const { return square[pi] == None; }
+    constexpr bool none(Pi pi) const { return square[pi] == Square::null(); }
     constexpr Square sq(Pi pi) const { assertOk(pi); return Square{square[pi]}; }
 
     constexpr bool has(_t sq) const { return piecesAt(sq).any(); }
@@ -267,12 +266,12 @@ public:
     constexpr Pi pi(_t sq) const { assert (has(sq)); return piecesAt(sq).pi(); }
     constexpr Pi pi(Square sq) const { return pi(sq.v()); }
 
-    constexpr PiMask pieces() const { return PiMask::notEquals(u8x16, ::all(None)); }
+    constexpr PiMask pieces() const { return PiMask::notEquals(u8x16, ::all(Square::null())); }
     constexpr PiMask piecesAt(_t sq) const { return PiMask::equals(u8x16, vector(sq)); }
 
     constexpr PiMask piecesOn(Rank::_t rank) const {
         return PiMask::equals(
-            u8x16 & vector(static_cast<_t>(None ^ static_cast<_t>(File::Mask))),
+            u8x16 & vector(static_cast<_t>(Square::null() ^ static_cast<_t>(File::mask()))),
             vector(Square{static_cast<File::_t>(0), rank}.v())
         );
     }

@@ -4,9 +4,9 @@ void test_history_moves() {
     Color c{White};
     PieceType ty{Knight};
 
-    HistoryMoves<1> hm;
+    HistoryMoves<2> hm;
     hm.set(c, HistoryMove{ty, Square{B8}, Square{C6}}, HistoryMove{Pawn, Square{E2}, Square{E4}});
-    assert (( hm.get(HistoryMoves<1>::Index{0}, c, HistoryMove{ty, Square{B8}, Square{C6}}) == HistoryMove{Pawn, Square{E2}, Square{E4}} ));
+    assert (( hm.get(HistoryMoves<2>::Index{0}, c, HistoryMove{ty, Square{B8}, Square{C6}}) == HistoryMove{Pawn, Square{E2}, Square{E4}} ));
 }
 
 namespace TestHistoryMoves {

@@ -63,7 +63,7 @@ struct CACHE_ALIGN Nnue {
 
     struct FeatureIndex : Index<FeatureIndex, 768> { using Index::Index; };
     struct HalfAccumulatorIndex : Index<HalfAccumulatorIndex, HIDDEN_SIZE / VECTOR_SIZE> { using Index::Index; };
-    struct AccumulatorIndex : Index<AccumulatorIndex, 2*HalfAccumulatorIndex::Size> { using Index::Index; };
+    struct AccumulatorIndex : Index<AccumulatorIndex, 2*HalfAccumulatorIndex::size()> { using Index::Index; };
 
     using L0b = array<_t, HalfAccumulatorIndex>;
     using L0w = array<L0b, FeatureIndex>;

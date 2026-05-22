@@ -3,18 +3,18 @@
 
 #include "Index.hpp"
 
-static constexpr int ScoreBitSize = 14;
+static constexpr int ScoreBitWidth = 14;
 
 // position evaluation score, fits in 14 bits
 enum score_enum : i16_t {
-    NoScore = -singleton(ScoreBitSize-1), //-8192 TRICK: assume two's complement
+    NoScore = -singleton(ScoreBitWidth-1), //-8192 TRICK: assume two's complement
     MinusInfinity = NoScore + 1, // no position should eval to it
 
     MateLoss = MinusInfinity + 1, // -8190, mated in 0, only even negative values for mated positions
 
     // ... negative mate range of scores (loss) ...
 
-    MinEval = MateLoss + Ply::Size, // minimal (negative) non mate score
+    MinEval = MateLoss + Ply::size(), // -8126, minimal (negative) non mate score
 
     // ... negative position static evaluation range of scores ...
 
@@ -38,7 +38,8 @@ class Score {
     using Arg = Score;
     _t v_;
 public:
-    static constexpr int Mask = singleton(ScoreBitSize) - 1;
+    static constexpr int bit_width() { return ScoreBitWidth; }
+    static constexpr unsigned mask() { return singleton<unsigned>(bit_width()) - 1u; }
 
     constexpr explicit Score (_t e) : v_{e} {}
     friend constexpr Score operator""_cp(unsigned long long);
