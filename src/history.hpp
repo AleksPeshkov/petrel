@@ -45,10 +45,9 @@ class CACHE_ALIGN HistoryMoves {
 public:
     static constexpr int Size = _Size;
     struct Index : ::Index<Index, Size> { using ::Index<Index, Size>::Index; };
-    using Slot = Index:: template arrayOf<HistoryMove>;
 
 private:
-    using _t = Color::arrayOf<HistoryMove::HistoryIndex::arrayOf<Slot>>;
+    using _t = array<HistoryMove, Color, HistoryMove::HistoryIndex, Index>;
     _t v_;
 
 public:
@@ -69,7 +68,7 @@ class CACHE_ALIGN PrincipalVariation {
     static constexpr auto triangularArraySize = (Ply::Last+1) * (Ply::Last+2) / 2;
 public:
     struct Index : ::Index<Index, triangularArraySize> { using ::Index<Index, triangularArraySize>::Index; };
-    Index::arrayOf<UciMove> moves_;
+    array<UciMove, Index> moves_;
 
     Ply   depth_{0}; // last root PV update iteration depth
     Score score_{NoScore}; // last root PV update score
@@ -121,14 +120,14 @@ public:
 class RepSide {
     struct RepIndex : Index<RepIndex, 50> { using Index::Index; };
 
-    struct RepEntry {
+    struct _t {
         Z z;
         RepHash hash;
     };
 
     static constexpr RepIndex Last{RepIndex::Last};
 
-    RepIndex::arrayOf<RepEntry> reps;
+    array<_t, RepIndex> reps;
     int count = 0; // number of entries
     RepIndex last{RepIndex::Last}; // last added entry index
 
@@ -231,7 +230,7 @@ public:
 };
 
 class Repetitions {
-    Color::arrayOf<RepSide> v_;
+    array<RepSide, Color> v_;
 
 public:
     void clear() {

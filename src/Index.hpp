@@ -1,59 +1,53 @@
 #ifndef INDEX_HPP
 #define INDEX_HPP
 
-#include <algorithm>
-#include <array>
-#include <cstddef>
-#include <concepts>
 #include <limits>
 #include <ranges>
 #include <type_traits>
 
-#include "assert.hpp"
 #include "bitops.hpp"
 #include "io.hpp"
 
-template <typename T>
-concept IndexLike =
-    requires { T::Size; }
-    && std::is_integral_v<std::remove_cv_t<decltype(T::Size)>>
-    && (T::Size > 0)
-    && requires { typename T::_t; }
-    && std::is_constructible_v<T, typename T::_t>
-    && (std::is_integral_v<typename T::_t> || std::is_enum_v<typename T::_t>);
+template <typename Index> concept IndexLike =
+    requires { Index::size(); } && std::is_integral_v<std::remove_cv_t<decltype(Index::size())>> && (Index::size() >= 1)
+    && requires { typename Index::_t; } && (std::is_integral_v<typename Index::_t> || std::is_enum_v<typename Index::_t>)
+    && std::is_constructible_v<Index, typename Index::_t>
+    && requires(Index i) { { i.v() } -> std::convertible_to<typename Index::_t>; };
 
-template <IndexLike Index>
-static constexpr auto range() {
-    return std::views::iota(0, Index::Size) | std::views::transform([](int i) {
-        return Index{static_cast<Index::_t>(i)};
-    });
+template <IndexLike Index> constexpr auto range() {
+    return std::views::iota(0, Index::size()) | std::views::transform(
+        [](int i) { return Index{static_cast<Index::_t>(i)}; }
+    );
 }
 
-template <IndexLike Index>
-static constexpr auto reverse_range() { return std::views::reverse(range<Index>()); }
+template <int Size> constexpr auto range() { return std::views::iota(0, Size); }
 
-template <typename T, IndexLike Index>
-class indexed_array : public std::array<T, Index::Size> {
-    using Base = std::array<T, Index::Size>;
+// Multidimensional array template
+template <typename V, IndexLike Index, IndexLike... Indices>
+class array : public std::array<array<V, Indices...>, Index::size()> {
+    using Base = std::array<array<V, Indices...>, Index::size()>;
 
-    // Delete all integral overloads
-    template <typename I> requires std::integral<I>
-    T& operator[](I) = delete;
-
-    template <typename I> requires std::integral<I>
-    const T& operator[](I) const = delete;
+    // delete all integral overloads
+    template <typename N> requires std::integral<N> auto& operator[](N) = delete;
+    template <typename N> requires std::integral<N> const auto& operator[](N) const = delete;
 
 public:
-    // allow only indexing with Index
-    constexpr T& operator[](Index i) {
-        i.assertOk();
-        return Base::operator[](i.v());
-    }
+    constexpr auto& operator[](Index i) { return Base::operator[](i.v()); }
+    constexpr const auto& operator[](Index i) const { return Base::operator[](i.v()); }
+};
 
-    constexpr const T& operator[](Index i) const {
-        i.assertOk();
-        return Base::operator[](i.v());
-    }
+// Partial specialization for single dimension
+template <typename V, IndexLike Index>
+class array<V, Index> : public std::array<V, Index::size()> {
+    using Base = std::array<V, Index::size()>;
+
+    // delete all integral overloads
+    template <typename N> requires std::integral<N> auto& operator[](N) = delete;
+    template <typename N> requires std::integral<N> const auto& operator[](N) const = delete;
+
+public:
+    constexpr auto& operator[](Index i) { return Base::operator[](i.v()); }
+    constexpr const auto& operator[](Index i) const { return Base::operator[](i.v()); }
 };
 
 //typesafe implementation using "curiously recurring template pattern"
@@ -69,13 +63,12 @@ public:
     static constexpr _t Mask = static_cast<_t>(Size-1);
     static constexpr _t Last = static_cast<_t>(Size-1);
 
-    template <typename T>
-    using arrayOf = indexed_array<T, Index>;
-
 protected:
     _t v_; // _t v_
 
 public:
+    static constexpr int size() { static_assert (_Size >= 1); return _Size; }
+
     constexpr Index () : v_{} {}
     constexpr explicit Index (_t i) : v_{i} {
         // disabled to make constexpr ::inBetween compile

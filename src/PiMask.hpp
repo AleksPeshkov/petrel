@@ -73,7 +73,7 @@ struct BitArrayOps<u8x16_t> {
 class CACHE_ALIGN VectorOfAll {
     using _t = u8x16_t;
     struct Index : ::Index<Index, 0x100> { using ::Index<Index, 0x100>::Index; };
-    Index::arrayOf<_t> v_;
+    array<_t, Index> v_;
 
 public:
     consteval VectorOfAll () {
@@ -146,7 +146,7 @@ public:
 
 class PiSingle {
     using _t = u8x16_t;
-    Pi::arrayOf<_t> v_;
+    array<_t, Pi> v_;
 
 public:
     consteval PiSingle() {
@@ -217,7 +217,7 @@ class PiSquare {
 
     // defined to make debugging clear
     union {
-        Pi::arrayOf<_t> square;
+        array<_t, Pi> square;
         u8x16_t u8x16;
     };
 
@@ -299,7 +299,7 @@ class PiType {
 
     using element_type = pieces_t;
 
-    static constexpr PieceType::arrayOf<element_type> LessOrEqualValue = {
+    static constexpr array<element_type, PieceType> LessOrEqualValue = {
         NonK,  // Queen
         NonQK, // Rook
         PNB,   // Bishop
@@ -308,7 +308,7 @@ class PiType {
         All,   // King
     };
 
-    static constexpr PieceType::arrayOf<element_type> LessValue = {
+    static constexpr array<element_type, PieceType> LessValue = {
         NonQK, // Queen
         PNB,   // Rook
         Pawns, // Bishop
@@ -319,7 +319,7 @@ class PiType {
 
     // defined to make debugging clear
     union {
-        Pi::arrayOf<pieces_t> type;
+        array<pieces_t, Pi> type;
         u8x16_t u8x16;
     };
 
@@ -398,7 +398,7 @@ class PiTrait {
 
     // defined to make debugging clear
     union {
-        Pi::arrayOf<element_type> trait;
+        array<element_type, Pi> trait;
         u8x16_t u8x16;
     };
 
@@ -480,10 +480,8 @@ public:
 };
 
 class PiOrder {
-    using PiArray = Pi::arrayOf<Pi>;
-
     union {
-        PiArray order;
+        array<Pi, Pi> order;
         u8x16_t u8x16;
     };
 

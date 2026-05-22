@@ -63,8 +63,8 @@ class UciSearchLimits {
     // less pieces remain: the better BF, the less time to finish iteration needed
     int iterLowMaterialBonus_{0};
 
-    Side::arrayOf<TimeInterval> time_{ 0ms, 0ms };
-    Side::arrayOf<TimeInterval> inc_{ 0ms, 0ms };
+    array<TimeInterval, Side> time_{ 0ms, 0ms };
+    array<TimeInterval, Side> inc_{ 0ms, 0ms };
     TimeInterval movetime_{0ms};
     int movestogo_{0};
 
