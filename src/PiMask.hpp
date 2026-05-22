@@ -272,7 +272,7 @@ public:
 
     constexpr PiMask piecesOn(Rank::_t rank) const {
         return PiMask::equals(
-            u8x16 & vector(static_cast<_t>(None ^ static_cast<_t>(File::Mask))),
+            u8x16 & vector(static_cast<_t>(None ^ static_cast<_t>(File::mask()))),
             vector(Square{static_cast<File::_t>(0), rank}.v())
         );
     }

@@ -714,7 +714,7 @@ ReturnStatus Node::searchRoot() {
         maxDepth = root.limits.canPonder() ? 2_ply : 1_ply;
     }
 
-    for (depth = 1_ply; depth <= maxDepth; ++depth) {
+    for (depth = 1_ply; depth.isOk() && depth <= maxDepth; ++depth) {
         tt = root.tt.prefetch<TtSlot>(z());
         setMoves(rootMovesClone);
         alpha = Score{MateLoss};

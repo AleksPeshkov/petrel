@@ -49,6 +49,21 @@ T narrow_cast(N n) {
     return r;
 }
 
+template <typename P, typename T, typename S>
+constexpr P pack(T v, S shift) {
+    return static_cast<P>(static_cast<P>(v) << shift);
+}
+
+template <typename T, typename S>
+constexpr int pack(T v, S shift) {
+    return pack<int, T, S>(v, shift);
+}
+
+template <typename P, typename S, typename M>
+constexpr M unpack(P packed, S shift, M mask) {
+    return static_cast<M>(packed >> shift & static_cast<P>(mask));
+}
+
 template <typename T = int, typename N>
 constexpr T singleton(N n) {
     return static_cast<T>(static_cast<T>(1u) << static_cast<T>(n));
