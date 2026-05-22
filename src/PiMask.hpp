@@ -95,13 +95,11 @@ extern const VectorOfAll vectorOfAll;
 #ifndef NEON_VECTOR
 
 class PieceSet : public BitSet<PieceSet, Pi> {
-    using Base = BitSet<PieceSet, Pi>;
-    friend class BitArray<PieceSet>;
-    using Base::v_;
 public:
-    constexpr PieceSet () : Base{} {}
-    constexpr explicit PieceSet (_t v) : Base{v} {}
-    constexpr explicit PieceSet (Pi pi) : Base{pi} {}
+    constexpr PieceSet () : BitSet{0} {}
+    constexpr explicit PieceSet (_t n) : BitSet{n} {}
+    constexpr explicit PieceSet (u8x16_t v) : BitSet{static_cast<_t>(::mask(v))} {}
+    constexpr explicit PieceSet (Pi pi) : BitSet{::singleton<_t>(pi.v())} {}
 
     constexpr Pi piFirstVacant() const {
         for (Pi pi : range<Pi>()) {
@@ -117,10 +115,11 @@ public:
 #else
 
 class PieceSet : public BitSet<PieceSet, Pi, u64_t> {
-    using Base = BitSet<PieceSet, Pi, u64_t>;
 public:
-    constexpr explicit PieceSet (_t n = 0) : Base{n & U64(0x8888'8888'8888'8888)} {}
-    constexpr explicit PieceSet (Pi pi) : Base{::singleton<u64_t>((pi.v() << 2) + 3)} {}
+    constexpr PieceSet () : BitSet{0} {}
+    constexpr explicit PieceSet (_t n) : BitSet{n & U64(0x8888'8888'8888'8888)} {}
+    constexpr explicit PieceSet (u8x16_t v) : PieceSet{static_cast<_t>(::mask4(v))} {}
+    constexpr explicit PieceSet (Pi pi) : BitSet{::singleton<_t>((pi.v() << 2) + 3)} {}
 
     // get the first (lowest) bit set
     constexpr Pi first() const {
@@ -153,7 +152,7 @@ public:
     consteval PiSingle() {
         for (auto pi : range<Pi>()) {
             std::array<uint8_t, 16> vec = {}; // zero
-            vec[static_cast<int>(pi.v())] = 0xff;
+            vec[pi.v()] = 0xff;
             v_[pi] = std::bit_cast<u8x16_t>(vec);
         }
     }
@@ -165,23 +164,16 @@ extern const PiSingle piSingle;
 
 ///piece vector of boolean values: false (0) or true (0xff)
 class PiMask : public BitArray<PiMask, u8x16_t> {
-    using Base = BitArray<PiMask, u8x16_t>;
-    friend class BitArray<PiMask, u8x16_t>;
-
-    using Base::v_;
-
 public:
-    using typename Base::_t;
-    using Base::any;
+    constexpr PiMask () : BitArray{zero()} {}
+    constexpr PiMask (Pi pi) : BitArray( ::piSingle[pi] ) {}
+    constexpr explicit PiMask (_t a) : BitArray{a} { assertOk(); }
 
     static constexpr _t zero() { return ::all(0); }
-
-    constexpr PiMask () : Base{zero()} {}
-    constexpr PiMask (Pi pi) : Base( ::piSingle[pi] ) {}
-    constexpr explicit PiMask (_t a) : Base{a} { assertOk(); }
-
     static constexpr PiMask equals(_t a, _t b) { return PiMask{a == b}; }
     static constexpr PiMask notEquals(_t a, _t b) { return PiMask{a != b}; }
+
+    using BitArray::any;
     static constexpr PiMask any(_t a) { return notEquals(a, zero()); }
     static constexpr PiMask all() { return PiMask{::all(0xff)}; }
 
@@ -193,33 +185,26 @@ public:
     // assert if either 0 or 0xff bytes are set
     constexpr void assertOk() const { assert (isOk()); }
 
-    constexpr explicit operator PieceSet() const {
-        assertOk();
-        #ifndef NEON_VECTOR
-            return PieceSet{static_cast<PieceSet::_t>(::mask(v_))};
-        #else
-            return PieceSet{::mask4(v_)};
-        #endif
-    }
+    constexpr explicit operator PieceSet() const { assertOk(); return PieceSet{v_}; }
 
-    constexpr bool has(Pi pi) const { return PieceSet{*this}.has(pi); }
-    constexpr bool none() const { return PieceSet{*this}.none(); }
-    constexpr bool none(PiMask mask) const { return PieceSet{*this}.none(PieceSet{mask}); }
-    constexpr bool isSingleton() const { return PieceSet{*this}.isSingleton(); }
+    constexpr bool has(Pi pi) const { return PieceSet{v_}.has(pi); }
+    constexpr bool none() const { return PieceSet{v_}.none(); }
+    constexpr bool none(PiMask mask) const { return PieceSet{v_}.none(PieceSet{mask}); }
+    constexpr bool isSingleton() const { return PieceSet{v_}.isSingleton(); }
 
     // get the singleton piece index
-    constexpr Pi pi() const { return PieceSet{*this}.index(); }
+    constexpr Pi pi() const { return PieceSet{v_}.index(); }
 
     // most valuable piece in the first (lowest) set bit
-    constexpr Pi piFirst() const { return PieceSet{*this}.first(); }
+    constexpr Pi piFirst() const { return PieceSet{v_}.first(); }
 
     // least valuable pieces in the last (highest) set bit
-    constexpr Pi piLast() const { return PieceSet{*this}.last(); }
+    constexpr Pi piLast() const { return PieceSet{v_}.last(); }
 
-    constexpr int popcount() const { return PieceSet{*this}.popcount(); }
+    constexpr int popcount() const { return PieceSet{v_}.popcount(); }
 
-    constexpr PieceSet begin() const { return PieceSet{*this}; }
-    constexpr PieceSet end() const { return PieceSet{}; }
+    constexpr PieceSet begin() const { return PieceSet{v_}.begin(); }
+    static constexpr PieceSet end() { return PieceSet::end(); }
 
     friend ostream& operator << (ostream& out, PiMask mask) {
         return out << std::hex << PieceSet{mask}.v();
@@ -344,7 +329,7 @@ class PiType {
     constexpr u8x16_t vector(PieceType::_t ty) const { return vector(element(ty)); }
 
     constexpr bool has(Pi pi, element_type e) const { assertOk(pi); return (static_cast<u8_t>(type[pi]) & static_cast<u8_t>(e)) != 0; }
-    constexpr bool is(Pi pi, PieceType::_t ty) const { assertOk(pi);  return has(pi, element(ty)); }
+    constexpr bool is(Pi pi, PieceType::_t ty) const { assertOk(pi); return has(pi, element(ty)); }
     constexpr PiMask any(element_type e) const { return PiMask::any(u8x16 & vector(e)); }
 
 public:

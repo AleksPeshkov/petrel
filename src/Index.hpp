@@ -59,10 +59,8 @@ public:
 //typesafe implementation using "curiously recurring template pattern"
 template <class self_type, int _Size, typename value_type = int>
 class Index {
-    using Self = self_type;
-#define SELF static_cast<Self&>(*this)
-#define CONST_SELF static_cast<const Self&>(*this)
-    using Arg = Self;
+    using T = self_type;
+    using Arg = T;
 
 public:
     using _t = value_type; // _t v_
@@ -84,25 +82,22 @@ public:
         /*assertOk();*/
     }
 
-    constexpr _t v() const { assertOk(); return v_; } // _t v() const { return v_; }
+    constexpr _t v() const { /*assertOk();*/ return v_; } // _t v() const { return v_; }
 
     constexpr void assertOk() const { assert (isOk()); }
-    [[nodiscard]] constexpr bool isOk() const { return static_cast<unsigned>(v_) < static_cast<unsigned>(Size); }
+    constexpr bool isOk() const { return static_cast<unsigned>(v_) < static_cast<unsigned>(Size); }
 
     constexpr bool is(_t i) const { return v_ == i; }
-    constexpr bool is(Index i) const { return v_ == i.v_; }
+    constexpr bool is(T i) const { return v_ == i.v(); }
 
-    constexpr Self& operator ++ () { assertOk(); v_ = static_cast<_t>(v_+1); return SELF; }
-    [[nodiscard]] constexpr Self operator ++ (int) { Self before{v_}; ++(*this); return before; }
+    constexpr T& operator ++ () { assertOk(); v_ = static_cast<_t>(v_+1); return static_cast<T&>(*this); }
+    [[nodiscard]] constexpr T operator ++ (int) { T before{v_}; ++(*this); return before; }
 
-    constexpr Self& flip() { assertOk(); v_ = static_cast<_t>(v_ ^ Mask); return SELF; }
-    constexpr Self operator ~ () const { return Self{v_}.flip(); }
+    constexpr T& flip() { assertOk(); v_ = static_cast<_t>(v_ ^ Mask); return static_cast<T&>(*this); }
+    constexpr T operator ~ () const { return T{v_}.flip(); }
 
-    friend constexpr bool operator == (Arg a, Arg b) { return a.v_ == b.v_; }
-    friend constexpr bool operator <  (Arg a, Arg b) { return a.v_ < b.v_; }
-
-#undef SELF
-#undef CONST_SELF
+    friend constexpr bool operator == (Arg a, Arg b) { return a.v() == b.v(); }
+    friend constexpr bool operator <  (Arg a, Arg b) { return a.v() < b.v(); }
 };
 #define STRUCT_INDEX(self_type, Size) struct self_type : ::Index<self_type, Size> { using ::Index<self_type, Size>::Index; }
 #define STRUCT_INDEX_ENUM(self_type, Size, value_type) struct self_type : ::Index<self_type, Size, value_type> { using ::Index<self_type, Size, value_type>::Index; }
@@ -116,7 +111,6 @@ struct CharMap {
 template <class self_type, int _Size, typename value_type = int>
 class IndexChar : public Index<self_type, _Size, value_type> {
     using Base = Index<self_type, _Size, value_type>;
-    friend class Index<self_type, _Size, value_type>;
     using Self = self_type;
 
     static constexpr io::czstring The_string = CharMap<value_type>::The_string;
@@ -175,17 +169,17 @@ public:
 
 // search tree distance in halfmoves
 struct Ply : Index<Ply, 64> {
-    constexpr explicit Ply(int i) : Index{i > 0 ? i : 0} { assertOk(); }
+    constexpr explicit Ply(_t n) : Index{n > 0 ? n : 0} { assertOk(); }
     friend constexpr Ply operator""_ply(unsigned long long);
-    friend constexpr Ply operator + (Ply a, Ply b) { return Ply{a.v() + b.v()}; }
-    friend constexpr Ply operator - (Ply a, Ply b) { return Ply{a.v() - b.v()}; }
-    friend constexpr Ply operator * (Ply a, int n) { return Ply{a.v() * n}; }
-    friend constexpr Ply operator / (Ply a, int n) { return Ply{a.v() / n}; }
+    friend constexpr Ply operator + (Ply a, Ply b) { return Ply{a.v_ + b.v_}; }
+    friend constexpr Ply operator - (Ply a, Ply b) { return Ply{a.v_ - b.v_}; }
+    friend constexpr Ply operator * (Ply a, int n) { return Ply{a.v_ * n}; }
+    friend constexpr Ply operator / (Ply a, int n) { return Ply{a.v_ / n}; }
 
-    friend ostream& operator << (ostream& out, Ply ply) { return out << ply.v(); }
+    friend ostream& operator << (ostream& out, Ply ply) { return out << ply.v_; }
 
     friend istream& operator >> (istream& in, Ply& ply) {
-        int n;
+        _t n;
         auto before = in.tellg();
         in >> n;
         if (!(0 <= n && n <= Last)) { return io::fail_pos(in, before); }
@@ -210,8 +204,8 @@ struct File : Index<File, 8, file_t> {
     friend ostream& operator << (ostream& out, File file) { return out << file.to_char(); }
 
     bool from_char(io::char_type c) {
+        if (!('a' <= c && c <= 'h')) { return false; }
         File file{ static_cast<File::_t>(c - 'a') };
-        if (!file.isOk()) { return false; }
         v_ = file.v();
         return true;
     }
@@ -227,6 +221,8 @@ struct File : Index<File, 8, file_t> {
 
 enum rank_t { Rank8, Rank7, Rank6, Rank5, Rank4, Rank3, Rank2, Rank1, };
 struct Rank : Index<Rank, 8, rank_t> {
+    enum { Shift = 3 };
+
     using Index::Index;
 
     constexpr Rank forward() const { return Rank{static_cast<Rank::_t>(v_ + Rank2 - Rank1)}; }
@@ -235,8 +231,8 @@ struct Rank : Index<Rank, 8, rank_t> {
     friend ostream& operator << (ostream& out, Rank rank) { return out << rank.to_char(); }
 
     bool from_char(io::char_type c) {
+        if (!('1' <= c && c <= '8')) { return false; }
         Rank rank{ static_cast<Rank::_t>('8' - c) };
-        if (!rank.isOk()) { return false; }
         v_ = rank.v();
         return true;
     }
@@ -266,25 +262,18 @@ enum square_t : u8_t {
 
 class Bb;
 class Square : public Index<Square, 64, square_t> {
-    using Base = Index<Square, 64, square_t>;
-    friend class Index<Square, 64, square_t>;
-
-protected:
-    enum { RankShift = 3 };
-    static constexpr _t RankMask{Rank::Mask << RankShift};
-    using Index::v_;
-
+    static constexpr _t RankMask{Rank::Mask << Rank::Shift};
 public:
     static constexpr _t None{0xff};
 
-    constexpr Square () : Base{None} {}
-    constexpr explicit Square (_t sq) : Base{sq} {}
-    constexpr Square (File::_t file, Rank::_t rank) : Square{static_cast<_t>(file + (rank << RankShift))} {}
+    constexpr Square () : Index{None} {}
+    constexpr explicit Square (_t sq) : Index{sq} {}
+    constexpr Square (File::_t file, Rank::_t rank) : Square{static_cast<_t>(file + (rank << Rank::Shift))} {}
     constexpr Square (File file, Rank rank) : Square{file.v(), rank.v()} {}
     constexpr Square (File file, Rank::_t rank) : Square{file.v(), rank} {}
 
     constexpr explicit operator File() const { return File{static_cast<File::_t>(static_cast<int>(v_) & File::Mask)}; }
-    constexpr explicit operator Rank() const { return Rank{static_cast<Rank::_t>(static_cast<unsigned>(v_) >> RankShift)}; }
+    constexpr explicit operator Rank() const { return Rank{static_cast<Rank::_t>(static_cast<unsigned>(v_) >> Rank::Shift)}; }
 
     /// flip side of the board
     constexpr Square& flip() { v_ = static_cast<_t>(v_ ^ RankMask); return *this; }
@@ -316,10 +305,8 @@ constexpr color_t operator ~ (color_t color) { return static_cast<color_t>(color
 
 template <> struct CharMap<color_t> { static constexpr io::czstring The_string = "wb"; };
 class Color : public IndexChar<Color, 2, color_t> {
-    using Base = IndexChar<Color, 2, color_t>;
-    using Base::v_;
 public:
-    using Base::Base;
+    using IndexChar::IndexChar;
     constexpr Color operator ~ () const { return Color{~v_}; }
 };
 
@@ -516,8 +503,8 @@ public:
     constexpr Z(Index ty, Square sq) : v_{::rotateleft(zKey[ty.v()], sq.v())} {}
     constexpr _t v() const { return v_; }
 
-    [[nodiscard]] constexpr Z operator ~ () const { return Z{::byteswap(v_)}; }
-    [[nodiscard]] friend constexpr Z operator ^ (Z a, Z b) { return Z{a.v_ ^ b.v_}; }
+    constexpr Z operator ~ () const { return Z{::byteswap(v_)}; }
+    friend constexpr Z operator ^ (Z a, Z b) { return Z{a.v_ ^ b.v_}; }
     [[nodiscard]] friend constexpr bool operator == (Z a, Z b) { return a.v_ == b.v_; }
 
     friend ostream& operator << (ostream& out, Z z) {
