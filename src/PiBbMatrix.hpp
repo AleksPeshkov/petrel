@@ -78,7 +78,7 @@ public:
         return (v_[Rank{sq}] & PiRank{pi, File{sq}}).any();
     }
 
-    constexpr const PiRank& operator[] (Rank rank) const {
+    constexpr PiRank operator[] (Rank rank) const {
         return v_[rank];
     }
 

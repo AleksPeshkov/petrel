@@ -141,7 +141,7 @@ public:
         }
     }
 
-    constexpr const _t& operator[] (PieceType ty) const { return v_[ty]; }
+    constexpr _t operator[] (PieceType ty) const { return v_[ty]; }
 };
 
 extern constinit PieceCountTable pieceCountTable;

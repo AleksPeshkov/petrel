@@ -118,7 +118,7 @@ protected:
     constexpr PositionSide& positionSide(Side side) { return positionSide_[side]; }
 
     // all occupied squares by both sides from the given side point of view
-    constexpr const Bb& occupied(Side side) const { return occupied_[side]; }
+    constexpr Bb occupied(Side side) const { return occupied_[side]; }
 
     // myAttackers > opAttackers
     bool safeForMe(Square sq) const {
@@ -152,8 +152,8 @@ protected:
     void setZobrist() { zobrist_ = generateZobrist(); }
 
     // number of halfmoves since last capture or pawn move
-    constexpr const Rule50& rule50() const { return rule50_; }
-    void setRule50(const Rule50& rule50) { rule50_ = rule50; }
+    constexpr Rule50 rule50() const { return rule50_; }
+    void setRule50(Rule50 rule50) { rule50_ = rule50; }
 
     // convert internal move to be printable in UCI format
     UciMove uciMove(Square from, Square to) const { return UciMove{from, to, isSpecialMove(from, to)}; }

@@ -133,7 +133,7 @@ public:
         }
     }
 
-    constexpr const Bb& operator() (Square from, Square to) const { return inBetween[from][to]; }
+    constexpr Bb operator() (Square from, Square to) const { return inBetween[from][to]; }
 
 };
 
@@ -162,7 +162,7 @@ public:
         }
     }
 
-    constexpr const Bb& operator() (PieceType ty, Square sq) const { return attack[ty][sq]; }
+    constexpr Bb operator() (PieceType ty, Square sq) const { return attack[ty][sq]; }
 };
 
 extern constinit AttacksFrom attacksFrom;

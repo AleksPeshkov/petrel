@@ -39,7 +39,7 @@ public:
     constexpr const PiBbMatrix& moves() const { return moves_; }
 
     // already made moves count
-    constexpr const MovesNumber& movesMade() const { return movesMade_; }
+    constexpr MovesNumber movesMade() const { return movesMade_; }
 
     // move is legal and not yet made
     bool isPossibleMove(Square from, Square to) const {
@@ -60,10 +60,10 @@ public:
     bool isNonCapture(Pi, Square) const;
 
     // attacked squares by not side to move pieces (op)
-    constexpr const Bb& bbAttacked() const { return bbAttacked_; }
+    constexpr Bb bbAttacked() const { return bbAttacked_; }
 
     // side to move king is under attack
-    constexpr const bool& inCheck() const { return inCheck_; }
+    constexpr bool inCheck() const { return inCheck_; }
 
     // not yet made legal moves of the target piece
     constexpr Bb bbMovesOf(Pi pi) const { return moves_.bb(pi); }
