@@ -147,14 +147,14 @@ void Position::makeMove(Square from, Square to) {
                 if constexpr (Flags & WithEval) {
                     accumulator.promote(promo, from, to, captured);
                 }
-                updateSliderAttacks<My>(MY.affectedBy(from) | pi, OP.affectedBy(~from));
+                updateSliderAttacks<My>(MY.affectedBy(from) | PiMask{pi}, OP.affectedBy(~from));
                 return; // end of pawn promotion move with capture
             }
 
             if constexpr (Flags & WithEval) {
                 accumulator.promote(promo, from, to);
             }
-            updateSliderAttacks<My>(MY.affectedBy(from, to) | pi, OP.affectedBy(~from, ~to));
+            updateSliderAttacks<My>(MY.affectedBy(from, to) | PiMask{pi}, OP.affectedBy(~from, ~to));
             return; // end of pawn promotion move without capture
         }
 
@@ -269,7 +269,7 @@ void Position::makeMove(Square from, Square to) {
         if constexpr (Flags & WithEval) {
             accumulator.move(moved, from, to, captured);
         }
-        updateSliderAttacks<My>(MY.affectedBy(from) | pi, OP.affectedBy(~from));
+        updateSliderAttacks<My>(MY.affectedBy(from) | PiMask{pi}, OP.affectedBy(~from));
         return; // end of simple non-pawn non-king capture move
     }
 
@@ -323,8 +323,8 @@ void Position::setLegalEnPassant(Pi victim, Square to) {
     if (killers.none()) { return; }
 
     // discovered check
-    if (MY.isPinned(OCCUPIED)) { assert ((MY.checkers() % victim).any()); return; }
-    assert ((MY.checkers() % victim).none());
+    if (MY.isPinned(OCCUPIED)) { assert ((MY.checkers() % PiMask{victim}).any()); return; }
+    assert ((MY.checkers() % PiMask{victim}).none());
 
     for (Square from : killers) {
         assert (from.on(Rank4));
