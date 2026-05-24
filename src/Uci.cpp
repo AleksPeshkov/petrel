@@ -73,6 +73,24 @@ bool consume(istream& is, czstring token) {
 
 namespace { // anonymous namespace
 
+istream& operator >> (istream& is, TimeInterval& timeInterval) {
+    int msecs;
+    if (is >> msecs) {
+        if (msecs < 0) { msecs = 0; }
+        timeInterval = std::chrono::duration_cast<TimeInterval>(std::chrono::milliseconds{msecs} );
+    }
+    return is;
+}
+
+ostream& operator << (ostream& os, const TimeInterval& timeInterval) {
+    return os << std::chrono::duration_cast<std::chrono::milliseconds>(timeInterval).count();
+}
+
+template <typename nodes_type, typename duration_type>
+constexpr nodes_type nps(nodes_type nodes, duration_type duration) {
+    return (nodes * duration_type::period::den) / (static_cast<nodes_type>(duration.count()) * duration_type::period::num);
+}
+
 static constexpr size_t mebibyte = 1024 * 1024;
 
 template <typename T> static T mebi(T bytes) { return bytes / mebibyte; }
@@ -653,6 +671,87 @@ UciMove UciPosition::firstRootMove() const {
     return {};
 }
 
+void SearchLimits::newSearch() {
+    stop_.store(false, std::memory_order_release);
+    searchStartTime_ = timeNow();
+    nodes_ = 0;
+    nodesQuota_ = 0;
+    lastMove_ = {};
+}
+
+void SearchLimits::stop() {
+    pondering_.store(false, std::memory_order_relaxed);
+    stop_.store(true, std::memory_order_release);
+}
+
+void SearchLimits::ponderhit() {
+    pondering_.store(false, std::memory_order_relaxed);
+}
+
+void SearchLimits::setLimits(const UciLimits& go, const UciPosition& position) {
+    const Color my{ position.colorToMove() };
+
+    maxDepth_ = go.depth;
+    nodesLimit_ = go.nodes;
+    pondering_.store(go.ponder, std::memory_order_relaxed);
+
+    if (go.movetime > 0ms) {
+        timePool_ = go.movetime;
+        timeStrategy_ = ExactTime;
+        return;
+    }
+
+    auto noTimeGiven = go.time[my] <= 0ms && go.inc[my] <= 0ms;
+    if (go.infinite || noTimeGiven) {
+        timePool_ = UnlimitedTime;
+        timeStrategy_ = ExactTime;
+        return;
+    }
+
+    auto lookAheadMoves = [&go]() { return go.movestogo > 0 ? std::min(go.movestogo, 16) : 16; };
+    auto lookAheadTime = [&](Color color) { return go.time[color] + go.inc[color] * (lookAheadMoves() - 1); };
+    auto averageMoveTime = [&](Color color) { return lookAheadTime(color) / lookAheadMoves(); };
+
+    auto optimumTime = averageMoveTime(my);
+    {
+        //TODO: fix case black has one more movestogo
+        if (go.canPonder || go.ponder) { optimumTime += averageMoveTime(~my); }
+
+        // allocate 1.6x more time for the first out of book move in the game (fill up TT and history data)
+        if (go.isNewGame) { optimumTime *= 13; optimumTime /= 8; }
+
+        // MaxQuota and/or HardMove time strategy may spend up to 5.12 times over average (optimium) move quota
+        optimumTime *= +MaxQuota * HardMove; // time * 512
+        // average thinking time for OptimumTimeQuota with NormalMove time strategy
+        optimumTime /= +OptimumTimeQuota * NormalMove; // time / 100
+    }
+
+    // [0..6] startpos = 6, queens exchanged = 4, R vs R endgame = 1
+    int gamePhase = position.gamePhase();
+    lowMaterialQuotaBonus_ = 4 - std::clamp(gamePhase, 1, 5);
+
+    auto maximumTime = lookAheadTime(my) / 4; // 25%
+    {
+        if (lookAheadMoves() < 16) {
+            // solved for f(1) = 100%, f(2) = 75%, f(16) = 25%
+            maximumTime *= 19 + lookAheadMoves();
+            maximumTime /= 3 + 2 * lookAheadMoves();
+        }
+
+        // left board material correction
+        maximumTime *= 8 - std::clamp(gamePhase, 3, 5);
+        maximumTime /= 4; // 75%, 100%, 125%
+
+        //TRICK: some GUI can send negative `time` when soft clock used, use `inc` for available time
+        auto availableTime = (go.time[my] <= 0ms) ? go.inc[my] : go.time[my];
+
+        maximumTime = std::clamp(maximumTime, TimeInterval{0}, availableTime - go.moveOverhead);
+    }
+
+    timePool_ = std::clamp(optimumTime - go.moveOverhead, TimeInterval{0}, maximumTime);
+    timeStrategy_ = EasyMove;
+}
+
 Uci::Uci(ostream& os) :
     inputLine{std::string(2048, '\0')}, // preallocate 2048 bytes (~200 full moves)
     out_{os},
@@ -667,10 +766,10 @@ Uci::Uci(ostream& os) :
 }
 
 void Uci::newGame() {
-    limits.newGame();
     tt.newGame();
     counterMove.clear();
     followMove.clear();
+    go_.isNewGame = true;
 }
 
 void Uci::newSearch() {
@@ -678,6 +777,8 @@ void Uci::newSearch() {
     swapBestMove(bestmove); // cleanup
     if (!bestmove.empty()) { error("newsearch(), bestmove was not empty: " + bestmove); }
 
+    lastInfoNodes_ = 0;
+    lastInfoTime_ = {};
     limits.newSearch();
     tt.newSearch();
     pv.clear();
@@ -806,7 +907,8 @@ void Uci::uciok() const {
     ob << "\noption name Debug Log File type string default " << (logFileName.empty() ? "<empty>" : logFileName);
     ob << "\noption name EvalFile type string default " << (evalFileName.empty() ? "<empty>" : evalFileName);
     ob << "\noption name Hash type spin min " << ::mebi(tt.minSize()) << " max " << ::mebi(tt.maxSize()) << " default " << ::mebi(tt.size());
-    limits.uciok(ob);
+    ob << "\noption name Move Overhead type spin min " << UciLimits::MoveOverheadDefault << " max 10000 default " << go_.moveOverhead;
+    ob << "\noption name Ponder type check default " << (go_.canPonder ? "true" : "false");
     ob << "\noption name UCI_Chess960 type check default " << (chessVariant().is(Chess960) ? "true" : "false");
     ob << "\nuciok";
 }
@@ -884,7 +986,26 @@ void Uci::setoption() {
         return;
     }
 
-    limits.setoption(inputLine);
+    if (consume("Move Overhead")) {
+        consume("value");
+
+        TimeInterval moveOverhead{0};
+        inputLine >> moveOverhead;
+        go_.moveOverhead = std::max(go_.moveOverhead, UciLimits::MoveOverheadDefault);
+
+        if (!inputLine) { io::fail_rewind(inputLine); }
+        return;
+    }
+
+    if (consume("Ponder")) {
+        consume("value");
+
+        if (consume("true"))  { go_.canPonder = true; return; }
+        if (consume("false")) { go_.canPonder = false; return; }
+
+        io::fail_rewind(inputLine);
+        return;
+    }
 }
 
 void Uci::setDebugOn() {
@@ -1029,13 +1150,14 @@ void Uci::setPositionMoves() {
 }
 
 void Uci::go() {
-    newSearch();
-
 #ifndef NDEBUG
     debugGo = inputLine.str();
 #endif
 
-    limits.go(inputLine, position_);
+    newSearch();
+    go_.readGo(inputLine);
+    infinite_ = go_.infinite;
+    limits.setLimits(go_, position_);
 
     if (hasMoreInput() || position_.movesTotal() == 0) {
     } else if (position_.movesTotal() == 1) {
@@ -1049,7 +1171,11 @@ void Uci::go() {
             Node{position_, *this}.searchRoot();
             info_bestmove();
         });
-        if (started) { std::this_thread::yield(); return; }
+        if (started) {
+            if (go_.isNewGame) { go_.isNewGame = false; }
+            std::this_thread::yield();
+            return;
+        }
     }
 
     // error: search not started
@@ -1066,6 +1192,34 @@ void Uci::go() {
     }
 }
 
+void UciLimits::readGo(istream& is) {
+    constexpr Color w{White};
+    constexpr Color b{Black};
+
+    time = {0ms, 0ms}; // `wtime`/`btime`
+    inc = {0ms, 0ms}; // `winc`/`binc`
+    movetime = {0ms};
+    nodes = NodeCountMax;
+    movestogo = 0;
+    depth = MaxPly;
+    ponder = false;
+    infinite = false;
+
+    while (is >> std::ws, !is.eof()) {
+        if      (io::consume(is, "wtime"))    { is >> time[w]; }
+        else if (io::consume(is, "btime"))    { is >> time[b]; }
+        else if (io::consume(is, "winc"))     { is >> inc[w]; }
+        else if (io::consume(is, "binc"))     { is >> inc[b]; }
+        else if (io::consume(is, "movetime")) { is >> movetime; }
+        else if (io::consume(is, "nodes"))    { is >> nodes;     if (nodes == 0) { nodes = NodeCountMax; } }
+        else if (io::consume(is, "movestogo")){ is >> movestogo; if (movestogo < 0) { movestogo = 0; } }
+        else if (io::consume(is, "depth"))    { int d; is >> d;  if (Ply::isOk(d)) { depth = Ply{d}; } }
+        else if (io::consume(is, "ponder"))   { ponder = true; }
+        else if (io::consume(is, "infinite")) { infinite = true; }
+        else { break; }
+    }
+}
+
 void Uci::outputBestMove() {
     std::string bestmove; // empty
     swapBestMove(bestmove); // cleanup
@@ -1078,6 +1232,7 @@ void Uci::swapBestMove(std::string& bestmove) {
 }
 
 void Uci::stop() {
+    infinite_ = false;
     outputBestMove();
     limits.stop();
     std::this_thread::yield();
@@ -1093,6 +1248,39 @@ void Uci::wait() {
     mainSearchThread.waitNotBusy();
 }
 
+ostream& Uci::average_nps(ostream& os) const {
+    auto nodes = limits.getNodes();
+    auto time = ::timeNow();
+    auto elapsedTime = time - limits.searchStartTime();
+
+    os << " nodes " << nodes;
+    if (elapsedTime >= 1ms) {
+        os << " time " << elapsedTime << " nps " << ::nps(nodes, elapsedTime);
+    }
+
+    lastInfoNodes_ = nodes;
+    lastInfoTime_ = time;
+    return os;
+}
+
+ostream& Uci::instant_nps(ostream& os) const {
+    auto nodes = limits.getNodes();
+    auto time = ::timeNow();
+    auto elapsedTime = time - limits.searchStartTime();
+
+    auto deltaNodes = nodes - lastInfoNodes_;
+    auto deltaTime = time - lastInfoTime_;
+
+    os << " nodes " << nodes;
+    if (elapsedTime >= 1ms) {
+        os << " time " << elapsedTime << " nps " << ::nps(deltaNodes, deltaTime);
+    }
+
+    lastInfoNodes_ = nodes;
+    lastInfoTime_ = time;
+    return os;
+}
+
 void Uci::info_pv() const {
 #ifdef NDEBUG
     bool flush = limits.getNodes() >= 1'000'000;
@@ -1101,20 +1289,20 @@ void Uci::info_pv() const {
 #endif
 
     UciOutput ob{this, flush};
-    ob << "info depth " << pv.depth(); limits.instant_nps(ob); ob << pv;
+    ob << "info depth " << pv.depth(); instant_nps(ob); ob << pv;
 }
 
 void Uci::info_bestmove() {
     UciOutput ob{this};
-    auto delayed = limits.shouldDelayBestmove();
+    auto delayed = limits.pondering() || infinite_;
 
-    if (limits.hasNewNodes()) {
-        ob << "info depth " << pv.depth(); limits.average_nps(ob); ob << pv;
+    if (hasNewNodes()) {
+        ob << "info depth " << pv.depth(); average_nps(ob); ob << pv;
         if (delayed) { ob.flush(); } else { ob << '\n'; }
     }
 
     ob << "bestmove" << pv.move(0_ply);
-    if (limits.canPonder() && pv.move(1_ply).any()) {
+    if (go_.canPonder && pv.move(1_ply).any()) {
         ob << " ponder" << pv.move(1_ply);
     }
 
@@ -1129,8 +1317,8 @@ void Uci::info_bestmove() {
 void Uci::info_readyok() const {
     UciOutput ob{this};
     ob << "readyok";
-    if (limits.hasNewNodes()) {
-        ob << "\ninfo depth " << pv.depth(); limits.instant_nps(ob); ob << pv;
+    if (hasNewNodes()) {
+        ob << "\ninfo depth " << pv.depth(); instant_nps(ob); ob << pv;
     }
 }
 
@@ -1149,19 +1337,19 @@ void Uci::perft() {
 
 void Uci::info_perft_bestmove() const {
     Output ob{this};
-    if (limits.hasNewNodes()) { ob << "info"; limits.average_nps(ob) << '\n'; }
+    if (hasNewNodes()) { ob << "info"; average_nps(ob) << '\n'; }
     ob << "bestmove 0000";
 }
 
 void Uci::info_perft_depth(Ply depth, node_count_t perft) const {
     Output ob{this};
-    ob << "info depth " << depth; limits.average_nps(ob) << " perft " << perft;
+    ob << "info depth " << depth; average_nps(ob) << " perft " << perft;
 }
 
 void Uci::info_perft_currmove(int moveCount, UciMove currentMove, node_count_t perft) const {
     UciOutput ob{this};
     ob << "info currmovenumber " << moveCount;
-    limits.instant_nps(ob);
+    instant_nps(ob);
     ob << " currmove" << currentMove;
     ob << " perft " << perft;
 }
@@ -1184,7 +1372,8 @@ void Uci::bench(std::string_view goLimits) {
 #endif
     }
 
-    std::istringstream go{std::string{goLimits}};
+    std::istringstream goStream{std::string{goLimits}};
+    go_.readGo(goStream);
 
     static constexpr std::string_view positions[][2] = {
         //{"2r2rk1/ppR5/1n1n4/3PNP2/3q3p/5Qp1/P5PP/1B3R1K w - - 0 28", "bm c7g7; id mate#11 talkchess.com/forum/viewtopic.php?p=937997"},
@@ -1228,10 +1417,7 @@ void Uci::bench(std::string_view goLimits) {
 
         newGame();
         newSearch();
-
-        limits.go(go, position_);
-        go.clear();
-        go.seekg(0);
+        limits.setLimits(go_, position_);
 
         {
             auto searchStart{::timeNow()};

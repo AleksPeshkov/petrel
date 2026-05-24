@@ -4,6 +4,89 @@
 
 #define RETURN_CUTOFF(visitor) { ReturnStatus status = visitor; if (status != ReturnStatus::Continue) { return status; }} ((void)0)
 
+void SearchLimits::assertNodesOk() const {
+    assert (0 <= nodesQuota_); assert (nodesQuota_ < QuotaLimit);
+    //assert (0 <= nodes);
+    assert (nodes_ <= nodesLimit_);
+    assert (static_cast<decltype(nodesLimit_)>(nodesQuota_) <= nodes_);
+}
+
+ReturnStatus SearchLimits::refreshQuota() const {
+    assertNodesOk();
+
+    // expected nodesQuata_ == 0
+    nodes_ -= nodesQuota_;
+    //nodesQuota_ = 0; // keeps invariant, but redundant
+
+    auto nodesRemaining = nodesLimit_ - nodes_;
+    if (nodesRemaining >= QuotaLimit) {
+        nodesQuota_ = QuotaLimit;
+    }
+    else {
+        nodesQuota_ = static_cast<decltype(nodesQuota_)>(nodesRemaining);
+        if (nodesQuota_ == 0) {
+            // `go nodes` limit reached
+            assertNodesOk();
+            return ReturnStatus::Stop;
+        }
+    }
+
+    assert (0 < nodesQuota_); assert (nodesQuota_ <= QuotaLimit);
+    nodes_ += nodesQuota_; // allocate new nodesQuota
+
+    return lastDeadlineReached();
+}
+
+template <SearchLimits::time_quota_t TimeQuota>
+ReturnStatus SearchLimits::reachedTime() const {
+    if (stop_.load(std::memory_order_seq_cst)) { return ReturnStatus::Stop; } // unconditional stop
+    if (timePool_ == UnlimitedTime || pondering_.load(std::memory_order_relaxed)) { return ReturnStatus::Continue; }
+    if (getNodes() < QuotaLimit) { return ReturnStatus::Continue; } // avoid early time check throttling
+
+    auto timePool = timePool_;
+    if (timeStrategy_ != ExactTime) {
+        int timeQuota = TimeQuota;
+        if (TimeQuota != MaxQuota) { timeQuota += lowMaterialQuotaBonus_; }
+
+        timePool *= +timeStrategy_ * timeQuota;
+        timePool /= +HardMove * MaxQuota;
+    }
+
+    bool deadlineReached = timePool < ::elapsedSince(searchStartTime_);
+    return deadlineReached ? ReturnStatus::Stop : ReturnStatus::Continue;
+}
+ReturnStatus SearchLimits::lastDeadlineReached() const { return reachedTime<MaxQuota>(); }
+ReturnStatus SearchLimits::iterationDeadlineReached() const { return reachedTime<IterationQuota>(); }
+
+ReturnStatus SearchLimits::updateTimeStrategy(const PrincipalVariation& pv) const {
+    if (timeStrategy_ == ExactTime) { return ReturnStatus::Continue; }
+
+    auto bestMove = pv.move(0_ply);
+    auto score = pv.score();
+    auto depth = pv.depth();
+
+    if (lastMove_.none()) {
+        lastMove_ = bestMove;
+    } else {
+        if (lastMove_ != bestMove) {
+            lastMove_ = bestMove;
+            timeStrategy_ = HardMove; // best root move just have changed
+            hardMoveDepth_ = depth;
+        } else if (lastScore_.isEval() && score.isEval() && score + 40_cp <= lastScore_) {
+            timeStrategy_ = HardMove; // root score have dropped
+            hardMoveDepth_ = depth;
+        } else if (timeStrategy_ == HardMove && hardMoveDepth_ + 2_ply <= depth) {
+            timeStrategy_ = NormalMove; // no negative factors during full iteration
+        }
+    }
+
+    lastScore_ = score;
+
+    // good place to check time as there are no wasted search nodes
+    // and timeStrategy_ just possibly changed
+    return lastDeadlineReached();
+}
+
 TtSlot::TtSlot (const Node* n) : TtSlot{
     n->z(),
     n->score,
