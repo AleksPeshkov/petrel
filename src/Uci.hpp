@@ -6,9 +6,9 @@
 #include "history.hpp"
 #include "io.hpp"
 #include "PositionMoves.hpp"
+#include "SearchLimits.hpp"
 #include "Thread.hpp"
 #include "Tt.hpp"
-#include "UciSearchLimits.hpp"
 
 class UciPosition : public PositionMoves {
     Color colorToMove_{White}; //root position side to move color
@@ -30,9 +30,30 @@ public:
     constexpr int fullMoveNumber() const { return fullMoveNumber_; }
 };
 
+struct UciLimits {
+    static constexpr TimeInterval MoveOverheadDefault{1500us};
+
+    array<TimeInterval, Color> time{ 0ms, 0ms }; // go wtime|btime
+    array<TimeInterval, Color> inc{ 0ms, 0ms }; // go winc|binc
+    TimeInterval movetime{0ms}; // go movetime
+    TimeInterval moveOverhead{MoveOverheadDefault}; // option Move Overhead
+
+    node_count_t nodes{NodeCountMax}; // go nodes
+    int movestogo{0}; // go movestogo
+    Ply depth{MaxPly}; // go depth
+
+    bool ponder{false}; // go ponder
+    bool infinite{false}; // go infinite
+    bool canPonder{false}; // option Ponder
+    bool isNewGame{false}; // set by Uci::newGame(), reset by Uci::go()
+
+    void readGo(istream&);
+};
+
 /// Handling input and output of UCI (Universal Chess Interface)
 class Uci {
     UciPosition position_; // result of parsing 'position' command
+    UciLimits go_; // state after parsing 'go' and `setoption` commands
     Thread mainSearchThread;
 
     std::istringstream inputLine; // stream buffer for parsing current input line
@@ -44,6 +65,10 @@ class Uci {
 
     std::string bestmove_; // in infinite or ponder mode we cannot send bestmove immediately
     std::mutex bestmoveMutex;
+    bool infinite_{false}; // should delay bestmove output
+
+    mutable node_count_t lastInfoNodes_{0}; // avoid output duplicate 'info nps'
+    mutable TimePoint lastInfoTime_{}; // for instantaneous nps
 
 // log pretty printing:
 
@@ -65,7 +90,7 @@ class Uci {
     std::string evalFileName; // use embedded by default
 
 public: // used by search:
-    UciSearchLimits limits; // result of parsing 'go' command
+    SearchLimits limits; // inited from UciLimits and UciPosition
     Repetitions repetitions;
     Tt tt; // main transposition table
 
@@ -112,6 +137,10 @@ private:
     void info_readyok() const;
     void info_bestmove();
     void info_perft_bestmove() const;
+
+    constexpr bool hasNewNodes() const { return lastInfoNodes_ != limits.getNodes(); }
+    ostream& average_nps(ostream&) const;
+    ostream& instant_nps(ostream&) const;
 
     void info(std::string_view) const; // output to log file
     void log(io::char_type tag, std::string_view) const; // log messages to the logFile named by logFileName
