@@ -313,7 +313,7 @@ ReturnStatus NodePerft::visitMove(Square from, Square to) {
 
         case 1:
             RETURN_IF_STOP (root.limits.countNode());
-            makeMoveNoZobrist(parent, from, to);
+            makeMoveFast(parent, from, to);
             parent->clearMove(from, to);
             generateMoves();
             perft = moves().popcount();

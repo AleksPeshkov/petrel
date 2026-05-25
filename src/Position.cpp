@@ -33,7 +33,7 @@ void Position::makeMoveNoEval(Square from, Square to) {
     //skip accumulator.swap();
 
     // the position just swapped its sides, so we make the move for the Op
-    makeMove<Op, WithZobrist>(from, to, []{});
+    makeMove<Op, NoEval>(from, to, []{});
     zobrist_.flip();
     //assert (z() == *generateZobrist()); // true, but slow to compute
 }
@@ -57,11 +57,11 @@ void Position::makeNullMove(const Position* parent) {
     //assert (z() == *generateZobrist()); // true, but slow to compute
 }
 
-void Position::makeMoveNoZobrist(const Position* parent, Square from, Square to) {
+void Position::makeMoveFast(const Position* parent, Square from, Square to) {
     copyParent(parent);
 
     // current position flipped its sides relative to parent, so we make the move inplace for the Op
-    makeMove<Op, None>(from, to, []{});
+    makeMove<Op, Fast>(from, to, []{});
 
     //assert (z() == Z{} || z() == *generateZobrist()); // true, but slow to compute
 }

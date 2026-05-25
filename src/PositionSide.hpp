@@ -51,7 +51,7 @@ class PositionSide {
         constexpr void assertOk(Pi, PieceType, Square) const {}
     #endif
 
-    void move(Pi, PieceType, Square, Square);
+    void move(Pi, Square, Square);
     void updateMovedKing(Square);
     void setLeaperAttacks();
     void setLeaperAttack(Pi, PieceType, Square);
@@ -124,11 +124,11 @@ public:
     static void swap(PositionSide&, PositionSide&);
 
     void setOpKing(Square);
-    void move(Pi, Square, Square);
-    void movePawn(Pi, Square, Square);
+    void move(Pi, PieceType, Square, Square);
+    void movePawn(Square, Square);
     void moveKing(Square, Square);
     void castle(Square kingFrom, Square kingTo, Pi rook, Square rookFrom, Square rookTo);
-    Pi piPromoted(Pi, Square, PromoType, Square);
+    Pi piPromoted(Square, PromoType, Square);
     void capture(Square);
 
     void setEnPassantVictim(Square);
