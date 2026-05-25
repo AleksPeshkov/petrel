@@ -100,7 +100,12 @@ class Position {
     template <Side::_t> void updateSliderAttacks(PiMask);
     template <Side::_t> void updateSliderAttacks(PiMask, PiMask);
 
-    enum MakeMoveFlags { None = 0, WithZobrist = 0b01, WithEval = 0b10, Full = WithZobrist | WithEval };
+    enum MakeMoveFlags {
+        Fast = 0,
+        WithZobrist = 0b01, NoEval = WithZobrist,
+        WithEval = 0b10,
+        Full = WithZobrist | WithEval
+    };
     template <Side::_t, MakeMoveFlags> void makeMove(Square, Square, auto&& prefetch);
 
     template <Side::_t> Zobrist generateZobrist() const;
@@ -132,7 +137,7 @@ protected:
     }
 
     // update the position without updating the zobrist hash (because it already updated)
-    void makeMoveNoZobrist(const Position*, Square, Square);
+    void makeMoveFast(const Position*, Square, Square);
 
     // make move directly inside position itself
     void makeMove(Square, Square);

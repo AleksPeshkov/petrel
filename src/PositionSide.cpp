@@ -96,21 +96,19 @@ void PositionSide::capture(Square from) {
     traits.clear(pi);
 }
 
-void PositionSide::move(Pi pi, PieceType ty, Square from, Square to) {
+void PositionSide::move(Pi pi, Square from, Square to) {
     assert (from != to);
-    assertOk(pi, ty, from);
+    assertOk(pi, typeOf(pi), from);
 
     squares.move(pi, to);
     bbSide_.move(from, to);
 }
 
 // simple non king, non pawn move
-void PositionSide::move(Pi pi, Square from, Square to) {
-    PieceType ty = typeOf(pi);
-    assert (!ty.is(King));
-    assert (!ty.is(Pawn));
+void PositionSide::move(Pi pi, PieceType ty, Square from, Square to) {
+    assert (!ty.is(King)); assert (!ty.is(Pawn));
 
-    move(pi, ty, from, to);
+    move(pi, from, to);
 
     if (ty.is(Knight)) {
         assert (traits.none(pi)); //nothing to clear or already cleared
@@ -125,24 +123,26 @@ void PositionSide::move(Pi pi, Square from, Square to) {
 }
 
 void PositionSide::moveKing(Square from, Square to) {
-    move(Pi{TheKing}, King, from, to);
+    move(Pi{TheKing}, from, to);
     updateMovedKing(to);
 }
 
-void PositionSide::movePawn(Pi pi, Square from, Square to) {
-    move(pi, Pawn, from, to);
+void PositionSide::movePawn(Square from, Square to) {
+    Pi pawn{pi(from) };
+    move(pawn, from, to);
     bbPawns_.move(from, to);
     bbPawnAttacks_ = bbPawns_.pForwardDiag();
 
-    assert (traits.none(pi));
-    if (to.on(Rank7)) { traits.setPromotable(pi); }
+    assert (traits.none(pawn));
+    if (to.on(Rank7)) { traits.setPromotable(pawn); }
 
-    setLeaperAttack(pi, Pawn, to);
+    setLeaperAttack(pawn, Pawn, to);
 
-    assertOk(pi, Pawn, to);
+    assertOk(pawn, Pawn, to);
 }
 
-Pi PositionSide::piPromoted(Pi pawn, Square from, PromoType ty, Square to) {
+Pi PositionSide::piPromoted(Square from, PromoType ty, Square to) {
+    Pi pawn{pi(from)};
     assert (from.on(Rank7));
     assert (to.on(Rank8));
     assert (traits.isPromotable(pawn));
