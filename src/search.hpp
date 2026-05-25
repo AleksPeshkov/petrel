@@ -62,7 +62,7 @@ protected:
     friend class TtSlot;
 
     const Uci& root; // common search thread data
-    Node* const parent{nullptr}; // previous (ply-1) opposite side to move node or nullptr
+    const Node* const parent{nullptr}; // previous (ply-1) opposite side to move node or nullptr
     const Node* const grandParent{nullptr}; // previous side to move node (ply-2) or nullptr
     Node* child{nullptr}; // child node to make moves into, created in search()
 
@@ -102,11 +102,11 @@ protected:
     [[nodiscard]] ReturnStatus searchMove(Square, Square, Ply R = 1_ply);
 
     [[nodiscard]] ReturnStatus searchIfPossible(HistoryMove move, Ply R = 1_ply) {
-        return parent->isPossibleMove(move) ? searchMove(move.from(), move.to(), R) : ReturnStatus::Continue;
+        return isPossibleMove(move) ? searchMove(move.from(), move.to(), R) : ReturnStatus::Continue;
     }
 
     [[nodiscard]] ReturnStatus searchIfPossible(Square from, Square to, Ply R = 1_ply) {
-        return parent->isPossibleMove(from, to) ? searchMove(from, to, R) : ReturnStatus::Continue;
+        return isPossibleMove(from, to) ? searchMove(from, to, R) : ReturnStatus::Continue;
     }
 
     [[nodiscard]] ReturnStatus goodCaptures(PiMask); // winning promotions to queen, winning or equal captures
@@ -116,6 +116,8 @@ protected:
     [[nodiscard]] ReturnStatus followMove();
     [[nodiscard]] ReturnStatus updatePv();
 
+    void childNullMove();
+    void childMove(Square, Square);
     void failHigh();
     void updateHistory(HistoryMove) const;
 

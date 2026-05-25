@@ -6,10 +6,10 @@
 using MovesNumber = int; // number of (legal) moves in the position
 
 class PositionMoves : public Position {
-    mutable PiBb moves_; // generated strictly legal moves
+    PiBb moves_; // generated strictly legal moves
 
     Bb bbAttacked_; // bitboard of squares attacked by any opponent (not side to move) piece (set during moves generation)
-    mutable MovesNumber movesMade_; // number of moves already made in this node (set to 0 during moves generation)
+    MovesNumber movesMade_; // number of moves already made in this node (set to 0 during moves generation)
     bool inCheck_; // king of current side to move is under attack (set during moves generation)
 
     //legal move generation helpers
@@ -25,7 +25,7 @@ class PositionMoves : public Position {
 
 protected:
     void setMoves(const decltype(moves_)& moves) { moves_ = moves; movesMade_ = 0; }
-    void clearMove(Square from, Square to) const { moves_.clear(MY.pi(from), to); ++movesMade_; }
+    void clearMove(Square from, Square to) { moves_.clear(MY.pi(from), to); ++movesMade_; }
 
 public:
     constexpr PositionMoves () {}

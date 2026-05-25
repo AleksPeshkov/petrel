@@ -241,19 +241,19 @@ ReturnStatus Node::search() {
         && MY.material().canNullMove() // avoid null move in late endgame
     ) {
         canBeKiller = false;
-        RETURN_CUTOFF (child->searchNullMove());
+        RETURN_CUTOFF (searchNullMove());
     }
 
     if (ttHit && ttSlot.hasMove()) {
         canBeKiller = ttSlot.canBeKiller();
-        RETURN_CUTOFF (child->searchMove(ttSlot.from(), ttSlot.to()));
+        RETURN_CUTOFF (searchMove(ttSlot.from(), ttSlot.to()));
     }
 
     if (isRoot()) {
         canBeKiller = false; // rootBestMoves can be anything
         for (auto move : root.rootBestMoves) {
             if (move.none()) { break; }
-            RETURN_CUTOFF (child->searchIfPossible(move.from(), move.to()));
+            RETURN_CUTOFF (searchIfPossible(move.from(), move.to()));
         }
     }
 
@@ -262,15 +262,15 @@ ReturnStatus Node::search() {
     canBeKiller = !inCheck();
 
     if (parent && !inCheck()) {
-        RETURN_CUTOFF (child->searchIfPossible(parent->killer[0]));
+        RETURN_CUTOFF (searchIfPossible(parent->killer[0]));
         RETURN_CUTOFF (counterMove());
         RETURN_CUTOFF (followMove());
 
-        RETURN_CUTOFF (child->searchIfPossible(parent->killer[1]));
+        RETURN_CUTOFF (searchIfPossible(parent->killer[1]));
         RETURN_CUTOFF (counterMove());
         RETURN_CUTOFF (followMove());
 
-        RETURN_CUTOFF (child->searchIfPossible(parent->killer[2]));
+        RETURN_CUTOFF (searchIfPossible(parent->killer[2]));
     }
 
     do {
@@ -310,7 +310,7 @@ ReturnStatus Node::search() {
             Pi pi = MY.pi(from);
             for (Square to : bbMovesOf(pi)) {
                 if (MY.bbPawnAttacks().has(to) || !safeForOp(to)) {
-                    RETURN_CUTOFF (child->searchMove(from, to, from.on(Rank6) ? 1_ply : 2_ply));
+                    RETURN_CUTOFF (searchMove(from, to, from.on(Rank6) ? 1_ply : 2_ply));
                 }
             }
         }
@@ -323,7 +323,7 @@ ReturnStatus Node::search() {
             Square to{from.file(), from.rank().forward()};
             if (!bbMovesOf(MY.pi(from)).has(to)) { continue; }
             if (safeForOp(to)) { continue; }
-            RETURN_CUTOFF (child->searchMove(from, to, 2_ply));
+            RETURN_CUTOFF (searchMove(from, to, 2_ply));
         }
 
         // safe officers moves
@@ -339,7 +339,7 @@ ReturnStatus Node::search() {
             Pi pi{TheKing};
             Square from{MY.sqKing()};
             for (Square to : bbMovesOf(pi)) {
-                RETURN_CUTOFF (child->searchMove(from, to, 4_ply));
+                RETURN_CUTOFF (searchMove(from, to, 4_ply));
             }
         }
 
@@ -349,7 +349,7 @@ ReturnStatus Node::search() {
         for (Square from : MY.bbPawns()) {
             Pi pi = MY.pi(from);
             for (Square to : bbMovesOf(pi)) {
-                RETURN_CUTOFF (child->searchMove(from, to, 4_ply));
+                RETURN_CUTOFF (searchMove(from, to, 4_ply));
             }
         }
 
@@ -358,7 +358,7 @@ ReturnStatus Node::search() {
             Pi pi = pieces.piLast(); pieces -= PiMask{pi};
             Square from{MY.sq(pi)};
             for (Square to : bbMovesOf(pi) & ~OP.bbSide()) {
-                RETURN_CUTOFF (child->searchMove(from, to, 4_ply));
+                RETURN_CUTOFF (searchMove(from, to, 4_ply));
             }
         }
 
@@ -369,7 +369,7 @@ ReturnStatus Node::search() {
             Pi pi = pieces.piLast(); pieces -= PiMask{pi};
             Square from{MY.sq(pi)};
             for (Square to : bbMovesOf(pi)) {
-                RETURN_CUTOFF (child->searchMove(from, to, 5_ply));
+                RETURN_CUTOFF (searchMove(from, to, 5_ply));
             }
         }
     } while (false);
@@ -409,7 +409,7 @@ ReturnStatus Node::goodNonCaptures(Pi pi, Bb moves, Ply R) {
             }
         }
 
-        RETURN_CUTOFF (child->searchMove(from, to, R));
+        RETURN_CUTOFF (searchMove(from, to, R));
     }
 
     return ReturnStatus::Continue;
@@ -451,7 +451,7 @@ ReturnStatus Node::goodCaptures(PiMask victims) {
         for (Square to : queenPromos) {
             if (!safeForOp(to) || OP.bbSide().has(~to)) {
                 // move to safe square or always good promotion with capture
-                RETURN_CUTOFF (child->searchMove(from, to));
+                RETURN_CUTOFF (searchMove(from, to));
             }
         }
     }
@@ -481,7 +481,7 @@ ReturnStatus Node::goodCaptures(PiMask victims) {
             // LVA (least valuable attacker) order
             Pi pi = attackers.piLast(); attackers -= PiMask{pi};
             Square from{MY.sq(pi)};
-            RETURN_CUTOFF (child->searchMove(from, to));
+            RETURN_CUTOFF (searchMove(from, to));
         }
     }
 
@@ -496,7 +496,7 @@ ReturnStatus Node::counterMove() {
             auto move = root.counterMove.get(i, colorToMove(), parent->currentMove);
             if (move.none()) { break; }
             if (isPossibleMove(move)) {
-                return child->searchMove(move.from(), move.to());
+                return searchMove(move.from(), move.to());
             }
         }
     }
@@ -510,7 +510,7 @@ ReturnStatus Node::followMove() {
             auto move = root.followMove.get(i, colorToMove(), grandParent->currentMove);
             if (move.none()) { break; }
             if (isPossibleMove(move)) {
-                return child->searchMove(move.from(), move.to());
+                return searchMove(move.from(), move.to());
             }
         }
     }
@@ -520,28 +520,35 @@ ReturnStatus Node::followMove() {
 ReturnStatus Node::searchNullMove() {
     RETURN_IF_STOP (root.limits.countNode());
 
-    parent->currentMove = {};
-    makeNullMove(parent);
+    currentMove = {};
+    child->childNullMove();
 
+    return negamax(4_ply + (depth-2_ply)/4);
+}
+
+void Node::childNullMove() {
+    makeNullMove(parent);
     tt = root.tt.prefetch<TtSlot>(z());
     repHash = {};
-
-    return parent->negamax(4_ply + (parent->depth-2_ply)/4);
 }
 
 ReturnStatus Node::searchMove(Square from, Square to, Ply R) {
     RETURN_IF_STOP (root.limits.countNode());
 
-    parent->clearMove(from, to);
-    parent->currentMove = HistoryMove{parent->MY.typeAt(from), from, to};
+    currentMove = HistoryMove{MY.typeAt(from), from, to};
+    clearMove(from, to);
+    child->childMove(from, to);
+
+    return negamax(finalR(R));
+}
+
+void Node::childMove(Square from, Square to) {
     makeMove(parent, from, to, [&](Z z){ tt = root.tt.prefetch<TtSlot>(z); });
     root.pv.clear(pvIndex);
 
     if (rule50() < 2_ply) { repHash = {}; }
     else if (grandParent) { repHash = RepHash{grandParent->repHash, grandParent->z()}; }
     else { repHash = root.repetitions.repHash(colorToMove()); }
-
-    return parent->negamax(parent->finalR(R));
 }
 
 Ply Node::finalR(Ply R) const {
