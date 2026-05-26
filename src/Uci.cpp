@@ -134,7 +134,7 @@ static constexpr T permil(T n, T m) { return (n * 1000) / m; }
 } // anonymous namespace
 
 Uci::Uci(ostream &o) :
-    tt(16 * mebibyte),
+    tt(64 * mebibyte),
     inputLine{std::string(2048, '\0')}, // preallocate 2048 bytes (~200 full moves)
     out{o},
     bestmove_(sizeof("bestmove a7a8q ponder h2h1q"), '\0'),
@@ -621,23 +621,24 @@ void Uci::bench() {
 
 void Uci::bench(std::string& goLimits) {
     if (goLimits.empty()) {
-#ifdef NDEBUG
-        goLimits = "depth 18 nodes 50000000"; // default
+#ifndef NDEBUG
+        goLimits = "depth 9 nodes 100000"; // default for slow debug build
 #else
-        goLimits = "depth 8 nodes 100000"; // default for slow build
+        goLimits = "depth 18 nodes 50000000"; // default
 #endif
     }
 
     std::istringstream is{goLimits};
 
-    static std::string_view positions[][2] = {
+    static constexpr std::string_view positions[][2] = {
+        //{"2r2rk1/ppR5/1n1n4/3PNP2/3q3p/5Qp1/P5PP/1B3R1K w - - 0 28", "bm c7g7; id mate#11 talkchess.com/forum/viewtopic.php?p=937997"},
         {"1B1Q2K1/q1p4P/4P3/3Pk1p1/1r1NrR1b/4pn1P/1pRp2n1/1B2N2b w - -", "bm c2c7; id mate#2 talkchess.com/viewtopic.php?p=190985"},
         {"3R1R2/K3k3/1p1nPb2/pN2P2N/nP1ppp2/4P3/6P1/4Qq1r w - -", "bm e1e2; id mate#5 talkchess.com/viewtopic.php?p=904264"}, // depth 13
         {"8/1Pp5/nP5K/p7/8/8/PR6/2r4k w - -", "bm b7b8n id Dann Corbit aleks.underpromotion.09"},
         {"1k2b3/4bpp1/p2pp1P1/1p3P2/2q1P3/4B3/PPPQN2r/1K1R4 w - -", "bm f5f6 id Dann Corbit aleks.pawn-race.01"},
         {"2b3r1/6pp/1kn2p2/7N/ppp1PN2/5P2/1PP2KPP/R7 b - - 1 28", "bm b6a5 talkchess.com/forum/viewtopic.php?t=85672"},
         {"2kr3r/Qbp1q1bp/1np3p1/5p2/2P1pP2/1PN3P1/PBK3BP/3RR3 w - - 0 21", "bm e1e4; id petrel 20251206"},
-        {"6k1/p1rqbppp/1p2p3/nb1pP3/3P1NBP/PP4P1/5PN1/R2Q2K1 w - - 0 26", "bm f4e6; id petrel 20251231"},
+        {"2r3k1/p1rqbppp/1pn1p3/1b1pP3/3P1N1P/5NPB/PP3P2/R1RQ2K1 w - - 0 20 moves f3e1 c6b4 c1c7 c8c7 h3g4 b5a4 b2b3 a4b5 a2a3 b4c6 e1g2 c6a5", "bm f4e6; id petrel 20251231"},
         {"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", "id startpos"},
     };
 
@@ -652,6 +653,11 @@ void Uci::bench(std::string& goLimits) {
         inputLine.str(fen);
 
         position_.readFen(inputLine);
+        repetitions.clear();
+        if (consume("moves")) {
+            position_.playMoves(inputLine, repetitions);
+        }
+
         if (hasMoreInput()) {
             error("failed parsing bench fen: " + fen);
             continue;
