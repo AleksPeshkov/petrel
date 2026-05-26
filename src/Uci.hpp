@@ -139,7 +139,7 @@ public:
     constexpr ChessVariant chessVariant() const { return position_.chessVariant(); }
     constexpr Color colorToMove(Ply ply = 0_ply) const { return position_.colorToMove(ply); }
 
-    void bench(std::string& goLimits);
+    void bench(std::string_view goLimits);
 
     void newGame();
     void newSearch();

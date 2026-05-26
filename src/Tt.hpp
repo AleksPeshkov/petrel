@@ -49,9 +49,9 @@ class Tt {
     }
 
 public:
+    mutable node_count_t hits = 0;
     mutable node_count_t reads = 0;
     mutable node_count_t writes = 0;
-    mutable node_count_t hits = 0;
 
     Tt(size_t n = minSize()) { setSize(n); }
     ~Tt() { free(); }
