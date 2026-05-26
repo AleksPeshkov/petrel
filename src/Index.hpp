@@ -99,8 +99,6 @@ public:
     friend constexpr bool operator == (Arg a, Arg b) { return a.v() == b.v(); }
     friend constexpr bool operator <  (Arg a, Arg b) { return a.v() < b.v(); }
 };
-#define STRUCT_INDEX(self_type, Size) struct self_type : ::Index<self_type, Size> { using ::Index<self_type, Size>::Index; }
-#define STRUCT_INDEX_ENUM(self_type, Size, value_type) struct self_type : ::Index<self_type, Size, value_type> { using ::Index<self_type, Size, value_type>::Index; }
 
 template <typename Enum>
 struct CharMap {
@@ -165,7 +163,6 @@ public:
         return in;
     }
 };
-#define STRUCT_INDEX_CHAR(self_type, Size, value_type) struct self_type : ::IndexChar<self_type, Size, value_type> { using ::IndexChar<self_type, Size, value_type>::IndexChar; }
 
 // search tree distance in halfmoves
 struct Ply : Index<Ply, 64> {
@@ -247,7 +244,7 @@ struct Rank : Index<Rank, 8, rank_t> {
 };
 
 enum direction_t { FileDir, RankDir, DiagonalDir, AntidiagDir };
-struct Direction; STRUCT_INDEX_ENUM (Direction, 4, direction_t);
+struct Direction : Index<Direction, 4, direction_t> { using Index::Index; };
 
 enum square_t : u8_t {
     A8, B8, C8, D8, E8, F8, G8, H8,
@@ -318,17 +315,17 @@ enum side_to_move_t {
     Op, // not side to move
 };
 constexpr side_to_move_t operator ~ (side_to_move_t si) { return static_cast<side_to_move_t>(si ^ 1); }
-struct Side; STRUCT_INDEX_ENUM (Side, 2, side_to_move_t);
+struct Side : Index<Side, 2, side_to_move_t> { using Index::Index; };
 
 enum chess_variant_t { Orthodox, Chess960 };
-struct ChessVariant; STRUCT_INDEX_ENUM (ChessVariant, 2, chess_variant_t);
+struct ChessVariant : Index<ChessVariant, 2, chess_variant_t> { using Index::Index; };
 
 enum castling_side_t { KingSide, QueenSide };
 template <> struct CharMap<castling_side_t> { static constexpr io::czstring The_string = "kq"; };
-struct CastlingSide; STRUCT_INDEX_CHAR (CastlingSide, 2, castling_side_t);
+struct CastlingSide : IndexChar<CastlingSide, 2, castling_side_t> { using IndexChar::IndexChar; };
 
 enum piece_index_t : u8_t { TheKing }; // king index is always 0
-struct Pi; STRUCT_INDEX_ENUM (Pi, 16, piece_index_t);
+struct Pi : Index<Pi, 16, piece_index_t> { using Index::Index; };
 
 enum piece_type_t {
     Queen = 0,
@@ -341,13 +338,13 @@ enum piece_type_t {
 template <> struct CharMap<piece_type_t> { static constexpr io::czstring The_string = "qrbnpk"; };
 
 // Queen, Rook, Bishop
-struct SliderType; STRUCT_INDEX_ENUM (SliderType, 3, piece_type_t);
+struct SliderType : Index<SliderType, 3, piece_type_t> { using Index::Index; };
 
 // Queen, Rook, Bishop, Knight
-struct PromoType; STRUCT_INDEX_CHAR (PromoType, 4, piece_type_t);
+struct PromoType : IndexChar<PromoType, 4, piece_type_t> { using IndexChar::IndexChar; };
 
  // Queen, Rook, Bishop, Knight, Pawn
-struct NonKingType; STRUCT_INDEX_ENUM (NonKingType, 5, piece_type_t);
+struct NonKingType : Index<NonKingType, 5, piece_type_t> { using Index::Index; };
 
 // Queen, Rook, Bishop, Knight, Pawn, King
 struct PieceType : IndexChar<PieceType, 6, piece_type_t> {
@@ -374,7 +371,7 @@ enum class ReturnStatus {
 };
 
 enum history_type_t { HistoryRBN, HistoryQueen, HistoryPawn, HistoryKing };
-struct HistoryType; STRUCT_INDEX_ENUM (HistoryType, 4, history_type_t);
+struct HistoryType : Index<HistoryType, 4, history_type_t> { using Index::Index; };
 
 constexpr HistoryType historyType(PieceType ty) {
     constexpr HistoryType::_t fromPieceType[] = { HistoryQueen, HistoryRBN, HistoryRBN, HistoryRBN, HistoryPawn, HistoryKing };
@@ -397,7 +394,7 @@ class HistoryMove {
 public:
     static constexpr _t None{0};
     static constexpr int Size = HistoryType::Size * Square::Size * Square::Size;
-    struct HistoryIndex; STRUCT_INDEX (HistoryIndex, Size);
+    struct HistoryIndex : Index<HistoryIndex, Size> { using Index::Index; };
 
     // null move
     constexpr HistoryMove() : v_{None} {}

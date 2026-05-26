@@ -61,9 +61,9 @@ struct CACHE_ALIGN Nnue {
     static constexpr int QA = 256;
     static constexpr int QB = 64;
 
-    struct FeatureIndex; STRUCT_INDEX (FeatureIndex, 768);
-    struct HalfAccumulatorIndex; STRUCT_INDEX (HalfAccumulatorIndex, HIDDEN_SIZE / VECTOR_SIZE);
-    struct AccumulatorIndex; STRUCT_INDEX (AccumulatorIndex, 2*HalfAccumulatorIndex::Size);
+    struct FeatureIndex : Index<FeatureIndex, 768> { using Index::Index; };
+    struct HalfAccumulatorIndex : Index<HalfAccumulatorIndex, HIDDEN_SIZE / VECTOR_SIZE> { using Index::Index; };
+    struct AccumulatorIndex : Index<AccumulatorIndex, 2*HalfAccumulatorIndex::Size> { using Index::Index; };
 
     using L0b = HalfAccumulatorIndex::arrayOf<_t>;
     using L0w = FeatureIndex::arrayOf<L0b>;

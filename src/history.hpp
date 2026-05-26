@@ -44,7 +44,7 @@ template<int _Size>
 class CACHE_ALIGN HistoryMoves {
 public:
     static constexpr int Size = _Size;
-    struct Index; STRUCT_INDEX (Index, Size);
+    struct Index : ::Index<Index, Size> { using ::Index<Index, Size>::Index; };
     using Slot = Index:: template arrayOf<HistoryMove>;
 
 private:
@@ -68,7 +68,7 @@ public:
 class CACHE_ALIGN PrincipalVariation {
     static constexpr auto triangularArraySize = (Ply::Last+1) * (Ply::Last+2) / 2;
 public:
-    struct Index; STRUCT_INDEX (Index, triangularArraySize);
+    struct Index : ::Index<Index, triangularArraySize> { using ::Index<Index, triangularArraySize>::Index; };
     Index::arrayOf<UciMove> moves_;
 
     Ply   depth_{0}; // last root PV update iteration depth
@@ -119,7 +119,7 @@ public:
 };
 
 class RepSide {
-    struct RepIndex; STRUCT_INDEX (RepIndex, 50);
+    struct RepIndex : Index<RepIndex, 50> { using Index::Index; };
 
     struct RepEntry {
         Z z;

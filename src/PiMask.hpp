@@ -72,7 +72,7 @@ struct BitArrayOps<u8x16_t> {
 
 class CACHE_ALIGN VectorOfAll {
     using _t = u8x16_t;
-    struct Index; STRUCT_INDEX (Index, 0x100);
+    struct Index : ::Index<Index, 0x100> { using ::Index<Index, 0x100>::Index; };
     Index::arrayOf<_t> v_;
 
 public:
