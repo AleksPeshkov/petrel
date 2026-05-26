@@ -379,12 +379,22 @@ ReturnStatus Node::search() {
             ));
         } else {
             RETURN_CUTOFF (searchIfPossible(parent->killer[0]));
-            RETURN_CUTOFF (counterMove());
-            RETURN_CUTOFF (followMove());
+
+            if (parent->currentMove.any()) {
+                RETURN_CUTOFF (contMove(CounterMove, parent->currentMove)); // ply-1
+            }
+            if (grandParent && grandParent->currentMove.any()) {
+                RETURN_CUTOFF (contMove(FollowupMove, grandParent->currentMove)); // ply-2
+            }
 
             RETURN_CUTOFF (searchIfPossible(parent->killer[1]));
-            RETURN_CUTOFF (counterMove());
-            RETURN_CUTOFF (followMove());
+
+            if (parent->currentMove.any()) {
+                RETURN_CUTOFF (contMove(CounterMove, parent->currentMove)); // ply-1
+            }
+            if (grandParent && grandParent->currentMove.any()) {
+                RETURN_CUTOFF (contMove(FollowupMove, grandParent->currentMove)); // ply-2
+            }
 
             RETURN_CUTOFF (searchIfPossible(parent->killer[2]));
         }
@@ -609,30 +619,13 @@ ReturnStatus Node::goodCaptures(PiMask victims) {
     return ReturnStatus::Continue;
 }
 
-// Counter move heuristic: refutation of the last opponent's move
-ReturnStatus Node::counterMove() {
-    assert (parent);
-    if (parent->currentMove.any()) {
-        for (auto i : range<decltype(root.counterMove)::Index>()) {
-            auto move = root.counterMove.get(i, colorToMove(), parent->currentMove);
-            if (move.none()) { break; }
-            if (isPossibleMove(move)) {
-                return searchMove(move);
-            }
-        }
-    }
-    return ReturnStatus::Continue;
-}
-
-// Follow up move heuristic: continue the idea of our last made move
-ReturnStatus Node::followMove() {
-    if (grandParent && grandParent->currentMove.any()) {
-        for (auto i : range<decltype(root.followMove)::Index>()) {
-            auto move = root.followMove.get(i, colorToMove(), grandParent->currentMove);
-            if (move.none()) { break; }
-            if (isPossibleMove(move)) {
-                return searchMove(move);
-            }
+// counter and folloup move heuristic
+ReturnStatus Node::contMove(ContIndex::_t contMoveType, HistoryMove move) {
+    for (auto i : range<decltype(root.contMoves)::Index>()) {
+        auto contMove = root.contMoves.get(contMoveType, i, colorToMove(), move);
+        if (contMove.none()) { break; }
+        if (isPossibleMove(contMove)) {
+            return searchMove(contMove);
         }
     }
     return ReturnStatus::Continue;
@@ -711,12 +704,12 @@ void Node::updateHistory() {
     if (!parent) { return; } // ply-1
     insert_unique_pos(parent->killer, bestMove);
     if (parent->currentMove.any()) {
-        root.counterMove.set(colorToMove(), parent->currentMove, bestMove);
+        root.contMoves.set(CounterMove, colorToMove(), parent->currentMove, bestMove);
     }
 
     if (!grandParent) { return; } // ply-2
     if (grandParent->currentMove.any()) {
-        root.followMove.set(colorToMove(), grandParent->currentMove, bestMove);
+        root.contMoves.set(FollowupMove, colorToMove(), grandParent->currentMove, bestMove);
     }
 
     if (!grandParent->parent) { return; } // ply-3

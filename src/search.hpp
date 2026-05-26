@@ -122,8 +122,7 @@ protected:
     [[nodiscard]] ReturnStatus goodCaptures(PiMask); // winning promotions to queen, winning or equal captures
     [[nodiscard]] ReturnStatus goodNonCaptures(Pi, Bb moves, Ply R);
 
-    [[nodiscard]] ReturnStatus counterMove();
-    [[nodiscard]] ReturnStatus followMove();
+    [[nodiscard]] ReturnStatus contMove(ContIndex::_t, HistoryMove);
 
     void childNullMove();
     void childMove(Square, Square);

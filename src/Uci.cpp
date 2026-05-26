@@ -764,8 +764,7 @@ Uci::Uci(ostream& os) :
 
 void Uci::newGame() {
     tt.newGame();
-    counterMove.clear();
-    followMove.clear();
+    contMoves.clear();
     counterCheck.clear();
     go_.isNewGame = true;
 }

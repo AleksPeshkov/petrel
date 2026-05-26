@@ -91,14 +91,18 @@ constexpr void insert_unique_compact(std::array<value_type, Size>& arr, value_ty
     *pos = value;
 }
 
+enum continuation_t {CounterMove, FollowupMove};
+struct ContIndex : Index<ContIndex, 2, continuation_t> { using Index::Index; };
+
+// Continuation Move table, counter and followup moves together (for cache locality)
 template<int _Size>
-class CACHE_ALIGN ContinuationMoves {
+class CACHE_ALIGN ContMoves {
 public:
     static constexpr int Size = _Size;
     struct Index : ::Index<Index, Size> { using ::Index<Index, Size>::Index; };
 
 private:
-    using _t = array<HistoryMove, Color, HistoryType, Square, Square, Index>;
+    using _t = array<HistoryMove, Color, HistoryType, Square, Square, ContIndex, Index>;
     _t v_;
 
 public:
@@ -106,15 +110,15 @@ public:
         std::memset(&v_, 0, sizeof(v_)); //TRICK: HistoryMove{None} == uint16_t{0}
     }
 
-    constexpr HistoryMove get(Index i, Color color, HistoryMove move) const {
+    constexpr HistoryMove get(ContIndex::_t ci, Index i, Color color, HistoryMove move) const {
         assert (move.any());
-        return v_[color][move.historyType()][move.from()][move.to()][i];
+        return v_[color][move.historyType()][move.from()][move.to()][ContIndex{ci}][i];
     }
 
     template <size_t Pos = 0>
-    constexpr void set(Color color, HistoryMove move, HistoryMove bestMove) {
+    constexpr void set(ContIndex::_t ci, Color color, HistoryMove move, HistoryMove bestMove) {
         assert (move.any()); assert (bestMove.any());
-        ::insert_unique_compact<Pos>(v_[color][move.historyType()][move.from()][move.to()], bestMove);
+        ::insert_unique_compact<Pos>(v_[color][move.historyType()][move.from()][move.to()][ContIndex{ci}], bestMove);
     }
 };
 
