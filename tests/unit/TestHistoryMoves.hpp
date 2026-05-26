@@ -74,22 +74,22 @@ void expect_array_equals(const std::array<HistoryMove, Size>& arr,
 }
 
 // -----------------------------------------------------------------------------
-// ✅ Test: ContinuationMoves basic behavior
+// ✅ Test: ContMoves basic behavior
 // -----------------------------------------------------------------------------
 void test_history_moves() {
-    Color c{White};
-    ContinuationMoves<2> hm;
+    Color color{White};
+    ContMoves<2> hm;
 
     auto move1 = randomMove();
     auto move2 = randomMove();
     auto move3 = randomMove();
 
-    hm.set(c, move1, move2);
-    assert(hm.get(ContinuationMoves<2>::Index{0}, c, move1) == move2);
+    hm.set(FollowupMove, color, move1, move2);
+    assert(hm.get(FollowupMove, ContMoves<2>::Index{0}, color, move1) == move2);
 
-    hm.set(c, move1, move3);
-    assert(hm.get(ContinuationMoves<2>::Index{0}, c, move1) == move3);
-    assert(hm.get(ContinuationMoves<2>::Index{1}, c, move1) == move2);
+    hm.set(FollowupMove, color, move1, move3);
+    assert(hm.get(FollowupMove, ContMoves<2>::Index{0}, color, move1) == move3);
+    assert(hm.get(FollowupMove, ContMoves<2>::Index{1}, color, move1) == move2);
 }
 
 // -----------------------------------------------------------------------------
