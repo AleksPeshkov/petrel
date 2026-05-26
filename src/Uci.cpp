@@ -1130,7 +1130,7 @@ void Uci::bench() {
     bench(goLimits);
 }
 
-void Uci::bench(std::string& goLimits) {
+void Uci::bench(std::string_view goLimits) {
     if (goLimits.empty()) {
 #ifndef NDEBUG
         goLimits = "depth 9 nodes 100000"; // default for slow debug build
@@ -1139,7 +1139,7 @@ void Uci::bench(std::string& goLimits) {
 #endif
     }
 
-    std::istringstream is{goLimits};
+    std::istringstream go{std::string{goLimits}};
 
     static constexpr std::string_view positions[][2] = {
         //{"2r2rk1/ppR5/1n1n4/3PNP2/3q3p/5Qp1/P5PP/1B3R1K w - - 0 28", "bm c7g7; id mate#11 talkchess.com/forum/viewtopic.php?p=937997"},
@@ -1155,13 +1155,16 @@ void Uci::bench(std::string& goLimits) {
 
     uciok();
 
-    node_count_t benchNodes = 0;
-    auto benchStart = ::timeNow();
+    node_count_t benchTotalNodes{0};
+    TimeInterval benchTotalTime{0};
+    node_count_t ttHits{0};
+    node_count_t ttReads{0};
+    node_count_t ttWrites{0};
 
     for (auto pos : positions) {
-        std::string fen{pos[0]};
+        auto fen{pos[0]};
         inputLine.clear();
-        inputLine.str(fen);
+        inputLine.str({fen.data(), fen.size()});
 
         position_.readFen(inputLine);
         repetitions.clear();
@@ -1170,28 +1173,48 @@ void Uci::bench(std::string& goLimits) {
         }
 
         if (hasMoreInput()) {
-            error("failed parsing bench fen: " + fen);
+            error("failed parsing bench position fen " + std::string(fen));
             continue;
         }
 
         {
             Output ob{this};
-            ob << "\n"; info_fen(ob); ob << " ; " << pos[1];
+            ob << "\n# " << pos[1];
+            ob << "\nposition fen " << fen;
             ob << "\ngo " << goLimits;
         }
 
-        is.clear();
-        is.seekg(0);
         newGame();
         newSearch();
 
-        limits.go(is, position_);
+        limits.go(go, position_);
+        go.clear();
+        go.seekg(0);
 
-        Node{position_, *this}.searchRoot();
-        benchNodes += limits.getNodes();
+        {
+            auto searchStart{::timeNow()};
+            Node{position_, *this}.searchRoot();
+
+            benchTotalTime += ::elapsedSince(searchStart);
+            benchTotalNodes += limits.getNodes();
+            ttHits += tt.hits;
+            ttReads += tt.reads;
+            ttWrites += tt.writes;
+        }
+
         info_bestmove();
     }
 
-    Output ob{this};
-    ob << "\n" << benchNodes << " nodes " << ::nps(benchNodes, elapsedSince(benchStart)) << " nps";
+    {
+        auto benchTotalMs{std::chrono::duration_cast<std::chrono::milliseconds>(benchTotalTime).count()};
+
+        Output ob{this};
+        ob << '\n'
+            << ttHits << " tt-hits, "
+            << ttReads << " tt-reads, "
+            << ttWrites << " tt-writes\n"
+            << benchTotalNodes << " nodes "
+            << benchTotalMs << " msec "
+            << ::nps(benchTotalNodes, benchTotalTime) << " nps";
+    }
 }
