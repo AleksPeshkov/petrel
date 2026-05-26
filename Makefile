@@ -81,7 +81,7 @@ LDFLAGS := $(BUILD_FLAGS)
 # === Build Targets ===
 MAKE_TARGET := @make --jobs --warn-undefined-variables --no-print-directory $(TARGET) CXX='$(CXX)'
 
-.PHONY: default release test debug clean run bench check unit FORCE
+.PHONY: default release test debug clean run bench perft unit FORCE
 
 default: $(BUILD_DIR)
 	$(CLS)
@@ -115,9 +115,9 @@ bench: default
 	$(CLS)
 	$(TARGET) bench
 
-check: test
+perft: test
 	$(CLS)
-	$(TEST_DIR)/expect.sh $(TARGET) $(TEST_DIR)/test.rc
+	$(TEST_DIR)/expect.sh $(TARGET) $(TEST_DIR)/perft.rc
 
 unit:
 	@cd $(UNIT_TEST_DIR) && $(MAKE) -s CXX='$(CXX)' run

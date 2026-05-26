@@ -1,7 +1,7 @@
 #include "Hyperbola.hpp"
 
-constexpr HyperbolaDir hyperbolaDir; // 4k 64*2*32
-constexpr HyperbolaSq hyperbolaSq; // 2k 64*32
+constinit HyperbolaDir hyperbolaDir; // 4k 64*2*32
+constinit HyperbolaSq hyperbolaSq; // 2k 64*32
 
 void test_hyperbola_rook_attack() {
     Square from{D4};
@@ -22,7 +22,7 @@ void test_hyperbola_rook_attack() {
         std::cerr << "Expected:\n" << expected << "\n";
     }
 
-    assert((attacks == expected) && "Rook attack failed");
+    assert ((attacks == expected) && "Rook attack failed");
 }
 
 void test_hyperbola_bishop_attack() {
@@ -45,7 +45,7 @@ void test_hyperbola_bishop_attack() {
         std::cerr << "Expected:\n" << expected << "\n";
     }
 
-    assert((attacks == expected) && "Bishop attack failed on diagonal");
+    assert ((attacks == expected) && "Bishop attack failed on diagonal");
 }
 
 void test_hyperbola_queen_attack() {
@@ -72,7 +72,7 @@ void test_hyperbola_queen_attack() {
         std::cerr << "Expected:\n" << expected << "\n";
     }
 
-    assert((attacks == expected) && "Queen attack failed");
+    assert ((attacks == expected) && "Queen attack failed");
 }
 
 namespace TestHyperbola {
