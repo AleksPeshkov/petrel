@@ -7,8 +7,14 @@ SRC_DIR := src
 TEST_DIR := tests/integration
 UNIT_TEST_DIR := tests/unit
 
-CXX := clang++
-#CXX := g++
+# Force CXX to clang++ unless user explicitly sets it
+ifeq ($(origin CXX), command line)
+	# Keep user choice
+else
+	override CXX := clang++
+	#override CXX := g++
+endif
+
 RM := rm -rf
 MKDIR := mkdir -p
 CLS := clear
@@ -20,6 +26,7 @@ CHECKSUM ?= sha1sum
 # === Tag Files for Build Type ===
 TAG_TEST  := $(BUILD_DIR)/tag_test
 TAG_DEBUG := $(BUILD_DIR)/tag_debug
+COMPILER_STAMP := $(BUILD_DIR)/.compiler-stamp
 
 # === Common Flags ===
 BUILD_ARCH := -march=native -mtune=native
@@ -72,9 +79,9 @@ CXXFLAGS := $(BUILD_ARCH) $(BUILD_FLAGS) $(CXXFLAGS) $(WARNINGS) $(DEFINES)
 LDFLAGS := $(BUILD_FLAGS)
 
 # === Build Targets ===
-MAKE_TARGET := @make --jobs --warn-undefined-variables --no-print-directory $(TARGET)
+MAKE_TARGET := @make --jobs --warn-undefined-variables --no-print-directory $(TARGET) CXX='$(CXX)'
 
-.PHONY: default release test debug clean run bench check unit
+.PHONY: default release test debug clean run bench check unit FORCE
 
 default: $(BUILD_DIR)
 	$(CLS)
@@ -113,7 +120,7 @@ check: test
 	$(TEST_DIR)/expect.sh $(TARGET) $(TEST_DIR)/test.rc
 
 unit:
-	@cd $(UNIT_TEST_DIR) && $(MAKE) -s run > /dev/null || true
+	@cd $(UNIT_TEST_DIR) && $(MAKE) -s CXX='$(CXX)' run
 
 # === Build Rules ===
 
@@ -121,10 +128,26 @@ SOURCES := $(wildcard $(SRC_DIR)/*.cpp)
 OBJECTS := $(patsubst $(SRC_DIR)/%.cpp, $(BUILD_DIR)/%.o, $(SOURCES))
 DEPS := $(patsubst %.o, %.d, $(OBJECTS))
 
-$(TARGET): $(OBJECTS)
+$(TARGET): $(OBJECTS) | $(COMPILER_STAMP)
 	$(CXX) -o $@ $(LDFLAGS) $^
 
-$(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp
+$(COMPILER_STAMP): FORCE | $(BUILD_DIR)
+	@type="release"; \
+	if [ -f "$(TAG_TEST)" ]; then type="test"; \
+	elif [ -f "$(TAG_DEBUG)" ]; then type="debug"; \
+	fi; \
+	prev=""; \
+	if [ -f "$(COMPILER_STAMP)" ]; then \
+		prev="$$(cat '$(COMPILER_STAMP)' 2>/dev/null || echo '')"; \
+	fi; \
+	curr="$${type}_$(CXX)"; \
+	if [ "x$$curr" != "x$$prev" ]; then \
+		$(RM) $(OBJECTS) $(TARGET); \
+		echo "$$curr" > "$(COMPILER_STAMP)"; \
+	fi
+
+# All objects depend on compiler stamp
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp $(COMPILER_STAMP)
 	$(CXX) -c -o $@ $< -MMD -MP $(CXXFLAGS)
 
 $(BUILD_DIR)/main.o: $(SRC_DIR)/main.cpp $(NNUE_STAMP)
@@ -139,5 +162,7 @@ $(NNUE_STAMP): $(BUILD_DIR)
 $(BUILD_DIR): Makefile
 	@$(RM) $@
 	@$(MKDIR) $@
+
+FORCE:
 
 -include $(DEPS)

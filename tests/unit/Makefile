@@ -2,12 +2,15 @@
 BUILD_DIR ?= ../../build/unit
 TARGET = $(BUILD_DIR)/test
 
-RM = rm -rf
-MKDIR = mkdir -p
+# Compiler tracking
+COMPILER_STAMP := $(BUILD_DIR)/.compiler-stamp
+
+RM := rm -rf
+MKDIR := mkdir -p
 
 # Compiler and flags
-CXX = clang++
-CXXFLAGS = -MMD -MP -std=c++20 -Wall -Wextra -g -I../../src -O0 -ggdb -DDEBUG -fsanitize=address,undefined
+CXX ?= clang++
+CXXFLAGS := -MMD -MP -std=c++20 -Wall -Wextra -g -I../../src -O0 -ggdb -DDEBUG -fsanitize=address,undefined
 CXXFLAGS += -mavx2
 
 # Source files
@@ -22,29 +25,42 @@ SRC_OBJECTS  = $(addprefix $(BUILD_DIR)/, $(notdir $(SRC_SOURCES:.cpp=.o)))
 OBJECTS = $(TEST_OBJECTS) $(SRC_OBJECTS)
 DEPS = $(OBJECTS:.o=.d)
 
-.PHONY: all run clean
+.PHONY: all run clean FORCE
 
 all: $(BUILD_DIR) $(TARGET) run
 
-# Run the test
 run: $(TARGET)
 	@echo "Running tests..."
 	@./$(TARGET) || (echo "Tests failed!"; exit 1)
 
-# Clean up
 clean:
 	$(RM) $(BUILD_DIR)
 
+FORCE:
+
+# Compiler change detection
+$(COMPILER_STAMP): FORCE | $(BUILD_DIR)
+	@prev=""; \
+	if [ -f "$@" ]; then prev="$$(cat '$@' 2>/dev/null || echo '')"; fi; \
+	curr="$(CXX)"; \
+	if [ "x$$curr" != "x$$prev" ]; then \
+		echo "🔄 Compiler changed: $$prev → $$curr, rebuilding..."; \
+		$(RM) $(OBJECTS) $(TARGET); \
+		echo "$$curr" > '$@'; \
+	else \
+		echo "✅ Compiler unchanged: $$curr"; \
+	fi
+
 # Compile test .cpp files
-$(BUILD_DIR)/%.o: %.cpp | $(BUILD_DIR)
+$(BUILD_DIR)/%.o: %.cpp $(COMPILER_STAMP)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 # Compile src .cpp files (from ../../src)
-$(BUILD_DIR)/%.o: ../../src/%.cpp | $(BUILD_DIR)
+$(BUILD_DIR)/%.o: ../../src/%.cpp $(COMPILER_STAMP)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 # Link final binary
-$(TARGET): $(OBJECTS)
+$(TARGET): $(OBJECTS) | $(COMPILER_STAMP)
 	$(CXX) -o $@ $^ $(CXXFLAGS)
 
 # Ensure build directory exists
