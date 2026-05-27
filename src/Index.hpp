@@ -372,6 +372,7 @@ public:
     constexpr Square to() const { return Square::unpack(v_, ShiftTo); }
     constexpr HistoryType historyType() const { assert (any()); return HistoryType::unpack(v_, ShiftType); }
 
+    constexpr explicit operator bool() const { return any(); }
     friend constexpr bool operator == (HistoryMove a, HistoryMove b) { return a.v_ == b.v_; }
 };
 
@@ -400,6 +401,7 @@ public:
     constexpr Square to() const { return Square::unpack(v_, ShiftTo); }
     constexpr bool isSpecial() const { return ::unpack(v_, ShiftSpecial, true); }
 
+    constexpr explicit operator bool() const { return any(); }
     friend constexpr bool operator == (UciMove a, UciMove b) { return a.v_ == b.v_; }
 };
 

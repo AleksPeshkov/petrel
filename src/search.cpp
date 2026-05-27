@@ -704,7 +704,7 @@ ReturnStatus Node::updatePv() {
 
         RETURN_IF_STOP (root.limits.updateTimeStrategy(root.pv));
 
-        ::insert_unique(root.rootBestMoves, bestMove);
+        ::insert_unique_compact(root.rootBestMoves, bestMove);
         if (depth > 1_ply) { root.info_pv(); }
     }
 
@@ -715,9 +715,9 @@ void Node::updateHistory(HistoryMove historyMove) const {
     assert (isPseudoLegal(historyMove));
     if (!parent) { return; }
 
-    insert_unique(parent->killer, historyMove);
+    ::insert_unique_pos(parent->killer, historyMove);
     if (parent->grandParent) {
-        insert_unique<2>(parent->grandParent->killer, historyMove);
+        ::insert_unique_pos<2>(parent->grandParent->killer, historyMove);
     }
 
     if (parent->currentMove.any()) {

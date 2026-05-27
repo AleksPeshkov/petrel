@@ -5,39 +5,90 @@
 #include "Score.hpp"
 
 /**
- * Inserts or moves `value` to position `Pos` in the array, preserving uniqueness.
- * - If `value` is already present in [0, Pos): no action (already prioritized).
- * - Else if `value` is found at i >= Pos: moves it to position `Pos`.
- * - Otherwise: inserts at `Pos`, shifting [Pos, end-1] right (last element dropped).
+ * Inserts unique non empty `value` to position `Pos` in the array.
  *
- * Useful for history heuristics where earlier positions have higher priority.
+ * Behavior:
+ * - Insert at `Pos`, shifting elements in [Pos, gap) right by one,
+ *   where `gap` is the first empty slot (`{}`) in [Pos, Size-1). If no gap exists,
+ *   shifts [Pos, Size-1) right, evicting the last element.
+ * - If `value` is already present at [0, `Pos`]: do nothing (already prioritized).
+ * - If `value` is already present at index > `Pos`: remove it before inserting again at correct `Pos`
  *
- * @tparam Pos Target position (should be < Size)
- * @tparam T Element type
- * @tparam Size Array size
- * @param arr Array to update
- * @param value Value to insert or move
+ * @tparam Pos Target position (must be < Size)
+ * @tparam value_type Element type (must support `operator==` and contextually convertible to `bool`)
+ * @tparam Size   Array size
+ * @param arr  Array to update
+ * @param value  Value to insert
  */
-template <size_t Pos = 0, typename T, size_t Size>
-void insert_unique(std::array<T, Size>& arr, const T& value) {
-    static_assert (Pos < Size, "Pos must be less than container size");
+template <size_t Pos = 0, typename value_type, size_t Size>
+constexpr void insert_unique_pos(std::array<value_type, Size>& arr, value_type value) {
+    static_assert(Pos < Size, "Insert position must be within bounds");
+    assert(value);
 
-    auto begin = arr.begin();
-    auto pos = begin + Pos;
-    auto end = begin + Size;
+    const auto begin = arr.begin();
+    const auto end = arr.end();
+    const auto pos = begin + Pos;
 
-    // already in high-priority zone?
-    if (std::find(begin, pos, value) != pos) { return; }
-
-    // found later?
-    auto found = std::find(pos, end, value);
+    auto found = std::find_if(begin, end, [&](value_type v) { return v == value; });
     if (found != end) {
-        std::rotate(pos, found, found + 1);
-    } else {
-        // insert at Pos, shift right, drop last
-        std::copy_backward(pos, end - 1, end);
-        *pos = value;
+        if (found < pos + 1) { return; } // already present at correct position
+        *found = value_type{}; // remove duplication at wrong position
     }
+
+    if (pos != end - 1) {
+        // find nearest right empty slot in [pos, end-1) — this also marks start of "gap"
+        auto gap = std::find_if(pos, end - 1, [](value_type v) { return !static_cast<bool>(v); });
+        if (pos != gap) {
+            // preserve more valuable left entries by filling empty gaps or by evicting last entry
+            std::copy_backward(pos, gap, gap + 1);
+        }
+    }
+
+    *pos = value;
+}
+
+/**
+ * Inserts non empty `value` to an early position in the array, preserving uniqueness and compactness.
+ * - Inserts at `Pos` or the first empty slot in [0, Pos).
+ * - If `value` is already present in [0, Pos): no action (already prioritized).
+ * - if `value` is found elsewhere: removes it (marks as empty) so it can be reinserted early.
+ * - If no empty slot exists in [0, Pos]: inserts at `Pos`, shifting [Pos, end-1] right (last element dropped).
+ *
+ * This ensures:
+ * - No duplicates,
+ * - No empty gaps from the beginning,
+ *
+ * @tparam Pos  Maximum target index for insertion (must be < Size)
+ * @tparam value_type Element type (must support `operator==` and be contextually convertible to `bool`)
+ * @tparam Size Array size
+ * @param arr   Array to update
+ * @param value Value to insert
+ */
+template <size_t Pos = 0, typename value_type, size_t Size>
+constexpr void insert_unique_compact(std::array<value_type, Size>& arr, value_type value) {
+    static_assert(Pos < Size, "Pos must be less than container size");
+    assert(value); // value must be valid
+
+    const auto begin = arr.begin();
+    const auto end = arr.end();
+    const auto pos = begin + Pos;
+
+    auto found = std::find_if(begin, end, [&](value_type v) { return v == value; });
+    if (found != end) {
+        if (found <= pos) { return; } // already present at correct position
+        *found = value_type{}; // remove duplication at wrong position
+    }
+
+    // find first empty slot from the begining till last by one element
+    auto gap = std::find_if(begin, end - 1, [](value_type v) { return !static_cast<bool>(v); });
+    if (gap <= pos) {
+        *gap = value;
+        return;
+    }
+
+    // preserve more valuable left entries till the first gap or by evicting last entry
+    std::copy_backward(pos, gap, gap + 1);
+    *pos = value;
 }
 
 template<int _Size>
@@ -60,9 +111,10 @@ public:
         return v_[color][move.historyType()][move.from()][move.to()][i];
     }
 
+    template <size_t Pos = 0>
     constexpr void set(Color color, HistoryMove move, HistoryMove bestMove) {
         assert (move.any()); assert (bestMove.any());
-        insert_unique(v_[color][move.historyType()][move.from()][move.to()], bestMove);
+        ::insert_unique_compact<Pos>(v_[color][move.historyType()][move.from()][move.to()], bestMove);
     }
 };
 
