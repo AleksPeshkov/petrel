@@ -1,6 +1,7 @@
 #ifndef BIT_OPS_128_HPP
 #define BIT_OPS_128_HPP
 
+#include <array>
 #include "bitops.hpp"
 
 using u8x16_t =  u8_t __attribute__((vector_size(16)));
