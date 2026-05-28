@@ -1,15 +1,19 @@
 #ifndef BIT_OPS_HPP
 #define BIT_OPS_HPP
 
-#include <algorithm>
-#include <array>
 #include <bit>
 #include <cstdint>
-#include <cstring>
+#include <limits>
 #include <type_traits>
 #include "common.hpp"
 
 #define CACHE_ALIGN alignas(64)
+
+#if defined _WIN32
+#   define U64(number) number##ull
+#else
+#   define U64(number) number##ul
+#endif
 
 using std::size_t;
 using i8_t = std::int8_t;
@@ -21,11 +25,11 @@ using u32_t = std::uint32_t;
 using i64_t = std::int64_t;
 using u64_t = std::uint64_t;
 
-#if defined _WIN32
-#   define U64(number) number##ull
-#else
-#   define U64(number) number##ul
-#endif
+using node_count_t = u64_t;
+enum : node_count_t {
+    NodeCountNone = std::numeric_limits<node_count_t>::max(),
+    NodeCountMax  = NodeCountNone - 1
+};
 
 template <typename T> [[nodiscard]] constexpr bool operator != (T a, T b) { return !(a == b); }
 template <typename T> [[nodiscard]] constexpr bool operator >  (T a, T b) { return b < a; }

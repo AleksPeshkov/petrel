@@ -1,3 +1,4 @@
+#include <set>
 #include <utility>
 #include "perft.hpp"
 #include "search.hpp"

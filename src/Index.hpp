@@ -1,9 +1,10 @@
 #ifndef INDEX_HPP
 #define INDEX_HPP
 
-#include <limits>
+#include <algorithm>
+#include <cstring>
+#include <iomanip>
 #include <ranges>
-#include <type_traits>
 
 #include "bitops.hpp"
 #include "io.hpp"
@@ -190,12 +191,6 @@ struct Ply : Index<Ply, 64> {
 };
 constexpr Ply MaxPly{Ply::last()}; // Ply is limited to [0 .. MaxPly]
 constexpr Ply operator""_ply(unsigned long long n) { return Ply{static_cast<Ply::_t>(n)}; }
-
-using node_count_t = u64_t;
-enum : node_count_t {
-    NodeCountNone = std::numeric_limits<node_count_t>::max(),
-    NodeCountMax  = NodeCountNone - 1
-};
 
 enum file_t { FileA, FileB, FileC, FileD, FileE, FileF, FileG, FileH, };
 struct File : Index<File, 8, file_t> {
