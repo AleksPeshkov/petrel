@@ -319,8 +319,7 @@ public:
     constexpr PieceType typeOf(Pi pi) const { assertOk(pi); return PieceType{static_cast<PieceType::_t>( ::lsb(static_cast<unsigned>(type[pi])) )}; }
 
     constexpr PiMask pieces() const { return PiMask::any(u8x16); }
-    constexpr PiMask piecesOfType(PieceType::_t ty) const { assert (!PieceType{ty}.is(King)); return any(element(ty)); }
-    constexpr PiMask piecesOfType(PieceType ty) const { return piecesOfType(*ty); }
+    constexpr PiMask piecesOf(PieceType::_t ty) const { assert (!PieceType{ty}.is(King)); return any(element(ty)); }
 
     // Queens, Rooks, Bishops
     constexpr PiMask sliders() const { return any(Sliders); }

@@ -341,7 +341,7 @@ bool PositionSide::setValidCastling(CastlingSide castlingSide) {
     }
 
     Square sqOuter{sqKing()};
-    for (Pi rook : piecesOfType(Rook) & piecesOn(Rank1)) {
+    for (Pi rook : types.piecesOf(Rook) & piecesOn(Rank1)) {
         if (CastlingRules::castlingSide(sqOuter, sq(rook)).is(*castlingSide)) {
             sqOuter = sq(rook);
         }
