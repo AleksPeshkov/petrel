@@ -174,13 +174,3 @@ void PositionMoves::generateMoves() {
     generateMoves<My>();
     movesMade_ = 0;
 }
-
-bool PositionMoves::isNonCapture(Pi pi, Square to) const {
-    // any promotion move, with or without capture (including underpromotion)
-    if (MY.isPromotable(pi)) { return false; }
-
-    //TRICK: can trigger false negative in case of underpromotion move
-    if (OP.bbSide().has(~to)) { return false; }
-
-    return true;
-}

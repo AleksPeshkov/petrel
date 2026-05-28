@@ -390,7 +390,7 @@ ReturnStatus Node::goodNonCaptures(Pi pi, Bb moves, Ply R) {
     Square from{MY.sq(pi)};
     for (Square to : moves) {
         assert (!OP.bbPawnAttacks().has(~to));
-        assert (isNonCapture(pi, to));
+        assert (isQuietMove(pi, to));
 
         if (bbAttacked().has(to)) {
             if ((OP.attackersTo(~to) & opLessValue).any()) {
