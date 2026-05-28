@@ -53,8 +53,8 @@ public:
         return isPseudoLegal(move) && isPossibleMove(move.from(), move.to());
     }
 
-    // non capture nor promotion move
-    bool isNonCapture(Pi, Square) const;
+    // nor capture nor promotion move
+    constexpr bool isQuietMove(Pi pi, Square to) const { return !MY.isPromotable(pi) && !OP.bbSide().has(~to); }
 
     // attacked squares by not side to move pieces (op)
     constexpr Bb bbAttacked() const { return bbAttacked_; }
