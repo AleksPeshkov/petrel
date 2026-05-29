@@ -49,15 +49,15 @@ void PositionMoves::generatePawnMoves() {
         BitRank fileTo{ File{from} };
 
         //push to free square
-        fileTo %= BitRank{OCCUPIED, rankTo};
+        fileTo %= OCCUPIED.bitRank(rankTo);
 
         //double push
-        if ((rankTo.is(Rank3)) && (fileTo % BitRank{OCCUPIED, Rank{Rank4}}).any()) {
+        if ((rankTo.is(Rank3)) && (fileTo % OCCUPIED.bitRank(Rank{Rank4})).any()) {
             moves_.set(pi, Rank{Rank4}, fileTo);
         }
 
         //remove "captures" of free squares from default generated moves
-        fileTo += moves_[rankTo].bitRank(pi) & BitRank{OCCUPIED, rankTo};
+        fileTo += moves_[rankTo].bitRank(pi) & OCCUPIED.bitRank(rankTo);
 
         moves_.set(pi, rankTo, fileTo);
     }
@@ -67,20 +67,20 @@ template <Side::_t My>
 void PositionMoves::correctCheckEvasionsByPawns(Bb checkLine, Square checkFrom) {
     //TRICK: assumes Rank8 = 0
     //simple pawn push over check line
-    Bb potentialBlockers = checkLine << 8u;
+    Bb potentialBlockers = checkLine.pBackward();
 
     //the general case generates invalid diagonal moves to empty squares
-    Bb pawnDiagonalMoves = (checkLine << 9u) % Bb{FileA} | (checkLine << 7u) % Bb{FileH};
+    Bb pawnDiagonalMoves = checkLine.pBackwardDiag();
 
     Bb affectedPawns = MY.bbPawns() & (potentialBlockers | pawnDiagonalMoves);
     for (Square from : affectedPawns) {
         Bb bb = (Bb{from.rankForward()} & checkLine) + (::attacksFrom(Pawn, from) & Bb{checkFrom});
         Rank rankTo = Rank{from}.forward();
-        moves_.set(MY.pi(from), rankTo, BitRank{bb, rankTo});
+        moves_.set(MY.pi(from), rankTo, bb.bitRank(rankTo));
     }
 
     //pawns double push over check line
-    Bb pawnJumpEvasions = MY.bbPawns() & Bb{Rank2} & (checkLine << 16u) % (OCCUPIED << 8u);
+    Bb pawnJumpEvasions = MY.bbPawns() & Bb{Rank2} & checkLine.pBackward().pBackward() % OCCUPIED.pBackward();
     for (Square from : pawnJumpEvasions) {
         moves_.add(MY.pi(from), File{from}, Rank{Rank4});
     }

@@ -311,7 +311,7 @@ ReturnStatus Node::search() {
 
         // safe pawns pushes attacking non-pawns
         //TODO: double push attacks
-        Bb pawnsThreatsFrom = ((OP.bbSide() - OP.bbPawns()).pawnAttacks() % OP_OCCUPIED) >> 8;
+        Bb pawnsThreatsFrom = ((OP.bbSide() - OP.bbPawns()).pForwardDiag() % OP_OCCUPIED).pForward();
         Bb potentialAttackers = MY.bbPawns() & ~pawnsThreatsFrom;
         for (Square from : potentialAttackers) {
             Square to{File{from}, Rank{from}.forward()};

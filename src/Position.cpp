@@ -351,9 +351,9 @@ bool Position::afterDrop() {
 }
 
 Bb Position::bbPassedPawns() const {
-    Bb blockers = ~(OP.bbPawns() | OP.bbPawnAttacks() >> 8u);
+    Bb blockers = ~(OP.bbPawns() | OP.bbPawnAttacks().pForward());
     for (int i = 0; i < 5; ++i) {
-        blockers |= blockers << 8u;
+        blockers |= blockers.pBackward();
     }
     return MY.bbPawns() % blockers;
 }
