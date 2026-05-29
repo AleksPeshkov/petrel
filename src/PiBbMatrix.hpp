@@ -11,7 +11,7 @@ public:
     constexpr explicit PiRank (PiMask m) : BitArray{m.v()} {}
     constexpr explicit PiRank (File file) : PiRank{BitRank{file}} {}
     constexpr explicit PiRank (Pi pi) : PiRank{PiMask{pi}} {}
-    constexpr PiRank(Bb bb, Rank rank) : PiRank{BitRank{bb, rank}} {}
+    constexpr PiRank(Bb bb, Rank rank) : PiRank{bb.bitRank(rank)} {}
     constexpr PiRank(Pi pi, File file) : PiRank{PiRank{pi} & PiRank{file}} {}
     constexpr PiRank(Pi pi, BitRank br) : PiRank{PiRank{pi} & PiRank{br}} {}
 
@@ -65,7 +65,7 @@ public:
 
     constexpr void set(Pi pi, Bb bb) {
         for (auto rank : range<Rank>()) {
-            set(pi, rank, BitRank{bb, rank});
+            set(pi, rank, bb.bitRank(rank));
         }
     }
 

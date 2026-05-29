@@ -67,7 +67,7 @@ public:
     constexpr Bb bbPawns() const { return bbPawns_; }
 
     // bitboard of squares attacked by the given side pawns
-    constexpr Bb bbPawnAttacks() const { assert (bbPawnAttacks_ == bbPawns_.pawnAttacks()); return bbPawnAttacks_; }
+    constexpr Bb bbPawnAttacks() const { assert (bbPawnAttacks_ == bbPawns_.pForwardDiag()); return bbPawnAttacks_; }
 
     // incremental piece count and material score for the given side to move
     constexpr Material material() const { return material_; }

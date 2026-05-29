@@ -5,46 +5,52 @@
 #include "Index.hpp"
 
 /**
+ * a bit for each square of a chessboard rank
+ */
+class BitRank : public BitArray<BitRank, u8_t> {
+public:
+    static constexpr _t mask() { return 0xff; }
+    constexpr BitRank () : BitArray{} {}
+    constexpr explicit BitRank (_t v) : BitArray{v} {}
+    constexpr explicit BitRank (File file) : BitArray{static_cast<_t>(1 << +file)} {}
+};
+
+/**
  * BitBoard type: a bit for each chessboard square
  */
 class Bb : public BitSet<Bb, Square, u64_t> {
     Bb (int) = delete; // declared to catch type cast bugs
+    constexpr Bb operator << (unsigned offset) const { return Bb{v_ << offset}; }
+    constexpr Bb operator >> (unsigned offset) const { return Bb{v_ >> offset}; }
+
 public:
     constexpr Bb () : BitSet{} {}
     constexpr explicit Bb (_t bb) : BitSet{bb} {}
 
     constexpr explicit Bb (Square::_t sq) : Bb{::singleton<_t>(sq)} {}
-    constexpr explicit Bb (Square sq) : Bb{*sq} {}
     constexpr explicit Bb (File::_t file) : Bb{U64(0x0101'0101'0101'0101) << file} {}
-    constexpr explicit Bb (Rank::_t rank) : Bb{U64(0xff) << 8*rank} {}
+    constexpr explicit Bb (Rank::_t rank) : Bb{static_cast<_t>(BitRank::mask()) << 8*rank} {}
+
+    constexpr explicit Bb (Square sq) : Bb{*sq} {}
     constexpr explicit Bb (File file) : Bb{*file} {}
     constexpr explicit Bb (Rank rank) : Bb{*rank} {}
 
+    constexpr Bb (Rank rank, BitRank br) : Bb{static_cast<_t>(br.v()) << 8*+rank} {}
+    constexpr BitRank bitRank(Rank rank) {
+        return BitRank{static_cast<BitRank::_t>( v_>> 8*+rank & BitRank::mask() )};
+    }
+
     constexpr Bb operator ~ () const { return Bb{::byteswap(v_)}; }
+    constexpr void move(Square from, Square to) { assert (from != to); *this -= Bb{from}; *this += Bb{to}; }
 
-    void move(Square from, Square to) { assert (from != to); *this -= Bb{from}; *this += Bb{to}; }
-
-    constexpr Bb pawnAttacks() const { return (*this % Bb{FileA} >> 9u) | (*this % Bb{FileH} >> 7u); }
+    constexpr Bb pForward() const { return *this >> 8u; }
+    constexpr Bb pBackward() const { return *this << 8u; }
+    constexpr Bb pForwardDiag() const { return (*this % Bb{FileA} >> 9u) | (*this % Bb{FileH} >> 7u); }
+    constexpr Bb pBackwardDiag() const { return (*this % Bb{FileA} << 7u) | (*this % Bb{FileH} << 9u); }
 
     // bidirectional signed rank shift
     constexpr Bb shiftRank(signed r) { return Bb{ r >= 0 ? (v_ << 8*r) : (v_ >> -8*r) }; }
 
-    friend constexpr Bb operator << (Bb bb, unsigned offset) { return Bb{bb.v_ << offset}; }
-    friend constexpr Bb operator >> (Bb bb, unsigned offset) { return Bb{bb.v_ >> offset}; }
-
-    friend ostream& operator << (ostream& out, Bb bb) {
-        out << "    a b c d e f g h\n";
-        for (auto rank : range<Rank>()) {
-            out << Rank{rank} << " |";
-            for (auto file : range<File>()) {
-                Square sq{file, rank};
-                out << " " << (bb.has(sq) ? 'x'  : '.');
-            }
-            out << '\n';
-        }
-        out << "    a b c d e f g h\n";
-        return out;
-    }
 };
 
 constexpr Bb Square::bbRank() const { return Bb{Rank{*this}} - Bb{*this}; }
@@ -75,17 +81,6 @@ constexpr Bb Square::bb(signed df, signed dr) const {
 
     return Bb{ static_cast<Square::_t>((sq0x88 + (sq0x88 & 7)) >> 1) };
 }
-
-/**
- * a bit for each square of a chessboard rank
- */
-class BitRank : public BitArray<BitRank, u8_t> {
-public:
-    constexpr BitRank () : BitArray{} {}
-    constexpr explicit BitRank (_t v) : BitArray{v} {}
-    constexpr explicit BitRank (File file) : BitArray{static_cast<_t>(1 << +file)} {}
-    constexpr BitRank (Bb bb, Rank rank) : BitArray{small_cast<_t>(bb.v() >> 8*+rank)} {}
-};
 
 // line (file, rank, diagonal) in between two squares (excluding both ends) or 0 (32k)
 class CACHE_ALIGN InBetween {
@@ -124,6 +119,20 @@ public:
     constexpr Bb operator() (Square from, Square to) const { return inBetween[from][to]; }
 
 };
+
+inline ostream& operator << (ostream& os, Bb bb) {
+    os << "    a b c d e f g h\n";
+    for (auto rank : range<Rank>()) {
+        os << Rank{rank} << " |";
+        for (auto file : range<File>()) {
+            Square sq{file, rank};
+            os << " " << (bb.has(sq) ? 'x'  : '.');
+        }
+        os << '\n';
+    }
+    os << "    a b c d e f g h\n";
+    return os;
+}
 
 // line (file, rank, diagonal) in between two squares (excluding both ends) or 0
 extern const InBetween inBetween;
