@@ -267,8 +267,8 @@ public:
     constexpr Square (File file, Rank::_t rank) : Square{file, Rank{rank}} {}
     constexpr Square (File::_t file, Rank::_t rank): Square{File{file}, Rank{rank}} {}
 
-    constexpr explicit operator File() const { return File::unpack(v_, FileShift); }
-    constexpr explicit operator Rank() const { return Rank::unpack(v_, RankShift); }
+    constexpr File file() const { return File::unpack(v_, FileShift); }
+    constexpr Rank rank() const { return Rank::unpack(v_, RankShift); }
 
     // flip side of the board
     constexpr Square operator ~ () const {
@@ -278,8 +278,8 @@ public:
     /// move pawn forward
     constexpr Square rankForward() const { return Square{static_cast<_t>(v_ + A8 - A7)}; }
 
-    constexpr bool on(Rank::_t rank) const { return Rank{*this} == Rank{rank}; }
-    constexpr bool on(File::_t file) const { return File{*this} == File{file}; }
+    constexpr bool on(Rank::_t r) const { return rank() == Rank{r}; }
+    constexpr bool on(File::_t f) const { return file() == File{f}; }
 
     constexpr bool none() const { return v_ == null(); }
     constexpr bool any() const { return !none(); }
@@ -293,7 +293,7 @@ public:
     constexpr Bb bbAntidiag() const; // BitBoard of the antidiagonal of the square (excluding the square itself)
     constexpr Bb bbDirection(Direction) const; // BitBoard of the direction of the square (excluding the square itself)
 
-    friend ostream& operator << (ostream& out, Square sq) { return out << File{sq} << Rank{sq}; }
+    friend ostream& operator << (ostream& out, Square sq) { return out << sq.file() << sq.rank(); }
 };
 
 enum color_t { White, Black };

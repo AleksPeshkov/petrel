@@ -117,7 +117,7 @@ public:
     constexpr bool isEnPassant(Pi pi) const { return traits.isEnPassant(pi); }
     constexpr bool hasEnPassant() const { return enPassantPawns().any(); }
     constexpr Square sqEnPassant() const { Square ep{sq(traits.piEnPassant())}; assert (ep.on(Rank4)); return ep; }
-    constexpr File fileEnPassant() const { return File{sqEnPassant()}; }
+    constexpr File fileEnPassant() const { return sqEnPassant().file(); }
 
     constexpr PiMask pinners() const { return traits.pinners(); }
     bool isPinned(Bb) const;

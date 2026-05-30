@@ -20,14 +20,14 @@ istream& operator >> (istream& in, Square& sq) {
 class FenToBoard {
     struct SquareImportance {
         bool operator () (Square sq1, Square sq2) const {
-            if (Rank{sq1} != Rank{sq2}) {
-                return Rank{sq1} < Rank{sq2}; //Rank8 < Rank1
+            if (sq1.rank() != sq2.rank()) {
+                return sq1.rank() < sq2.rank(); //Rank8 < Rank1
             }
             else {
                 // FileD > FileE > FileC > FileF > FileB > FileG > FileA > FileH
                 // order gains a few Elo
                 constexpr array<int, File> order{6, 4, 2, 0, 1, 3, 5, 7};
-                return order[File{sq1}] < order[File{sq2}];
+                return order[sq1.file()] < order[sq2.file()];
             }
         }
     };
@@ -194,7 +194,7 @@ class CastlingToFen {
 
             switch (*chessVariant) {
                 case Chess960:
-                    castlingSymbol = File{positionSide.sq(pi)}.to_char();
+                    castlingSymbol = positionSide.sq(pi).file().to_char();
                     break;
 
                 case Orthodox:
@@ -269,12 +269,12 @@ istream& UciPosition::readMove(istream& in, Square& from, Square& to) const {
             PromoType promo{Queen};
             in >> promo;
             in.clear(); //promotion piece is optional
-            to = Square{File{to}, ::rankOf(promo)};
+            to = Square{to.file(), ::rankOf(promo)};
             return in;
         }
 
-        if (from.on(Rank5) && OP.hasEnPassant() && OP.fileEnPassant().is(File{to})) {
-            to = Square{File{to}, Rank5};
+        if (from.on(Rank5) && OP.hasEnPassant() && OP.fileEnPassant().is(to.file())) {
+            to = Square{to.file(), Rank5};
             return in;
         }
 
@@ -433,7 +433,7 @@ istream& UciPosition::readEnPassant(istream& in) {
 
     auto beforeSquare = in.tellg();
     if (in >> ep) {
-        if (!ep.on(colorToMove_.is(White) ? Rank6 : Rank3) || !setEnPassant( File{ep} )) {
+        if (!ep.on(colorToMove_.is(White) ? Rank6 : Rank3) || !setEnPassant(ep.file())) {
             return io::fail_pos(in, beforeSquare);
         }
     }

@@ -75,8 +75,8 @@ UciOutput& operator << (UciOutput& out, UciMove move) {
     //pawn promotion
     if (from.on(Rank7)) {
         //the type of a promoted pawn piece encoded in place of move to's rank
-        uciTo = Square{File{to}, isWhite ? Rank8 : Rank1};
-        out << uciFrom << uciTo << PromoType{::promoTypeFrom(Rank{to})};
+        uciTo = Square{to.file(), isWhite ? Rank8 : Rank1};
+        out << uciFrom << uciTo << PromoType{::promoTypeFrom(to.rank())};
         return out;
     }
 
@@ -84,7 +84,7 @@ UciOutput& operator << (UciOutput& out, UciMove move) {
     if (from.on(Rank5)) {
         //en passant capture move internally encoded as pawn captures pawn
         assert (to.on(Rank5));
-        out << uciFrom << Square{File{to}, isWhite ? Rank6 : Rank3};
+        out << uciFrom << Square{to.file(), isWhite ? Rank6 : Rank3};
         return out;
     }
 
@@ -93,8 +93,8 @@ UciOutput& operator << (UciOutput& out, UciMove move) {
         //castling move internally encoded as the rook captures the king
 
         if (out.chessVariant().is(Orthodox)) {
-            if (from.on(FileA)) { out << uciTo << Square{File{FileC}, Rank{uciFrom}}; return out; }
-            if (from.on(FileH)) { out << uciTo << Square{File{FileG}, Rank{uciFrom}}; return out; }
+            if (from.on(FileA)) { out << uciTo << Square{File{FileC}, uciFrom.rank()}; return out; }
+            if (from.on(FileH)) { out << uciTo << Square{File{FileG}, uciFrom.rank()}; return out; }
         }
 
         // Chess960:
