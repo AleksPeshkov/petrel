@@ -1,14 +1,7 @@
 #ifndef NNUE_HPP
 #define NNUE_HPP
 
-#ifdef __AVX2__
-    #define USE_AVX2 1
-    #include <immintrin.h>
-#else
-    #define USE_AVX2 0
-#endif
-
-#include <bit>
+#include "bitops256.hpp"
 #include "Index.hpp"
 
 using vi16x16_t = i16_t __attribute__((vector_size(32)));

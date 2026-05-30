@@ -508,8 +508,8 @@ istream& UciPosition::readMove(istream& in, Square& from, Square& to) const {
 }
 
 void UciPosition::limitMoves(istream& in) {
-    PiBbMatrix movesMatrix;
-    movesMatrix.clear();
+    PiBb moves;
+    moves.clear();
     int n = 0;
 
     while (in >> std::ws && !in.eof()) {
@@ -524,14 +524,14 @@ void UciPosition::limitMoves(istream& in) {
         }
 
         Pi pi = MY.pi(from);
-        if (!movesMatrix.has(pi, to)) {
-            movesMatrix.add(pi, to);
+        if (!moves.has(pi, to)) {
+            moves.add(pi, to);
             ++n;
         }
     }
 
     if (n) {
-        setMoves(movesMatrix);
+        setMoves(moves);
         in.clear();
         return;
     }

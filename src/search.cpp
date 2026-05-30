@@ -101,7 +101,7 @@ ReturnStatus Node::search() {
     bound = FailLow;
     assertOk();
 
-    if (moves().none()) {
+    if (moves().popcount() == 0) {
         // checkmate or stalemate
         score = inCheck() ? Score::mateLoss(ply) : Score{DrawScore};
         assert (currentMove.none());
