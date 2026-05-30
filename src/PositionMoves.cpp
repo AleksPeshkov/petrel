@@ -9,18 +9,22 @@ void PositionMoves::generateEnPassantMoves() {
 
     File file = OP.fileEnPassant();
     assert (MY.enPassantPawns() <= ( MY.pawns() & MY.attackersTo(Square{file, Rank6}) ));
-
-    moves_[Rank{Rank5}] |= PiRank(file) & PiRank{MY.enPassantPawns()};
+    for (Pi pi : MY.enPassantPawns()) {
+        moves_.add(pi, Square{file, Rank5});
+    }
 }
 
 template <Side::_t My>
 void PositionMoves::populateUnderpromotions() {
-    //add underpromotions for each already generated legal queen promotion
-    //TRICK: promoted piece type encoded inside pawn destination square rank
-    PiRank promotionFiles = moves_[Rank{Rank8}] & PiRank{MY.pawns()};
-    moves_[::rankOf(PromoType{Rook})]   += promotionFiles;
-    moves_[::rankOf(PromoType{Bishop})] += promotionFiles;
-    moves_[::rankOf(PromoType{Knight})] += promotionFiles;
+    for (Pi pi : MY.promotables()) {
+        //add underpromotions for each already generated legal queen promotion
+        //TRICK: promoted piece type encoded inside pawn destination square rank
+        Bb bb{moves_.bb(pi)};
+        bb += bb.pBackward(); // Rook, Rank7
+        bb |= bb.pBackward(); // Bishop, Rank6
+        bb |= bb.pBackward(); // Knight, Rank5
+        moves_.set(pi, bb);
+    }
 }
 
 template <Side::_t My>
@@ -45,44 +49,32 @@ void PositionMoves::generatePawnMoves() {
     for (Pi pi : MY.pawns()) {
         Square from{ MY.sq(pi) };
 
-        Rank rankTo{ from.rank().forward() };
-        BitRank fileTo{ from.file() };
-
-        //push to free square
-        fileTo %= OCCUPIED.bitRank(rankTo);
-
-        //double push
-        if ((rankTo.is(Rank3)) && (fileTo % OCCUPIED.bitRank(Rank{Rank4})).any()) {
-            moves_.set(pi, Rank{Rank4}, fileTo);
-        }
-
-        //remove "captures" of free squares from default generated moves
-        fileTo += moves_[rankTo].bitRank(pi) & OCCUPIED.bitRank(rankTo);
-
-        moves_.set(pi, rankTo, fileTo);
+        Bb bb{ Bb{from}.pForward() % OCCUPIED }; // push
+        bb += (bb & Bb{Rank3}).pForward() % OCCUPIED; // double push
+        bb += ::attacksFrom(Pawn, from) & ~OP.bbSide(); // captures
+        moves_.set(pi, bb);
     }
 }
 
 template <Side::_t My>
 void PositionMoves::correctCheckEvasionsByPawns(Bb checkLine, Square checkFrom) {
-    //TRICK: assumes Rank8 = 0
-    //simple pawn push over check line
+    // simple pawn push over check line
     Bb potentialBlockers = checkLine.pBackward();
 
-    //the general case generates invalid diagonal moves to empty squares
-    Bb pawnDiagonalMoves = checkLine.pBackwardDiag();
+    // illegal phantom diagonal captures to fix
+    Bb potentialInvalidCaptures = checkLine.pBackwardDiag();
 
-    Bb affectedPawns = MY.bbPawns() & (potentialBlockers | pawnDiagonalMoves);
-    for (Square from : affectedPawns) {
+    for (Square from : MY.bbPawns() & (potentialBlockers | potentialInvalidCaptures)) {
         Bb bb = (Bb{from.rankForward()} & checkLine) + (::attacksFrom(Pawn, from) & Bb{checkFrom});
-        Rank rankTo = from.rank().forward();
-        moves_.set(MY.pi(from), rankTo, bb.bitRank(rankTo));
+        moves_.set(MY.pi(from), bb);
     }
 
-    //pawns double push over check line
-    Bb pawnJumpEvasions = MY.bbPawns() & Bb{Rank2} & checkLine.pBackward().pBackward() % OCCUPIED.pBackward();
+    //TODO: refactor this
+    // pawns double push over check line
+    Bb pawnJumpEvasions = MY.bbPawns() & Bb{Rank2} & checkLine.pBackward().pBackward();
+    pawnJumpEvasions %= OCCUPIED.pBackward(); // exlcude double push through occupied square
     for (Square from : pawnJumpEvasions) {
-        moves_.add(MY.pi(from), from.file(), Rank{Rank4});
+        moves_.add(MY.pi(from), Square{from.file(), Rank4});
     }
 }
 
@@ -116,15 +108,17 @@ void PositionMoves::generateCheckEvasions() {
 
     PiMask checkers = OP.checkers();
 
-    if (checkers.isSingleton()) {
-        //single checker case
+    if (!checkers.isSingleton()) {
+        moves_ = {}; //double check case: no moves except king's ones are possible
+    } else { // common single checker case
         Pi checker = checkers.pi();
         Square checkFrom{~OP.sq(checker)};
-
         Bb checkLine = ::inBetween(MY.sqKing(), checkFrom);
 
-        //general case: check evasion moves of all pieces
-        moves_ = MY.attacks() & (checkLine + Bb{checkFrom});
+        // check evasion moves of all pieces
+        // (including invalid phantom pawn captures and missing pawn non-captures)
+        moves_.setAttacks(MY.attacks());
+        moves_ &= checkLine + Bb{checkFrom};
 
         //pawns moves are special case
         correctCheckEvasionsByPawns<My>(checkLine, checkFrom);
@@ -133,11 +127,8 @@ void PositionMoves::generateCheckEvasions() {
 
         populateUnderpromotions<My>();
 
+        // trust out legal enpassant flag
         if (MY.hasEnPassant()) { assert (OP.enPassantPawns() == checkers); generateEnPassantMoves<My>(); }
-    }
-    else {
-        //double check case: no moves except king's ones are possible
-        moves_ = {};
     }
 
     generateLegalKingMoves<My>();
@@ -157,19 +148,23 @@ void PositionMoves::generateMoves() {
         return;
     }
 
-    //the most general case: captures and non captures for all pieces
-    moves_ = MY.attacks() % MY.bbSide();
+    // create pseudolegal moves from piece attacks
+    // (including invalid phantom pawn captures and missing pawn non-captures)
+    moves_.setAttacks(MY.attacks());
+    moves_ %= MY.bbSide();
 
-    //pawns moves treated separately
+    // pawns moves treated separately
     generatePawnMoves<My>();
 
+    //TRICK: castling encoded as a rook move, so we implicitly cover the case of pinned castling in Chess960
     generateCastlingMoves<My>();
 
-    //TRICK: castling encoded as a rook move, so we implicitly cover the case of pinned castling in Chess960
     excludePinnedMoves<My>(OP.pinners());
 
+    // encoding underpromotions: generate pseudomoves mirroring already generated queen promotions
     populateUnderpromotions<My>();
 
+    // trust out legal enpassant flag
     if (MY.hasEnPassant()) { generateEnPassantMoves<My>(); }
 
     generateLegalKingMoves<My>();

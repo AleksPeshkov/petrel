@@ -9,7 +9,7 @@
 using MovesNumber = int; // number of (legal) moves in the position
 
 class PositionMoves : public Position {
-    mutable PiBbMatrix moves_; // generated strictly legal moves
+    mutable PiBb moves_; // generated strictly legal moves
 
     Bb bbAttacked_; // bitboard of squares attacked by any opponent (not side to move) piece (set during moves generation)
     mutable MovesNumber movesMade_; // number of moves already made in this node (set to 0 during moves generation)

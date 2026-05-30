@@ -7,12 +7,16 @@
 /**
  * a bit for each square of a chessboard rank
  */
-class BitRank : public BitArray<BitRank, u8_t> {
+class BitRank {
+public:
+    using _t = u8_t;
+private:
+    _t v_;
 public:
     static constexpr _t mask() { return 0xff; }
-    constexpr BitRank () : BitArray{} {}
-    constexpr explicit BitRank (_t v) : BitArray{v} {}
-    constexpr explicit BitRank (File file) : BitArray{static_cast<_t>(1 << +file)} {}
+    constexpr BitRank () : v_{0} {}
+    constexpr explicit BitRank (_t v) : v_{v} {}
+    constexpr _t v() const { return v_; }
 };
 
 /**
@@ -35,7 +39,6 @@ public:
     constexpr explicit Bb (File file) : Bb{*file} {}
     constexpr explicit Bb (Rank rank) : Bb{*rank} {}
 
-    constexpr Bb (Rank rank, BitRank br) : Bb{static_cast<_t>(br.v()) << 8*+rank} {}
     constexpr BitRank bitRank(Rank rank) {
         return BitRank{static_cast<BitRank::_t>( v_>> 8*+rank & BitRank::mask() )};
     }
