@@ -3,7 +3,6 @@
 #include "TestHyperbola.hpp"
 #include "TestHistoryMoves.hpp"
 #include "TestRepetitions.hpp"
-#include "TestTranspose.hpp"
 
 /* mocks */
 
@@ -23,7 +22,6 @@ int main() {
         TestHyperbola::test();
         TestHistoryMoves::test();
         TestRepetitions::test();
-        TestTranspose::test();
 
         std::cerr << "✅ All tests passed!\n";
         return 0;

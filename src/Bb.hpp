@@ -5,21 +5,6 @@
 #include "Index.hpp"
 
 /**
- * a bit for each square of a chessboard rank
- */
-class BitRank {
-public:
-    using _t = u8_t;
-private:
-    _t v_;
-public:
-    static constexpr _t mask() { return 0xff; }
-    constexpr BitRank () : v_{0} {}
-    constexpr explicit BitRank (_t v) : v_{v} {}
-    constexpr _t v() const { return v_; }
-};
-
-/**
  * BitBoard type: a bit for each chessboard square
  */
 class Bb : public BitSet<Bb, Square, u64_t> {
@@ -33,15 +18,11 @@ public:
 
     constexpr explicit Bb (Square::_t sq) : Bb{::singleton<_t>(sq)} {}
     constexpr explicit Bb (File::_t file) : Bb{U64(0x0101'0101'0101'0101) << file} {}
-    constexpr explicit Bb (Rank::_t rank) : Bb{static_cast<_t>(BitRank::mask()) << 8*rank} {}
+    constexpr explicit Bb (Rank::_t rank) : Bb{U64(0xff) << 8*rank} {}
 
     constexpr explicit Bb (Square sq) : Bb{*sq} {}
     constexpr explicit Bb (File file) : Bb{*file} {}
     constexpr explicit Bb (Rank rank) : Bb{*rank} {}
-
-    constexpr BitRank bitRank(Rank rank) {
-        return BitRank{static_cast<BitRank::_t>( v_>> 8*+rank & BitRank::mask() )};
-    }
 
     constexpr Bb operator ~ () const { return Bb{::byteswap(v_)}; }
     constexpr void move(Square from, Square to) { assert (from != to); *this -= Bb{from}; *this += Bb{to}; }

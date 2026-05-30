@@ -51,8 +51,7 @@ Abbreviations in the code:
 * `PiSquare`: stores locations of active pieces or the `0xFF` NoSquare tag.
 * `PiType`: each piece type is represented as a separate bit, enabling quick grouping by criteria.
 * `PiTrait`: castling and en passant statuses, plus temporary information like currently checking pieces.
-* `PiBbMatrix`: matrix of Pi × Bb (128 bytes), used for storing and fast retrieving piece attacks.
-* `PiBb`: vector of Bb x Pi, generated using matrix transpostion of PiBbMatrix and used for storing chess moves.
+* `PiBb`: vector of Bb x Pi, for incremental attacks and moves generated from attacks.
 
 Move Encoding
 -------------
