@@ -722,19 +722,22 @@ void Node::updateHistory() {
     if (bestMove.none() || bestMove.canBeKiller() == CanBeKiller::No) { return; }
     assert (!inCheck());
 
-    if (!parent) { return; }
+    if (!parent) { return; } // ply-1
     insert_unique_compact(parent->killer, bestMove);
     if (parent->currentMove.any()) {
         root.contMoves.set(CounterMove, colorToMove(), parent->currentMove, bestMove);
     }
 
-    if (!grandParent) { return; }
+    if (!grandParent) { return; } // ply-2
     if (grandParent->currentMove.any()) {
         root.contMoves.set(FollowupMove, colorToMove(), grandParent->currentMove, bestMove);
     }
 
-    if (!grandParent->parent || !grandParent->isPseudoLegal(bestMove)) { return; }
+    if (!grandParent->parent || !grandParent->isPseudoLegal(bestMove)) { return; } // ply-3
     insert_unique_compact<1>(grandParent->parent->killer, bestMove);
+    if (grandParent->parent->currentMove.any()) {
+        root.contMoves.set<2>(CounterMove, colorToMove(), grandParent->parent->currentMove, bestMove);
+    }
 }
 
 constexpr Color Node::colorToMove() const { return root.colorToMove(ply); }
