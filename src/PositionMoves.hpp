@@ -48,7 +48,9 @@ public:
     constexpr bool isPossibleMove(Square from, Square to) const { return MY.has(from) && moves_.has(MY.pi(from), to); }
 
     // move is legal and not yet made
-    constexpr bool isPossibleMove(HistoryMove move) const { return isPseudoLegal(move) && isPossibleMove(move.from(), move.to()); }
+    constexpr bool isPossibleMove(HistoryMove move) const {
+        return move.any() && isPossibleMove(move.from(), move.to()) && move.historyType() == historyType(move.from(), move.to());
+    }
 
     // nor capture nor promotion move
     constexpr bool isQuietMove(Pi pi, Square to) const { return !MY.isPromotable(pi) && !OP.bbSide().has(~to); }
