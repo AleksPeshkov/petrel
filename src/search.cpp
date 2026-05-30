@@ -380,8 +380,6 @@ ReturnStatus Node::search() {
         RETURN_CUTOFF (searchIfPossible(parent->killer[1]));
         RETURN_CUTOFF (counterMove());
         RETURN_CUTOFF (followMove());
-
-        RETURN_CUTOFF (searchIfPossible(parent->killer[2]));
     }
 
     do {
@@ -703,9 +701,9 @@ void Node::updateHistory() {
 
     assert (!inCheck());
 
-    insert_unique_pos(parent->killer, bestMove);
+    insert_unique_compact(parent->killer, bestMove);
     if (parent->grandParent) {
-        insert_unique_pos<2>(parent->grandParent->killer, bestMove);
+        insert_unique_compact<1>(parent->grandParent->killer, bestMove);
     }
 
     if (parent->currentMove.any()) {

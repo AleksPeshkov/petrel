@@ -103,7 +103,7 @@ protected:
 
     HistoryMove currentMove{}; // last move made from *this into *child
     HistoryMove bestMove{}; // TtMove or best move found
-    mutable std::array<HistoryMove, 3> killer{}; // Killer heuristic, mutable to update from const* grandParent
+    mutable std::array<HistoryMove, 2> killer{}; // Killer heuristic, mutable to update from const* grandParent
 
 public:
     Node (const PositionMoves& _position, const Uci& _uci) : PositionMoves{_position}, root{_uci} {}
