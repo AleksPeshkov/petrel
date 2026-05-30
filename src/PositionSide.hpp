@@ -149,7 +149,9 @@ public:
         Square from{move.from()};
         Square to{move.to()};
 
-        return has(from) && move.historyType() == historyType(from, to);
+        return has(from)
+            && (move.historyType().is(HistorySpecial) || attacks_.has(pi(from), to))
+            && move.historyType() == historyType(from, to);
     }
 
 //friend class Position;
