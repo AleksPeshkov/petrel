@@ -102,7 +102,7 @@ void Position::makeMove(Square from, Square to) {
             rule50_.clear();
 
             Square ep{to};
-            to = Square{File{to}, Rank6};
+            to = Square{to.file(), Rank6};
 
             if constexpr (Flags & WithZobrist) {
                 zobrist_.move(Pawn, from, to);
@@ -128,8 +128,8 @@ void Position::makeMove(Square from, Square to) {
         rule50_.clear();
 
         if (from.on(Rank7)) {
-            PromoType promo{::promoTypeFrom(Rank{to})};
-            to = {File{to}, Rank8};
+            PromoType promo{::promoTypeFrom(to.rank())};
+            to = {to.file(), Rank8};
 
             if constexpr (Flags & WithZobrist) {
                 zobrist_.promote(from, promo, to);
@@ -316,7 +316,7 @@ void Position::setLegalEnPassant(Pi victim, Square to) {
     assert (!MY.hasEnPassant());
     assert (!OP.hasEnPassant());
 
-    Square ep{File{to}, Rank3};
+    Square ep{to.file(), Rank3};
 
     // check if there are any pawns to capture ep victim
     Bb killers = ~OP.bbPawns() & ::attacksFrom(Pawn, ep);
@@ -409,7 +409,7 @@ Zobrist Position::createZobrist(Square from, Square to) const {
 
         // en passant capture
         if (ty.is(Pawn) && from.on(Rank5) && to.on(Rank5)) {
-            mz.move(Pawn, from, Square{File{to}, Rank6});
+            mz.move(Pawn, from, Square{to.file(), Rank6});
             oz(Pawn, ~to);
             goto zobrist;
         }
@@ -417,8 +417,8 @@ Zobrist Position::createZobrist(Square from, Square to) const {
 
     if (ty.is(Pawn)) {
         if (from.on(Rank7)) {
-            PromoType promo{::promoTypeFrom(Rank{to})};
-            to = Square{File{to}, Rank8};
+            PromoType promo{::promoTypeFrom(to.rank())};
+            to = Square{to.file(), Rank8};
 
             mz.promote(from, promo, to);
             goto capture;
@@ -427,8 +427,7 @@ Zobrist Position::createZobrist(Square from, Square to) const {
         if (from.on(Rank2) && to.on(Rank4)) {
             mz.move(ty, from, to);
 
-            File file{from};
-            Square ep{file, Rank3};
+            Square ep{from.file(), Rank3};
 
             Bb killers = ~OP.bbPawns() & ::attacksFrom(Pawn, ep);
             if (killers.any() && !MY.isPinned(OCCUPIED - Bb{from} + Bb{ep})) {

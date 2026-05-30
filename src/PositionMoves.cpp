@@ -45,8 +45,8 @@ void PositionMoves::generatePawnMoves() {
     for (Pi pi : MY.pawns()) {
         Square from{ MY.sq(pi) };
 
-        Rank rankTo{ Rank{from}.forward() };
-        BitRank fileTo{ File{from} };
+        Rank rankTo{ from.rank().forward() };
+        BitRank fileTo{ from.file() };
 
         //push to free square
         fileTo %= OCCUPIED.bitRank(rankTo);
@@ -75,14 +75,14 @@ void PositionMoves::correctCheckEvasionsByPawns(Bb checkLine, Square checkFrom) 
     Bb affectedPawns = MY.bbPawns() & (potentialBlockers | pawnDiagonalMoves);
     for (Square from : affectedPawns) {
         Bb bb = (Bb{from.rankForward()} & checkLine) + (::attacksFrom(Pawn, from) & Bb{checkFrom});
-        Rank rankTo = Rank{from}.forward();
+        Rank rankTo = from.rank().forward();
         moves_.set(MY.pi(from), rankTo, bb.bitRank(rankTo));
     }
 
     //pawns double push over check line
     Bb pawnJumpEvasions = MY.bbPawns() & Bb{Rank2} & checkLine.pBackward().pBackward() % OCCUPIED.pBackward();
     for (Square from : pawnJumpEvasions) {
-        moves_.add(MY.pi(from), File{from}, Rank{Rank4});
+        moves_.add(MY.pi(from), from.file(), Rank{Rank4});
     }
 }
 

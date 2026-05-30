@@ -40,7 +40,7 @@ constexpr u64x2_t u64x2(Bb a, Bb b) {
 }
 
 //TRICK: Square operator~ is different
-constexpr Square reverse(Square sq) { return Square{ ~File{sq}, ~Rank{sq} }; }
+constexpr Square reverse(Square sq) { return Square{ ~sq.file(), ~sq.rank() }; }
 
 struct CACHE_ALIGN HyperbolaSq : array<u64x2_t, Square> {
     consteval HyperbolaSq () {

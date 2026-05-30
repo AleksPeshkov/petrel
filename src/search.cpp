@@ -314,7 +314,7 @@ ReturnStatus Node::search() {
         Bb pawnsThreatsFrom = ((OP.bbSide() - OP.bbPawns()).pForwardDiag() % OP_OCCUPIED).pForward();
         Bb potentialAttackers = MY.bbPawns() & ~pawnsThreatsFrom;
         for (Square from : potentialAttackers) {
-            Square to{File{from}, Rank{from}.forward()};
+            Square to{from.file(), from.rank().forward()};
             if (!bbMovesOf(MY.pi(from)).has(to)) { continue; }
             if (safeForOp(to)) { continue; }
             RETURN_CUTOFF (child->searchMove(from, to, 2_ply));

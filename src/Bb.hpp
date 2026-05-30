@@ -53,13 +53,13 @@ public:
 
 };
 
-constexpr Bb Square::bbRank() const { return Bb{Rank{*this}} - Bb{*this}; }
-constexpr Bb Square::bbFile() const { return Bb{File{*this}} - Bb{*this}; }
+constexpr Bb Square::bbRank() const { return Bb{rank()} - Bb{*this}; }
+constexpr Bb Square::bbFile() const { return Bb{file()} - Bb{*this}; }
 constexpr Bb Square::bbDiagonal() const {
-    return Bb{U64(0x0102'0408'1020'4080)}.shiftRank(+Rank{*this} + +File{*this} - 7) - Bb{*this};
+    return Bb{U64(0x0102'0408'1020'4080)}.shiftRank(+rank() + +file() - 7) - Bb{*this};
 }
 constexpr Bb Square::bbAntidiag() const {
-    return Bb{U64(0x8040'2010'0804'0201)}.shiftRank(+Rank{*this} - +File{*this}) - Bb{*this};
+    return Bb{U64(0x8040'2010'0804'0201)}.shiftRank(+rank() - +file()) - Bb{*this};
 }
 
 constexpr Bb Square::bbDirection(Direction dir) const {
@@ -98,16 +98,16 @@ public:
             for (auto to : range<Square>()) {
                 Bb result{};
 
-                if (File{from} == File{to}) {
+                if (from.file() == to.file()) {
                     result = areaInBetween(from, to) & from.bbFile();
                 }
-                else if (Rank{from} == Rank{to}) {
+                else if (from.rank() == to.rank()) {
                     result = areaInBetween(from, to) & from.bbRank();
                 }
-                else if (+File{from} + +Rank{from} == +File{to} + +Rank{to}) {
+                else if (+from.file() + +from.rank() == +to.file() + +to.rank()) {
                     result = areaInBetween(from, to) & from.bbDiagonal();
                 }
-                else if (+File{from} - +Rank{from} == +File{to} - +Rank{to}) {
+                else if (+from.file() - +from.rank() == +to.file() - +to.rank()) {
                     result = areaInBetween(from, to) & from.bbAntidiag();
                 }
 
@@ -205,8 +205,8 @@ public:
         assert (king.on(Rank1));
         assert (rook.on(Rank1));
         assert (king != rook);
-        return castlingRules[File{king}][File{rook}].unimpeded.none(occupied)
-            && castlingRules[File{king}][File{rook}].unattacked.none(attacked);
+        return castlingRules[king.file()][rook.file()].unimpeded.none(occupied)
+            && castlingRules[king.file()][rook.file()].unattacked.none(attacked);
     }
 
     static constexpr CastlingSide castlingSide(Square king, Square rook) {
