@@ -1,9 +1,5 @@
 #include "Position_impl.hpp"
 
-void Position::clear() {
-    accumulator.clear();
-}
-
 Score Position::evaluate() const {
     auto eval = accumulator.evaluate();
     return Score::clampEval(eval);

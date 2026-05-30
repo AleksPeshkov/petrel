@@ -159,6 +159,17 @@ protected:
     UciMove uciMove(Square from, Square to) const { return UciMove{from, to, isSpecialMove(from, to)}; }
 
 public:
+    constexpr Position() {}
+
+    constexpr void clear() {
+        accumulator.clear();
+        MY.clear();
+        OP.clear();
+        occupied_ = {};
+        zobrist_ = {};
+        rule50_ = {};
+    }
+
     // position hash
     constexpr Z z() const { return *zobrist_; }
 
@@ -173,7 +184,6 @@ public:
 
 // initial position setup in class UciPosition
 
-    void clear(); // init accumulators
     bool dropValid(Side, PieceType, Square);
     bool afterDrop();
     bool setEnPassant(File);

@@ -27,14 +27,16 @@ class PositionMoves : public Position {
     template <Side::_t> void generateMoves();
 
 protected:
-    void setMoves(const PiBbMatrix& moves) { moves_ = moves; movesMade_ = 0; }
+    void setMoves(const decltype(moves_)& moves) { moves_ = moves; movesMade_ = 0; }
     void clearMove(Square from, Square to) const { moves_.clear(MY.pi(from), to); ++movesMade_; }
 
 public:
+    constexpr PositionMoves () {}
+
     void generateMoves();
 
     // not yet made set of legal moves
-    constexpr const PiBbMatrix& moves() const { return moves_; }
+    constexpr const auto& moves() const { return moves_; }
 
     // already made moves count
     constexpr MovesNumber movesMade() const { return movesMade_; }
