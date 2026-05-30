@@ -7,16 +7,14 @@
 using u8x16_t =  u8_t __attribute__((vector_size(16)));
 using u64x2_t = u64_t __attribute__((vector_size(16)));
 
-constexpr u64_t u64(u64x2_t v, int i = 0) {
-    return std::bit_cast<std::array<u64_t, 2>>(v)[i];
-}
+constexpr u8x16_t x16(u8_t b) { return u8x16_t{ b,b,b,b, b,b,b,b, b,b,b,b, b,b,b,b }; }
 
-template <typename vector_type>
-constexpr vector_type shuffle(vector_type vector, vector_type mask) {
+template <typename vector_type, typename mask_type>
+constexpr vector_type shuffle(vector_type vector, mask_type mask) {
 #ifdef __clang__
-    return __builtin_shufflevector(vector, mask);
+    return __builtin_shufflevector(static_cast<mask_type>(vector), mask);
 #else
-    return __builtin_shuffle(vector, mask);
+    return __builtin_shuffle(static_cast<mask_type>(vector), mask);
 #endif
 }
 

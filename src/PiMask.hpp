@@ -12,10 +12,6 @@
 #include "bitops128.hpp"
 #include "BitArray.hpp"
 
-constexpr u8x16_t x16(u8_t b) {
-    return u8x16_t{ b,b,b,b, b,b,b,b, b,b,b,b, b,b,b,b };
-}
-
 constexpr u8_t u8(u8x16_t v, int i) {
     return std::bit_cast<std::array<u8_t, 16>>(v)[i];
 }

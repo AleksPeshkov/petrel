@@ -1,7 +1,7 @@
 #ifndef POSITION_SIDE_HPP
 #define POSITION_SIDE_HPP
 
-#include "PiBbMatrix.hpp"
+#include "PiBb.hpp"
 #include "PiMask.hpp"
 #include "Score.hpp"
 
@@ -9,7 +9,7 @@
 // TRICK: all squares always relative to the point of view of given side
 // (so the king piece is initially on E1 square regardless color)
 class PositionSide {
-    PiBbMatrix attacks_; // squares attacked by a piece and pieces attacking to a square
+    PiBb attacks_; // squares attacked by a piece and pieces attacking to a square
     PiType types; // chess type of each alive piece: king, pawn, knignt, bishop, rook, queen
     PiTrait traits; // rooks with castling rights, pawns affected by en passant, pinner pieces, checker pieces
     PiSquare squares; // onboard square locations of the alive pieces or 'NoSquare' special value

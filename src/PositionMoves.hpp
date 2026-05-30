@@ -2,7 +2,6 @@
 #define POSITION_MOVES_HPP
 
 #include "Position.hpp"
-#include "PiBbMatrix.hpp"
 
 #define RETURN_IF_STOP(visitor) { if (visitor == ReturnStatus::Stop) { return ReturnStatus::Stop; } } ((void)0)
 
