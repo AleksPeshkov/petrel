@@ -697,22 +697,21 @@ void Node::updateHistory() {
     }
 
     if (bestMove.none() || bestMove.canBeKiller() == CanBeKiller::No) { return; }
-    if (!parent) { return; }
-
     assert (!inCheck());
 
+    if (!parent) { return; }
     insert_unique_compact(parent->killer, bestMove);
-    if (parent->grandParent) {
-        insert_unique_compact<1>(parent->grandParent->killer, bestMove);
-    }
-
     if (parent->currentMove.any()) {
         root.counterMove.set(colorToMove(), parent->currentMove, bestMove);
     }
 
-    if (grandParent && grandParent->currentMove.any()) {
+    if (!grandParent) { return; }
+    if (grandParent->currentMove.any()) {
         root.followMove.set(colorToMove(), grandParent->currentMove, bestMove);
     }
+
+    if (!grandParent->parent || !grandParent->isPseudoLegal(bestMove)) { return; }
+    insert_unique_compact<1>(grandParent->parent->killer, bestMove);
 }
 
 constexpr Color Node::colorToMove() const { return root.colorToMove(ply); }
