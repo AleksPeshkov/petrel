@@ -103,7 +103,6 @@ Node::Node (Node* p) :
 {
     if (grandParent) {
         killer[0] = grandParent->killer[0];
-        killer[1] = grandParent->killer[1];
     }
 }
 
@@ -395,8 +394,6 @@ ReturnStatus Node::search() {
             if (grandParent && grandParent->currentMove.any()) {
                 RETURN_CUTOFF (contMove(FollowupMove, grandParent->currentMove)); // ply-2
             }
-
-            RETURN_CUTOFF (searchIfPossible(parent->killer[2]));
         }
     }
 
@@ -713,7 +710,7 @@ void Node::updateHistory() {
     }
 
     if (!grandParent->parent) { return; } // ply-3
-    insert_unique_pos<2>(grandParent->parent->killer, bestMove);
+    insert_unique_pos<1>(grandParent->parent->killer, bestMove);
 }
 
 constexpr Color Node::colorToMove() const { return root.colorToMove(ply); }

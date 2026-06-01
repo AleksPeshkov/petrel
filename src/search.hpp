@@ -95,7 +95,7 @@ protected:
 
     HistoryMove currentMove{}; // last move made from *this into *child
     HistoryMove bestMove{}; // TtMove or best move found
-    mutable std::array<HistoryMove, 3> killer{}; // Killer heuristic, mutable to update from const* grandParent
+    mutable std::array<HistoryMove, 2> killer{}; // Killer heuristic, mutable to update from const* grandParent
 
     PrincipalVariation::Index pvIndex{0}; // start of subPV for the current ply
     ZHash zHash{}; // mini-hash of all previous reversible positions zobrist keys
