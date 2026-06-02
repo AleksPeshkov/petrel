@@ -137,7 +137,7 @@ void PositionMoves::generateCheckEvasions() {
     }
     else {
         //double check case: no moves except king's ones are possible
-        moves_.clear();
+        moves_ = {};
     }
 
     generateLegalKingMoves<My>();

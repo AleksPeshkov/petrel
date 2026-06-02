@@ -172,7 +172,6 @@ public:
 
 // initial position setup in class UciPosition:
 
-    void clear(); // init accumulators
     bool dropValid(Side, PieceType, Square);
     bool afterDrop();
     bool setEnPassant(File);

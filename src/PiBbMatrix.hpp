@@ -15,8 +15,6 @@ public:
     constexpr PiRank(Pi pi, File file) : PiRank{PiRank{pi} & PiRank{file}} {}
     constexpr PiRank(Pi pi, BitRank br) : PiRank{PiRank{pi} & PiRank{br}} {}
 
-    constexpr void clear() { *this = {}; }
-
     BitRank bitRank() const {
 #ifdef __clang__
         return BitRank{__builtin_reduce_or(v_)};
@@ -42,12 +40,6 @@ class CACHE_ALIGN PiBbMatrix {
     array<PiRank, Rank> v_;
 
 public:
-    constexpr void clear() {
-        for (auto& piRank : v_) {
-            piRank.clear();
-        }
-    }
-
     constexpr void clear(Pi pi) {
         for (auto& piRank : v_) {
             piRank %= PiRank{pi};

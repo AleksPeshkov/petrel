@@ -21,7 +21,8 @@ Node::Node (const PositionMoves& p, const Uci& r) :
 {}
 
 Node::Node (const Node* p) :
-    PositionMoves{}, root{p->root}, parent{p}, grandParent{p->parent},
+    //TRICK: no need to clean up PositionMoves{}
+    root{p->root}, parent{p}, grandParent{p->parent},
     ply{p->ply + 1_ply}, plyPv{p->isPv() ? ply : p->plyPv},
     alpha{-p->beta}, beta{-p->alpha}, pvIndex{+p->pvIndex+1}
 {

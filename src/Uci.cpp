@@ -326,7 +326,6 @@ bool FenToBoard::dropPieces(Position& position, Color colorToMove_) {
     }
 
     Position pos;
-    pos.clear();
 
     for (auto color : range<Color>()) {
         Side side{colorToMove_.is(color) ? My : Op};
@@ -509,7 +508,6 @@ istream& UciPosition::readMove(istream& in, Square& from, Square& to) const {
 
 void UciPosition::limitMoves(istream& in) {
     PiBbMatrix movesMatrix;
-    movesMatrix.clear();
     int n = 0;
 
     while (in >> std::ws && !in.eof()) {
