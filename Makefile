@@ -29,8 +29,8 @@ TAG_DEBUG := $(BUILD_DIR)/tag_debug
 COMPILER_STAMP := $(BUILD_DIR)/.compiler-stamp
 
 # === Common Flags ===
-BUILD_ARCH := -march=native -mtune=native
-#BUILD_ARCH := -march=x86-64-v3 -mtune=znver3 -static
+#BUILD_ARCH := -march=native -mtune=native
+BUILD_ARCH := -march=x86-64-v3 -mtune=znver3 -static
 CXXFLAGS := -std=c++20 -fno-exceptions -fno-rtti
 WARNINGS := -Wall -Wpedantic -Wextra -Wundef
 WARNINGS += -Wcast-qual -Wshadow -Wmissing-declarations -Wredundant-decls -Wextra-semi -Wsuggest-override
@@ -74,7 +74,7 @@ ifneq ($(GIT_ORIGIN),)
 endif
 
 CXXFLAGS := $(BUILD_ARCH) $(BUILD_FLAGS) $(CXXFLAGS) $(WARNINGS) $(DEFINES)
-LDFLAGS := $(BUILD_FLAGS)
+LDFLAGS := $(BUILD_ARCH) $(BUILD_FLAGS)
 
 # === Build Targets ===
 MAKE_TARGET := @make --jobs --warn-undefined-variables --no-print-directory $(TARGET) CXX='$(CXX)'
