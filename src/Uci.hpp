@@ -6,6 +6,7 @@
 #include "history.hpp"
 #include "io.hpp"
 #include "PositionMoves.hpp"
+#include "search.hpp"
 #include "SearchLimits.hpp"
 #include "Thread.hpp"
 #include "Tt.hpp"
@@ -95,6 +96,7 @@ public: // used by search:
     Tt tt; // main transposition table
 
 //TODO: per search thread
+    array<Node, Ply> searchStack;
     ContMoves<4> contMoves;
     CheckMoves counterCheck;
     PrincipalVariation pv;
