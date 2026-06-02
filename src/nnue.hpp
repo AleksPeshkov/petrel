@@ -214,7 +214,8 @@ public:
         side[Side{Op}] = {};
     }
 
-    constexpr void copyParent(const Accumulator& parent) {
+    // copy parent accumulator but flip sides
+    constexpr void flip(const Accumulator& parent) {
         side[Side{My}] = parent.side[Side{Op}];
         side[Side{Op}] = parent.side[Side{My}];
     }

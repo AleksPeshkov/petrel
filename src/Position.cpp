@@ -9,10 +9,10 @@ Score Position::evaluate() const {
     return Score::clampEval(eval);
 }
 
-void Position::copyParent(const Position* parent) {
+void Position::flip(const Position* parent) {
     // copy from the parent position but swap sides
     assert (parent);
-    accumulator.copyParent(parent->accumulator);
+    accumulator.flip(parent->accumulator);
     positionSide_[Side{My}] = parent->OP;
     positionSide_[Side{Op}] = parent->MY;
     rule50_ = parent->rule50_;
@@ -39,7 +39,7 @@ void Position::makeMoveNoEval(Square from, Square to) {
 }
 
 void Position::makeNullMove(const Position* parent) {
-    copyParent(parent);
+    flip(parent);
     zobrist_ = parent->zobrist_;
     // null move
     rule50_.next();
@@ -58,7 +58,7 @@ void Position::makeNullMove(const Position* parent) {
 }
 
 void Position::makeMoveFast(const Position* parent, Square from, Square to) {
-    copyParent(parent);
+    flip(parent);
 
     // current position flipped its sides relative to parent, so we make the move inplace for the Op
     makeMove<Op, Fast>(from, to, []{});

@@ -97,8 +97,8 @@ class Position {
     Zobrist zobrist_; // incrementally updated position hash
     Rule50 rule50_; // number of halfmoves since last capture or pawn move, incremented or reset by makeMove()
 
-    template <Side::_t> void updateSliderAttacks(PiMask);
-    template <Side::_t> void updateSliderAttacks(PiMask, PiMask);
+    // copy parent position but flip sides
+    void flip(const Position* parent);
 
     enum MakeMoveFlags {
         Fast = 0,
@@ -108,13 +108,12 @@ class Position {
     };
     template <Side::_t, MakeMoveFlags> void makeMove(Square, Square, auto&& prefetch);
 
-    template <Side::_t> Zobrist generateZobrist() const;
-
-    // calculate Zobrist key from scratch
-    Zobrist generateZobrist() const;
-
+    Zobrist generateZobrist() const; // calculate Zobrist key from scratch
     bool isSpecialMove(Square, Square) const;
-    void copyParent(const Position* parent);
+
+    template <Side::_t> Zobrist generateZobrist() const;
+    template <Side::_t> void updateSliderAttacks(PiMask);
+    template <Side::_t> void updateSliderAttacks(PiMask, PiMask);
 
 protected:
     constexpr PositionSide& positionSide(Side side) { return positionSide_[side]; }
@@ -171,14 +170,15 @@ public:
     // [0..6] startpos = 6, queens exchanged = 4, R vs R endgame = 1
     constexpr auto gamePhase() const { return Material::gamePhase(MY.material(), OP.material()); }
 
-// initial position setup in class UciPosition
+// initial position setup in class UciPosition:
 
     void clear(); // init accumulators
     bool dropValid(Side, PieceType, Square);
     bool afterDrop();
     bool setEnPassant(File);
 
-// needed public for unit tests
+// public only for unit tests:
+
     constexpr const PositionSide& positionSide(Side side) const { return positionSide_[side]; }
 
     // my passed pawns

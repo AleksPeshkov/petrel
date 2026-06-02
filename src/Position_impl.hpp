@@ -245,7 +245,7 @@ void Position::makeMove(Square from, Square to, auto&& prefetch) {
 }
 
 void Position::makeMove(const Position* parent, Square from, Square to, auto&& prefetch) {
-    copyParent(parent);
+    flip(parent);
     zobrist_ = parent->zobrist_;
 
     // current position flipped its sides relative to parent, so we make the move inplace for the Op
@@ -255,7 +255,7 @@ void Position::makeMove(const Position* parent, Square from, Square to, auto&& p
 }
 
 void Position::makeMoveNoEval(const Position* parent, Square from, Square to, auto&& prefetch) {
-    copyParent(parent);
+    flip(parent);
     zobrist_ = parent->zobrist_;
 
     // current position flipped its sides relative to parent, so we make the move inplace for the Op
