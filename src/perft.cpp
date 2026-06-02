@@ -266,9 +266,6 @@ void TtPerft::set(Z z, Ply d, node_count_t n) {
     origin->m.set(3, u.m[2]);
 }
 
-NodePerft::NodePerft (const PositionMoves& p, Uci& r, Ply d) :
-    PositionMoves{p}, parent{nullptr}, root{r}, depth{d} {}
-
 ReturnStatus NodePerft::visitRoot() {
     NodePerft node{this};
     const auto child = &node;
@@ -282,11 +279,11 @@ ReturnStatus NodePerft::visitRoot() {
 
             RETURN_IF_STOP (child->visitMove(from, to));
 
-            root.info_perft_currmove(++moveCount, historyMove(from, to), perft - previousPerft);
+            The_uci.info_perft_currmove(++moveCount, historyMove(from, to), perft - previousPerft);
         }
     }
 
-    root.info_perft_depth(depth, perft);
+    The_uci.info_perft_depth(depth, perft);
     return ReturnStatus::Continue;
 }
 
@@ -312,7 +309,7 @@ ReturnStatus NodePerft::visitMove(Square from, Square to) {
             break;
 
         case 1:
-            RETURN_IF_STOP (root.limits.countNode());
+            RETURN_IF_STOP (The_uci.limits.countNode());
             makeMoveFast(parent, from, to);
             parent->clearMove(from, to);
             generateMoves();
@@ -321,17 +318,17 @@ ReturnStatus NodePerft::visitMove(Square from, Square to) {
 
         default: {
             assert (depth >= 2_ply);
-            RETURN_IF_STOP (root.limits.countNode());
-            makeMoveNoEval(parent, from, to, [&](Z z){ root.tt.prefetch<64>(z); });
+            RETURN_IF_STOP (The_uci.limits.countNode());
+            makeMoveNoEval(parent, from, to, [&](Z z){ The_uci.tt.prefetch<64>(z); });
             parent->clearMove(from, to);
             generateMoves();
 
-            perft = static_cast<TtPerft&>(root.tt).get(z(), depth - 2_ply);
+            perft = static_cast<TtPerft&>(The_uci.tt).get(z(), depth - 2_ply);
 
             if (perft == NodeCountNone) {
                 perft = 0;
                 RETURN_IF_STOP(visit());
-                static_cast<TtPerft&>(root.tt).set(z(), depth - 2_ply, perft);
+                static_cast<TtPerft&>(The_uci.tt).set(z(), depth - 2_ply, perft);
             }
         }
     }

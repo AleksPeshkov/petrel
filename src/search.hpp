@@ -78,7 +78,6 @@ class Uci;
 
 class Node : public PositionMoves {
 protected:
-    const Uci& root; // common search thread data
     const Node* const parent{nullptr}; // previous (ply-1) opposite side to move node or nullptr
     const Node* const grandParent{nullptr}; // previous side to move node (ply-2) or nullptr
     Node* child{nullptr}; // child node to make moves into, created in search()
@@ -142,7 +141,7 @@ protected:
     bool isRepetition() const;
 
 public:
-    Node (const PositionMoves& _position, const Uci& _uci) : PositionMoves{_position}, root{_uci} {}
+    Node (const PositionMoves& _position) : PositionMoves{_position} {}
     ReturnStatus searchRoot();
 };
 

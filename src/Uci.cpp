@@ -1165,7 +1165,7 @@ void Uci::go() {
         return;
     } else {
         auto started = mainSearchThread.start([this] {
-            Node{position_, *this}.searchRoot();
+            Node{position_}.searchRoot();
             info_bestmove();
         });
         if (started) {
@@ -1327,7 +1327,7 @@ void Uci::perft() {
     depth = std::min<Ply>(depth, 18_ply); // current Tt implementation limit
 
     mainSearchThread.start([this, depth] {
-        NodePerft{position_, *this, depth}.visitRoot();
+        NodePerft{position_, depth}.visitRoot();
         info_perft_bestmove();
     } );
 }
@@ -1418,7 +1418,7 @@ void Uci::bench(std::string_view goLimits) {
 
         {
             auto searchStart{::timeNow()};
-            Node{position_, *this}.searchRoot();
+            Node{position_}.searchRoot();
 
             benchTotalTime += ::elapsedSince(searchStart);
             benchTotalNodes += limits.getNodes();

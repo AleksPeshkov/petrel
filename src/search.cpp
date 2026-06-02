@@ -91,15 +91,15 @@ void Node::saveNode() {
     if (depth > 0_ply) {
         assert (tt);
         *tt = TtSlot{ z(), score, ply, bound, depth, bestMove.ttMove() };
-        ++root.tt.writes;
+        ++The_uci.tt.writes;
     }
 }
 
 Node::Node (Node* p) :
     //TRICK: no need to clean up PositionMoves{}
-    root{p->root}, parent{p}, grandParent{p->parent}, ply{p->ply + 1_ply},
-    pvPly{p->isPv() ? ply : p->pvPly}, pvIndex{+p->pvIndex+1},
-    alpha{-p->beta}, beta{-p->alpha}
+    parent{p}, grandParent{p->parent}, ply{p->ply + 1_ply},
+    pvPly{p->isPv() ? ply : p->pvPly},
+    alpha{-p->beta}, beta{-p->alpha}, pvIndex{+p->pvIndex+1}
 {
     if (grandParent) {
         killer[0] = grandParent->killer[0];
@@ -177,15 +177,15 @@ ReturnStatus Node::negamax(Ply R) {
         bestMove = currentMove;
 
         if (!isRoot()) {
-            child->pvIndex = root.pv.set(pvIndex, bestMove, child->pvIndex);
+            child->pvIndex = The_uci.pv.set(pvIndex, bestMove, child->pvIndex);
         } else {
             // unfinished iteration, so report depth-1
-            pvIndex = root.pv.set(depth - 1_ply, score, bestMove, child->pvIndex);
+            pvIndex = The_uci.pv.set(depth - 1_ply, score, bestMove, child->pvIndex);
             child->pvIndex = PrincipalVariation::Index{+pvIndex+1};
 
-            RETURN_IF_STOP (root.limits.updateTimeStrategy(root.pv));
+            RETURN_IF_STOP (The_uci.limits.updateTimeStrategy(The_uci.pv));
 
-            if (depth > 1_ply) { root.info_pv(); }
+            if (depth > 1_ply) { The_uci.info_pv(); }
         }
 
         alpha = childScore;
@@ -254,7 +254,7 @@ ReturnStatus Node::search() {
             break;
         }
 
-        ++root.tt.reads;
+        ++The_uci.tt.reads;
         auto ttSlot = *tt; // copy full TT entry
 
         ttHit = (ttSlot == z());
@@ -282,7 +282,7 @@ ReturnStatus Node::search() {
         }
         assert (bestMove.none() || isPossibleMove(bestMove));
 
-        ++root.tt.hits;
+        ++The_uci.tt.hits;
 
         if (!isPv() && depth <= ttSlot.draft()) {
             if (ttBound == ExactScore
@@ -367,7 +367,7 @@ ReturnStatus Node::search() {
     }
 
     if (isRoot()) {
-        for (auto move : root.rootBestMoves) {
+        for (auto move : The_uci.rootBestMoves) {
             if (move.none()) { break; }
             RETURN_CUTOFF (searchIfPossible(move));
         }
@@ -378,7 +378,7 @@ ReturnStatus Node::search() {
     if (parent) {
         if (inCheck()) {
             RETURN_CUTOFF (searchIfPossible(
-                root.counterCheck.get(colorToMove(), MY.sqKing(), parent->currentMove)
+                The_uci.counterCheck.get(colorToMove(), MY.sqKing(), parent->currentMove)
             ));
         } else {
             RETURN_CUTOFF (searchIfPossible(parent->killer[0]));
@@ -529,7 +529,7 @@ ReturnStatus Node::search() {
     assert (bestMove.none() || isPseudoLegal(bestMove));
     if (bound == ExactScore) {
         updateHistory();
-        if (isRoot()) { ::insert_unique_compact(root.rootBestMoves, bestMove); }
+        if (isRoot()) { ::insert_unique_compact(The_uci.rootBestMoves, bestMove); }
     } else {
         assert (depth > 0_ply);
         assert (score.isOk(ply));
@@ -640,8 +640,8 @@ ReturnStatus Node::goodCaptures(PiMask victims) {
 
 // counter and folloup move heuristic
 ReturnStatus Node::contMove(ContIndex::_t contMoveType, HistoryMove move) {
-    for (auto i : range<decltype(root.contMoves)::Index>()) {
-        auto contMove = root.contMoves.get(contMoveType, i, colorToMove(), move);
+    for (auto i : range<decltype(The_uci.contMoves)::Index>()) {
+        auto contMove = The_uci.contMoves.get(contMoveType, i, colorToMove(), move);
         if (contMove.none()) { break; }
         if (isPossibleMove(contMove)) {
             return searchMove(contMove);
@@ -651,7 +651,7 @@ ReturnStatus Node::contMove(ContIndex::_t contMoveType, HistoryMove move) {
 }
 
 ReturnStatus Node::searchNullMove() {
-    RETURN_IF_STOP (root.limits.countNode());
+    RETURN_IF_STOP (The_uci.limits.countNode());
 
     //TRICK: null move not counted as movesMade()
     currentMove = {};
@@ -662,12 +662,12 @@ ReturnStatus Node::searchNullMove() {
 
 void Node::childNullMove() {
     makeNullMove(parent);
-    tt = root.tt.prefetch<TtSlot>(z());
+    tt = The_uci.tt.prefetch<TtSlot>(z());
     zHash = {};
 }
 
 ReturnStatus Node::searchMove(HistoryMove move, Ply R) {
-    RETURN_IF_STOP (root.limits.countNode());
+    RETURN_IF_STOP (The_uci.limits.countNode());
 
     assert (move.any());
     assert (isPseudoLegal(move));
@@ -684,8 +684,8 @@ ReturnStatus Node::searchMove(HistoryMove move, Ply R) {
 }
 
 void Node::childMove(Square from, Square to) {
-    makeMove(parent, from, to, [&](Z z){ tt = root.tt.prefetch<TtSlot>(z); });
-    root.pv.clear(pvIndex);
+    makeMove(parent, from, to, [&](Z z){ tt = The_uci.tt.prefetch<TtSlot>(z); });
+    The_uci.pv.clear(pvIndex);
 
     if (rule50() < 2_ply || ply <= 2_ply) { zHash = {}; }
     else { zHash = ZHash{grandParent->zHash, grandParent->z()}; }
@@ -708,7 +708,7 @@ void Node::updateHistory() {
 
         if (parent) {
             assert (parent->currentMove.any());
-            root.counterCheck.set(colorToMove(), MY.sqKing(), parent->currentMove, bestMove);
+            The_uci.counterCheck.set(colorToMove(), MY.sqKing(), parent->currentMove, bestMove);
         }
     }
 
@@ -720,19 +720,19 @@ void Node::updateHistory() {
     if (!parent) { return; } // ply-1
     insert_unique_pos(parent->killer, bestMove);
     if (parent->currentMove.any()) {
-        root.contMoves.set(CounterMove, colorToMove(), parent->currentMove, bestMove);
+        The_uci.contMoves.set(CounterMove, colorToMove(), parent->currentMove, bestMove);
     }
 
     if (!grandParent) { return; } // ply-2
     if (grandParent->currentMove.any()) {
-        root.contMoves.set(FollowupMove, colorToMove(), grandParent->currentMove, bestMove);
+        The_uci.contMoves.set(FollowupMove, colorToMove(), grandParent->currentMove, bestMove);
     }
 
     if (!grandParent->parent) { return; } // ply-3
     insert_unique_pos<1>(grandParent->parent->killer, bestMove);
 }
 
-constexpr Color Node::colorToMove() const { return root.colorToMove(ply); }
+constexpr Color Node::colorToMove() const { return The_uci.colorToMove(ply); }
 
 // insufficient mate material
 bool Node::isDrawMaterial() const {
@@ -785,7 +785,7 @@ bool Node::isRepetition() const {
     }
 
     // game history repetitions
-    return rule50() >= ply && (isPv() ? root.repetitions.has3(colorToMove(), z) : root.repetitions.has2(colorToMove(), z));
+    return rule50() >= ply && (isPv() ? The_uci.repetitions.has3(colorToMove(), z) : The_uci.repetitions.has2(colorToMove(), z));
 }
 
 void savePv(const PositionMoves& p, const PrincipalVariation& pv, const Tt& tt) {
@@ -818,19 +818,19 @@ void savePv(const PositionMoves& p, const PrincipalVariation& pv, const Tt& tt) 
 
 ReturnStatus Node::searchRoot() {
     for (depth = 1_ply; depth.isOk(); ++depth) {
-        tt = root.tt.prefetch<TtSlot>(z());
+        tt = The_uci.tt.prefetch<TtSlot>(z());
         alpha = Score{MateLoss};
         beta = Score{MateWin};
 
         RETURN_IF_STOP (search());
-        root.pv.set(depth); // iteration fully completed
+        The_uci.pv.set(depth); // iteration fully completed
 
-        RETURN_IF_STOP (root.limits.iterationDeadlineReached());
-        if (depth >= root.limits.maxDepth()) { return ReturnStatus::Continue; }
+        RETURN_IF_STOP (The_uci.limits.iterationDeadlineReached());
+        if (depth >= The_uci.limits.maxDepth()) { return ReturnStatus::Continue; }
 
-        root.info_pv();
-        setMoves(root.moves()); // refresh moves for next iteration
-        ::savePv(*this, root.pv, root.tt);
+        The_uci.info_pv();
+        setMoves(The_uci.moves()); // refresh moves for next iteration
+        ::savePv(*this, The_uci.pv, The_uci.tt);
     }
 
     return ReturnStatus::Continue;

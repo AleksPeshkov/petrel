@@ -95,10 +95,10 @@ public: // used by search:
     Tt tt; // main transposition table
 
 //TODO: per search thread
-    mutable ContMoves<4> contMoves;
-    mutable CheckMoves counterCheck;
-    mutable PrincipalVariation pv;
-    mutable std::array<HistoryMove, 6> rootBestMoves;
+    ContMoves<4> contMoves;
+    CheckMoves counterCheck;
+    PrincipalVariation pv;
+    std::array<HistoryMove, 6> rootBestMoves;
 
 private:
 // input members and methods:
@@ -163,5 +163,7 @@ public:
     void info_perft_depth(Ply, node_count_t) const;
     void info_perft_currmove(int moveCount, HistoryMove currentMove, node_count_t) const;
 };
+
+extern Uci The_uci;
 
 #endif
