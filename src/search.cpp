@@ -87,14 +87,13 @@ ReturnStatus SearchLimits::updateTimeStrategy(const PrincipalVariation& pv) cons
     return lastDeadlineReached();
 }
 
-TtSlot::TtSlot (const Node* n) : TtSlot{
-    n->z(),
-    n->score,
-    n->ply,
-    n->bound,
-    n->depth,
-    n->bestMove.ttMove()
-} {}
+void Node::saveNode() {
+    if (depth > 0_ply) {
+        assert (tt);
+        *tt = TtSlot{ z(), score, ply, bound, depth, bestMove.ttMove() };
+        ++root.tt.writes;
+    }
+}
 
 Node::Node (Node* p) :
     //TRICK: no need to clean up PositionMoves{}
@@ -475,8 +474,7 @@ ReturnStatus Node::search() {
             return ReturnStatus::Continue;
         }
         assert (score.isOk(ply));
-        *tt = TtSlot{this};
-        ++root.tt.writes;
+        saveNode();
     }
     return ReturnStatus::Continue;
 }
@@ -668,11 +666,9 @@ void Node::failHigh() {
     }
 
     assert (score.isOk(ply));
-    if (depth > 0_ply) {
-        bound = FailHigh;
-        *tt = TtSlot{this};
-        ++root.tt.writes;
-    }
+
+    bound = FailHigh;
+    saveNode();
 
     if (bestMove.any()) {
         updateHistory(bestMove);
@@ -682,11 +678,8 @@ void Node::failHigh() {
 ReturnStatus Node::updatePv() {
     assert (isPseudoLegal(bestMove));
 
-    if (depth > 0_ply) {
-        bound = ExactScore;
-        *tt = TtSlot{this};
-        ++root.tt.writes;
-    }
+    bound = ExactScore;
+    saveNode();
 
     updateHistory(bestMove);
 
@@ -783,7 +776,7 @@ bool Node::isRepetition() const {
     return rule50() >= ply && (isPv() ? root.repetitions.has3(colorToMove(), z) : root.repetitions.has2(colorToMove(), z));
 }
 
-void refreshTtPv(const PositionMoves& p, const PrincipalVariation& pv, const Tt& tt) {
+void savePv(const PositionMoves& p, const PrincipalVariation& pv, const Tt& tt) {
     // clone position
     PositionMoves pos{p};
 
@@ -825,7 +818,7 @@ ReturnStatus Node::searchRoot() {
 
         root.info_pv();
         setMoves(root.moves()); // refresh moves for next iteration
-        ::refreshTtPv(*this, root.pv, root.tt);
+        ::savePv(*this, root.pv, root.tt);
     }
 
     return ReturnStatus::Continue;

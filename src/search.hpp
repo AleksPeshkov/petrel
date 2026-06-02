@@ -66,7 +66,6 @@ public:
         assert (ttMove() == _ttMove);
     }
 
-    TtSlot (const Node* node);
     constexpr bool operator == (Z z) const { return (v_ & ZMask) == (z & ZMask); }
 
     constexpr Score score(Ply ply) const { return Score::fromTt(::unpack(v_, ShiftScore, Score::mask()), ply); }
@@ -79,20 +78,13 @@ class Uci;
 
 class Node : public PositionMoves {
 protected:
-    friend class TtSlot;
-
     const Uci& root; // common search thread data
     const Node* const parent{nullptr}; // previous (ply-1) opposite side to move node or nullptr
     const Node* const grandParent{nullptr}; // previous side to move node (ply-2) or nullptr
     Node* child{nullptr}; // child node to make moves into, created in search()
 
-    ZHash zHash{}; // mini-hash of all previous reversible positions zobrist keys
-    TtSlot* tt{nullptr}; // pointer to the slot in TT
-    bool ttHit{false}; // this node found in TT
-
     Ply ply{0}; // distance from root (root is ply == 0)
     Ply pvPly{0}; // ply of nearest PV node, if pvPly == ply, this is PV node
-    PrincipalVariation::Index pvIndex{0}; // start of subPV for the current ply
     Ply depth{0}; // remaining depth to horizon (should be set before search)
 
     Score eval{NoScore}; // static evaluation of the current position
@@ -104,6 +96,11 @@ protected:
     HistoryMove currentMove{}; // last move made from *this into *child
     HistoryMove bestMove{}; // TtMove or best move found
     mutable std::array<HistoryMove, 3> killer{}; // Killer heuristic, mutable to update from const* grandParent
+
+    PrincipalVariation::Index pvIndex{0}; // start of subPV for the current ply
+    ZHash zHash{}; // mini-hash of all previous reversible positions zobrist keys
+    TtSlot* tt{nullptr}; // pointer to the slot in TT
+    bool ttHit{false}; // this node found in TT
 
     Node (Node* parent); // prepare empty child node
     void assertOk() const;
@@ -136,15 +133,16 @@ protected:
     void childMove(Square, Square);
     void failHigh();
     void updateHistory(HistoryMove) const;
+    void saveNode(); // write search result into TT
+    Ply finalR(Ply) const;
 
-    constexpr Color colorToMove() const; // current node's side to move color
     constexpr bool isRoot() const { assert (parent == nullptr || ply > 0_ply); return parent == nullptr; } // ply == 0
     constexpr bool isPv() const { return ply == pvPly; } // ply == pvPly
     constexpr bool isCutNode() const { return (+ply - +pvPly) & 1; } // odd (ply - pvPly)
     constexpr bool isAllNode() const { return !isPv() && !isCutNode(); } // even (plv - pvPly)
     constexpr Ply currentR() const { assert (!isRoot()); return parent->depth - depth; } // parent->depth - depth
-    Ply finalR(Ply) const;
 
+    constexpr Color colorToMove() const; // current node side to move color
     bool isDrawMaterial() const;
     bool isRepetition() const;
 
@@ -156,6 +154,6 @@ public:
 class Tt;
 
 // update TT with latest PV (in case it have been overwritten)
-void refreshTtPv(const PositionMoves&, const PrincipalVariation&, const Tt&);
+void savePv(const PositionMoves&, const PrincipalVariation&, const Tt&);
 
 #endif
