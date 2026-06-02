@@ -108,14 +108,14 @@ public:
     constexpr Square sqEnPassant() const { Square ep{sq(traits.piEnPassant())}; assert (ep.on(Rank4)); return ep; }
     constexpr File fileEnPassant() const { return sqEnPassant().file(); }
 
-    constexpr const PiBbMatrix& attacks() const { return attacks_; }
-    constexpr PiMask attackersTo(Square sq) const { return attacks_.piMask(sq); }
-    constexpr PiMask affectedBy(Square sq) const { return attackersTo(sq); }
-    constexpr PiMask affectedBy(Square a, Square b) const { return affectedBy(a) | affectedBy(b); }
-    constexpr PiMask affectedBy(Square a, Square b, Square c) const { return affectedBy(a) | affectedBy(b) | affectedBy(c); }
+    constexpr const auto& attacks() const { return attacks_; }
+    PiMask attackersTo(Square sq) const { return attacks_.piMask(sq); }
+    PiMask affectedBy(Square sq) const { return attackersTo(sq); }
+    PiMask affectedBy(Square a, Square b) const { return affectedBy(a) | affectedBy(b); }
+    PiMask affectedBy(Square a, Square b, Square c) const { return affectedBy(a) | affectedBy(b) | affectedBy(c); }
     int countAttackersTo(Square, Bb) const; // total number of attackers (including X-ray)
 
-    constexpr PiMask checkers() const { assert (traits.checkers() == attackersTo(opKing)); return traits.checkers(); }
+    PiMask checkers() const { assert (traits.checkers() == attackersTo(opKing)); return traits.checkers(); }
     constexpr PiMask pinners() const { return traits.pinners(); }
     bool isPinned(Bb) const;
 
@@ -146,7 +146,6 @@ public:
 // friend class UciPosition;
     bool setValidCastling(File);
     bool setValidCastling(CastlingSide);
-
 };
 
 #endif
