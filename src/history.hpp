@@ -123,14 +123,14 @@ class CACHE_ALIGN CheckMoves {
     _t v_;
 
 public:
-    constexpr Move get(Color color, Square king, Move move) const {
-        assert (move.any());
-        return v_[color][king][move.to()];
+    constexpr Move get(Color color, Square sqKing, Move checkMove) const {
+        assert (checkMove.any());
+        return v_[color][sqKing][checkMove.to()];
     }
 
-    constexpr void set(Color color, Square king, Move move, Move bestMove) {
-        assert (move.any()); assert (bestMove.any());
-        v_[color][king][move.to()] = bestMove;
+    constexpr void set(Color color, Square sqKing, Move checkMove, Move bestMove) {
+        assert (checkMove.any()); assert (bestMove.any());
+        v_[color][sqKing][checkMove.to()] = bestMove;
     }
 };
 
