@@ -5,7 +5,8 @@
 
 // search tree distance in halfmoves
 struct Ply : Index<Ply, 64> {
-    constexpr explicit Ply(_t n) : Index{n > 0 ? n : 0} { assertOk(); }
+    static_assert(last() >= 2);
+    constexpr explicit Ply(_t n) : Index{std::clamp(n, 0, last())} {  assertOk(); }
     friend constexpr Ply operator""_ply(unsigned long long);
     friend constexpr Ply operator + (Ply a, Ply b) { return Ply{a.v_ + b.v_}; }
     friend constexpr Ply operator - (Ply a, Ply b) { return Ply{a.v_ - b.v_}; }
