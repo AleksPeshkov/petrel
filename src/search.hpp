@@ -51,7 +51,7 @@ protected:
 
     void childNullMove();
     void childMove(Square, Square);
-    void updateHistory();
+    void saveHistory();
     void saveNode(); // write search result into TT
     constexpr Ply finalR(Ply) const;
 

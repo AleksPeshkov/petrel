@@ -87,6 +87,9 @@ ReturnStatus SearchLimits::updateTimeStrategy(const PrincipalVariation& pv) {
 }
 
 void Node::saveNode() {
+    assert (bestMove.none() || isPseudoLegal(bestMove));
+    assert (score.isOk(ply));
+
     if (depth > 0_ply) {
         assert (tt);
         *tt = TtSlot{ z(), score, ply, bound, depth, bestMove.ttMove() };
@@ -149,7 +152,7 @@ ReturnStatus Node::negamax(Ply R) {
             // currentMove.none() after NMP
             if (currentMove.any()) {
                 bestMove = currentMove;
-                updateHistory();
+                saveHistory();
             }
             return ReturnStatus::Cutoff;
         }
@@ -376,7 +379,7 @@ ReturnStatus Node::search() {
     if (hasParent()) {
         if (inCheck()) {
             RETURN_CUTOFF (searchIfPossible(
-                The_uci.counterCheck.get(colorToMove(), MY.sqKing(), parent().currentMove)
+                The_uci.checkMoves.get(colorToMove(), MY.sqKing(), parent().currentMove)
             ));
         } else {
             RETURN_CUTOFF (searchIfPossible(parent().killer[0]));
@@ -526,7 +529,7 @@ ReturnStatus Node::search() {
 
     if (bound == ExactScore) {
         assert (isPseudoLegal(bestMove));
-        updateHistory();
+        saveHistory();
         if (isRoot()) { ::insert_unique_compact(The_uci.rootBestMoves, bestMove); }
     } else {
         assert (bound == FailLow);
@@ -704,24 +707,18 @@ constexpr Move Node::followupMove() const {
     return hasGrandParent() ? grandParent().currentMove : Move{};
 }
 
-void Node::updateHistory() {
-    assert (bestMove.none() || isPseudoLegal(bestMove));
-    assert (score.isOk(ply));
-
-    if (bestMove.any() && inCheck() && bestMove.canBeKiller() == CanBeKiller::Yes) {
-        // reset canBeKiller when inCheck()
-        bestMove = Move{TtMove{bestMove.from(), bestMove.to(), CanBeKiller::No}, bestMove.moveType()};
-
-        if (hasParent()) {
-            assert (parent().currentMove.any());
-            The_uci.counterCheck.set(colorToMove(), MY.sqKing(), parent().currentMove, bestMove);
-        }
-    }
-
+void Node::saveHistory() {
     saveNode();
 
     if (bestMove.none() || bestMove.canBeKiller() == CanBeKiller::No) { return; }
-    assert (!inCheck());
+
+    if (inCheck()) {
+        if (hasParent()) {
+            assert (parent().currentMove.any());
+            The_uci.checkMoves.set(colorToMove(), MY.sqKing(), parent().currentMove, bestMove);
+        }
+        return;
+    }
 
     if (!hasParent()) { return; } // ply-1
     insert_unique_pos(parent().killer, bestMove);

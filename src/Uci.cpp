@@ -779,7 +779,7 @@ Uci::Uci(ostream& os) :
 void Uci::newGame() {
     tt.newGame();
     contMoves = {};
-    counterCheck = {};
+    checkMoves = {};
     go_.isNewGame = true;
 }
 
