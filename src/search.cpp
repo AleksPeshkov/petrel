@@ -94,13 +94,14 @@ void Node::saveNode() {
     }
 }
 
-void Node::prepareChild() {
-    child()->pvPly = isPv() ? child()->ply : pvPly;
-    child()->pvIndex = PrincipalVariation::Index{+pvIndex + 1};
-    child()->alpha = -beta;
-    child()->beta = -alpha;
-    child()->killer[0] = hasParent() ? parent()->killer[0] : Move{};
-    child()->killer[1] = {};
+void Node::clearNode() {
+    assert (hasParent());
+    pvPly = parent()->isPv() ? ply : parent()->pvPly;
+    pvIndex = PrincipalVariation::Index{+parent()->pvIndex + 1};
+    alpha = -parent()->beta;
+    beta = -parent()->alpha;
+    killer[0] = hasGrandParent() ? grandParent()->killer[0] : Move{};
+    killer[1] = {};
 }
 
 void Node::assertOk() const {
@@ -322,7 +323,7 @@ ReturnStatus Node::search() {
 // search all moves:
 
     // prepare empty child node to make moves into
-    prepareChild();
+    child()->clearNode();
 
     if (depth <= 0_ply && !inCheck()) {
         assert (depth == 0_ply);
