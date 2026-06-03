@@ -97,7 +97,7 @@ protected:
     ZHash zHash{}; // mini-hash of all previous reversible positions zobrist keys
     TtSlot* tt{nullptr}; // pointer to the slot in TT
 
-    void prepareChild(); // prepare empty child node
+    void clearNode(); // prepare empty node
     void assertOk() const;
 
     [[nodiscard]] ReturnStatus negamax(Ply R = 1_ply); // search with child->depth = depth - R, then apply child search score
@@ -125,15 +125,16 @@ protected:
     void saveNode(); // write search result into TT
     constexpr Ply finalR(Ply) const;
 
-    constexpr bool hasParent() const { return ply >= 1_ply; }
-    constexpr bool hasGrandParent() const { return ply >= 2_ply; }
-    constexpr bool hasChild() const { return ply <= Ply{Ply::last()}; }
-    constexpr bool hasAncestor(Ply _ply) const { return ply >= _ply; }
+    constexpr bool hasAncestor(Ply n) const { return ply >= n; }
+    constexpr bool hasDescendant(Ply n) const { return Ply{Ply::last()} - ply >= n; }
+    constexpr bool hasParent() const { return hasAncestor(1_ply); }
+    constexpr bool hasGrandParent() const { return hasAncestor(2_ply); }
 
-    constexpr Node* parent() const { assert (hasParent()); return const_cast<Node*>(this - 1); } // previous (ply-1) opposite side to move node
-    constexpr Node* grandParent() const { assert (hasGrandParent()); return const_cast<Node*>(this - 2); } // previous side to move node (ply-2)
-    constexpr Node* child() const { assert (hasChild()); return const_cast<Node*>(this + 1); } // child node to make moves into
-    constexpr Node* ancestor(Ply _ply) const { assert (hasAncestor(_ply)); return const_cast<Node*>(this - +_ply); }
+    constexpr auto ancestor(Ply n) const { assert (hasAncestor(n)); return const_cast<Node*>(this - +n); } // ply-n
+    constexpr auto descendant(Ply n) const { assert (hasDescendant(n)); return const_cast<Node*>(this + +n); } // ply+n
+    constexpr auto parent() const { return ancestor(1_ply); } // previous (ply-1) opposite side to move node
+    constexpr auto grandParent() const { return ancestor(2_ply); } // previous side to move node (ply-2)
+    constexpr auto child() const { return descendant(1_ply); } // child (ply+1) node to make moves into
 
     constexpr bool isRoot() const { return ply == 0_ply; } // ply == 0
     constexpr bool isPv() const { return ply == pvPly; } // ply == pvPly
