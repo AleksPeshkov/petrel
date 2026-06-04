@@ -1,11 +1,10 @@
 # Petrel is UCI Chess Engine
 
+<img src="petrel.gif" style="float:left; width: auto; height: auto;" alt="Petrel logo">
 Petrel is a conventional alpha-beta search engine, but some implementation details set it apart from others.
 Petrel's design goal is to be other engine's robust sparring partner particularly at very short (subsecond per game) time controls.
 
-Petrel 3.4 rated `3379` Elo on the [CCRL Blitz](https://computerchess.org.uk/ccrl/404/cgi/engine_details.cgi?eng=Petrel%203.4%2064-bit) list; `3333` Elo on the [CCRL 40/15](https://computerchess.org.uk/ccrl/4040/cgi/engine_details.cgi?print=Details&each_game=0&eng=Petrel%203.4%2064-bit).
-
-Petrel 2.2 rated `2775` Elo on the [Ultimate Bullet Classical](https://e4e6.com/) list.
+Petrel 3.5 rated `3435` Elo on the [CCRL Blitz](https://computerchess.org.uk/ccrl/404/cgi/engine_details.cgi?eng=Petrel%203.5%2064-bit) list; `3363` Elo on the [CCRL 40/15](https://computerchess.org.uk/ccrl/4040/cgi/engine_details.cgi?print=Details&each_game=0&eng=Petrel%203.5%2064-bit). Petrel 2.2 rated `2775` Elo on the [Ultimate Bullet Classical](https://e4e6.com/) list.
 
 ## Features
 
@@ -81,8 +80,7 @@ Relatively sophisticated scheme:
 10. SEE losing captures – Low valued pieces first
 11. SEE losing quiet moves – Low valued pieces first
 
-## Example of petrel's game [[PGN]](20251231_1705_petrel_3.2_N128_JA_2025-12-21_vs_EveAnn_3.6_64-bit.pgn)
-
+## Examples of petrel's games [[PGN1]](20251231_1705_petrel_3.2_N128_JA_2025-12-21_vs_EveAnn_3.6_64-bit.pgn) [[PGN2]](215_petrel_34_ja_2026-03-20_vs_schoenemann.pgn)
 <div align="center">
 
 **6k1/p1rqbppp/1p2p3/nb1pP3/3P1NBP/PP4P1/5PN1/R2Q2K1 w - - 0 26**
@@ -101,7 +99,7 @@ Relatively sophisticated scheme:
 
 ## Credits
 
-* Jim Ablett for [Windows, Linux and Android PGO builds](https://jim-ablett.kesug.com/) and code improvements
+* Jim Ablett for [Windows, Linux and Android PGO builds](https://jim-ablett.kesug.com/), icon and code improvements
 * Linmiao Xu (Linrock), guru of NNUE training for cooked data and [description what he did](https://www.kaggle.com/competitions/fide-google-efficiency-chess-ai-challenge/writeups/linrock-my-solution-cfish-nnue-data-1st)
 
 ---
