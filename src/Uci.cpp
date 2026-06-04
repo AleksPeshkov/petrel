@@ -757,6 +757,7 @@ Uci::Uci(ostream& os) :
     pid_{System::getPid()},
     tt(64 * mebibyte)
 {
+    for (auto ply : range<Ply>()) { std::construct_at(&searchStack[ply], ply); }
     inputLine.clear();
     bestmove_.clear();
     setEmbeddedEval();
@@ -1165,7 +1166,7 @@ void Uci::go() {
         return;
     } else {
         auto started = mainSearchThread.start([this] {
-            Node{position_}.searchRoot();
+            searchStack[0_ply].searchRoot(position_);
             info_bestmove();
         });
         if (started) {
@@ -1418,7 +1419,7 @@ void Uci::bench(std::string_view goLimits) {
 
         {
             auto searchStart{::timeNow()};
-            Node{position_}.searchRoot();
+            searchStack[0_ply].searchRoot(position_);
 
             benchTotalTime += ::elapsedSince(searchStart);
             benchTotalNodes += limits.getNodes();
