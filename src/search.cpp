@@ -9,7 +9,7 @@ void SearchLimits::assertNodesOk() const {
     assert (static_cast<decltype(nodesLimit_)>(nodesQuota_) <= nodes_);
 }
 
-ReturnStatus SearchLimits::refreshQuota() const {
+ReturnStatus SearchLimits::refreshQuota() {
     assertNodesOk();
 
     // expected nodesQuata_ == 0
@@ -56,7 +56,7 @@ ReturnStatus SearchLimits::reachedTime() const {
 ReturnStatus SearchLimits::lastDeadlineReached() const { return reachedTime<MaxQuota>(); }
 ReturnStatus SearchLimits::iterationDeadlineReached() const { return reachedTime<IterationQuota>(); }
 
-ReturnStatus SearchLimits::updateTimeStrategy(const PrincipalVariation& pv) const {
+ReturnStatus SearchLimits::updateTimeStrategy(const PrincipalVariation& pv) {
     if (timeStrategy_ == ExactTime) { return ReturnStatus::Continue; }
 
     auto bestMove = pv.getMove(0_ply);
