@@ -91,8 +91,8 @@ constexpr void insert_unique_compact(std::array<value_type, Size>& arr, value_ty
     *pos = value;
 }
 
-enum continuation_t {CounterMove, FollowupMove};
-struct ContIndex : Index<ContIndex, 2, continuation_t> { using Index::Index; };
+enum continuation_move_t {CounterMove, FollowupMove};
+struct ContIndex : Index<ContIndex, 2, continuation_move_t> { using Index::Index; };
 
 // Continuation Move table, counter and followup moves together (for cache locality)
 template<int _Size>
@@ -102,41 +102,41 @@ public:
     struct Index : ::Index<Index, Size> { using ::Index<Index, Size>::Index; };
 
 private:
-    using _t = array<HistoryMove, Color, HistoryType, Square, Square, ContIndex, Index>;
+    using _t = array<Move, Color, MoveType, Square, Square, ContIndex, Index>;
     _t v_;
 
 public:
     void clear() {
-        std::memset(&v_, 0, sizeof(v_)); //TRICK: HistoryMove{None} == uint16_t{0}
+        std::memset(&v_, 0, sizeof(v_)); //TRICK: Move{None} == uint16_t{0}
     }
 
-    constexpr HistoryMove get(ContIndex::_t ci, Index i, Color color, HistoryMove move) const {
+    constexpr Move get(ContIndex::_t ci, Index i, Color color, Move move) const {
         assert (move.any());
-        return v_[color][move.historyType()][move.from()][move.to()][ContIndex{ci}][i];
+        return v_[color][move.moveType()][move.from()][move.to()][ContIndex{ci}][i];
     }
 
     template <size_t Pos = 0>
-    constexpr void set(ContIndex::_t ci, Color color, HistoryMove move, HistoryMove bestMove) {
+    constexpr void set(ContIndex::_t ci, Color color, Move move, Move bestMove) {
         assert (move.any()); assert (bestMove.any());
-        ::insert_unique_compact<Pos>(v_[color][move.historyType()][move.from()][move.to()][ContIndex{ci}], bestMove);
+        ::insert_unique_compact<Pos>(v_[color][move.moveType()][move.from()][move.to()][ContIndex{ci}], bestMove);
     }
 };
 
 class CACHE_ALIGN CheckMoves {
-    using _t = array<HistoryMove, Color, Square, Square>;
+    using _t = array<Move, Color, Square, Square>;
     _t v_;
 
 public:
     void clear() {
-        std::memset(&v_, 0, sizeof(v_)); //TRICK: HistoryMove{None} == uint16_t{0}
+        std::memset(&v_, 0, sizeof(v_)); //TRICK: Move{None} == uint16_t{0}
     }
 
-    constexpr HistoryMove get(Color color, Square king, HistoryMove move) const {
+    constexpr Move get(Color color, Square king, Move move) const {
         assert (move.any());
         return v_[color][king][move.to()];
     }
 
-    constexpr void set(Color color, Square king, HistoryMove move, HistoryMove bestMove) {
+    constexpr void set(Color color, Square king, Move move, Move bestMove) {
         assert (move.any()); assert (bestMove.any());
         v_[color][king][move.to()] = bestMove;
     }
@@ -147,7 +147,6 @@ class CACHE_ALIGN PrincipalVariation {
     static constexpr auto triangularArraySize = Ply::size() + Ply::size()*(Ply::size()+1) / 2;
 public:
     struct Index : ::Index<Index, triangularArraySize> { using ::Index<Index, triangularArraySize>::Index; };
-    using Move = HistoryMove;
 
 private:
     array<Move, Index> pv_;
@@ -202,7 +201,7 @@ public:
     void set(Ply depth) { depth_ = depth; }
 
     const auto* moves() const { return &pv_[Index{0}]; }
-    auto move(Ply ply) const { return pv_[Index{+ply}]; }
+    auto getMove(Ply ply) const { return pv_[Index{+ply}]; }
     auto depth() const { return depth_; }
     auto score() const { return score_; }
 };

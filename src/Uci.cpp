@@ -169,7 +169,7 @@ UciOutput& operator << (UciOutput& ob, io::czstring message) {
 }
 
 // convert move to UCI format
-UciOutput& operator << (UciOutput& ob, HistoryMove move) {
+UciOutput& operator << (UciOutput& ob, Move move) {
     bool isWhite{ob.color().is(White)};
     ob.flipColor();
     ob << ' ';
@@ -231,7 +231,7 @@ UciOutput& operator << (UciOutput& ob, const PrincipalVariation& pv) {
 
     {
         ob << " pv";
-        for (HistoryMove move; (move = *moves++).any(); ) {
+        for (Move move; (move = *moves++).any(); ) {
             ob << move;
         }
         ob.resetRootColor();
@@ -659,10 +659,10 @@ void UciPosition::readFen(istream& is) {
 }
 
 // fast exit: return the first legal move found
-HistoryMove UciPosition::firstRootMove() const {
+Move UciPosition::firstRootMove() const {
     for (Pi pi : MY.pieces()) {
         if (bbMovesOf(pi).none()) { continue; }
-        return historyMove(MY.sq(pi), bbMovesOf(pi).first());
+        return toMove(MY.sq(pi), bbMovesOf(pi).first());
     }
     return {};
 }
@@ -1300,9 +1300,9 @@ void Uci::info_bestmove() {
         if (delayed) { ob.flush(); } else { ob << '\n'; }
     }
 
-    ob << "bestmove" << pv.move(0_ply);
-    if (go_.canPonder && pv.move(1_ply).any()) {
-        ob << " ponder" << pv.move(1_ply);
+    ob << "bestmove" << pv.getMove(0_ply);
+    if (go_.canPonder && pv.getMove(1_ply).any()) {
+        ob << " ponder" << pv.getMove(1_ply);
     }
 
     if (delayed) {
@@ -1345,7 +1345,7 @@ void Uci::info_perft_depth(Ply depth, node_count_t perft) const {
     ob << "info depth " << depth; average_nps(ob) << " perft " << perft;
 }
 
-void Uci::info_perft_currmove(int moveCount, HistoryMove currentMove, node_count_t perft) const {
+void Uci::info_perft_currmove(int moveCount, Move currentMove, node_count_t perft) const {
     UciOutput ob{this};
     ob << "info currmovenumber " << moveCount;
     instant_nps(ob);

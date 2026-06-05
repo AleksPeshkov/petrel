@@ -89,9 +89,9 @@ protected:
     Score score{NoScore}; // best score found, alpha <= score < beta
     Bound bound{FailLow}; // default FailLow, until Exact or FailHigh move will be found later
 
-    HistoryMove currentMove{}; // last move made from *this into *child
-    HistoryMove bestMove{}; // TtMove or best move found
-    std::array<HistoryMove, 2> killer{}; // Killer heuristic
+    Move currentMove{}; // last move made from *this into *child
+    Move bestMove{}; // TtMove or best move found
+    std::array<Move, 2> killer{}; // Killer heuristic
 
     PrincipalVariation::Index pvIndex{0}; // start of subPV for the current ply
     ZHash zHash{}; // mini-hash of all previous reversible positions zobrist keys
@@ -106,19 +106,19 @@ protected:
     [[nodiscard]] ReturnStatus quiescence();
 
     [[nodiscard]] ReturnStatus searchNullMove();
-    [[nodiscard]] ReturnStatus searchMove(HistoryMove, Ply R = 1_ply);
+    [[nodiscard]] ReturnStatus searchMove(Move, Ply R = 1_ply);
     [[nodiscard]] ReturnStatus searchMove(Square from, Square to, Ply R, CanBeKiller _canBeKiller = CanBeKiller::Yes) {
-        return searchMove(historyMove(from, to, _canBeKiller), R);
+        return searchMove(toMove(from, to, _canBeKiller), R);
     }
 
-    [[nodiscard]] ReturnStatus searchIfPossible(HistoryMove move, Ply R = 1_ply) {
+    [[nodiscard]] ReturnStatus searchIfPossible(Move move, Ply R = 1_ply) {
         return isPossibleMove(move) ? searchMove(move, R) : ReturnStatus::Continue;
     }
 
     [[nodiscard]] ReturnStatus goodCaptures(PiMask); // winning promotions to queen, winning or equal captures
     [[nodiscard]] ReturnStatus goodNonCaptures(Pi, Bb moves, Ply R);
 
-    [[nodiscard]] ReturnStatus contMove(ContIndex::_t, HistoryMove);
+    [[nodiscard]] ReturnStatus contMove(ContIndex::_t, Move);
 
     void childNullMove();
     void childMove(Square, Square);

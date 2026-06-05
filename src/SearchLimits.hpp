@@ -58,7 +58,7 @@ class SearchLimits {
     int lowMaterialQuotaBonus_{0};
 
     mutable time_strategy_t timeStrategy_{ExactTime}; // ExactTime = 0, EasyMove = 3, NormalMove = 5, HardMove = 8
-    mutable HistoryMove lastMove_{}; // last best root move (for updating timeStrategy_)
+    mutable Move lastMove_{}; // last best root move (for updating timeStrategy_)
     mutable Score lastScore_{NoScore}; // last best root move score (for updating timeStrategy_)
     mutable Ply hardMoveDepth_{0}; // iteration when HardMove triggered
 
