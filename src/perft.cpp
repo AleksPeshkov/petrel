@@ -279,7 +279,7 @@ ReturnStatus NodePerft::visitRoot() {
 
             RETURN_IF_STOP (child->visitMove(from, to));
 
-            The_uci.info_perft_currmove(++moveCount, historyMove(from, to), perft - previousPerft);
+            The_uci.info_perft_currmove(++moveCount, toMove(from, to), perft - previousPerft);
         }
     }
 
