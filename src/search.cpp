@@ -61,7 +61,7 @@ ReturnStatus SearchLimits::iterationDeadlineReached() const { return reachedTime
 ReturnStatus SearchLimits::updateTimeStrategy(const PrincipalVariation& pv) const {
     if (timeStrategy_ == ExactTime) { return ReturnStatus::Continue; }
 
-    auto bestMove = pv.move(0_ply);
+    auto bestMove = pv.getMove(0_ply);
     auto score = pv.score();
     auto depth = pv.depth();
 
@@ -100,7 +100,7 @@ void Node::prepareChild() {
     child()->pvIndex = PrincipalVariation::Index{+pvIndex + 1};
     child()->alpha = -beta;
     child()->beta = -alpha;
-    child()->killer[0] = hasParent() ? parent()->killer[0] : HistoryMove{};
+    child()->killer[0] = hasParent() ? parent()->killer[0] : Move{};
     child()->killer[1] = {};
 }
 
@@ -275,7 +275,7 @@ ReturnStatus Node::search() {
                 assert (bestMove.none());
                 break;
             }
-            bestMove = historyMove(ttMove);
+            bestMove = toMove(ttMove);
         }
         assert (bestMove.none() || isPossibleMove(bestMove));
 
@@ -477,7 +477,7 @@ ReturnStatus Node::search() {
         for (Pi pi : MY.promotables()) {
             Square from{MY.sq(pi)};
             Square to{from.file(), Rank8};
-            RETURN_CUTOFF (searchIfPossible(historyMove(from, to, CanBeKiller::Yes), 3_ply));
+            RETURN_CUTOFF (searchIfPossible(toMove(from, to, CanBeKiller::Yes), 3_ply));
         }
 
         // unsafe (losing) captures (N/B, R, Q order)
@@ -631,9 +631,9 @@ ReturnStatus Node::goodCaptures(PiMask victims) {
 }
 
 // counter and folloup move heuristic
-ReturnStatus Node::contMove(ContIndex::_t contMoveType, HistoryMove move) {
+ReturnStatus Node::contMove(ContIndex::_t ContType, Move move) {
     for (auto i : range<decltype(The_uci.contMoves)::Index>()) {
-        auto contMove = The_uci.contMoves.get(contMoveType, i, colorToMove(), move);
+        auto contMove = The_uci.contMoves.get(ContType, i, colorToMove(), move);
         if (contMove.none()) { break; }
         if (isPossibleMove(contMove)) {
             return searchMove(contMove);
@@ -658,7 +658,7 @@ void Node::childNullMove() {
     zHash = {};
 }
 
-ReturnStatus Node::searchMove(HistoryMove move, Ply R) {
+ReturnStatus Node::searchMove(Move move, Ply R) {
     RETURN_IF_STOP (The_uci.limits.countNode());
 
     assert (move.any());
@@ -696,7 +696,7 @@ void Node::updateHistory() {
 
     if (bestMove.any() && inCheck() && bestMove.canBeKiller() == CanBeKiller::Yes) {
         // reset canBeKiller when inCheck()
-        bestMove = HistoryMove{TtMove{bestMove.from(), bestMove.to(), CanBeKiller::No}, bestMove.historyType()};
+        bestMove = Move{TtMove{bestMove.from(), bestMove.to(), CanBeKiller::No}, bestMove.moveType()};
 
         if (hasParent()) {
             assert (parent()->currentMove.any());
@@ -789,7 +789,7 @@ void savePv(const PositionMoves& p, const PrincipalVariation& pv, const Tt& tt) 
     Score score = pv.score();
     auto  pmoves = pv.moves();
 
-    for (HistoryMove move; (move = *pmoves++).any();) {
+    for (Move move; (move = *pmoves++).any();) {
         assert (score.isOk(ply));
         assert (pos.isPseudoLegal(move));
         assert ((pos.generateMoves(), pos.isPossibleMove(move)));
