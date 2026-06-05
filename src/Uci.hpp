@@ -24,7 +24,7 @@ public:
     void readFen(istream&);
     void playMoves(istream&, Repetitions&);
 
-    HistoryMove firstRootMove() const;
+    Move firstRootMove() const;
 
     constexpr Side sideOf(Color::_t color) const { return Side{colorToMove_.is(color) ? My : Op}; }
     constexpr Color colorToMove(Ply ply = 0_ply) const { return Color{ ::distance(colorToMove_, ply) }; }
@@ -100,7 +100,7 @@ public: // used by search:
     ContMoves<4> contMoves;
     CheckMoves counterCheck;
     PrincipalVariation pv;
-    std::array<HistoryMove, 6> rootBestMoves;
+    std::array<Move, 6> rootBestMoves;
 
 private:
 // input members and methods:
@@ -163,7 +163,7 @@ public:
 
     void info_pv() const;
     void info_perft_depth(Ply, node_count_t) const;
-    void info_perft_currmove(int moveCount, HistoryMove currentMove, node_count_t) const;
+    void info_perft_currmove(int moveCount, Move currentMove, node_count_t) const;
 };
 
 extern Uci The_uci;

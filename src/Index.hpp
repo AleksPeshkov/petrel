@@ -343,8 +343,8 @@ enum class ReturnStatus {
     Cutoff,   // prune current node search (futility or beta cutoff)
 };
 
-enum history_type_t { HistorySpecial, HistoryRB, HistoryQN, HistoryKing };
-struct HistoryType : Index<HistoryType, 4, history_type_t> { using Index::Index; };
+enum move_type_t { MoveSpecial, MoveRB, MoveQN, MoveKing };
+struct MoveType : Index<MoveType, 4, move_type_t> { using Index::Index; };
 
 enum class CanBeKiller { No, Yes }; // No = 0, Yes = 1
 
@@ -396,14 +396,14 @@ public:
 
 static_assert (sizeof(TtMove) == sizeof(u16_t));
 
-// HistoryMove { Square to:6; Square from:6; CanBeKiller:1; HistoryType:2; MoveType:1 } (15 bits)
+// Move { Square to:6; Square from:6; CanBeKiller:1; MoveType:2; } (15 bits)
 // Any move's squares coordinates are relative to its side. Black side's move should flip squares before printing.
 // moveType == Special for castling moves and for any pawn move
 // Castling encoded as the castling rook moves over own king source square.
 // Pawn promotion piece type encoded in place of destination square rank.
 // En passant capture encoded as the pawn moves over captured pawn square.
 // Null move is encoded as 0 {A8A8}
-class HistoryMove {
+class Move {
     enum { ShiftTo = 0, ShiftFrom = ShiftTo + Square::bit_width(), ShiftKiller = ShiftFrom + Square::bit_width(), ShiftType = ShiftKiller + 1};
     using _t = u16_t;
 
@@ -414,7 +414,7 @@ class HistoryMove {
             Square::_t to_ : Square::bit_width();
             Square::_t from_ : Square::bit_width();
             CanBeKiller canBeKiller_ : 1;
-            history_type_t historyType_ : HistoryType::bit_width();
+            move_type_t moveType_ : MoveType::bit_width();
         } u;
     };
 #else
@@ -423,9 +423,9 @@ class HistoryMove {
 
 public:
     static constexpr _t null() { return 0; } // null move
-    constexpr HistoryMove() : v_{null()} {}
-    constexpr HistoryMove (TtMove ttMove, HistoryType historyType)
-        : v_{static_cast<_t>(*ttMove | historyType.pack(ShiftType))}
+    constexpr Move() : v_{null()} {}
+    constexpr Move (TtMove ttMove, MoveType moveType)
+        : v_{static_cast<_t>(*ttMove | moveType.pack(ShiftType))}
     { assertOk(); }
 
     constexpr TtMove ttMove() const { return TtMove{v_}; }
@@ -437,14 +437,14 @@ public:
     constexpr Square from() const { assert (any()); return Square::unpack(v_, ShiftFrom); }
     constexpr Square to() const { assert (any()); return Square::unpack(v_, ShiftTo); }
     constexpr CanBeKiller canBeKiller() const { assert (any()); return ::unpack(v_, ShiftKiller, CanBeKiller::Yes); }
-    constexpr HistoryType historyType() const { assert (any()); return HistoryType::unpack(v_, ShiftType); }
-    constexpr bool isSpecial() const { return historyType().is(HistorySpecial); }
+    constexpr MoveType moveType() const { assert (any()); return MoveType::unpack(v_, ShiftType); }
+    constexpr bool isSpecial() const { return moveType().is(MoveSpecial); }
 
     constexpr explicit operator bool() const { return any(); }
-    friend constexpr bool operator == (HistoryMove a, HistoryMove b) { return a.v_ == b.v_; }
+    friend constexpr bool operator == (Move a, Move b) { return a.v_ == b.v_; }
 };
 
-static_assert (sizeof(HistoryMove) == sizeof(u16_t));
+static_assert (sizeof(Move) == sizeof(u16_t));
 
 class Z {
 public:

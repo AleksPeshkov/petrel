@@ -40,17 +40,17 @@ public:
     // count of already made legal (non-null) moves
     constexpr MovesNumber movesMade() const { return movesMade_; }
 
-    constexpr HistoryType historyType(Square from, Square to) const { return MY.historyType(from, to); }
-    constexpr HistoryMove historyMove(TtMove ttMove) const { return HistoryMove{ttMove, historyType(ttMove.from(), ttMove.to())}; }
-    constexpr HistoryMove historyMove(Square from, Square to, CanBeKiller _canBeKiller = CanBeKiller::No) const { return historyMove(TtMove{from, to, _canBeKiller}); }
-    constexpr bool isPseudoLegal(HistoryMove move) const { return MY.isPseudoLegal(move); }
+    constexpr MoveType moveType(Square from, Square to) const { return MY.moveType(from, to); }
+    constexpr Move toMove(TtMove ttMove) const { return Move{ttMove, moveType(ttMove.from(), ttMove.to())}; }
+    constexpr Move toMove(Square from, Square to, CanBeKiller _canBeKiller = CanBeKiller::No) const { return toMove(TtMove{from, to, _canBeKiller}); }
+    constexpr bool isPseudoLegal(Move move) const { return MY.isPseudoLegal(move); }
 
     // move is legal and not yet made
     constexpr bool isPossibleMove(Square from, Square to) const { return MY.has(from) && moves_.has(MY.pi(from), to); }
 
     // move is legal and not yet made
-    constexpr bool isPossibleMove(HistoryMove move) const {
-        return move.any() && isPossibleMove(move.from(), move.to()) && move.historyType() == historyType(move.from(), move.to());
+    constexpr bool isPossibleMove(Move move) const {
+        return move.any() && isPossibleMove(move.from(), move.to()) && move.moveType() == moveType(move.from(), move.to());
     }
 
     // nor capture nor promotion move

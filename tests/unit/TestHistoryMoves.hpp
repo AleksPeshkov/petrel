@@ -2,11 +2,11 @@
 #include <random>
 
 // -----------------------------------------------------------------------------
-// ✅ Simple Random HistoryMove Generator
+// ✅ Simple Random Move Generator
 // -----------------------------------------------------------------------------
 
-/// Generates a random HistoryMove (from, to, type) - no params needed
-HistoryMove randomMove() {
+/// Generates a random Move (from, to, type) - no params needed
+Move randomMove() {
     static std::mt19937 seed{12345}; // Fixed seed for reproducibility
 
     auto sq = [] {
@@ -15,29 +15,29 @@ HistoryMove randomMove() {
     };
     auto ht = [] {
         int ht = std::uniform_int_distribution<int>(0, 3)(seed);
-        return HistoryType{static_cast<HistoryType::_t>(ht)};
+        return MoveType{static_cast<MoveType::_t>(ht)};
     };
-    return HistoryMove{TtMove{sq(), sq(), CanBeKiller::Yes}, ht()};
+    return Move{TtMove{sq(), sq(), CanBeKiller::Yes}, ht()};
 }
 
 // -----------------------------------------------------------------------------
 // ✅ Shared Testing Utility: expect_array_equals
 // -----------------------------------------------------------------------------
-// Compares std::array<HistoryMove, N> against expected list with detailed output
+// Compares std::array<Move, N> against expected list with detailed output
 template <size_t Size>
-void expect_array_equals(const std::array<HistoryMove, Size>& arr,
-                         std::initializer_list<HistoryMove> expected,
+void expect_array_equals(const std::array<Move, Size>& arr,
+                         std::initializer_list<Move> expected,
                          const char* context = "expect_array_equals") {
-    std::vector<HistoryMove> expVec(expected);
+    std::vector<Move> expVec(expected);
     bool failed = false;
     std::ostringstream msg;
 
-    msg << "\n" << context << " failed - HistoryMove array mismatch:\n";
+    msg << "\n" << context << " failed - Move array mismatch:\n";
 
     for (size_t i = 0; i < Size; ++i) {
         bool hasExpected = (i < expVec.size());
-        HistoryMove exp = hasExpected ? expVec[i] : HistoryMove{};
-        HistoryMove act = arr[i];
+        Move exp = hasExpected ? expVec[i] : Move{};
+        Move act = arr[i];
 
         bool expValid = static_cast<bool>(exp);
         bool actValid = static_cast<bool>(act);
@@ -69,7 +69,7 @@ void expect_array_equals(const std::array<HistoryMove, Size>& arr,
     if (failed) {
         msg << "Test context: " << context << "\n";
         std::cerr << msg.str();
-        assert(false && "HistoryMove array mismatch");
+        assert(false && "Move array mismatch");
     }
 }
 
@@ -97,7 +97,7 @@ void test_history_moves() {
 // -----------------------------------------------------------------------------
 void test_insert_unique_compact() {
     constexpr size_t Size = 4;
-    std::array<HistoryMove, Size> arr = {};
+    std::array<Move, Size> arr = {};
     auto clear = [&]() { std::memset(arr.data(), 0, sizeof(arr)); };
 
     auto A = randomMove();
@@ -111,11 +111,11 @@ void test_insert_unique_compact() {
     insert_unique_compact<2>(arr, A);
     insert_unique_compact<2>(arr, B);
     insert_unique_compact<2>(arr, C);
-    expect_array_equals(arr, {A, B, C, HistoryMove{}}, "Test1: Insert A,B,C");
+    expect_array_equals(arr, {A, B, C, Move{}}, "Test1: Insert A,B,C");
 
     // === Test 2: Insert duplicate C → no change ===
     insert_unique_compact<2>(arr, C);
-    expect_array_equals(arr, {A, B, C, HistoryMove{}}, "Test2: Duplicate C");
+    expect_array_equals(arr, {A, B, C, Move{}}, "Test2: Duplicate C");
 
     // === Test 3: Insert D → shift C to end ===
     insert_unique_compact<2>(arr, D);
@@ -138,7 +138,7 @@ void test_insert_unique_compact() {
     // ✅ Test: insert_unique with array size = 1
     // ========================================================
 
-    std::array<HistoryMove, 1> small1{};
+    std::array<Move, 1> small1{};
     auto clear1 = [&]() { std::memset(small1.data(), 0, sizeof(small1)); };
 
     auto X = randomMove();
@@ -166,7 +166,7 @@ void test_insert_unique_compact() {
     // ✅ Test: insert_unique with array size = 2
     // ========================================================
 
-    std::array<HistoryMove, 2> small2{};
+    std::array<Move, 2> small2{};
     auto clear2 = [&]() { std::memset(small2.data(), 0, sizeof(small2)); };
 
     auto P = randomMove();
@@ -201,7 +201,7 @@ void test_insert_unique_compact() {
 // ✅ Test: insert_unique_pos — always inserts/moves to Pos
 // -----------------------------------------------------------------------------
 void test_insert_unique_pos() {
-    std::array<HistoryMove, 3> posArr = {};
+    std::array<Move, 3> posArr = {};
     auto clearPos = [&]() { std::memset(posArr.data(), 0, sizeof(posArr)); };
 
     auto X = randomMove();
@@ -211,19 +211,19 @@ void test_insert_unique_pos() {
     // === Test P1: Insert X at Pos=1 → goes to index 1 ===
     clearPos();
     insert_unique_pos<1>(posArr, X);
-    expect_array_equals(posArr, {HistoryMove{}, X, HistoryMove{}}, "P1: Insert X at Pos=1");
+    expect_array_equals(posArr, {Move{}, X, Move{}}, "P1: Insert X at Pos=1");
 
     // === Test P2: Insert Y at Pos=1 → shift right → Y@1, X@2 ===
     insert_unique_pos<1>(posArr, Y);
-    expect_array_equals(posArr, {HistoryMove{}, Y, X}, "P2: Insert Y at Pos=1");
+    expect_array_equals(posArr, {Move{}, Y, X}, "P2: Insert Y at Pos=1");
 
     // === Test P3: Re-insert X → found at index 2 ≥ Pos=1 → move to Pos=1, shift Y→2 ===
     insert_unique_pos<1>(posArr, X);
-    expect_array_equals(posArr, {HistoryMove{}, X, Y}, "P3: Re-insert X");
+    expect_array_equals(posArr, {Move{}, X, Y}, "P3: Re-insert X");
 
     // === Test P4: Re-insert X again → stable ===
     insert_unique_pos<1>(posArr, X);
-    expect_array_equals(posArr, {HistoryMove{}, X, Y}, "P4: Re-insert X again");
+    expect_array_equals(posArr, {Move{}, X, Y}, "P4: Re-insert X again");
 
     // === Test P5: Insert Z at Pos=0 → insert at front ===
     insert_unique_pos<0>(posArr, Z);
@@ -231,7 +231,7 @@ void test_insert_unique_pos() {
 
 
     // === Test T1: Array size = 1 ===
-    std::array<HistoryMove, 1> small1{};
+    std::array<Move, 1> small1{};
     auto clear1 = [&]() { std::memset(small1.data(), 0, sizeof(small1)); };
 
     auto A = randomMove();
@@ -249,7 +249,7 @@ void test_insert_unique_pos() {
 
 
     // === Test T2: Array size = 2 ===
-    std::array<HistoryMove, 2> small2{};
+    std::array<Move, 2> small2{};
     auto clear2 = [&]() { std::memset(small2.data(), 0, sizeof(small2)); };
 
     auto M1 = randomMove();
@@ -271,7 +271,7 @@ void test_insert_unique_pos() {
 
 
     // === Test T3: Size=4, insert at Pos=0 and Pos=2 ===
-    std::array<HistoryMove, 4> bigArr = {};
+    std::array<Move, 4> bigArr = {};
     auto clearBig = [&]() { std::memset(bigArr.data(), 0, sizeof(bigArr)); };
 
     auto V1 = randomMove();
