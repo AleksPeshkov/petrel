@@ -31,12 +31,12 @@ class SearchLimits {
     static constexpr node_count_t NodeCountMax{std::numeric_limits<node_count_t>::max()};
     static constexpr int QuotaLimit{1000};
 
-    mutable node_count_t nodes_{0}; // (0 <= nodes_ && nodes_ <= nodesLimit_)
-    mutable node_count_t nodesLimit_{NodeCountMax}; // search limit
+    node_count_t nodes_{0}; // (0 <= nodes_ && nodes_ <= nodesLimit_)
+    node_count_t nodesLimit_{NodeCountMax}; // search limit
 
     // number of remaining nodes before (slow) checking for time deadline and UCI stop
     // (0 <= nodesQuota_ && nodesQuota_ <= QuotaLimit)
-    mutable int nodesQuota_{0};
+    int nodesQuota_{0};
 
     Ply maxDepth_{MaxPly}; // go depth
 
@@ -55,17 +55,17 @@ class SearchLimits {
     // less pieces remain, the better BF, the less time to finish iteration needed in average
     int lowMaterialQuotaBonus_{0};
 
-    mutable time_strategy_t timeStrategy_{ExactTime}; // ExactTime = 0, EasyMove = 3, NormalMove = 5, HardMove = 8
-    mutable Move lastMove_{}; // last best root move (for updating timeStrategy_)
-    mutable Score lastScore_{NoScore}; // last best root move score (for updating timeStrategy_)
-    mutable Ply hardMoveDepth_{0}; // iteration when HardMove triggered
+    time_strategy_t timeStrategy_{ExactTime}; // ExactTime = 0, EasyMove = 3, NormalMove = 5, HardMove = 8
+    Move  lastMove_{}; // last best root move (for updating timeStrategy_)
+    Score lastScore_{NoScore}; // last best root move score (for updating timeStrategy_)
+    Ply hardMoveDepth_{0}; // iteration when HardMove triggered
 
 private:
     template <time_quota_t TimeQuota>
     [[nodiscard]] ReturnStatus reachedTime() const;
 
     void assertNodesOk() const;
-    ReturnStatus refreshQuota() const;
+    ReturnStatus refreshQuota();
 
 public:
     constexpr Ply maxDepth() const { return maxDepth_; }
@@ -82,7 +82,7 @@ public:
 
 // used in search.cpp:
     // checks for search stop reasons
-    [[nodiscard]] ReturnStatus countNode() const {
+    [[nodiscard]] ReturnStatus countNode() {
         assertNodesOk();
 
         if (nodesQuota_ <= 0) {
@@ -98,7 +98,7 @@ public:
 
     [[nodiscard]] ReturnStatus lastDeadlineReached() const;
     [[nodiscard]] ReturnStatus iterationDeadlineReached() const;
-    [[nodiscard]] ReturnStatus updateTimeStrategy(const PrincipalVariation&) const;
+    [[nodiscard]] ReturnStatus updateTimeStrategy(const PrincipalVariation&);
 };
 
 #endif
