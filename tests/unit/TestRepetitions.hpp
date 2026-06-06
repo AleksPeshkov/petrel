@@ -113,7 +113,7 @@ void test_edge_cases() {
     assert (reps.has2(Zt{65}) && "Valid repetition not detected");
 
     // Buffer wrap-around
-    reps.clear();
+    reps = {};
     for (int i = 0; i < 60; ++i) {
         reps.push(Zt{static_cast<Z::_t>(i % 40)});
     }

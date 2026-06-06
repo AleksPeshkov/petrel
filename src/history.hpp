@@ -106,10 +106,6 @@ private:
     _t v_;
 
 public:
-    void clear() {
-        std::memset(&v_, 0, sizeof(v_)); //TRICK: Move{None} == uint16_t{0}
-    }
-
     constexpr Move get(ContIndex::_t ci, Index i, Color color, Move move) const {
         assert (move.any());
         return v_[color][move.moveType()][move.from()][move.to()][ContIndex{ci}][i];
@@ -127,10 +123,6 @@ class CACHE_ALIGN CheckMoves {
     _t v_;
 
 public:
-    void clear() {
-        std::memset(&v_, 0, sizeof(v_)); //TRICK: Move{None} == uint16_t{0}
-    }
-
     constexpr Move get(Color color, Square king, Move move) const {
         assert (move.any());
         return v_[color][king][move.to()];
@@ -155,9 +147,9 @@ private:
     Score score_{NoScore}; // latest PV score
 
 public:
-    PrincipalVariation () { clear(); }
-
-    void clear() {
+    constexpr PrincipalVariation () {
+        pv_[Index{0}] = {};
+        pv_[Index{1}] = {};
         depth_ = 0_ply;
         score_ = Score{NoScore};
     }
@@ -193,7 +185,7 @@ public:
     }
 
     void set(Move bestRootMove) {
-        clear();
+        *this = {};
         pv_[Index{0}] = bestRootMove;
         pv_[Index{1}] = {};
     }
@@ -276,7 +268,7 @@ class CACHE_ALIGN RepSide {
     RingIndex last_{Last}; // last added position index
 
 public:
-    constexpr void clear() {
+    constexpr RepSide () {
         hisZHash_ = {};
         hisCount_ = 0;
         dupZHash_ = {};
@@ -400,12 +392,6 @@ class Repetitions {
     array<RepSide, Color> v_;
 
 public:
-    constexpr void clear() {
-        for (auto& repSide : v_) {
-            repSide.clear();
-        }
-    }
-
     void push(Color color, Z z) {
         return v_[color].push(z);
     }

@@ -97,8 +97,7 @@ void test_history_moves() {
 // -----------------------------------------------------------------------------
 void test_insert_unique_compact() {
     constexpr size_t Size = 4;
-    std::array<Move, Size> arr = {};
-    auto clear = [&]() { std::memset(arr.data(), 0, sizeof(arr)); };
+    std::array<Move, Size> arr{};
 
     auto A = randomMove();
     auto B = randomMove();
@@ -107,7 +106,7 @@ void test_insert_unique_compact() {
     auto E = randomMove();
 
     // === Test 1: Insert A,B,C → fill compactly up to Pos=2 ===
-    clear();
+    arr = {};
     insert_unique_compact<2>(arr, A);
     insert_unique_compact<2>(arr, B);
     insert_unique_compact<2>(arr, C);
@@ -139,13 +138,12 @@ void test_insert_unique_compact() {
     // ========================================================
 
     std::array<Move, 1> small1{};
-    auto clear1 = [&]() { std::memset(small1.data(), 0, sizeof(small1)); };
 
     auto X = randomMove();
     auto Y = randomMove();
 
     // --- S1.1: Insert first value at Pos=0 ---
-    clear1();
+    small1 = {};
     insert_unique_compact<0>(small1, X);
     expect_array_equals(small1, {X}, "S1.1: Insert X at Pos=0");
 
@@ -167,7 +165,6 @@ void test_insert_unique_compact() {
     // ========================================================
 
     std::array<Move, 2> small2{};
-    auto clear2 = [&]() { std::memset(small2.data(), 0, sizeof(small2)); };
 
     auto P = randomMove();
     auto Q = randomMove();
@@ -175,7 +172,7 @@ void test_insert_unique_compact() {
     auto S = randomMove();
 
     // --- S2.1: Insert P,Q at Pos=1 → fill both slots ===
-    clear2();
+    small2 = {};
     insert_unique_compact<1>(small2, P);
     insert_unique_compact<1>(small2, Q);
     expect_array_equals(small2, {P, Q}, "S2.1: Insert P,Q at Pos=1");
@@ -201,15 +198,14 @@ void test_insert_unique_compact() {
 // ✅ Test: insert_unique_pos — always inserts/moves to Pos
 // -----------------------------------------------------------------------------
 void test_insert_unique_pos() {
-    std::array<Move, 3> posArr = {};
-    auto clearPos = [&]() { std::memset(posArr.data(), 0, sizeof(posArr)); };
+    std::array<Move, 3> posArr{};
 
     auto X = randomMove();
     auto Y = randomMove();
     auto Z = randomMove();
 
     // === Test P1: Insert X at Pos=1 → goes to index 1 ===
-    clearPos();
+    posArr = {};
     insert_unique_pos<1>(posArr, X);
     expect_array_equals(posArr, {Move{}, X, Move{}}, "P1: Insert X at Pos=1");
 
