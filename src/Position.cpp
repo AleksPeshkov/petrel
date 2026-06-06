@@ -83,7 +83,7 @@ bool Position::dropValid(Side si, PieceType ty, Square to) {
 bool Position::afterDrop() {
     PositionSide::finalSetup(MY, OP);
     updateSliderAttacks<Op>(OP.any(), MY.any());
-    rule50_.clear();
+    rule50_ = {};
 
     // opponent should not be in check
     return MY.checkers().none();

@@ -23,7 +23,6 @@ class Rule50 {
 
 public:
     constexpr Rule50() : v_{0} {}
-    constexpr void clear() { v_ = 0; }
     constexpr void next() { v_ = v_ < Draw ? v_ + 1 : Draw; }
     constexpr bool isDraw() const { return v_ == Draw; }
 
