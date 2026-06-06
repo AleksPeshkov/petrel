@@ -559,7 +559,7 @@ void UciPosition::playMoves(istream& is, Repetitions& repetitions) {
         generateMoves();
         colorToMove_ = ~colorToMove_;
 
-        if (rule50() == 0_ply) { repetitions.clear(); }
+        if (rule50() == 0_ply) { repetitions = {}; }
         repetitions.push(colorToMove_, z());
 
         if (colorToMove_.is(White)) { ++fullMoveNumber_; }
@@ -778,8 +778,8 @@ Uci::Uci(ostream& os) :
 
 void Uci::newGame() {
     tt.newGame();
-    contMoves.clear();
-    counterCheck.clear();
+    contMoves = {};
+    counterCheck = {};
     go_.isNewGame = true;
 }
 
@@ -1191,7 +1191,7 @@ void Uci::position() {
 }
 
 void Uci::setPositionMoves() {
-    repetitions.clear();
+    repetitions = {};
     repetitions.push(colorToMove(), position_.z());
 
     if (consume("moves")) {

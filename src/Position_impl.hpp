@@ -82,7 +82,7 @@ void Position::makeMove(Square from, Square to, auto&& prefetch) {
             MY.movePawn(from, to);
 
             OP.capture(~ep); // also clears en passant victim
-            rule50_.clear();
+            rule50_ = {};
             updateSliderAttacks<My>(MY.affectedBy(from, to, ep), OP.affectedBy(~from, ~to, ~ep));
             if constexpr (Flags & WithEval) { accumulator.ep(from, to, ep); }
             return; // end of en passant capture move
@@ -94,7 +94,7 @@ void Position::makeMove(Square from, Square to, auto&& prefetch) {
     assert (!MY.hasEnPassant()); assert (!OP.hasEnPassant());
 
     if (MY.isPawn(from)) {
-        rule50_.clear(); // any pawn move resets rule50
+        rule50_ = {}; // any pawn move resets rule50
 
         if (from.on(Rank7)) {
             PromoType promoType{::promoTypeFrom(to.rank())}; // decode promoted piece
@@ -173,7 +173,7 @@ void Position::makeMove(Square from, Square to, auto&& prefetch) {
             }
 
             OP.capture(~to);
-            rule50_.clear();
+            rule50_ = {};
             updateSliderAttacks<My>(MY.affectedBy(from)); // king cannot affect enemy attacks
             if constexpr (Flags & WithEval) { accumulator.move(King, from, to, captured); }
             return; // end of king capture move
@@ -232,7 +232,7 @@ void Position::makeMove(Square from, Square to, auto&& prefetch) {
         }
 
         OP.capture(~to);
-        rule50_.clear();
+        rule50_ = {};
         updateSliderAttacks<My>(MY.affectedBy(from) | PiMask{pi}, OP.affectedBy(~from));
         if constexpr (Flags & WithEval) { accumulator.move(promoType, from, to, captured); }
         return; // end of simple capture
