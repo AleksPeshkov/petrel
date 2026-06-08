@@ -129,14 +129,23 @@ public:
     }
 
     constexpr bool isPseudoLegal(Move move) const {
+        //TODO: create isLegal(move)
         if (move.none()) { return false; }
 
         Square from{move.from()};
         Square to{move.to()};
 
-        return has(from)
-            && (move.moveType().is(MoveSpecial) || attacks_.has(pi(from), to))
-            && move.moveType() == moveType(from, to);
+        if (!has(from) || move.moveType() != moveType(from, to)) { return false; }
+
+        if (move.moveType().is(MoveSpecial)) {
+            if (isPawn(from)) { return true; } //TODO: extra checks
+            if (sqKing().is(to)) { return isCastling(pi(from)); }
+            assert (false);
+            return false;
+        }
+
+        // simple move:
+        return attacks_.has(pi(from), to) && !bbSide_.has(to) && !attacks_.has(pi(from), opKing);
     }
 
 //friend class Position;
