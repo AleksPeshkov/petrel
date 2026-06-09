@@ -705,9 +705,9 @@ void SearchLimits::setLimits(const UciLimits& go, const UciPosition& position) {
         return;
     }
 
-    auto lookAheadMoves = [&go]() { return go.movestogo > 0 ? std::min(go.movestogo, 16) : 16; };
-    auto lookAheadTime = [&](Color color) { return go.time[color] + go.inc[color] * (lookAheadMoves() - 1); };
-    auto averageMoveTime = [&](Color color) { return lookAheadTime(color) / lookAheadMoves(); };
+    const auto lookAheadMoves = [&go]() { return 0 < go.movestogo && go.movestogo < 16 ? go.movestogo : 16; };
+    const auto lookAheadTime = [&](Color color) { return go.time[color] + go.inc[color] * (lookAheadMoves() - 1); };
+    const auto averageMoveTime = [&](Color color) { return lookAheadTime(color) / (lookAheadMoves() < 16 ? lookAheadMoves() : 16); };
 
     auto optimumTime = averageMoveTime(my);
     {
@@ -720,9 +720,8 @@ void SearchLimits::setLimits(const UciLimits& go, const UciPosition& position) {
         if (go.isNewGame) { optimumTime *= 13; optimumTime /= 8; }
 
         // MaxQuota and/or HardMove time strategy may spend up to 5.12 times over average (optimium) move quota
-        optimumTime *= +MaxQuota * HardMove; // time * 512
-        // average thinking time for OptimumTimeQuota with NormalMove time strategy
-        optimumTime /= +OptimumTimeQuota * NormalMove; // time / 100
+        optimumTime *= 41 * MaxQuota * HardMove; // time * 512
+        optimumTime /= 4096; //TRICK: OptimumTimeQuota * NormalMove = 100 ~= 4096/41
     }
 
     // [0..6] startpos = 6, queens exchanged = 4, R vs R endgame = 1
