@@ -47,7 +47,7 @@ ReturnStatus SearchLimits::reachedTime() const {
         if (TimeQuota != MaxQuota) { timeQuota += lowMaterialQuotaBonus_; }
 
         timePool *= +timeStrategy_ * timeQuota;
-        timePool /= +HardMove * MaxQuota;
+        timePool /= +HardMove * MaxQuota; // 512
     }
 
     bool deadlineReached = timePool < ::elapsedSince(searchStartTime_);
