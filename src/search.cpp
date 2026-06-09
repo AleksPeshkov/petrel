@@ -388,17 +388,20 @@ ReturnStatus Node::search() {
         if (followupMove().any()) {
             RETURN_CUTOFF (contMove(depth < ply ? FollowupMove : FollowupMove2, followupMove())); // ply-2
         }
-
-        RETURN_CUTOFF (searchIfPossible(killers[1]));
-
         if (followupMove2().any()) {
             RETURN_CUTOFF (contMove(depth < ply ? FollowupMove : FollowupMove2, followupMove2())); // ply-4
         }
+
+        RETURN_CUTOFF (searchIfPossible(killers[1]));
+
         if (counterMove().any()) {
             RETURN_CUTOFF (contMove(depth < ply ? CounterMove : CounterMove2, counterMove())); // ply-1
         }
         if (followupMove().any()) {
             RETURN_CUTOFF (contMove(depth < ply ? FollowupMove : FollowupMove2, followupMove())); // ply-2
+        }
+        if (followupMove2().any()) {
+            RETURN_CUTOFF (contMove(depth < ply ? FollowupMove : FollowupMove2, followupMove2())); // ply-4
         }
     }
 
