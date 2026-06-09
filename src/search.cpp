@@ -103,8 +103,8 @@ void Node::clearNode() {
     pvIndex = PrincipalVariation::Index{+parent().pvIndex + 1};
     alpha = -parent().beta;
     beta = -parent().alpha;
-    killers[0] = hasGrandParent() ? grandParent().killers[0] : Move{};
-    killers[1] = {};
+    killers[0] = {};
+    killers[1] = hasGrandParent() ? grandParent().killers[0] : Move{};
 }
 
 void Node::assertOk() const {
