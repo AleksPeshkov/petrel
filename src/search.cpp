@@ -391,6 +391,9 @@ ReturnStatus Node::search() {
 
         RETURN_CUTOFF (searchIfPossible(killers[1]));
 
+        if (followupMove2().any()) {
+            RETURN_CUTOFF (contMove(depth < ply ? FollowupMove : FollowupMove2, followupMove2())); // ply-4
+        }
         if (counterMove().any()) {
             RETURN_CUTOFF (contMove(depth < ply ? CounterMove : CounterMove2, counterMove())); // ply-1
         }
@@ -726,6 +729,10 @@ constexpr Move Node::followupMove() const {
     return hasGrandParent() ? grandParent()->currentMove : Move{};
 }
 
+constexpr Move Node::followupMove2() const {
+    return hasAncestor(4_ply) ? ancestor(4_ply)->currentMove : Move{};
+}
+
 void Node::updateHistory() {
     assert (bestMove.none() || isPseudoLegal(bestMove));
     assert (score.isOk(ply));
@@ -753,6 +760,10 @@ void Node::updateHistory() {
     insert_unique_pos<1>(grandParent()->killers, bestMove);
     if (followupMove().any()) {
         The_uci.contMoves.set(depth < ply ? FollowupMove : FollowupMove2, colorToMove(), followupMove(), bestMove);
+    }
+
+    if (followupMove2().any()) {
+        The_uci.contMoves.set(depth < ply ? FollowupMove : FollowupMove2, colorToMove(), followupMove2(), bestMove);
     }
 }
 
