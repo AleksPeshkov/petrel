@@ -388,6 +388,9 @@ ReturnStatus Node::search() {
         if (followupMove().any()) {
             RETURN_CUTOFF (contMove(FollowupMove, followupMove())); // ply-2
         }
+        if (followupMove2().any()) {
+            RETURN_CUTOFF (contMove(FollowupMove, followupMove2())); // ply-4
+        }
 
         RETURN_CUTOFF (searchIfPossible(killers[1]));
 
@@ -724,6 +727,10 @@ constexpr Move Node::counterMove() const {
 
 constexpr Move Node::followupMove() const {
     return hasGrandParent() ? grandParent().currentMove : Move{};
+}
+
+constexpr Move Node::followupMove2() const {
+    return hasAncestor(4_ply) ? ancestor(4_ply).currentMove : Move{};
 }
 
 void Node::updateHistory() {
