@@ -381,20 +381,20 @@ ReturnStatus Node::search() {
         } else {
             RETURN_CUTOFF (searchIfPossible(parent().killer[0]));
 
-            if (parent().currentMove.any()) {
-                RETURN_CUTOFF (contMove(CounterMove, parent().currentMove)); // ply-1
+            if (counterMove().any()) {
+                RETURN_CUTOFF (contMove(CounterMove, counterMove())); // ply-1
             }
-            if (hasGrandParent() && grandParent().currentMove.any()) {
-                RETURN_CUTOFF (contMove(FollowupMove, grandParent().currentMove)); // ply-2
+            if (followupMove().any()) {
+                RETURN_CUTOFF (contMove(FollowupMove, followupMove())); // ply-2
             }
 
             RETURN_CUTOFF (searchIfPossible(parent().killer[1]));
 
-            if (parent().currentMove.any()) {
-                RETURN_CUTOFF (contMove(CounterMove, parent().currentMove)); // ply-1
+            if (counterMove().any()) {
+                RETURN_CUTOFF (contMove(CounterMove, counterMove())); // ply-1
             }
-            if (hasGrandParent() && grandParent().currentMove.any()) {
-                RETURN_CUTOFF (contMove(FollowupMove, grandParent().currentMove)); // ply-2
+            if (followupMove().any()) {
+                RETURN_CUTOFF (contMove(FollowupMove, followupMove())); // ply-2
             }
         }
     }
@@ -402,6 +402,7 @@ ReturnStatus Node::search() {
     do {
         // going to search only non-captures, mask out remaining unsafe captures to avoid redundant safety checks
         //TRICK: ~ is not a negate bitwise operation but byteswap -- flip opponent's bitboard
+        //TODO: mask out pinned enemy pawns
         Bb bbAvoid = ~(OP.bbPawnAttacks() | OP.bbSide());
         PiMask safePieces = {}; // pieces on safe squares
 
@@ -634,18 +635,6 @@ ReturnStatus Node::goodCaptures(PiMask victims) {
     return ReturnStatus::Continue;
 }
 
-// counter and folloup move heuristic
-ReturnStatus Node::contMove(ContIndex::_t ContType, Move move) {
-    for (auto i : range<decltype(The_uci.contMoves)::Index>()) {
-        auto contMove = The_uci.contMoves.get(ContType, i, colorToMove(), move);
-        if (contMove.none()) { break; }
-        if (isPossibleMove(contMove)) {
-            return searchMove(contMove);
-        }
-    }
-    return ReturnStatus::Continue;
-}
-
 ReturnStatus Node::searchNullMove() {
     RETURN_IF_STOP (The_uci.limits.countNode());
 
@@ -695,6 +684,26 @@ constexpr Ply Node::finalR(Ply R) const {
     return baseR + R;
 }
 
+// counter and folloup move heuristic
+ReturnStatus Node::contMove(ContIndex::_t ContType, Move move) {
+    for (auto i : range<decltype(The_uci.contMoves)::Index>()) {
+        auto contMove = The_uci.contMoves.get(ContType, i, colorToMove(), move);
+        if (contMove.none()) { break; } // insert_unique_compact() garantees no holes
+        if (isPossibleMove(contMove)) {
+            return searchMove(contMove);
+        }
+    }
+    return ReturnStatus::Continue;
+}
+
+constexpr Move Node::counterMove() const {
+    return hasParent() ? parent().currentMove : Move{};
+}
+
+constexpr Move Node::followupMove() const {
+    return hasGrandParent() ? grandParent().currentMove : Move{};
+}
+
 void Node::updateHistory() {
     assert (bestMove.none() || isPseudoLegal(bestMove));
     assert (score.isOk(ply));
@@ -716,13 +725,13 @@ void Node::updateHistory() {
 
     if (!hasParent()) { return; } // ply-1
     insert_unique_pos(parent().killer, bestMove);
-    if (parent().currentMove.any()) {
-        The_uci.contMoves.set(CounterMove, colorToMove(), parent().currentMove, bestMove);
+    if (counterMove().any()) {
+        The_uci.contMoves.set(CounterMove, colorToMove(), counterMove(), bestMove);
     }
 
     if (!hasGrandParent()) { return; } // ply-2
-    if (grandParent().currentMove.any()) {
-        The_uci.contMoves.set(FollowupMove, colorToMove(), grandParent().currentMove, bestMove);
+    if (followupMove().any()) {
+        The_uci.contMoves.set(FollowupMove, colorToMove(), followupMove(), bestMove);
     }
 
     if (!hasAncestor(3_ply)) { return; } // ply-3
