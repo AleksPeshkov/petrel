@@ -22,7 +22,7 @@ class UciPosition;
 
 class SearchLimits {
     // thinking time pool scaled to OptimumTimeQuota = 100% of averageMoveTime()
-    enum time_quota_t { IterationQuota = 12, OptimumTimeQuota = 20, MaxQuota = 64 };
+    enum time_quota_t { IterationQuota = 13, OptimumTimeQuota = 20, MaxQuota = 64 };
 
     // NormalMove time = 100% of averageMoveTime(), EasyMove = 3/5, HardMove = 8/5 (Fibonacci numbers)
     enum time_strategy_t { ExactTime = 0, EasyMove = 3, NormalMove = 5, HardMove = 8 };
@@ -54,7 +54,7 @@ class SearchLimits {
 
 // dynamic time management:
 
-    // root position low material iteration time bonus -10% | 0 | +10% | 20% | 30%
+    // root position low material iteration time bonus: 0 | +10% | +20% | +30%
     // less pieces remain, the better BF, the less time to finish iteration needed in average
     int lowMaterialQuotaBonus_{0};
 
