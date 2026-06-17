@@ -720,7 +720,7 @@ bool SearchLimits::setLimits(const UciLimits& go, const UciPosition& position) {
 
     // [0..6] startpos = 6, queens exchanged = 4, R vs R endgame = 1
     int gamePhase = position.gamePhase();
-    lowMaterialQuotaBonus_ = 4 - std::clamp(gamePhase, 1, 5);
+    lowMaterialQuotaBonus_ = 4 - std::clamp(gamePhase, 1, 4);
 
     const auto lookAheadMoves = 0 < go.movestogo && go.movestogo < LookAheadMoves ? go.movestogo : LookAheadMoves;
     const auto lookAheadTime = [&](Color color) { return go.time[color] + go.inc[color] * (lookAheadMoves - 1); };
