@@ -53,7 +53,7 @@ struct CACHE_ALIGN Nnue {
 
         static constexpr array<PieceType::_t, PieceType> pieceType = {Pawn, Knight, Bishop, Rook, Queen, King};
 
-        //TODO: reshape feauture indexing during net loading
+        //TODO: reshape feature indexing during net loading
         constexpr FeatureIndex (Side si, PieceType ty, Square sq)
             : Index{ 6*64*+si + 64*pieceType[ty] + +~sq }
         {}
@@ -81,26 +81,26 @@ struct CACHE_ALIGN Nnue {
             add += static_cast<vi32x8_t>(_mm256_madd_epi16(v, vw)); //SCReLU
         }
 
-#ifdef __clang__
+    #ifdef __clang__
         auto sum = __builtin_reduce_add(add);
-#else
+    #else
         auto sum = add[0] + add[1] + add[2] + add[3] + add[4] + add[5] + add[6] + add[7];
-#endif
-        sum += static_cast<i64_t>(l1b) * QA;
-        return static_cast<i32_t>((static_cast<i64_t>(sum) * SCALE) / (QA * QA * QB));
+    #endif
+
 #else
-        int64_t sum{0};
+        int32_t sum{0};
         for (auto i : range<AccumulatorIndex>()) {
             auto v = clamp(accumulator[i], vi16x16x(0), vi16x16x(QA-1)); // CReLU
             auto vw = v * l1w[i];
 
             for (int j = 0; j < 16; ++j) {
-                sum += static_cast<i64_t>(v[j]) * static_cast<i64_t>(vw[j]);
+                sum += static_cast<i32_t>(v[j]) * static_cast<i32_t>(vw[j]);
             }
         }
-        sum += static_cast<i64_t>(l1b) * QA;
-        return static_cast<i32_t>((sum * SCALE) / (QA * QA * QB));
 #endif
+
+        sum += static_cast<i32_t>(l1b) * QA;
+        return static_cast<i32_t>((static_cast<i64_t>(sum) * SCALE) / (QA * QA * QB));
     }
 
     // load from embedded binary data, defined in main.cpp
@@ -113,99 +113,62 @@ extern Nnue nnue;
 class CACHE_ALIGN Accumulator {
     // 128 neurons, 256 bytes
     class AccumulatorSide {
-        using Index = Nnue::AccumulatorSideIndex; // 8
-        using Fi = Nnue::FeatureIndex; // 768
-        using _t = Nnue::_t; // vi16x16_t
+        using Index = Nnue::AccumulatorSideIndex;
+        using _t = array<Nnue::_t, Index>; // vi16x16_t[8]
+        _t v_;
 
-        static constexpr auto& w = nnue.l0w; // feauture weights
-        static constexpr auto& b = nnue.l0b; // feauture biases
-
-        array<_t, Index> v_;
-
-        constexpr void move(Index i, Side si, PieceType ty, Square from, Square to) {
-            v_[i] -= w[Fi{si, ty, from}][i];
-            v_[i] += w[Fi{si, ty, to}][i];
-        }
-
-        constexpr void promote(Index i, Side si, Square from, PromoType promoted, Square to) {
-            v_[i] -= w[Fi{si, Pawn, from}][i];
-            v_[i] += w[Fi{si, promoted, to}][i];
-        }
-
-        constexpr void capture(Index i, Side si, NonKingType captured, Square to) {
-            v_[i] -= w[Fi{~si, captured, to}][i];
-        }
+        constexpr void add(Nnue::FeatureIndex fi) { for (auto i : range<Index>()) { v_[i] += nnue.l0w[fi][i]; } }
+        constexpr void sub(Nnue::FeatureIndex fi) { for (auto i : range<Index>()) { v_[i] -= nnue.l0w[fi][i]; } }
 
     public:
-        constexpr AccumulatorSide() {
-            for (auto i : range<Index>()) {
-                v_[i] = b[i];
-            }
+        constexpr AccumulatorSide() : v_{nnue.l0b} {} // feature biases
+
+        static constexpr void flip(AccumulatorSide& my, AccumulatorSide& op) {
+            for (auto i : range<Index>()) { std::swap(my.v_[i], op.v_[i]); }
         }
 
         constexpr void drop(Side si, PieceType ty, Square to) {
-            for (auto i : range<Index>()) {
-                v_[i] += w[Fi{si, ty, to}][i];
-            }
+            add({ si, ty, to });
         }
 
         constexpr void move(Side si, PieceType ty, Square from, Square to) {
-            for (auto i : range<Index>()) {
-                move(i, si, ty, from, to);
-            }
-        }
-
-        constexpr void move(Side si, PieceType ty, Square from, Square to, NonKingType captured) {
-            for (auto i : range<Index>()) {
-                move(i, si, ty, from, to);
-                capture(i, si, captured, to);
-            }
-        }
-
-        constexpr void promote(Side si, Square from, PromoType promoted, Square to) {
-            for (auto i : range<Index>()) {
-                promote(i, si, from, promoted, to);
-            }
-        }
-
-        constexpr void promote(Side si, Square from, PromoType promoted, Square to, NonKingType captured) {
-            for (auto i : range<Index>()) {
-                promote(i, si, from, promoted, to);
-                capture(i, si, captured, to);
-            }
-        }
-
-        constexpr void ep(Side si, Square from, Square to, Square ep) {
-            for (auto i : range<Index>()) {
-                move(i, si, Pawn, from, to);
-                capture(i, si, NonKingType{Pawn}, ep);
-            }
+            sub({ si, ty, from });
+            add({ si, ty, to });
         }
 
         constexpr void castle(Side si, Square kingFrom, Square kingTo, Square rookFrom, Square rookTo) {
-            for (auto i : range<Index>()) {
-                move(i, si, King, kingFrom, kingTo);
-                move(i, si, Rook, rookFrom, rookTo);
-            }
+            move(si, King, kingFrom, kingTo);
+            move(si, Rook, rookFrom, rookTo);
+        }
+
+        constexpr void move(Side si, PieceType ty, Square from, Square to, NonKingType captured) {
+            move(si, ty, from, to);
+            sub({~si, captured, to});
+        }
+
+        constexpr void ep(Side si, Square from, Square to, Square ep) {
+            move(si, Pawn, from, to);
+            sub({~si, Pawn, ep});
+        }
+
+        constexpr void promote(Side si, Square from, PromoType promoted, Square to) {
+            sub({si, Pawn, from});
+            add({si, promoted, to});
+        }
+
+        constexpr void promote(Side si, Square from, PromoType promoted, Square to, NonKingType captured) {
+            promote(si, from, promoted, to);
+            sub({~si, captured, to});
         }
     };
 
-    union {
-        array<AccumulatorSide, Side> side;
-        Nnue::L1w accumulator;
-    };
-    static_assert (sizeof(side) == sizeof(accumulator));
+    array<AccumulatorSide, Side> side;
 
 public:
     // raw NNUE static evaluation
-    constexpr auto evaluate() const {
-        return nnue.evaluate(accumulator);
-    }
+    constexpr auto evaluate() const { return nnue.evaluate(std::bit_cast<Nnue::L1w>(side)); }
 
-    constexpr Accumulator () {
-        side[Side{My}] = {};
-        side[Side{Op}] = {};
-    }
+    constexpr Accumulator () : side{} {}
 
     // copy parent accumulator but flip sides
     constexpr void flip(const Accumulator& parent) {
@@ -213,9 +176,7 @@ public:
         side[Side{Op}] = parent.side[Side{My}];
     }
 
-    constexpr void swap() {
-        std::swap(side[Side{My}], side[Side{Op}]);
-    }
+    constexpr void flip() { AccumulatorSide::flip(side[Side{My}], side[Side{Op}]); }
 
     constexpr void drop(Side si, PieceType ty, Square to) {
         side[si].drop(Side{My}, ty, to);

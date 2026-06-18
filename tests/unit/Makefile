@@ -16,7 +16,7 @@ CXXFLAGS += -mavx2
 ifeq ($(CXX), clang++)
 	CXXFLAGS += -fconstexpr-steps=10000000
 else ifeq ($(CXX), g++)
-	CXXFLAGS += -flax-vector-conversions -Wno-class-memaccess -Wno-packed-bitfield-compat
+	CXXFLAGS += -flax-vector-conversions -Wno-class-memaccess -Wno-packed-bitfield-compat -Wno-invalid-constexpr
 endif
 
 # Source files
