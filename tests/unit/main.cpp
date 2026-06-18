@@ -3,8 +3,10 @@
 #include "TestHyperbola.hpp"
 #include "TestHistoryMoves.hpp"
 #include "TestRepetitions.hpp"
+#include "Uci.hpp"
 
 /* mocks */
+Uci The_uci(std::cout);
 
 void io::error(std::string_view) {}
 
