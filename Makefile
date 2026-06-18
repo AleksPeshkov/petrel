@@ -54,7 +54,7 @@ ifeq ($(CXX), clang++)
 else ifeq ($(CXX), g++)
 	BUILD_FLAGS += -flto=auto --param inline-unit-growth=100 --param max-inline-insns-single=1000
 	CXXFLAGS += -flax-vector-conversions
-	WARNINGS += -Wno-class-memaccess -Wno-packed-bitfield-compat
+	WARNINGS += -Wno-class-memaccess -Wno-packed-bitfield-compat -Wno-invalid-constexpr
 	WARNINGS += -Wuseless-cast -Wcast-align=strict -Wsuggest-final-types -Wsuggest-final-methods -Wlogical-op
 	WARNINGS += -Wnormalized -Wunsafe-loop-optimizations -Wvector-operation-performance
 endif
