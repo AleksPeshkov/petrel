@@ -16,7 +16,7 @@ void Position::flip(const Position* parent) {
 
 void Position::makeMove(Square from, Square to) {
     PositionSide::swap(MY, OP);
-    accumulator.swap();
+    accumulator.flip();
 
     // the position just swapped its sides, so we make the move for the Op
     makeMove<Op, Full>(from, to, []{});
