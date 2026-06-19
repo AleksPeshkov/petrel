@@ -176,12 +176,9 @@ public:
     }
 
     friend ostream& operator << (ostream& os, Score score) {
+        if (score.none()) { return os; }
+
         os << " score ";
-
-        if (score.none()) {
-            return os << "none";
-        }
-
         auto v = score.v_;
 
         if (v < MinEval) {

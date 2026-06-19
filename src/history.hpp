@@ -198,6 +198,11 @@ public:
         pv_[Index{1}] = {};
     }
 
+    void set(Move bestRootMove, Score score) {
+        set(bestRootMove);
+        score_ = score;
+    }
+
     void set(Ply depth) { depth_ = depth; }
 
     const auto* moves() const { return &pv_[Index{0}]; }
