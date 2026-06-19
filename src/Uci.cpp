@@ -752,6 +752,7 @@ void SearchLimits::setLimits(const UciLimits& go, const UciPosition& position) {
 
     timePool_ = std::clamp(optimumTime, TimeInterval{0}, maximumTime);
     timeStrategy_ = EasyMove;
+    if (timePool_ < 1ms) { quotaLimit_ = QuotaLimitSmall; }
 }
 
 Uci::Uci(ostream& os) :
@@ -783,7 +784,6 @@ void Uci::newSearch() {
     lastInfoTime_ = limits.newSearch();
     lastInfoNodes_ = 0;
     tt.newSearch();
-    pv.clear();
     rootBestMoves = {};
 }
 
@@ -1151,7 +1151,26 @@ void Uci::setPositionMoves() {
         position_.playMoves(inputLine, repetitions);
     }
 
-    tt.prefetch<TtSlot>(position_.z());
+    do {
+        auto ttSlot = *tt.addr<TtSlot>(position_.z());
+        if (ttSlot != position_.z()) { break; }
+
+        auto ttMove = ttSlot.ttMove();
+        if (ttMove.none()) { break; }
+        if (!position_.isPossibleMove(ttMove.from(), ttMove.to())) { break; }
+
+        Score score{NoScore};
+        if (ttSlot.bound() == ExactScore) {
+            score = ttSlot.score(0_ply);
+        }
+
+        HistoryMove move{ttMove, position_.historyType(ttMove.from(), ttMove.to())};
+        pv.set(move, score);
+        return;
+    } while (false);
+
+    // TT miss
+    pv.set(position_.firstRootMove()); // some legal move in worst case
 }
 
 void Uci::go() {
@@ -1167,8 +1186,6 @@ void Uci::go() {
     if (hasMoreInput() || position_.movesTotal() == 0) {
     } else if (position_.movesTotal() == 1) {
         // immediate move, not an error case, optimization
-        //TODO: add ponder move
-        pv.set(position_.firstRootMove());
         info_bestmove();
         return;
     } else {
@@ -1216,7 +1233,7 @@ void UciLimits::readGo(istream& is) {
         else if (io::consume(is, "winc"))     { is >> inc[w]; }
         else if (io::consume(is, "binc"))     { is >> inc[b]; }
         else if (io::consume(is, "movetime")) { is >> movetime; }
-        else if (io::consume(is, "nodes"))    { is >> nodes;     if (nodes == 0) { nodes = NodeCountMax; } }
+        else if (io::consume(is, "nodes"))    { is >> nodes; }
         else if (io::consume(is, "movestogo")){ is >> movestogo; if (movestogo < 0) { movestogo = 0; } }
         else if (io::consume(is, "depth"))    { int d; is >> d;  if (Ply::isOk(d)) { depth = Ply{d}; } }
         else if (io::consume(is, "ponder"))   { ponder = true; }
