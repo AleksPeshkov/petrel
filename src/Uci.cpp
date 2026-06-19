@@ -670,7 +670,8 @@ Move UciPosition::firstRootMove() const {
 TimePoint SearchLimits::newSearch() {
     stop_.store(false, std::memory_order_release);
     nodes_ = 0;
-    nodesQuota_ = 0;
+    quotaCounter_ = 0;
+    quotaLimit_ = QuotaLimit;
     lastMove_ = {};
     searchStartTime_ = timeNow();
     return searchStartTime_;
