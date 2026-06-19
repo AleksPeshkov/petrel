@@ -31,10 +31,11 @@ class SearchLimits {
     static constexpr node_count_t NodeCountMax{std::numeric_limits<node_count_t>::max()};
     static constexpr int LookAheadMoves{16}; // number of moves to allocate time for
     static constexpr node_count_t QuotaLimit{1000}; // default quotaLimit_ value
+    static constexpr node_count_t QuotaLimitSmall{100}; // quotaLimit_ value for remaining time < 1ms
 
     node_count_t nodes_{0}; // (0 <= nodes_ && nodes_ <= nodesLimit_)
     node_count_t nodesLimit_{NodeCountMax}; // `go nodes` limit
-    node_count_t quotaLimit_{QuotaLimit}; // number of searched nodes to check time deadline
+    mutable node_count_t quotaLimit_{QuotaLimit}; // number of searched nodes to check time deadline
 
     // number of remaining nodes before (slow) checking for time deadline and UCI stop
     // (0 <= quotaCounter_ && quotaCounter_ <= quotaLimit_)

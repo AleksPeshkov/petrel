@@ -50,8 +50,9 @@ ReturnStatus SearchLimits::reachedTime() const {
         timePool /= +HardMove * MaxQuota; // 512
     }
 
-    bool deadlineReached = timePool < ::elapsedSince(searchStartTime_);
-    return deadlineReached ? ReturnStatus::Stop : ReturnStatus::Continue;
+    auto remainingTime = timePool - ::elapsedSince(searchStartTime_);
+    if (remainingTime < 1ms) { quotaLimit_ = QuotaLimitSmall; }
+    return remainingTime > 0ms ? ReturnStatus::Continue : ReturnStatus::Stop;
 }
 ReturnStatus SearchLimits::lastDeadlineReached() const { return reachedTime<MaxQuota>(); }
 ReturnStatus SearchLimits::iterationDeadlineReached() const { return reachedTime<IterationQuota>(); }
