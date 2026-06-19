@@ -30,14 +30,15 @@ class SearchLimits {
     static constexpr TimeInterval UnlimitedTime{TimeInterval::max()};
     static constexpr node_count_t NodeCountMax{std::numeric_limits<node_count_t>::max()};
     static constexpr int LookAheadMoves{16}; // number of moves to allocate time for
-    static constexpr int QuotaLimit{1000};
+    static constexpr node_count_t QuotaLimit{1000}; // default quotaLimit_ value
 
     node_count_t nodes_{0}; // (0 <= nodes_ && nodes_ <= nodesLimit_)
-    node_count_t nodesLimit_{NodeCountMax}; // search limit
+    node_count_t nodesLimit_{NodeCountMax}; // `go nodes` limit
+    node_count_t quotaLimit_{QuotaLimit}; // number of searched nodes to check time deadline
 
     // number of remaining nodes before (slow) checking for time deadline and UCI stop
-    // (0 <= nodesQuota_ && nodesQuota_ <= QuotaLimit)
-    int nodesQuota_{0};
+    // (0 <= quotaCounter_ && quotaCounter_ <= quotaLimit_)
+    int quotaCounter_{0};
 
     Ply maxDepth_{MaxPly}; // go depth
 
@@ -70,7 +71,7 @@ private:
 
 public:
     constexpr Ply maxDepth() const { return maxDepth_; }
-    constexpr node_count_t getNodes() const { return nodes_ - nodesQuota_; } // exact number of searched nodes
+    constexpr node_count_t getNodes() const { return nodes_ - quotaCounter_; } // exact number of searched nodes
 
 // called from the Uci input handling thread:
     TimePoint newSearch(); // clear search state
@@ -86,12 +87,12 @@ public:
     [[nodiscard]] ReturnStatus countNode() {
         assertNodesOk();
 
-        if (nodesQuota_ <= 0) {
+        if (quotaCounter_ <= 0) {
             RETURN_IF_STOP (refreshQuota());
         }
 
-        assert (nodesQuota_ > 0);
-        --nodesQuota_;
+        assert (quotaCounter_ > 0);
+        --quotaCounter_;
 
         assertNodesOk();
         return ReturnStatus::Continue;

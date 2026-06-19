@@ -3,34 +3,34 @@
 #include "Position_impl.hpp"
 
 void SearchLimits::assertNodesOk() const {
-    assert (0 <= nodesQuota_); assert (nodesQuota_ < QuotaLimit);
+    assert (0 <= quotaCounter_); assert (quotaCounter_ < static_cast<int>(quotaLimit_));
     //assert (0 <= nodes);
     assert (nodes_ <= nodesLimit_);
-    assert (static_cast<decltype(nodesLimit_)>(nodesQuota_) <= nodes_);
+    assert (static_cast<decltype(nodesLimit_)>(quotaCounter_) <= nodes_);
 }
 
 ReturnStatus SearchLimits::refreshQuota() {
     assertNodesOk();
 
     // expected nodesQuata_ == 0
-    nodes_ -= nodesQuota_;
-    //nodesQuota_ = 0; // keeps invariant, but redundant
+    nodes_ -= quotaCounter_;
+    //quotaCounter_ = 0; // keeps invariant, but redundant
 
-    auto nodesRemaining = nodesLimit_ - nodes_;
-    if (nodesRemaining >= QuotaLimit) {
-        nodesQuota_ = QuotaLimit;
+    auto remainingLimit = nodesLimit_ - nodes_;
+    if (remainingLimit >= quotaLimit_) {
+        quotaCounter_ = quotaLimit_;
     }
     else {
-        nodesQuota_ = static_cast<decltype(nodesQuota_)>(nodesRemaining);
-        if (nodesQuota_ == 0) {
+        quotaCounter_ = static_cast<decltype(quotaCounter_)>(remainingLimit);
+        if (quotaCounter_ == 0) {
             // `go nodes` limit reached
             assertNodesOk();
             return ReturnStatus::Stop;
         }
     }
 
-    assert (0 < nodesQuota_); assert (nodesQuota_ <= QuotaLimit);
-    nodes_ += nodesQuota_; // allocate new nodesQuota
+    assert (0 < quotaCounter_); assert (quotaCounter_ <= static_cast<int>(quotaLimit_));
+    nodes_ += quotaCounter_; // allocate new nodesQuota
 
     return lastDeadlineReached();
 }
@@ -39,7 +39,7 @@ template <SearchLimits::time_quota_t TimeQuota>
 ReturnStatus SearchLimits::reachedTime() const {
     if (stop_.load(std::memory_order_seq_cst)) { return ReturnStatus::Stop; } // unconditional stop
     if (timePool_ == UnlimitedTime || pondering_.load(std::memory_order_relaxed)) { return ReturnStatus::Continue; }
-    if (getNodes() < QuotaLimit) { return ReturnStatus::Continue; } // avoid early time check throttling
+    if (getNodes() < quotaLimit_) { return ReturnStatus::Continue; } // avoid early time check throttling
 
     auto timePool = timePool_;
     if (timeStrategy_ != ExactTime) {
