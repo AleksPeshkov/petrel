@@ -84,12 +84,12 @@ void test_history_moves() {
     auto move2 = randomMove();
     auto move3 = randomMove();
 
-    hm.set(FollowupMove, color, move1, move2);
-    assert(hm.get(FollowupMove, ContMoves<2>::Index{0}, color, move1) == move2);
+    hm.set(DeepFollowupMove, color, move1, move2);
+    assert(hm.get(DeepFollowupMove, ContMoves<2>::Index{0}, color, move1) == move2);
 
-    hm.set(FollowupMove, color, move1, move3);
-    assert(hm.get(FollowupMove, ContMoves<2>::Index{0}, color, move1) == move3);
-    assert(hm.get(FollowupMove, ContMoves<2>::Index{1}, color, move1) == move2);
+    hm.set(DeepFollowupMove, color, move1, move3);
+    assert(hm.get(DeepFollowupMove, ContMoves<2>::Index{0}, color, move1) == move3);
+    assert(hm.get(DeepFollowupMove, ContMoves<2>::Index{1}, color, move1) == move2);
 }
 
 // -----------------------------------------------------------------------------
