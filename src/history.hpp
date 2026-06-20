@@ -91,8 +91,8 @@ constexpr void insert_unique_compact(std::array<value_type, Size>& arr, value_ty
     *pos = value;
 }
 
-enum continuation_move_t {CounterMove, FollowupMove};
-struct ContIndex : Index<ContIndex, 2, continuation_move_t> { using Index::Index; };
+enum continuation_move_t { CounterMove, DeepCounterMove, FollowupMove, DeepFollowupMove };
+struct ContIndex : Index<ContIndex, 4, continuation_move_t> { using Index::Index; };
 
 // Continuation Move table, counter and followup moves together (for cache locality)
 template<int _Size>
