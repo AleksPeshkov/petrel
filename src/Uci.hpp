@@ -68,7 +68,9 @@ class Uci {
     bool infinite_{false}; // should delay bestmove output
 
     mutable node_count_t lastInfoNodes_{0}; // avoid output duplicate 'info nps'
-    mutable TimePoint lastInfoTime_{}; // for instantaneous nps
+    mutable node_count_t lastNpsNodes_{0}; // avoid output instant nps for too short interval
+    mutable TimePoint lastInfoTime_{}; // time for lastInfoNodes_
+    mutable TimePoint lastNpsTime_{}; // time for lastNpsTime_
 
 // log pretty printing:
 
@@ -140,8 +142,7 @@ private:
     void info_perft_bestmove() const;
 
     constexpr bool hasNewNodes() const { return lastInfoNodes_ != limits.getNodes(); }
-    ostream& average_nps(ostream&) const;
-    ostream& instant_nps(ostream&) const;
+    template <bool = false> ostream& info_nps(ostream&) const;
     ostream& info_pv(ostream&) const;
 
     void info(std::string_view) const; // output to log file

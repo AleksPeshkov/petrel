@@ -761,8 +761,8 @@ void Uci::newSearch() {
     swapBestMove(bestmove); // cleanup
     if (!bestmove.empty()) { error("newsearch(), bestmove was not empty: ", bestmove); }
 
-    lastInfoTime_ = limits.newSearch();
-    lastInfoNodes_ = 0;
+    lastInfoTime_ = lastNpsTime_ = limits.newSearch();
+    lastInfoNodes_ = lastNpsNodes_ = 0;
     tt.newSearch();
     rootBestMoves = {};
 }
@@ -1296,32 +1296,36 @@ void Uci::wait() {
     mainSearchThread.waitNotBusy();
 }
 
-ostream& Uci::average_nps(ostream& os) const {
+template <bool Instant>
+ostream& Uci::info_nps(ostream& os) const {
     auto nodes = limits.getNodes();
     auto time = ::timeNow();
-    auto elapsedTime = time - limits.searchStartTime();
 
     os << " nodes " << nodes;
-    if (elapsedTime >= 1ms) {
-        os << " time " << elapsedTime << " nps " << ::nps(nodes, elapsedTime);
-    }
 
-    lastInfoNodes_ = nodes;
-    lastInfoTime_ = time;
-    return os;
-}
-
-ostream& Uci::instant_nps(ostream& os) const {
-    auto nodes = limits.getNodes();
-    auto time = ::timeNow();
     auto elapsedTime = time - limits.searchStartTime();
-
-    auto deltaNodes = nodes - lastInfoNodes_;
-    auto deltaTime = time - lastInfoTime_;
-
-    os << " nodes " << nodes;
     if (elapsedTime >= 1ms) {
-        os << " time " << elapsedTime << " nps " << ::nps(deltaNodes, deltaTime);
+        os << " time " << elapsedTime;
+
+        // for average nps
+        auto deltaNodes = nodes;
+        auto deltaTime = elapsedTime;
+
+        if constexpr (Instant) {
+            if (nodes - lastInfoNodes_ >= 1000 && time - lastInfoTime_ >= 1ms) {
+                // common case
+                lastNpsNodes_ = lastInfoNodes_;
+                lastNpsTime_ = lastInfoTime_;
+            }
+
+            // smooth nps by using larger interval
+            deltaNodes = nodes - lastNpsNodes_;
+            deltaTime = time - lastNpsTime_;
+        }
+
+        if (deltaNodes > 0) {
+            os << " nps " << ::nps(deltaNodes, deltaTime);
+        }
     }
 
     lastInfoNodes_ = nodes;
@@ -1337,7 +1341,7 @@ void Uci::info_pv() const {
 #endif
 
     Output ob{flush};
-    ob << "info depth " << pv.depth(); instant_nps(ob); info_pv(ob);
+    ob << "info depth " << pv.depth(); info_nps<true>(ob); info_pv(ob);
 }
 
 void Uci::info_bestmove() {
@@ -1345,7 +1349,7 @@ void Uci::info_bestmove() {
     auto delayed = limits.pondering() || infinite_;
 
     if (hasNewNodes()) {
-        ob << "info depth " << pv.depth(); average_nps(ob); info_pv(ob);
+        ob << "info depth " << pv.depth(); info_nps(ob); info_pv(ob);
         if (delayed) { ob.flush(); } else { ob << '\n'; }
     }
 
@@ -1366,7 +1370,7 @@ void Uci::info_readyok() const {
     Output ob;
     ob << "readyok";
     if (hasNewNodes()) {
-        ob << "\ninfo depth " << pv.depth(); instant_nps(ob); info_pv(ob);
+        ob << "\ninfo depth " << pv.depth(); info_nps<true>(ob); info_pv(ob);
     }
 }
 
@@ -1385,19 +1389,19 @@ void Uci::perft() {
 
 void Uci::info_perft_bestmove() const {
     Output ob;
-    if (hasNewNodes()) { ob << "info"; average_nps(ob) << '\n'; }
+    if (hasNewNodes()) { ob << "info"; info_nps(ob) << '\n'; }
     ob << "bestmove 0000";
 }
 
 void Uci::info_perft_depth(Ply depth, node_count_t perft) const {
     Output ob;
-    ob << "info depth " << depth; average_nps(ob) << " perft " << perft;
+    ob << "info depth " << depth; info_nps(ob) << " perft " << perft;
 }
 
 void Uci::info_perft_currmove(int moveCount, Move currentMove, node_count_t perft) const {
     Output ob;
     ob << "info currmovenumber " << moveCount;
-    instant_nps(ob);
+    info_nps<true>(ob);
     ob << " currmove"; move(ob, currentMove);
     ob << " perft " << perft;
 }
