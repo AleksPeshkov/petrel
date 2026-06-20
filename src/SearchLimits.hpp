@@ -76,7 +76,7 @@ public:
 
 // called from the Uci input handling thread:
     TimePoint newSearch(); // clear search state
-    void setLimits(const UciLimits&, const UciPosition&);
+    bool setLimits(const UciLimits&, const UciPosition&); // return false if search should not start
     void stop();
     void ponderhit();
 
