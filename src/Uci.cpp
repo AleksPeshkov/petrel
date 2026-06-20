@@ -712,8 +712,10 @@ void SearchLimits::setLimits(const UciLimits& go, const UciPosition& position) {
 
     auto optimumTime = averageMoveTime(my);
     {
-        //TODO: fix case black has one more movestogo
-        if (go.canPonder || go.ponder) { optimumTime += averageMoveTime(~my); }
+        if (go.ponder) {
+            auto ponderTime = std::min(averageMoveTime(~my), averageMoveTime(my)); // do not fully trust opponent time
+            optimumTime += 5 * ponderTime / 8;
+        }
 
         // allocate 1.6x more time for the first out of book move in the game (fill up TT and history data)
         if (go.isNewGame) { optimumTime *= 13; optimumTime /= 8; }
