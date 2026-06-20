@@ -705,9 +705,11 @@ void SearchLimits::setLimits(const UciLimits& go, const UciPosition& position) {
         return;
     }
 
-    const auto lookAheadMoves = [&go]() { return 0 < go.movestogo && go.movestogo < 16 ? go.movestogo : 16; };
-    const auto lookAheadTime = [&](Color color) { return go.time[color] + go.inc[color] * (lookAheadMoves() - 1); };
-    const auto averageMoveTime = [&](Color color) { return lookAheadTime(color) / (lookAheadMoves() < 16 ? lookAheadMoves() : 16); };
+    const auto lookAheadMoves = 0 < go.movestogo && go.movestogo < LookAheadMoves ? go.movestogo : LookAheadMoves;
+    const auto lookAheadTime = [&](Color color) { return go.time[color] + go.inc[color] * (lookAheadMoves - 1); };
+    const auto averageMoveTime = [&](Color color) {
+        return lookAheadTime(color) / (lookAheadMoves < LookAheadMoves ? lookAheadMoves : LookAheadMoves);
+    };
 
     auto optimumTime = averageMoveTime(my);
     {
@@ -722,6 +724,7 @@ void SearchLimits::setLimits(const UciLimits& go, const UciPosition& position) {
         // MaxQuota and/or HardMove time strategy may spend up to 5.12 times over average (optimium) move quota
         optimumTime *= 41 * MaxQuota * HardMove; // time * 512
         optimumTime /= 4096; //TRICK: OptimumTimeQuota * NormalMove = 100 ~= 4096/41
+        optimumTime -= go.moveOverhead;
     }
 
     // [0..6] startpos = 6, queens exchanged = 4, R vs R endgame = 1
@@ -730,10 +733,10 @@ void SearchLimits::setLimits(const UciLimits& go, const UciPosition& position) {
 
     auto maximumTime = lookAheadTime(my) / 4; // 25%
     {
-        if (lookAheadMoves() < 16) {
+        if (lookAheadMoves < LookAheadMoves) {
             // solved for f(1) = 100%, f(2) = 75%, f(16) = 25%
-            maximumTime *= 19 + lookAheadMoves();
-            maximumTime /= 3 + 2 * lookAheadMoves();
+            maximumTime *= 19 + lookAheadMoves;
+            maximumTime /= 3 + 2 * lookAheadMoves;
         }
 
         // left board material correction
@@ -746,7 +749,7 @@ void SearchLimits::setLimits(const UciLimits& go, const UciPosition& position) {
         maximumTime = std::clamp(maximumTime, TimeInterval{0}, availableTime - go.moveOverhead);
     }
 
-    timePool_ = std::clamp(optimumTime - go.moveOverhead, TimeInterval{0}, maximumTime);
+    timePool_ = std::clamp(optimumTime, TimeInterval{0}, maximumTime);
     timeStrategy_ = EasyMove;
 }
 
