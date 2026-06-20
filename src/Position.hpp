@@ -92,7 +92,7 @@ public:
 
 class Position {
     Accumulator accumulator; // NNUE evaluation accumulators (separate for each side)
-    array<PositionSide, Side> positionSide_; //copied from the parent, updated incrementally
+    array<PositionSide, Side> positionSide_; // copied from the parent, updated incrementally
     array<Bb, Side> occupied_; // both color pieces combined, updated from positionSide[] after each move
 
     Zobrist zobrist_; // incrementally updated position hash

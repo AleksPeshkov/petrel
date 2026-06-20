@@ -13,7 +13,7 @@ class PositionMoves : public Position {
     MovesNumber movesMade_; // number of moves already made in this node (set to 0 during moves generation)
     bool inCheck_; // king of current side to move is under attack (set during moves generation)
 
-    //legal move generation helpers
+    // legal move generation helpers
     template <Side::_t> void excludePinnedMoves(PiMask);
     template <Side::_t> void correctCheckEvasionsByPawns(Bb, Square);
     template <Side::_t> void populateUnderpromotions();

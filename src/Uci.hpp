@@ -58,7 +58,6 @@ class Uci {
     Thread mainSearchThread;
 
     std::istringstream inputLine; // stream buffer for parsing current input line
-    std::istringstream startpos{"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"};
 
     mutable std::mutex outMutex; // for both out_ and logFile
     ostream& out_; // UCI output stream

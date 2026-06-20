@@ -66,7 +66,7 @@ bool Position::setEnPassant(File file) {
     Square ep{file, Rank4}; // not FEN ep square, but victim pawn location
 
     if (!OP.isPawn(ep) || OCCUPIED.has(Square{file, Rank6})) {
-        //pseudo legal test failed
+        // pseudo legal test failed
         return false;
     }
 
@@ -82,10 +82,10 @@ bool Position::dropValid(Side si, PieceType ty, Square to) {
 
 bool Position::afterDrop() {
     PositionSide::finalSetup(MY, OP);
-    updateSliderAttacks<Op>(OP.pieces(), MY.pieces());
+    updateSliderAttacks<Op>(OP.any(), MY.any());
     rule50_.clear();
 
-    //opponent should not be in check
+    // opponent should not be in check
     return MY.checkers().none();
 }
 
@@ -101,7 +101,7 @@ template <Side::_t My>
 Zobrist Position::generateZobrist() const {
     Zobrist z{};
 
-    for (Pi pi : MY.pieces()) { z(MY.typeOf(pi), MY.sq(pi));}
+    for (Pi pi : MY.any()) { z(MY.typeOf(pi), MY.sq(pi));}
     for (Pi rook : MY.castlingRooks()) { z.castling(MY.sq(rook)); }
 
     return z;

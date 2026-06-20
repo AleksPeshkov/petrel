@@ -17,7 +17,7 @@ void PositionMoves::generateEnPassantMoves() {
 template <Side::_t My>
 void PositionMoves::populateUnderpromotions() {
     for (Pi pi : MY.promotables()) {
-        //add underpromotions for each already generated legal queen promotion
+        // add underpromotions for each already generated legal queen promotion
         //TRICK: promoted piece type encoded inside pawn destination square rank
         Bb bb{moves_.bb(pi)};
         bb += bb.pBackward(); // Rook, Rank7
@@ -38,7 +38,7 @@ template <Side::_t My>
 void PositionMoves::generateCastlingMoves() {
     for (Pi pi : MY.castlingRooks()) {
         if ( ::castlingRules.isLegal(MY.sqKing(), MY.sq(pi), OCCUPIED, bbAttacked()) ) {
-            //castling encoded as the rook moves over the own king square
+            // castling encoded as the rook moves over the own king square
             moves_.add(pi, MY.sqKing());
         }
     }
@@ -78,7 +78,7 @@ void PositionMoves::correctCheckEvasionsByPawns(Bb checkLine, Square checkFrom) 
     }
 }
 
-//exclude illegal moves due absolute pin
+// exclude illegal moves due absolute pin
 template <Side::_t My>
 void PositionMoves::excludePinnedMoves(PiMask opPinners) {
     constexpr Side::_t Op{~My};
@@ -89,14 +89,14 @@ void PositionMoves::excludePinnedMoves(PiMask opPinners) {
         assert (::attacksFrom(OP.typeOf(pinner), pinFrom).has(MY.sqKing()));
 
         Bb pinLine = ::inBetween(MY.sqKing(), pinFrom);
-        Bb piecesOnPinLine = pinLine & OCCUPIED;
-        assert (piecesOnPinLine.any());
+        Bb occupiedPinLine = pinLine & OCCUPIED;
+        assert (occupiedPinLine.any());
 
-        if (piecesOnPinLine.isSingleton() && piecesOnPinLine.any(MY.bbSide())) {
-            //we discovered a true pinned piece
-            Pi pinned = MY.pi(piecesOnPinLine.index());
+        if (occupiedPinLine.isSingleton() && occupiedPinLine.any(MY.bbSide())) {
+            // we discovered a true pinned piece
+            Pi pinned = MY.pi(occupiedPinLine.index());
 
-            //exclude all pinned piece moves except those over the pin line
+            // exclude all pinned piece moves except those over the pin line
             moves_.filter(pinned, pinLine + Bb{pinFrom});
         }
     }
@@ -109,7 +109,7 @@ void PositionMoves::generateCheckEvasions() {
     PiMask checkers = OP.checkers();
 
     if (!checkers.isSingleton()) {
-        moves_ = {}; //double check case: no moves except king's ones are possible
+        moves_ = {}; // double check case: no moves except king's ones are possible
     } else { // common single checker case
         Pi checker = checkers.pi();
         Square checkFrom{~OP.sq(checker)};
@@ -120,7 +120,7 @@ void PositionMoves::generateCheckEvasions() {
         moves_.setAttacks(MY.attacks());
         moves_ &= checkLine + Bb{checkFrom};
 
-        //pawns moves are special case
+        // pawns moves are special case
         correctCheckEvasionsByPawns<My>(checkLine, checkFrom);
 
         excludePinnedMoves<My>(OP.pinners() % checkers);
@@ -134,7 +134,7 @@ void PositionMoves::generateCheckEvasions() {
     generateLegalKingMoves<My>();
 }
 
-//generate all legal moves from the current position for the current side to move
+// generate all legal moves from the current position for the current side to move
 template <Side::_t My>
 void PositionMoves::generateMoves() {
     constexpr Side::_t Op{~My};
