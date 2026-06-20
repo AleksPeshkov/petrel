@@ -810,6 +810,8 @@ void savePv(const PositionMoves& p, const PrincipalVariation& pv, const Tt& tt) 
 
 ReturnStatus Node::searchRoot(const PositionMoves& pos) {
     static_cast<PositionMoves&>(*this) = pos;
+    killer = {};
+
     for (depth = 1_ply; depth.isOk(); ++depth) {
         tt = The_uci.tt.prefetch<TtSlot>(z());
         alpha = Score{MateLoss};
