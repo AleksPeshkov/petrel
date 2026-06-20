@@ -22,6 +22,7 @@ protected:
     Move currentMove{}; // last move made from *this into *child
     Move bestMove{}; // TtMove or best move found
     std::array<Move, 2> killers{}; // Killer heuristic
+    array<Square, Square, NonKingType> capturesFrom; // array<AttackerFrom, VictimSquare, VictimType>
 
     PrincipalVariation::Index pvIndex{0}; // start of subPV for the current ply
     TtSlot* tt{nullptr}; // pointer to the slot in TT
@@ -90,6 +91,7 @@ public:
     constexpr Node() = default;
     constexpr explicit Node (Ply _ply) : ply{_ply} {}
     ReturnStatus searchRoot(const PositionMoves&);
+    void newGame() { capturesFrom = {}; } // clear history
 };
 
 class Tt;

@@ -348,7 +348,18 @@ enum class ReturnStatus {
 #define RETURN_CUTOFF(visitor) { ReturnStatus status = visitor; if (status != ReturnStatus::Continue) { return status; }} ((void)0)
 
 enum move_type_t { MoveSpecial, MoveRB, MoveQN, MoveKing };
+// compact encoding has sense only together with Square move.from() and Square move.to()
 struct MoveType : Index<MoveType, 4, move_type_t> { using Index::Index; };
+
+enum victim_type_t { VictimQueen, VictimRook, VictimMinor, VictimPawn };
+// pack NonKingType into 4 slots
+struct VictimType : Index<VictimType, 4, victim_type_t> {
+    using Index::Index;
+    constexpr VictimType (NonKingType ty) {
+        constexpr array<VictimType::_t, NonKingType> victimType{ VictimQueen, VictimRook, VictimMinor, VictimMinor, VictimPawn };
+        v_ = victimType[ty];
+    }
+};
 
 enum class CanBeKiller { No, Yes }; // No = 0, Yes = 1
 
