@@ -160,7 +160,8 @@ void Position::makeMove(Square from, Square to, auto&& prefetch) {
             for (Pi rook : MY.castlingRooks()) { zobrist_.castling(MY.sq(rook)); }
             zobrist_.move(King, from, to);
         }
-        MY.moveKing(from, to);
+        MY.move(Pi{TheKing}, from, to);
+        MY.updateMovedKing(to);
         OP.setOpKing(~to);
 
         if (OP.has(~to)) {
@@ -211,9 +212,9 @@ void Position::makeMove(Square from, Square to, auto&& prefetch) {
             //TRICK: castling should not affect opponent's sliders, otherwise it is check or pin
             //TRICK: castling rook should attack 'kingFrom' square
             //TRICK: only first rank sliders can be affected
-            updateSliderAttacks<My>(MY.affectedBy(rookFrom, kingFrom) & MY.piecesOn(Rank1));
+            updateSliderAttacks<My>(MY.affectedBy(rookFrom, kingFrom) & MY.anyOn(Rank1));
             if constexpr (Flags & WithEval) { accumulator.castle(kingFrom, kingTo, rookFrom, rookTo); }
-            return; //end of castling move
+            return; // end of castling move
         }
 
         if constexpr (Flags & WithZobrist) { zobrist_.castling(from); } // clear just moved rook castling right

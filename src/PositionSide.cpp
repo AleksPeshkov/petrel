@@ -28,14 +28,14 @@ void PositionSide::finalSetup(PositionSide& MY, PositionSide& OP) {
 int PositionSide::countAttackersTo(Square sq0, Bb occupied) const {
     auto attackers = attackersTo(sq0);
 
-    int result = attackers.popcount();
-    if (result == 0) { return result; }
+    int count = attackers.popcount();
+    if (count == 0) { return count; }
 
     auto sliders1 = sliders() & attackers; // primary slider attackers
-    if (sliders1.none()) { return result; }
+    if (sliders1.none()) { return count; }
 
     auto sliders2 = sliders() % attackers; // secondary slider attackers
-    if (sliders2.none()) { return result; }
+    if (sliders2.none()) { return count; }
 
     for (auto pi2 : sliders2) {
         Square sq2{sq(pi2)};
@@ -43,7 +43,7 @@ int PositionSide::countAttackersTo(Square sq0, Bb occupied) const {
             sliders2 -= PiMask{pi2};
         }
     }
-    if (sliders2.none()) { return result; }
+    if (sliders2.none()) { return count; }
 
     for (auto pi1 : sliders1) {
         Square sq1{sq(pi1)};
@@ -60,12 +60,12 @@ int PositionSide::countAttackersTo(Square sq0, Bb occupied) const {
         // triple battery possible
         for (auto sq2 : candidates) {
             if ((::inBetween(sq2, sq1) & (occupied - candidates)).none()) {
-                ++result;
+                ++count;
             }
         }
     }
 
-    return result;
+    return count;
 }
 
 void PositionSide::setLeaperAttacks() {
@@ -100,7 +100,7 @@ void PositionSide::move(Pi pi, Square from, Square to) {
     assert (from != to);
     assertOk(pi, typeOf(pi), from);
 
-    squares.move(pi, to);
+    squares.set(pi, to);
     bbSide_.move(from, to);
 }
 
@@ -111,7 +111,7 @@ void PositionSide::move(Pi pi, PieceType ty, Square from, Square to) {
     move(pi, from, to);
 
     if (ty.is(Knight)) {
-        assert (traits.none(pi)); //nothing to clear or already cleared
+        assert (traits.none(pi)); // nothing to clear or already cleared
         setLeaperAttack(pi, Knight, to);
     }
     else {
@@ -122,13 +122,8 @@ void PositionSide::move(Pi pi, PieceType ty, Square from, Square to) {
     assertOk(pi, ty, to);
 }
 
-void PositionSide::moveKing(Square from, Square to) {
-    move(Pi{TheKing}, from, to);
-    updateMovedKing(to);
-}
-
 void PositionSide::movePawn(Square from, Square to) {
-    Pi pawn{pi(from) };
+    Pi pawn{pi(from)};
     move(pawn, from, to);
     bbPawns_.move(from, to);
     bbPawnAttacks_ = bbPawns_.pForwardDiag();
@@ -161,7 +156,7 @@ Pi PositionSide::piPromoted(Square from, PromoType ty, Square to) {
 
     // drop promoted piece to the most valuable if possible
     //TODO: resort all pieces
-    Pi promo = PieceSet(pieces()).piFirstVacant();
+    Pi promo = PieceSet(any()).piFirstVacant();
     assert (promo <= pawn);
 
     squares.drop(promo, to);
@@ -179,7 +174,7 @@ Pi PositionSide::piPromoted(Square from, PromoType ty, Square to) {
 }
 
 void PositionSide::updateMovedKing(Square to) {
-    //king move cannot check
+    // king move cannot check
     assert (traits.none(Pi{TheKing}));
     assert (!::attacksFrom(King, to).has(opKing));
     attacks_.set(Pi{TheKing}, ::attacksFrom(King, to));
@@ -192,7 +187,7 @@ void PositionSide::castle(Square kingFrom, Square kingTo, Pi rook, Square rookFr
     assertOk(Pi{TheKing}, King, kingFrom);
     assertOk(rook, Rook, rookFrom);
 
-    //possible overlap in Chess960
+    // possible overlap in Chess960
     squares.castle(kingTo, rook, rookTo);
     bbSide_ -= Bb{kingFrom};
     bbSide_ -= Bb{rookFrom};
@@ -228,7 +223,7 @@ void PositionSide::setPinner(Pi pi, SliderType ty, Square sq) {
 void PositionSide::setOpKing(Square king) {
     opKing = king;
 
-    assert (traits.checkers().none()); //king should not be in check
+    assert (traits.checkers().none()); // king should not be in check
 
     traits.clearPinners();
     for (Pi pi : types.sliders()) {
@@ -285,13 +280,13 @@ void PositionSide::setEnPassantKiller(Square from) {
 void PositionSide::clearEnPassantVictim() {
     assert (hasEnPassant());
     assert (traits.enPassantPawns().isSingleton());
-    assert (traits.enPassantPawns() <= squares.piecesOn(Rank4));
+    assert (traits.enPassantPawns() <= squares.anyOn(Rank4));
     traits.clearEnPassants();
 }
 
 void PositionSide::clearEnPassantKillers() {
     assert (hasEnPassant());
-    assert (traits.enPassantPawns() <= squares.piecesOn(Rank5));
+    assert (traits.enPassantPawns() <= squares.anyOn(Rank5));
     traits.clearEnPassants();
 }
 
@@ -314,7 +309,7 @@ bool PositionSide::dropValid(PieceType ty, Square to) {
     }
     bbSide_ += Bb{to};
 
-    Pi pi = ty.is(King) ? Pi{TheKing} : PieceSet{pieces() | PiMask{Pi{TheKing}}}.piFirstVacant();
+    Pi pi = ty.is(King) ? Pi{TheKing} : PieceSet{any() | PiMask{Pi{TheKing}}}.piFirstVacant();
 
     material_.drop(ty);
     types.drop(pi, ty);
@@ -341,7 +336,7 @@ bool PositionSide::setValidCastling(CastlingSide castlingSide) {
     }
 
     Square sqOuter{sqKing()};
-    for (Pi rook : types.piecesOf(Rook) & piecesOn(Rank1)) {
+    for (Pi rook : types.anyOf(Rook) & anyOn(Rank1)) {
         if (CastlingRules::castlingSide(sqOuter, sq(rook)).is(*castlingSide)) {
             sqOuter = sq(rook);
         }
