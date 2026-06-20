@@ -116,7 +116,7 @@ protected:
     }
 
     [[nodiscard]] ReturnStatus goodCaptures(PiMask); // winning promotions to queen, winning or equal captures
-    [[nodiscard]] ReturnStatus goodNonCaptures(Pi, Bb moves, Ply R);
+    [[nodiscard]] ReturnStatus goodNonCaptures(Pi, Bb, Ply R);
 
     [[nodiscard]] ReturnStatus contMove(ContIndex::_t, Move);
 
@@ -124,7 +124,7 @@ protected:
     void childMove(Square, Square);
     void updateHistory();
     void saveNode(); // write search result into TT
-    Ply finalR(Ply) const;
+    constexpr Ply finalR(Ply) const;
 
     constexpr bool hasParent() const { return ply >= 1_ply; }
     constexpr bool hasGrandParent() const { return ply >= 2_ply; }

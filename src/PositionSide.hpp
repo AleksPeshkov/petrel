@@ -51,8 +51,6 @@ class PositionSide {
         constexpr void assertOk(Pi, PieceType, Square) const {}
     #endif
 
-    void move(Pi, Square, Square);
-    void updateMovedKing(Square);
     void setLeaperAttacks();
     void setLeaperAttack(Pi, PieceType, Square);
     void setPinner(Pi, SliderType, Square);
@@ -75,18 +73,17 @@ public:
     constexpr Square sq(Pi pi) const { assertOk(pi); return squares.sq(pi); }
     constexpr Square sqKing() const { return sq(Pi{TheKing}); } // sq(TheKing)
     constexpr bool isKing(Square sq) const { return sqKing().is(sq); } // sq(TheKing)
-    constexpr PiMask piecesOn(Rank::_t rank) const { Rank{rank}.assertOk(); return squares.piecesOn(rank); }
+    constexpr PiMask anyOn(Rank::_t rank) const { Rank{rank}.assertOk(); return squares.anyOn(rank); }
 
     constexpr PieceType typeOf(Pi pi) const { assertOk(pi); return types.typeOf(pi); }
     constexpr PieceType typeAt(Square sq) const { return typeOf(pi(sq)); }
 
     // all onboard pieces of the given side
-    constexpr PiMask pieces() const { assert (squares.pieces() == types.pieces()); return squares.pieces(); }
+    constexpr PiMask any() const { assert (squares.any() == types.any()); return squares.any(); }
     constexpr PiMask sliders() const { return types.sliders(); } // Q, R, B
     constexpr PiMask officers() const { return types.officers(); } // Q, R, B, N
-    constexpr PiMask nonPawns() const { return types.nonPawns(); } // K, Q, R, B, N
     constexpr PiMask nonKing() const { return types.nonKing(); } // Q, R, B, N, P
-    constexpr PiMask pawns() const { return types.piecesOf(Pawn); }
+    constexpr PiMask pawns() const { return types.anyOf(Pawn); }
 
     // pieces of less value than given piece type
     constexpr PiMask lessValue(PieceType ty) const { return types.lessValue(ty); }
@@ -120,9 +117,9 @@ public:
     bool isPinned(Bb) const;
 
     constexpr MoveType moveType(Square from, Square to) const {
-        // any pawn move or castling or null move
         //TRICK: from == to can be either null move or rook underpromotion
-        if (from == to || isPawn(from) || isKing(to)) { return MoveType{MoveSpecial}; }
+        // pawn move || castling || null move
+        if (isPawn(from) || isKing(to) || from == to) { return MoveType{MoveSpecial}; }
 
         constexpr MoveType::_t fromPieceType[] = { MoveQN, MoveRB, MoveRB, MoveQN, MoveSpecial, MoveKing };
         return MoveType{fromPieceType[+typeAt(from)]};
@@ -152,12 +149,13 @@ public:
     static void swap(PositionSide&, PositionSide&);
 
     void setOpKing(Square);
+    void move(Pi, Square, Square);
     void move(Pi, PieceType, Square, Square);
     void movePawn(Square, Square);
-    void moveKing(Square, Square);
     void castle(Square kingFrom, Square kingTo, Pi rook, Square rookFrom, Square rookTo);
     Pi piPromoted(Square, PromoType, Square);
     void capture(Square);
+    void updateMovedKing(Square);
 
     void setEnPassantVictim(Square);
     void setEnPassantKiller(Square);
@@ -168,11 +166,11 @@ public:
     void updateSliders(PiMask, Bb);
     void updateSlidersCheckers(PiMask, Bb);
 
-    //used only during initial position setup
+    // used only during initial position setup
     bool dropValid(PieceType, Square);
     static void finalSetup(PositionSide&, PositionSide&);
 
-// friend class UciPosition;
+//friend class UciPosition;
     bool setValidCastling(File);
     bool setValidCastling(CastlingSide);
 };

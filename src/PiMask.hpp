@@ -127,7 +127,7 @@ struct BitArrayOps<u8x16_t> {
     static bool equals(Arg a, Arg b) { return ::all(a == b); }
 };
 
-///piece vector of boolean values: false (0) or true (0xff)
+// piece vector of boolean values: false (0) or true (0xff)
 class PiMask : public BitArray<PiMask, u8x16_t> {
 public:
     constexpr PiMask () : BitArray{} {}
@@ -183,7 +183,6 @@ class PiSquare {
     };
 
     constexpr void set(Pi pi, _t sq) { square[pi] = sq; }
-    constexpr void set(Pi pi, Square sq) { square[pi] = *sq; }
 
     constexpr PiMask at(_t sq) const { return PiMask{u8x16 == ::x16(sq)}; }
     constexpr bool has(_t sq) const { return at(sq).any(); }
@@ -196,7 +195,7 @@ public:
         }
     }
 
-    constexpr bool isOk(Pi pi) const { return !none(pi) && this->pi(square[pi]) == pi; }
+    constexpr bool isOk(Pi _pi) const { return !none(_pi) && pi(square[_pi]) == _pi; }
 
     #ifndef NDEBUG
         constexpr void assertOk(Pi pi) const { assert (isOk(pi)); }
@@ -204,9 +203,9 @@ public:
         constexpr void assertOk(Pi) const {}
     #endif
 
-    void drop(Pi pi, Square sq) { assert (none(pi)); assert (!has(sq)); set(pi, sq); }
-    void clear(Pi pi) { assertOk(pi); square[pi] = Square::null(); }
-    void move(Pi pi, Square sq) { assertOk(pi); assert (!has(sq)); set(pi, sq); }
+    void set(Pi pi, Square sq) { assertOk(pi); assert (!has(sq)); set(pi, *sq); }
+    void drop(Pi pi, Square sq) { assert (none(pi)); assert (!has(sq)); set(pi, *sq); }
+    void clear(Pi pi) { assertOk(pi); set(pi, Square::null()); }
 
     void castle(Square kingTo, Pi theRook, Square rookTo) {
         assert (!theRook.is(TheKing));
@@ -217,8 +216,8 @@ public:
 
         assertOk(Pi{TheKing});
         assertOk(theRook);
-        set(Pi{TheKing}, kingTo);
-        set(theRook, rookTo);
+        set(Pi{TheKing}, *kingTo);
+        set(theRook, *rookTo);
         assertOk(Pi{TheKing});
         assertOk(theRook);
     }
@@ -228,9 +227,9 @@ public:
     constexpr Square sq(Pi pi) const { assertOk(pi); return Square{square[pi]}; }
     constexpr Pi pi(Square sq) const { return pi(*sq); }
 
-    constexpr PiMask pieces() const { return PiMask{u8x16 != ::x16(Square::null())}; }
+    constexpr PiMask any() const { return PiMask{u8x16 != ::x16(Square::null())}; }
 
-    constexpr PiMask piecesOn(Rank::_t rank) const {
+    constexpr PiMask anyOn(Rank::_t rank) const {
         return PiMask{
             (u8x16 & ::x16( static_cast<_t>(Square::null() ^ static_cast<_t>(File::mask())) ))
             == ::x16( *Square{static_cast<File::_t>(0), rank} )
@@ -258,24 +257,6 @@ class PiType {
     };
 
     using element_type = pieces_t;
-
-    static constexpr array<element_type, PieceType> LessOrEqualValue = {
-        NonK,  // Queen
-        NonQK, // Rook
-        PNB,   // Bishop
-        PNB,   // Knight
-        Pawns, // Pawn
-        All,   // King
-    };
-
-    static constexpr array<element_type, PieceType> LessValue = {
-        NonQK, // Queen
-        PNB,   // Rook
-        Pawns, // Bishop
-        Pawns, // Knight
-        None,  // Pawn
-        NonK,  // King
-    };
 
     // defined to make debugging clear
     union {
@@ -314,29 +295,39 @@ public:
     constexpr bool isSlider(Pi pi) const { assertOk(pi); return has(pi, Sliders); }
     constexpr PieceType typeOf(Pi pi) const { assertOk(pi); return PieceType{static_cast<PieceType::_t>( ::lsb(static_cast<unsigned>(type[pi])) )}; }
 
-    constexpr PiMask pieces() const { return PiMask::any(u8x16); }
-    constexpr PiMask piecesOf(PieceType::_t ty) const { assert (!PieceType{ty}.is(King)); return any(element(ty)); }
+    constexpr PiMask any() const { return PiMask::any(u8x16); }
+    constexpr PiMask anyOf(PieceType::_t ty) const { assert (!PieceType{ty}.is(King)); return any(element(ty)); }
 
-    // Queens, Rooks, Bishops
-    constexpr PiMask sliders() const { return any(Sliders); }
-
-    // King, Pawns, Knights
-    constexpr PiMask leapers() const { return any(Leapers); }
-
-    // Queens, Rooks, Bishops, Knights
-    constexpr PiMask officers() const { return any(Officers); }
-
-    // King, Queens, Rooks, Bishops, Knights
-    constexpr PiMask nonPawns() const { return any(NonP); }
-
-    // Queens, Rooks, Bishops, Knights, Pawns
-    constexpr PiMask nonKing() const { return any(NonK); }
+    constexpr PiMask sliders() const { return any(Sliders); } // Q, R, B
+    constexpr PiMask leapers() const { return any(Leapers); } // K, P, N
+    constexpr PiMask officers() const { return any(Officers); } // Q, R, B, N
+    constexpr PiMask nonKing() const { return any(NonK); } // Q, R, B, K, P
 
     // less valuable pieces than given piece type
-    constexpr PiMask lessValue(PieceType ty) const {return any(LessValue[ty]); }
+    constexpr PiMask lessValue(PieceType ty) const {
+        constexpr array<element_type, PieceType> LessValue = {
+            NonQK, // Queen
+            PNB,   // Rook
+            Pawns, // Bishop
+            Pawns, // Knight
+            None,  // Pawn
+            NonK,  // King
+        };
+        return any(LessValue[ty]);
+    }
 
     // less or equal value pieces than given piece type
-    constexpr PiMask lessOrEqualValue(PieceType ty) const { return any(LessOrEqualValue[ty]); }
+    constexpr PiMask lessOrEqualValue(PieceType ty) const {
+        constexpr array<element_type, PieceType> LessOrEqualValue = {
+            NonK,  // Queen
+            NonQK, // Rook
+            PNB,   // Bishop
+            PNB,   // Knight
+            Pawns, // Pawn
+            All,   // King
+        };
+        return any(LessOrEqualValue[ty]);
+    }
 };
 
 class PiTrait {
@@ -347,7 +338,7 @@ class PiTrait {
         Castlings   = ::singleton<u8_t>(2), // rook with castling rights
         EnPassants  = ::singleton<u8_t>(3), // pawn can be legally captured en passant OR pawn can perform a legal en passant capture
         Promotables = ::singleton<u8_t>(4), // any pawn on the 7th rank
-        CheckersPinners = Checkers | Pinners,  // Checkers + Pinners
+        CheckersPinners = Checkers | Pinners, // Checkers + Pinners
     };
 
     using element_type = trait_t;

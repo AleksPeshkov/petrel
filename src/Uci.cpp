@@ -227,12 +227,12 @@ UciOutput& operator << (UciOutput& ob, Move move) {
 
 UciOutput& operator << (UciOutput& ob, const PrincipalVariation& pv) {
     ob << pv.score();
-    auto moves = pv.moves();
-    if (moves->none()) { return ob; } // empty PV (no legal moves at root)
+    auto pvMoves = pv.moves();
+    if (pvMoves->none()) { return ob; } // empty PV (no legal moves at root)
 
     {
         ob << " pv";
-        for (Move move; (move = *moves++).any(); ) {
+        for (Move move; (move = *pvMoves++).any(); ) {
             ob << move;
         }
         ob.resetRootColor();
@@ -661,7 +661,7 @@ void UciPosition::readFen(istream& is) {
 
 // fast exit: return the first legal move found
 Move UciPosition::firstRootMove() const {
-    for (Pi pi : MY.pieces()) {
+    for (Pi pi : MY.any()) {
         if (bbMovesOf(pi).none()) { continue; }
         return toMove(MY.sq(pi), bbMovesOf(pi).first());
     }
@@ -1111,7 +1111,10 @@ void Uci::ucinewgame() {
 }
 
 void Uci::readStartPos() {
+    static std::istringstream startpos{"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"};
     position_.readFen(startpos);
+
+    // rewind for next use:
     startpos.clear();
     startpos.seekg(0);
 }
@@ -1389,8 +1392,8 @@ void Uci::bench(std::string_view goLimits) {
 
     uciok();
 
-    node_count_t benchTotalNodes{0};
-    TimeInterval benchTotalTime{0};
+    node_count_t benchNodes{0};
+    TimeInterval benchTime{0};
     node_count_t ttHits{0};
     node_count_t ttReads{0};
     node_count_t ttWrites{0};
@@ -1423,8 +1426,8 @@ void Uci::bench(std::string_view goLimits) {
             auto searchStart{::timeNow()};
             searchStack[0_ply].searchRoot(position_);
 
-            benchTotalTime += ::elapsedSince(searchStart);
-            benchTotalNodes += limits.getNodes();
+            benchTime += ::elapsedSince(searchStart);
+            benchNodes += limits.getNodes();
             ttHits += tt.hits;
             ttReads += tt.reads;
             ttWrites += tt.writes;
@@ -1434,15 +1437,11 @@ void Uci::bench(std::string_view goLimits) {
     }
 
     {
-        auto benchTotalMs{std::chrono::duration_cast<std::chrono::microseconds>(benchTotalTime).count()};
+        auto benchMicroseconds{ static_cast<unsigned long>(std::chrono::duration_cast<std::chrono::microseconds>(benchTime).count()) };
 
         Output ob{this};
         ob << '\n'
-            << Mega{ttWrites} << " tt-writes, "
-            << Mega{ttHits} << " tt-hits, "
-            << Mega{ttReads} << " tt-reads\n"
-            << Mega{benchTotalNodes} << " nodes "
-            << Mega{static_cast<unsigned long>(benchTotalMs)} << " usec "
-            << Mega{::nps(benchTotalNodes, benchTotalTime)} << " nps";
+            << Mega{ttWrites} << " tt-writes, " << Mega{ttHits} << " tt-hits, " << Mega{ttReads} << " tt-reads\n"
+            << Mega{benchNodes} << " nodes " << Mega{(benchMicroseconds)} << " usec " << Mega{::nps(benchNodes, benchTime)} << " nps";
     }
 }
