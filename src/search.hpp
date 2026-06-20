@@ -91,7 +91,7 @@ protected:
 
     Move currentMove{}; // last move made from *this into *child
     Move bestMove{}; // TtMove or best move found
-    std::array<Move, 2> killer{}; // Killer heuristic
+    std::array<Move, 2> killers{}; // Killer heuristic
 
     PrincipalVariation::Index pvIndex{0}; // start of subPV for the current ply
     ZHash zHash{}; // mini-hash of all previous reversible positions zobrist keys
