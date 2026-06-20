@@ -5,8 +5,6 @@
 #include <chrono>
 #include "Score.hpp"
 
-#define RETURN_IF_STOP(visitor) { if (visitor == ReturnStatus::Stop) { return ReturnStatus::Stop; } } ((void)0)
-
 using namespace std::chrono_literals;
 
 using clock_type = std::chrono::steady_clock;

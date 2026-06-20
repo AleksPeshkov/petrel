@@ -342,6 +342,8 @@ enum class ReturnStatus {
     Stop,     // stop current search (timeout or other termination reason)
     Cutoff,   // prune current node search (futility or beta cutoff)
 };
+#define RETURN_IF_STOP(visitor) { if (visitor == ReturnStatus::Stop) { return ReturnStatus::Stop; } } ((void)0)
+#define RETURN_CUTOFF(visitor) { ReturnStatus status = visitor; if (status != ReturnStatus::Continue) { return status; }} ((void)0)
 
 enum move_type_t { MoveSpecial, MoveRB, MoveQN, MoveKing };
 struct MoveType : Index<MoveType, 4, move_type_t> { using Index::Index; };

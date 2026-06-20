@@ -2,8 +2,6 @@
 #include "Uci.hpp"
 #include "Position_impl.hpp"
 
-#define RETURN_CUTOFF(visitor) { ReturnStatus status = visitor; if (status != ReturnStatus::Continue) { return status; }} ((void)0)
-
 void SearchLimits::assertNodesOk() const {
     assert (0 <= nodesQuota_); assert (nodesQuota_ < QuotaLimit);
     //assert (0 <= nodes);
@@ -309,6 +307,7 @@ ReturnStatus Node::search() {
     }
 
     assert ((inCheck() && eval.none()) || (!inCheck() && eval.isEval()));
+    assert (bestMove.none() || (isPseudoLegal(bestMove) && ttHit && toMove(tt->ttMove()) == bestMove));
 
     if (ply == MaxPly) {
         // no room to search deeper
@@ -512,20 +511,21 @@ ReturnStatus Node::search() {
 
     if (movesMade() == 0) {
         // not stalemate, all moves pruned
-        assert (!inCheck());
         assert (bound == FailLow);
         assert (bestMove.none());
         assert (currentMove.none());
+        assert (!inCheck());
         if (score.none()) { score = alpha; } // !score.none() if null move happened (null move not counted in movesMade())
         return ReturnStatus::Continue;
     }
 
-    assert (bound == FailLow || bound == ExactScore);
-    assert (bestMove.none() || isPseudoLegal(bestMove));
     if (bound == ExactScore) {
+        assert (isPseudoLegal(bestMove));
         updateHistory();
         if (isRoot()) { ::insert_unique_compact(The_uci.rootBestMoves, bestMove); }
     } else {
+        assert (bound == FailLow);
+        assert (bestMove.none() || (isPseudoLegal(bestMove) && ttHit && toMove(tt->ttMove()) == bestMove));
         assert (depth > 0_ply);
         assert (score.isOk(ply));
         saveNode();
@@ -533,12 +533,12 @@ ReturnStatus Node::search() {
     return ReturnStatus::Continue;
 }
 
-ReturnStatus Node::goodNonCaptures(Pi pi, Bb moves, Ply R) {
+ReturnStatus Node::goodNonCaptures(Pi pi, Bb bbMoves, Ply R) {
     PieceType ty = MY.typeOf(pi);
     assert (!ty.is(Pawn));
     PiMask opLessValue = OP.lessValue(ty);
     Square from{MY.sq(pi)};
-    for (Square to : moves) {
+    for (Square to : bbMoves) {
         assert (!OP.bbPawnAttacks().has(~to));
         assert (isQuietMove(pi, to));
 
@@ -683,7 +683,7 @@ void Node::childMove(Square from, Square to) {
     else { zHash = ZHash{grandParent()->zHash, grandParent()->z()}; }
 }
 
-Ply Node::finalR(Ply R) const {
+constexpr Ply Node::finalR(Ply R) const {
     if (R <= 1_ply) { return R; }
     if (inCheck()) { return depth >= 6_ply ? 2_ply : 1_ply; } // plus check extension
 
@@ -787,9 +787,9 @@ void savePv(const PositionMoves& p, const PrincipalVariation& pv, const Tt& tt) 
     Ply   ply   = 0_ply;
     Ply   depth = pv.depth();
     Score score = pv.score();
-    auto  pmoves = pv.moves();
+    auto  pvMoves = pv.moves();
 
-    for (Move move; (move = *pmoves++).any();) {
+    for (Move move; (move = *pvMoves++).any();) {
         assert (score.isOk(ply));
         assert (pos.isPseudoLegal(move));
         assert ((pos.generateMoves(), pos.isPossibleMove(move)));
