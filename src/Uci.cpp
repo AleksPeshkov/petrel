@@ -668,12 +668,13 @@ HistoryMove UciPosition::firstRootMove() const {
     return {};
 }
 
-void SearchLimits::newSearch() {
+TimePoint SearchLimits::newSearch() {
     stop_.store(false, std::memory_order_release);
-    searchStartTime_ = timeNow();
     nodes_ = 0;
     nodesQuota_ = 0;
     lastMove_ = {};
+    searchStartTime_ = timeNow();
+    return searchStartTime_;
 }
 
 void SearchLimits::stop() {
@@ -775,9 +776,8 @@ void Uci::newSearch() {
     swapBestMove(bestmove); // cleanup
     if (!bestmove.empty()) { error("newsearch(), bestmove was not empty: " + bestmove); }
 
+    lastInfoTime_ = limits.newSearch();
     lastInfoNodes_ = 0;
-    lastInfoTime_ = {};
-    limits.newSearch();
     tt.newSearch();
     pv.clear();
     rootBestMoves = {};
