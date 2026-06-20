@@ -383,19 +383,19 @@ ReturnStatus Node::search() {
         RETURN_CUTOFF (searchIfPossible(killers[0]));
 
         if (counterMove().any()) {
-            RETURN_CUTOFF (contMove(CounterMove, counterMove())); // ply-1
+            RETURN_CUTOFF (contMove(depth < ply ? CounterMove : CounterMove2, counterMove())); // ply-1
         }
         if (followupMove().any()) {
-            RETURN_CUTOFF (contMove(FollowupMove, followupMove())); // ply-2
+            RETURN_CUTOFF (contMove(depth < ply ? FollowupMove : FollowupMove2, followupMove())); // ply-2
         }
 
         RETURN_CUTOFF (searchIfPossible(killers[1]));
 
         if (counterMove().any()) {
-            RETURN_CUTOFF (contMove(CounterMove, counterMove())); // ply-1
+            RETURN_CUTOFF (contMove(depth < ply ? CounterMove : CounterMove2, counterMove())); // ply-1
         }
         if (followupMove().any()) {
-            RETURN_CUTOFF (contMove(FollowupMove, followupMove())); // ply-2
+            RETURN_CUTOFF (contMove(depth < ply ? FollowupMove : FollowupMove2, followupMove())); // ply-2
         }
     }
 
@@ -746,13 +746,13 @@ void Node::updateHistory() {
 
     if (!hasParent()) { return; } // ply-1
     if (counterMove().any()) {
-        The_uci.contMoves.set(CounterMove, colorToMove(), counterMove(), bestMove);
+        The_uci.contMoves.set(depth < ply ? CounterMove : CounterMove2, colorToMove(), counterMove(), bestMove);
     }
 
     if (!hasGrandParent()) { return; } // ply-2
     insert_unique_pos<1>(grandParent()->killers, bestMove);
     if (followupMove().any()) {
-        The_uci.contMoves.set(FollowupMove, colorToMove(), followupMove(), bestMove);
+        The_uci.contMoves.set(depth < ply ? FollowupMove : FollowupMove2, colorToMove(), followupMove(), bestMove);
     }
 }
 
