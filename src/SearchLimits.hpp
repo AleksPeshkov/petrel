@@ -29,6 +29,7 @@ class SearchLimits {
 
     static constexpr TimeInterval UnlimitedTime{TimeInterval::max()};
     static constexpr node_count_t NodeCountMax{std::numeric_limits<node_count_t>::max()};
+    static constexpr int LookAheadMoves{16}; // number of moves to allocate time for
     static constexpr int QuotaLimit{1000};
 
     node_count_t nodes_{0}; // (0 <= nodes_ && nodes_ <= nodesLimit_)
