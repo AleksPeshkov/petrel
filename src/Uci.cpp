@@ -687,25 +687,40 @@ void SearchLimits::ponderhit() {
     pondering_.store(false, std::memory_order_relaxed);
 }
 
-void SearchLimits::setLimits(const UciLimits& go, const UciPosition& position) {
+bool SearchLimits::setLimits(const UciLimits& go, const UciPosition& position) {
     const Color my{ position.colorToMove() };
 
     maxDepth_ = go.depth;
     nodesLimit_ = go.nodes;
     pondering_.store(go.ponder, std::memory_order_relaxed);
 
+    // minimum reasonable thinking time (search 100 nodes)
+    auto setMinimumThinkingTime = [&]() { timePool_ = 0ms; timeStrategy_ = ExactTime; quotaLimit_ = QuotaLimitSmall; };
+
+    if (go.nodes <= 0) { setMinimumThinkingTime(); return false; }
+
     if (go.movetime > 0ms) {
         timePool_ = go.movetime;
         timeStrategy_ = ExactTime;
-        return;
+        return true;
     }
 
-    auto noTimeGiven = go.time[my] <= 0ms && go.inc[my] <= 0ms;
+    auto noTimeGiven = go.time[my] <= 0ms && go.inc[my] <= 0ms; // `go` without time limits
     if (go.infinite || noTimeGiven) {
         timePool_ = UnlimitedTime;
         timeStrategy_ = ExactTime;
-        return;
+        return true;
     }
+
+    //TRICK: some GUI can send negative `time` when soft clock used, use `inc` for available time
+    auto availableTime = go.time[my] <= 0ms ? go.time[my] + go.inc[my] : go.time[my];
+
+    availableTime -= go.moveOverhead;
+    if (availableTime <= 0ms) { io::error("availableTime <= 0ms"); setMinimumThinkingTime(); return true; }
+
+    // [0..6] startpos = 6, queens exchanged = 4, R vs R endgame = 1
+    int gamePhase = position.gamePhase();
+    lowMaterialQuotaBonus_ = 4 - std::clamp(gamePhase, 1, 5);
 
     const auto lookAheadMoves = 0 < go.movestogo && go.movestogo < LookAheadMoves ? go.movestogo : LookAheadMoves;
     const auto lookAheadTime = [&](Color color) { return go.time[color] + go.inc[color] * (lookAheadMoves - 1); };
@@ -713,6 +728,26 @@ void SearchLimits::setLimits(const UciLimits& go, const UciPosition& position) {
         return lookAheadTime(color) / (lookAheadMoves < LookAheadMoves ? lookAheadMoves : LookAheadMoves);
     };
 
+    // "maximum" time strategy: allocate 1/4 of all remaining time (including look ahead number of future time increments)
+    auto maximumTime = lookAheadTime(my) / 4; // 25%
+    {
+        if (lookAheadMoves < LookAheadMoves) {
+            // solved for f(1) = 100%, f(2) = 75%, f(16) = 25%
+            maximumTime *= 19 + lookAheadMoves;
+            maximumTime /= 3 + 2 * lookAheadMoves;
+        }
+
+        // left board material correction
+        maximumTime *= 8 - std::clamp(gamePhase, 3, 5);
+        maximumTime /= 4; // 75%, 100%, 125%
+
+        maximumTime -= go.moveOverhead;
+        if (maximumTime <= 0ms) { io::error("maximumTime <= 0ms"); setMinimumThinkingTime(); return true; }
+
+        maximumTime = std::min(maximumTime, availableTime);
+    }
+
+    // "optimum" time strategy: allocate time evenly between look ahead number of moves
     auto optimumTime = averageMoveTime(my);
     {
         if (go.ponder) {
@@ -726,34 +761,17 @@ void SearchLimits::setLimits(const UciLimits& go, const UciPosition& position) {
         // MaxQuota and/or HardMove time strategy may spend up to 5.12 times over average (optimium) move quota
         optimumTime *= 41 * MaxQuota * HardMove; // time * 512
         optimumTime /= 4096; //TRICK: OptimumTimeQuota * NormalMove = 100 ~= 4096/41
+
         optimumTime -= go.moveOverhead;
+        if (optimumTime <= 0ms) { io::error("optimumTime <= 0ms"); setMinimumThinkingTime(); return true; }
     }
 
-    // [0..6] startpos = 6, queens exchanged = 4, R vs R endgame = 1
-    int gamePhase = position.gamePhase();
-    lowMaterialQuotaBonus_ = 4 - std::clamp(gamePhase, 1, 5);
-
-    auto maximumTime = lookAheadTime(my) / 4; // 25%
-    {
-        if (lookAheadMoves < LookAheadMoves) {
-            // solved for f(1) = 100%, f(2) = 75%, f(16) = 25%
-            maximumTime *= 19 + lookAheadMoves;
-            maximumTime /= 3 + 2 * lookAheadMoves;
-        }
-
-        // left board material correction
-        maximumTime *= 8 - std::clamp(gamePhase, 3, 5);
-        maximumTime /= 4; // 75%, 100%, 125%
-
-        //TRICK: some GUI can send negative `time` when soft clock used, use `inc` for available time
-        auto availableTime = (go.time[my] <= 0ms) ? go.inc[my] : go.time[my];
-
-        maximumTime = std::clamp(maximumTime, TimeInterval{0}, availableTime - go.moveOverhead);
-    }
-
-    timePool_ = std::clamp(optimumTime, TimeInterval{0}, maximumTime);
     timeStrategy_ = EasyMove;
+    timePool_ = std::min(optimumTime, maximumTime);
+    assert (timePool_ > 0ms);
+
     if (timePool_ < 1ms) { quotaLimit_ = QuotaLimitSmall; }
+    return true;
 }
 
 Uci::Uci(ostream& os) :
@@ -1165,8 +1183,7 @@ void Uci::setPositionMoves() {
             score = ttSlot.score(0_ply);
         }
 
-        HistoryMove move{ttMove, position_.historyType(ttMove.from(), ttMove.to())};
-        pv.set(move, score);
+        pv.set(position_.toMove(ttMove), score);
         return;
     } while (false);
 
@@ -1175,35 +1192,42 @@ void Uci::setPositionMoves() {
 }
 
 void Uci::go() {
-#ifndef NDEBUG
-    debugGo = inputLine.str();
-#endif
-
     newSearch();
-    go_.readGo(inputLine);
-    infinite_ = go_.infinite;
-    limits.setLimits(go_, position_);
 
-    if (hasMoreInput() || position_.movesTotal() == 0) {
-    } else if (position_.movesTotal() == 1) {
-        // immediate move, not an error case, optimization
-        info_bestmove();
-        return;
-    } else {
-        auto started = mainSearchThread.start([this] {
-            searchStack[0_ply].searchRoot(position_);
+    do {
+        #ifndef NDEBUG
+            debugGo = inputLine.str();
+        #endif
+
+        if (position_.movesTotal() == 0) { break; } // nothing to search
+
+        go_.readGo(inputLine);
+        if (hasMoreInput()) { break; } // parsing error
+        infinite_ = go_.infinite;
+
+        if (position_.movesTotal() == 1) {
+            // immediate move, not an error case, optimization
+            //TODO: add ponder move
             info_bestmove();
-        });
-        if (started) {
-            if (go_.isNewGame) { go_.isNewGame = false; }
+            return;
+        } else if (limits.setLimits(go_, position_)) {
+            auto started = mainSearchThread.start([this] {
+                searchStack[0_ply].searchRoot(position_);
+                info_bestmove();
+            });
+            if (!started) { break; }
+
+            go_.isNewGame = false;
             std::this_thread::yield();
             return;
         }
+    } while (false);
+
+    // error: search not started, report some bestmove without any search
+    {
+        UciOutput ob{this};
+        ob << "bestmove" << pv.getMove(0_ply);
     }
-
-    // error: search not started
-
-    output("bestmove 0000");
 
     std::string bestmove; // empty
     swapBestMove(bestmove); // cleanup
@@ -1440,10 +1464,8 @@ void Uci::bench(std::string_view goLimits) {
 
         newGame();
         newSearch();
-        limits.setLimits(go_, position_);
-
-        {
-            auto searchStart{::timeNow()};
+        if (limits.setLimits(go_, position_)) {
+            auto searchStart = lastInfoTime_;
             searchStack[0_ply].searchRoot(position_);
 
             benchTime += ::elapsedSince(searchStart);
@@ -1456,7 +1478,7 @@ void Uci::bench(std::string_view goLimits) {
         info_bestmove();
     }
 
-    {
+    if (benchTime > 0ms) {
         auto benchMicroseconds{ static_cast<unsigned long>(std::chrono::duration_cast<std::chrono::microseconds>(benchTime).count()) };
 
         Output ob{this};
