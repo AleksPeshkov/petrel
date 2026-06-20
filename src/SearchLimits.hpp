@@ -74,7 +74,7 @@ public:
     constexpr node_count_t getNodes() const { return nodes_ - nodesQuota_; } // exact number of searched nodes
 
 // called from the Uci input handling thread:
-    void newSearch(); // clear search state
+    TimePoint newSearch(); // clear search state
     void setLimits(const UciLimits&, const UciPosition&);
     void stop();
     void ponderhit();
