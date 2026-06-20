@@ -780,6 +780,7 @@ void Uci::newGame() {
     tt.newGame();
     contMoves = {};
     counterCheck = {};
+    for (auto& node : searchStack) { node.newGame(); }
     go_.isNewGame = true;
 }
 

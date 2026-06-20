@@ -606,6 +606,7 @@ ReturnStatus Node::goodCaptures(PiMask victims) {
     // MVV (most valuable victim) order
     for (Pi victim : victims) {
         Square to = ~OP.sq(victim);
+        PieceType ty = OP.typeOf(victim);
 
         // exclude underpromotions, should be no queen promotions anymore
         PiMask attackers = canMoveTo(to) % MY.promotables();
@@ -620,15 +621,37 @@ ReturnStatus Node::goodCaptures(PiMask victims) {
         //TODO: check if bad capture makes discovered check
         //TODO: check if defending pawn is pinned and cannot recapture
         //TODO: try killer heuristics for uncertain and bad captures
-        if (OP.bbPawnAttacks().has(~to) || !safeForMe(to)) {
-            attackers &= MY.lessOrEqualValue(OP.typeOf(victim));
-        }
+        if (OP.bbPawnAttacks().has(~to) || !safeForMe(to)) { attackers &= MY.lessOrEqualValue(ty); }
+        if (attackers.none()) { continue; }
 
-        while (attackers.any()) {
-            // LVA (least valuable attacker) order
-            Pi pi = attackers.piLast(); attackers -= PiMask{pi};
-            Square from{MY.sq(pi)};
-            RETURN_CUTOFF (searchMove(from, to, 1_ply, CanBeKiller::No));
+        {
+            Square& captureFrom{ capturesFrom[to][VictimType{NonKingType{*ty}}] };
+
+            // best capture attacker history
+            if (captureFrom.any() && MY.bbSide().has(captureFrom)) {
+                Pi pi{ MY.pi(captureFrom) };
+                if (attackers.has(pi)) {
+                    attackers -= PiMask{pi};
+                    RETURN_CUTOFF (searchMove(captureFrom, to, 1_ply, CanBeKiller::No));
+                    captureFrom = {};
+                }
+            }
+
+            bool shouldUpdateCaptureFrom = false;
+            while (attackers.any()) {
+                // LVA (least valuable attacker) order
+                Pi pi = attackers.piLast(); attackers -= PiMask{pi};
+                Square from{ MY.sq(pi) };
+
+                auto returnStatus = searchMove(from, to, 1_ply, CanBeKiller::No);
+                if (returnStatus == ReturnStatus::Cutoff) {
+                    // do not write the first default LVA capture
+                    captureFrom = shouldUpdateCaptureFrom ? from : Square{};
+                }
+                RETURN_CUTOFF (returnStatus); // Cutoff or Stop
+
+                shouldUpdateCaptureFrom = true;
+            }
         }
     }
 
