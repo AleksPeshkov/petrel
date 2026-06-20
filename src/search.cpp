@@ -104,8 +104,8 @@ void Node::clearNode() {
     pvIndex = PrincipalVariation::Index{+parent().pvIndex + 1};
     alpha = -parent().beta;
     beta = -parent().alpha;
-    killer[0] = hasGrandParent() ? grandParent().killer[0] : Move{};
-    killer[1] = {};
+    killers[0] = hasGrandParent() ? grandParent().killers[0] : Move{};
+    killers[1] = {};
 }
 
 void Node::assertOk() const {
@@ -377,29 +377,29 @@ ReturnStatus Node::search() {
 
     RETURN_CUTOFF (goodCaptures(OP.nonKing()));
 
-    if (hasParent()) {
-        if (inCheck()) {
+    if (inCheck()) {
+        if (hasParent()) { //TODO: use game history move when root in check
             RETURN_CUTOFF (searchIfPossible(
                 The_uci.checkMoves.get(colorToMove(), MY.sqKing(), parent().currentMove)
             ));
-        } else {
-            RETURN_CUTOFF (searchIfPossible(parent().killer[0]));
+        }
+    } else {
+        RETURN_CUTOFF (searchIfPossible(killers[0]));
 
-            if (counterMove().any()) {
-                RETURN_CUTOFF (contMove(CounterMove, counterMove())); // ply-1
-            }
-            if (followupMove().any()) {
-                RETURN_CUTOFF (contMove(FollowupMove, followupMove())); // ply-2
-            }
+        if (counterMove().any()) {
+            RETURN_CUTOFF (contMove(CounterMove, counterMove())); // ply-1
+        }
+        if (followupMove().any()) {
+            RETURN_CUTOFF (contMove(FollowupMove, followupMove())); // ply-2
+        }
 
-            RETURN_CUTOFF (searchIfPossible(parent().killer[1]));
+        RETURN_CUTOFF (searchIfPossible(killers[1]));
 
-            if (counterMove().any()) {
-                RETURN_CUTOFF (contMove(CounterMove, counterMove())); // ply-1
-            }
-            if (followupMove().any()) {
-                RETURN_CUTOFF (contMove(FollowupMove, followupMove())); // ply-2
-            }
+        if (counterMove().any()) {
+            RETURN_CUTOFF (contMove(CounterMove, counterMove())); // ply-1
+        }
+        if (followupMove().any()) {
+            RETURN_CUTOFF (contMove(FollowupMove, followupMove())); // ply-2
         }
     }
 
@@ -721,19 +721,18 @@ void Node::saveHistory() {
         return;
     }
 
+    insert_unique_pos(killers, bestMove);
+
     if (!hasParent()) { return; } // ply-1
-    insert_unique_pos(parent().killer, bestMove);
     if (counterMove().any()) {
         The_uci.contMoves.set(CounterMove, colorToMove(), counterMove(), bestMove);
     }
 
     if (!hasGrandParent()) { return; } // ply-2
+    insert_unique_pos<1>(grandParent().killers, bestMove);
     if (followupMove().any()) {
         The_uci.contMoves.set(FollowupMove, colorToMove(), followupMove(), bestMove);
     }
-
-    if (!hasAncestor(3_ply)) { return; } // ply-3
-    insert_unique_pos<1>(ancestor(3_ply).killer, bestMove);
 }
 
 constexpr Color Node::colorToMove() const { return The_uci.colorToMove(ply); }
@@ -825,7 +824,7 @@ void savePv(const PositionMoves& p, const PrincipalVariation& pv, const Tt& tt) 
 
 ReturnStatus Node::searchRoot(const PositionMoves& pos) {
     static_cast<PositionMoves&>(*this) = pos;
-    killer = {};
+    killers = {};
 
     for (depth = 1_ply; depth.isOk(); ++depth) {
         tt = The_uci.tt.prefetch<TtSlot>(z());
