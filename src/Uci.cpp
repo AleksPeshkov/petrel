@@ -775,7 +775,7 @@ bool SearchLimits::setLimits(const UciLimits& go, const UciPosition& position) {
 }
 
 Uci::Uci(ostream& os) :
-    inputLine{std::string(2048, '\0')}, // preallocate 2048 bytes (~200 full moves)
+    inputLine{std::string(1024, '\0')}, // preallocate 1024 bytes (~100 full moves)
     out_{os},
     bestmove_(sizeof("bestmove a7a8q ponder h2h1q"), '\0'),
     logStartTime{::timeNow()},
@@ -876,8 +876,9 @@ void Uci::error(std::string_view message) const {
 
     }
 
-    std::cerr << ob.str() << std::flush;
-    log('!', ob.str());
+    auto error_message{ob.str()};
+    std::cerr << error_message << std::flush;
+    log('!', error_message);
 
     ob.str({});
 }
@@ -902,7 +903,7 @@ void Uci::info(std::string_view message) const {
 }
 
 void Uci::processInput(istream& is) {
-    std::string currentLine(2048, '\0'); // preallocate 2048 bytes (~200 full moves)
+    std::string currentLine(1024, '\0'); // preallocate 1024 bytes (~100 full moves)
     while (std::getline(is, currentLine)) {
         if (debugOn_) { log('>', currentLine); }
 
@@ -926,11 +927,10 @@ void Uci::processInput(istream& is) {
         else if (consume("quit"))      { break; }
         else if (consume("exit"))      { break; }
 
-        if (hasMoreInput()) {
-            std::string unparsedInput;
+        if (leftUnparsedInput()) {
             inputLine.clear();
-            std::getline(inputLine, unparsedInput);
-            error("unparsed input->" + unparsedInput);
+            auto errorPos{static_cast<size_t>(std::max<std::streamoff>(0, inputLine.tellg()))};
+            error("unparsed input->" + currentLine.substr(errorPos));
         }
     }
 }
@@ -1044,7 +1044,7 @@ void Uci::setoption() {
 }
 
 void Uci::setDebugOn() {
-    if (!hasMoreInput()) {
+    if (!leftUnparsedInput()) {
         Output ob{this};
         ob << "info string debug is " << (debugOn_ ? "on" : "off");
         return;
@@ -1063,7 +1063,7 @@ void Uci::setEmbeddedEval() {
 }
 
 void Uci::loadEvalFile(const std::string& fileName) {
-    std::ifstream file(fileName, std::ios::binary);
+    std::ifstream file{fileName, std::ios::binary};
 
     if (!file.is_open()) {
         error("failed opening EvalFile " + fileName);
@@ -1093,9 +1093,9 @@ void Uci::loadEvalFile(const std::string& fileName) {
 
     // everything is ok
     std::memcpy(&nnue, buffer.data(), sizeof(nnue));
-    evalFileName = std::move(fileName);
 
     info("loaded EvalFile " + fileName);
+    evalFileName = std::move(fileName);
 
     // reset accumulator bias state
     ucinewgame();
@@ -1155,7 +1155,7 @@ void Uci::readStartPos() {
 }
 
 void Uci::position() {
-    if (!hasMoreInput()) {
+    if (!leftUnparsedInput()) {
         UciOutput ob{this};
         ::info_fen(ob, position_);
         return;
@@ -1216,7 +1216,7 @@ void Uci::go() {
         if (position_.movesTotal() == 0) { break; } // nothing to search
 
         go_.readGo(inputLine);
-        if (hasMoreInput()) { break; } // parsing error
+        if (leftUnparsedInput()) { break; } // parsing error
         infinite_ = go_.infinite;
 
         if (position_.movesTotal() == 1) {
@@ -1464,8 +1464,8 @@ void Uci::bench(std::string_view goLimits) {
         position_.readFen(inputLine);
         setPositionMoves();
 
-        if (hasMoreInput()) {
-            error("failed parsing bench position fen " + std::string(fen));
+        if (leftUnparsedInput()) {
+            error("failed parsing bench position fen " + std::string{fen});
             continue;
         }
 
