@@ -797,7 +797,7 @@ void Uci::newGame() {
 void Uci::newSearch() {
     std::string bestmove; // empty
     swapBestMove(bestmove); // cleanup
-    if (!bestmove.empty()) { error("newsearch(), bestmove was not empty: " + bestmove); }
+    if (!bestmove.empty()) { error("newsearch(), bestmove was not empty: ", bestmove); }
 
     lastInfoTime_ = limits.newSearch();
     lastInfoNodes_ = 0;
@@ -858,9 +858,9 @@ void Uci::log(io::char_type tag, std::string_view message) const {
     }
 }
 
-void Uci::error(std::string_view message) const {
+void Uci::error(std::string_view prefix, std::string_view suffix) const {
     UciOutput ob{this};
-    ob << "petrel " << pid_ << " " << message << '\n';
+    ob << "petrel " << pid_ << " " << prefix << suffix << '\n';
 
     // search debugging info
     if (limits.getNodes() > 0) {
@@ -929,7 +929,7 @@ void Uci::processInput(istream& is) {
         if (leftUnparsedInput()) {
             inputLine.clear();
             auto errorPos{static_cast<size_t>(std::max<std::streamoff>(0, inputLine.tellg()))};
-            error("unparsed input->" + currentLine.substr(errorPos));
+            error("unparsed input->", currentLine.substr(errorPos));
         }
     }
 }
@@ -976,7 +976,7 @@ void Uci::setoption() {
 
             logFile.open(newFileName, std::ios::app);
             if (!logFile.is_open()) {
-                error("failed opening Debug Log File: " + newFileName);
+                error("failed opening Debug Log File: ", newFileName);
                 return;
             }
             logFileName = std::move(newFileName);
@@ -1065,7 +1065,7 @@ void Uci::loadEvalFile(const std::string& fileName) {
     std::ifstream file{fileName, std::ios::binary};
 
     if (!file.is_open()) {
-        error("failed opening EvalFile " + fileName);
+        error("failed opening EvalFile ", fileName);
         return;
     }
 
@@ -1074,19 +1074,19 @@ void Uci::loadEvalFile(const std::string& fileName) {
     file.seekg(std::ios::beg);
 
     if (fileSize == std::streamsize(-1)) {
-        error("failed reading size of EvalFile " + fileName);
+        error("failed reading size of EvalFile ", fileName);
         return;
     }
 
     if (static_cast<size_t>(fileSize) != sizeof(nnue)) {
-        error("EvalFile size mismatch, expected " + std::to_string(sizeof(nnue)) + ", file size " + std::to_string(fileSize));
+        error("EvalFile size mismatch, expected ", std::to_string(sizeof(nnue)) + ", file size " + std::to_string(fileSize));
         return;
     }
 
     std::vector<char> buffer(sizeof(nnue));
     file.read(buffer.data(), sizeof(nnue));
     if (!file) {
-        error("failed reading EvalFile " + fileName);
+        error("failed reading EvalFile ", fileName);
         return;
     }
 
@@ -1248,7 +1248,7 @@ void Uci::go() {
     if (bestmove.empty()) {
         error("search not started");
     } else {
-        error("search not started, bestmove was not empty: " + bestmove);
+        error("search not started, bestmove was not empty: ", bestmove);
     }
 }
 
@@ -1369,7 +1369,7 @@ void Uci::info_bestmove() {
     if (delayed) {
         std::string bestmove(ob.str());
         swapBestMove(bestmove); // save bestmove for later output
-        if (!bestmove.empty()) { info("old bestmove ignored: " + bestmove); }
+        if (!bestmove.empty()) { error("old bestmove ignored: ", bestmove); }
         ob.str({}); // prevent sending now
     }
 }
@@ -1464,7 +1464,7 @@ void Uci::bench(std::string_view goLimits) {
         setPositionMoves();
 
         if (leftUnparsedInput()) {
-            error("failed parsing bench position fen " + std::string{fen});
+            error("failed parsing bench position fen ", fen);
             continue;
         }
 

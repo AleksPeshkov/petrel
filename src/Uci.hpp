@@ -154,7 +154,7 @@ public:
     void bench(std::string_view goLimits);
 
     void output(std::string_view, bool flush = true) const; // output to cout and (if debugOn_) to log file
-    COLD void error(std::string_view) const; // output to cerr and log file
+    COLD void error(std::string_view prefix, std::string_view suffix = {}) const; // output to cerr and log file
 
     constexpr ChessVariant chessVariant() const { return chessVariant_; }
     constexpr Color colorToMove(Ply ply = 0_ply) const { return position_.colorToMove(ply); }
