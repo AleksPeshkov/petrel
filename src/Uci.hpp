@@ -107,8 +107,8 @@ private:
     // try to consume the given token from the inputLine
     bool consume(io::czstring token) { return io::consume(inputLine, token); }
 
-    // input left usually means parsing error
-    bool hasMoreInput() { inputLine >> std::ws; return !inputLine.eof(); }
+    // discovered parsing or other error
+    bool leftUnparsedInput() { return !(inputLine >> std::ws).eof(); }
 
 // UCI commands handlers:
 
