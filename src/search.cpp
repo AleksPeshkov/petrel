@@ -708,9 +708,6 @@ void Node::updateHistory() {
     assert (score.isOk(ply));
 
     if (bestMove.any() && inCheck() && bestMove.canBeKiller() == CanBeKiller::Yes) {
-        // reset canBeKiller when inCheck()
-        bestMove = Move{TtMove{bestMove.from(), bestMove.to(), CanBeKiller::No}, bestMove.moveType()};
-
         if (hasParent()) {
             assert (parent()->currentMove.any());
             The_uci.counterCheck.set(colorToMove(), MY.sqKing(), parent()->currentMove, bestMove);
@@ -720,7 +717,7 @@ void Node::updateHistory() {
     saveNode();
 
     if (bestMove.none() || bestMove.canBeKiller() == CanBeKiller::No) { return; }
-    assert (!inCheck());
+    if (inCheck()) { return; }
 
     if (!hasParent()) { return; } // ply-1
     insert_unique_pos(parent()->killer, bestMove);
