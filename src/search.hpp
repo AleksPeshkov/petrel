@@ -96,7 +96,6 @@ protected:
     PrincipalVariation::Index pvIndex{0}; // start of subPV for the current ply
     ZHash zHash{}; // mini-hash of all previous reversible positions zobrist keys
     TtSlot* tt{nullptr}; // pointer to the slot in TT
-    bool ttHit{false}; // this node found in TT
 
     void prepareChild(); // prepare empty child node
     void assertOk() const;
