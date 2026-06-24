@@ -882,6 +882,20 @@ void Uci::error(std::string_view message) const {
     ob.str({});
 }
 
+#ifndef NDEBUG
+void Node::assert_fail(const char* assertion, const char* file, unsigned int line, const char* function) const {
+    UciOutput ob{&The_uci};
+    ob << "\nposition fen "; ::fen(ob, The_uci.chessVariant(), *this, The_uci.colorToMove(ply), 1);
+    ob << "\ncurrentMove" << currentMove;
+
+    std::string message{assertion};
+    message += ob.str();
+    ob.str({});
+
+    ::assert_fail(message.c_str(), file, line, function);
+}
+#endif
+
 void Uci::info(std::string_view message) const {
     if (message.empty()) { return; }
     log('*', message);
