@@ -145,6 +145,11 @@ protected:
     bool isDrawMaterial() const;
     bool isRepetition() const;
 
+#ifndef NDEBUG
+    // defined in Uci.cpp
+    COLD void assert_fail(const char* assertion, const char* file, unsigned int line, const char* function) const;
+#endif
+
 public:
     constexpr Node() = default;
     constexpr explicit Node (Ply _ply) : ply{_ply} {}
