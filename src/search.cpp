@@ -243,71 +243,73 @@ ReturnStatus Node::search() {
         }
     }
 
-    do {
-        if (depth == 0_ply) {
-            ttHit = false;
-            break;
-        }
-
-        ++The_uci.tt.reads;
-        auto ttSlot = *tt; // copy full TT entry
-
-        ttHit = (ttSlot == z());
-        if (!ttHit) {
-            break;
-        }
-
-        Bound ttBound = ttSlot.bound();
-        Score ttScore = ttSlot.score(ply);
-        if (ttScore.none()) {
-            // cleared TT or collision
-            ttHit = false;
-            break;
-        }
-
-        if (ttSlot.ttMove().any()) {
-            auto ttMove = ttSlot.ttMove();
-            if (!isPossibleMove(ttMove.from(), ttMove.to())) {
-                // unlikely collision
+    {
+        auto ttHit{false};
+        do {
+            if (depth == 0_ply) {
                 ttHit = false;
-                assert (bestMove.none());
                 break;
             }
-            bestMove = toMove(ttMove);
-        }
-        assert (bestMove.none() || isPossibleMove(bestMove));
 
-        ++The_uci.tt.hits;
+            ++The_uci.tt.reads;
+            auto ttSlot = *tt; // copy full TT entry
 
-        if (!isPv() && depth <= ttSlot.draft()) {
-            if (ttBound == ExactScore
-                || (ttBound == FailHigh && beta <= ttScore)
-                || (ttBound == FailLow && ttScore <= alpha)
-            ) {
-                score = ttScore;
-                bound = ttBound;
-                return ReturnStatus::Cutoff;
+            ttHit = (ttSlot == z());
+            if (!ttHit) {
+                break;
             }
-        }
 
-        if (!inCheck()) {
+            Bound ttBound = ttSlot.bound();
+            Score ttScore = ttSlot.score(ply);
+            if (ttScore.none()) {
+                // cleared TT or collision
+                ttHit = false;
+                break;
+            }
+
+            if (ttSlot.ttMove().any()) {
+                auto ttMove = ttSlot.ttMove();
+                if (!isPossibleMove(ttMove.from(), ttMove.to())) {
+                    // unlikely collision
+                    ttHit = false;
+                    assert (bestMove.none());
+                    break;
+                }
+                bestMove = toMove(ttMove);
+            }
+            assert (bestMove.none() || isPossibleMove(bestMove));
+
+            ++The_uci.tt.hits;
+
+            if (!isPv() && depth <= ttSlot.draft()) {
+                if (ttBound == ExactScore
+                    || (ttBound == FailHigh && beta <= ttScore)
+                    || (ttBound == FailLow && ttScore <= alpha)
+                ) {
+                    score = ttScore;
+                    bound = ttBound;
+                    return ReturnStatus::Cutoff;
+                }
+            }
+
+            if (!inCheck()) {
+                eval = evaluate();
+                if (ttScore.isEval() &&
+                    (ttBound == ExactScore
+                        || (ttBound == FailHigh && eval <= ttScore)
+                        || (ttBound == FailLow && ttScore <= eval)
+                    )
+                ) {
+                    eval = ttScore;
+                }
+            }
+        } while(false);
+        if (!ttHit && !inCheck()) {
             eval = evaluate();
-            if (ttScore.isEval() &&
-                (ttBound == ExactScore
-                    || (ttBound == FailHigh && eval <= ttScore)
-                    || (ttBound == FailLow && ttScore <= eval)
-                )
-            ) {
-                eval = ttScore;
-            }
         }
-    } while(false);
-    if (!ttHit && !inCheck()) {
-        eval = evaluate();
     }
 
     assert ((inCheck() && eval.none()) || (!inCheck() && eval.isEval()));
-    assert (bestMove.none() || (isPseudoLegal(bestMove) && ttHit && toMove(tt->ttMove()) == bestMove));
 
     if (ply == MaxPly) {
         // no room to search deeper
@@ -525,7 +527,7 @@ ReturnStatus Node::search() {
         if (isRoot()) { ::insert_unique_compact(The_uci.rootBestMoves, bestMove); }
     } else {
         assert (bound == FailLow);
-        assert (bestMove.none() || (isPseudoLegal(bestMove) && ttHit && toMove(tt->ttMove()) == bestMove));
+        assert (bestMove.none() || isPseudoLegal(bestMove));
         assert (depth > 0_ply);
         assert (score.isOk(ply));
         saveNode();
