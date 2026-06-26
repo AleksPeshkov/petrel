@@ -169,16 +169,16 @@ public:
     }
 };
 
-enum file_t { FileA, FileB, FileC, FileD, FileE, FileF, FileG, FileH, };
+enum file_t { FileH, FileG, FileF, FileE, FileD, FileC, FileB, FileA, };
 struct File : Index<File, 8, file_t> {
     using Index::Index;
 
-    constexpr io::char_type to_char() const { return static_cast<io::char_type>('a' + v_); }
+    constexpr io::char_type to_char() const { return static_cast<io::char_type>('h' - v_); }
     friend ostream& operator << (ostream& os, File file) { return os << file.to_char(); }
 
     bool from_char(io::char_type c) {
         if (!('a' <= c && c <= 'h')) { return false; }
-        File file{ static_cast<File::_t>(c - 'a') };
+        File file{ static_cast<File::_t>('h' - c) };
         v_ = *file;
         return true;
     }
@@ -190,6 +190,8 @@ struct File : Index<File, 8, file_t> {
         }
         return is;
     }
+
+    static constexpr auto a_to_h() { return ::range<File>() | std::views::reverse; }
 };
 
 enum rank_t { Rank8, Rank7, Rank6, Rank5, Rank4, Rank3, Rank2, Rank1, };
@@ -221,14 +223,14 @@ enum direction_t { FileDir, RankDir, DiagonalDir, AntidiagDir };
 struct Direction : Index<Direction, 4, direction_t> { using Index::Index; };
 
 enum square_t : u8_t {
-    A8, B8, C8, D8, E8, F8, G8, H8,
-    A7, B7, C7, D7, E7, F7, G7, H7,
-    A6, B6, C6, D6, E6, F6, G6, H6,
-    A5, B5, C5, D5, E5, F5, G5, H5,
-    A4, B4, C4, D4, E4, F4, G4, H4,
-    A3, B3, C3, D3, E3, F3, G3, H3,
-    A2, B2, C2, D2, E2, F2, G2, H2,
-    A1, B1, C1, D1, E1, F1, G1, H1,
+    H8, G8, F8, E8, D8, C8, B8, A8,
+    H7, G7, F7, E7, D7, C7, B7, A7,
+    H6, G6, F6, E6, D6, C6, B6, A6,
+    H5, G5, F5, E5, D5, C5, B5, A5,
+    H4, G4, F4, E4, D4, C4, B4, A4,
+    H3, G3, F3, E3, D3, C3, B3, A3,
+    H2, G2, F2, E2, D2, C2, B2, A2,
+    H1, G1, F1, E1, D1, C1, B1, A1,
 };
 
 class Bb;
@@ -404,7 +406,7 @@ static_assert (sizeof(TtMove) == sizeof(u16_t));
 // Castling encoded as the castling rook moves over own king source square.
 // Pawn promotion piece type encoded in place of destination square rank.
 // En passant capture encoded as the pawn moves over captured pawn square.
-// Null move is encoded as 0 {A8A8}
+// Null move is encoded as 0 {H8H8}
 class Move {
     enum { ShiftTo = 0, ShiftFrom = ShiftTo + Square::bit_width(), ShiftKiller = ShiftFrom + Square::bit_width(), ShiftType = ShiftKiller + 1};
     using _t = u16_t;
@@ -474,7 +476,7 @@ private:
         ZPawn   = U64(0x031f'af09'dcda'2ca9),
         ZKing   = U64(0x0352'138a'fdd1'e65b),
         ZCastling = ZRook ^ ZPawn, // rook with castling right encoded as pawn on rank1
-        ZEnPassant = ::rotateleft(ZPawn, A4), // A4 => A8, en passant pawn encoded as pawn on rank8
+        ZEnPassant = ::rotateleft(ZPawn, H4), // H4 => H8, en passant pawn encoded as pawn on rank8
         // ZExtra  = U64(0x03ac'4dfb'4854'6797), // reserved
     };
 

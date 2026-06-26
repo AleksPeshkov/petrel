@@ -8,10 +8,10 @@ uciok
 readyok
 
 >perft 5
-info currmovenumber 1 nodes 9306 * currmove b1a3 perft 198572
-info currmovenumber 2 nodes 18650 * currmove b1c3 perft 234656
-info currmovenumber 3 nodes 27524 * currmove g1f3 perft 233491
-info currmovenumber 4 nodes 35068 * currmove g1h3 perft 198502
+info currmovenumber 1 nodes 10216 * currmove b1c3 perft 234656
+info currmovenumber 2 nodes 18650 * currmove b1a3 perft 198572
+info currmovenumber 3 nodes 26617 * currmove g1h3 perft 198502
+info currmovenumber 4 nodes 35068 * currmove g1f3 perft 233491
 info currmovenumber 5 nodes 46300 * currmove d2d4 perft 361790
 info currmovenumber 6 nodes 57039 * currmove d2d3 perft 328511
 info currmovenumber 7 nodes 68143 * currmove e2e4 perft 405385
