@@ -163,7 +163,7 @@ class FenToBoard {
             else {
                 // FileD > FileE > FileC > FileF > FileB > FileG > FileA > FileH
                 // order gains a few Elo
-                constexpr array<int, File> order{6, 4, 2, 0, 1, 3, 5, 7};
+                constexpr array<int, File> order{7, 5, 3, 1, 0, 2, 4, 6};
                 return order[sq1.file()] < order[sq2.file()];
             }
         }
@@ -203,7 +203,7 @@ istream& read(istream& is, FenToBoard& board) {
                 break;
             }
 
-            File file{static_cast<File::_t>( filePos )};
+            File file{static_cast<File::_t>( filePos^7 )};
             Rank rank{static_cast<Rank::_t>( rankPos )};
 
             Color color{std::isupper(c) ? White : Black};
@@ -323,7 +323,7 @@ public:
         for (auto rank : range<Rank>()) {
             int emptySqCount = 0;
 
-            for (auto file : range<File>()) {
+            for (auto file : File::a_to_h()) {
                 Square sq{file, rank};
 
                 if (board.whitePieces.has(sq)) {

@@ -29,8 +29,8 @@ public:
 
     constexpr Bb pForward() const { return *this >> 8u; }
     constexpr Bb pBackward() const { return *this << 8u; }
-    constexpr Bb pForwardDiag() const { return (*this % Bb{FileA} >> 9u) | (*this % Bb{FileH} >> 7u); }
-    constexpr Bb pBackwardDiag() const { return (*this % Bb{FileA} << 7u) | (*this % Bb{FileH} << 9u); }
+    constexpr Bb pForwardDiag() const { return (*this % Bb{FileH} >> 9u) | (*this % Bb{FileA} >> 7u); }
+    constexpr Bb pBackwardDiag() const { return (*this % Bb{FileH} << 7u) | (*this % Bb{FileA} << 9u); }
 
     // bidirectional signed rank shift
     constexpr Bb shiftRank(signed r) { return Bb{ r >= 0 ? (v_ << 8*r) : (v_ >> -8*r) }; }
@@ -107,7 +107,7 @@ inline ostream& operator << (ostream& os, Bb bb) {
     os << "    a b c d e f g h\n";
     for (auto rank : range<Rank>()) {
         os << Rank{rank} << " |";
-        for (auto file : range<File>()) {
+        for (auto file : File::a_to_h()) {
             Square sq{file, rank};
             os << " " << (bb.has(sq) ? 'x'  : '.');
         }
@@ -193,7 +193,7 @@ public:
     }
 
     static constexpr CastlingSide castlingSide(Square king, Square rook) {
-        return CastlingSide{rook < king ? QueenSide : KingSide};
+        return CastlingSide{rook < king ? KingSide : QueenSide};
     }
 
     static constexpr Square castlingKingTo(Square king, Square rook) {

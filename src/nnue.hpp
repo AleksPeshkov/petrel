@@ -46,7 +46,7 @@ struct CACHE_ALIGN Nnue {
 
         static constexpr array<PieceType::_t, PieceType> pieceType = {Pawn, Knight, Bishop, Rook, Queen, King};
         constexpr FeatureIndex (Side si, PieceType ty, Square sq)
-            : Index{ 6*64*+si + 64*pieceType[ty] + +~sq }
+            : Index{ 6*64*+si + 64*pieceType[ty] + (+sq ^ 077) }
         {}
     };
 
