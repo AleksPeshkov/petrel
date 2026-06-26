@@ -182,48 +182,75 @@ public:
 
 istream& read(istream& is, FenToBoard& board) {
     is >> std::ws;
-    File file{FileA}; Rank rank{Rank8};
+    int filePos = 0; int rankPos = 0;
 
     for (io::char_type c{}; is.get(c); ) {
-        if (std::isalpha(c) && rank.isOk() && file.isOk()) {
-            Color color{std::isupper(c) ? White : Black};
-            c = static_cast<io::char_type>(std::tolower(c));
-
-            PieceType ty{Queen};
-            if (!ty.from_char(c) || !board.drop(color, ty, Square{file, rank})) {
-                return io::fail_char(is);
-            }
-
-            ++file;
-            continue;
-        }
-
-        if ('1' <= c && c <= '8' && rank.isOk() && file.isOk()) {
-            //convert digit symbol to offset and skip blank squares
-            auto f = +file + (c - '1');
-            if (!File::isOk(f)) {
-                return io::fail_char(is);
-            }
-
-            //avoid out of range initialization check
-            file = File{static_cast<File::_t>(f)};
-            ++file;
-            continue;
-        }
-
-        if (c == '/' && rank.isOk()) {
-            ++rank;
-            file = File{FileA};
-            continue;
-        }
-
-        //end of board description field
+        // end of board description field
         if (std::isblank(c)) {
             break;
         }
 
-        //parsing error
-        return io::fail_char(is);
+        if (std::isalpha(c)) {
+            if (filePos > 7) {
+                io::fail_char(is);
+                io::error("invalid fen: file out of board");
+                break;
+            }
+
+            if (rankPos > 7) {
+                io::fail_char(is);
+                io::error("invalid fen: rank out of board");
+                break;
+            }
+
+            File file{static_cast<File::_t>( filePos )};
+            Rank rank{static_cast<Rank::_t>( rankPos )};
+
+            Color color{std::isupper(c) ? White : Black};
+            c = static_cast<io::char_type>(std::tolower(c));
+
+            PieceType ty{Queen};
+            if (!ty.from_char(c)) {
+                io::fail_char(is);
+                io::error("invalid fen: invalid char");
+                break;
+            }
+
+            if (!board.drop(color, ty, Square{file, rank})) {
+                io::fail_char(is);
+                break;
+            }
+
+            ++filePos;
+            continue;
+        }
+
+        if ('1' <= c && c <= '8') {
+            // convert digit symbol to offset and skip empty chessboard squares
+            filePos += c - '0';
+            if (filePos > 8) {
+                io::fail_char(is);
+                io::error("invalid fen: file out of board");
+                break;
+            }
+            continue;
+        }
+
+        if (c == '/') {
+            filePos = 0;
+            ++rankPos;
+            if (rankPos > 8) {
+                io::fail_char(is);
+                io::error("invalid fen: rank out of board");
+                break;
+            }
+            continue;
+        }
+
+        // parsing error
+        io::fail_char(is);
+        io::error("invalid fen: invalid char");
+        return is;
     }
 
     return is;
@@ -244,7 +271,7 @@ bool FenToBoard::drop(Color color, PieceType ty, Square sq) {
 
     // illegal pawn location
     if (ty.is(Pawn) && (sq.on(Rank1) || sq.on(Rank8))) {
-        io::error("invalid fen: pawn on impossible rank");
+        io::error("invalid fen: pawn on invalid rank");
         return false;
     }
 
