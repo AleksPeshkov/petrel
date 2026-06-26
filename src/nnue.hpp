@@ -55,7 +55,7 @@ struct CACHE_ALIGN Nnue {
 
         //TODO: reshape feature indexing during net loading
         constexpr FeatureIndex (Side si, PieceType ty, Square sq)
-            : Index{ 6*64*+si + 64*pieceType[ty] + +~sq }
+            : Index{ 6*64*+si + 64*pieceType[ty] + (+sq ^ 077) }
         {}
     };
 
