@@ -48,6 +48,8 @@ class Tt {
         return (size_-1) ^ (Align-1);
     }
 
+    Tt (const Tt&) = delete;
+    Tt& operator= (const Tt&) = delete;
 public:
     mutable node_count_t hits = 0;
     mutable node_count_t reads = 0;

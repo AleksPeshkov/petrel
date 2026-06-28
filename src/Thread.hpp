@@ -22,6 +22,8 @@ class Thread {
     void waitStatus(Status old) { status.wait(old, std::memory_order_acquire); }
     void setStatus(Status desired) { status.store(desired, std::memory_order_release); status.notify_all(); }
 
+    Thread (const Thread&) = delete;
+    Thread& operator= (const Thread&) = delete;
 public:
     Thread() : stdThread([this] {
         while (getStatus() != Status::Abort) {
