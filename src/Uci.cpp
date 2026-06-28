@@ -226,7 +226,7 @@ UciOutput& operator << (UciOutput& ob, Move move) {
 
 UciOutput& operator << (UciOutput& ob, const PrincipalVariation& pv) {
     ob << pv.score();
-    auto pvMoves = pv.moves();
+    auto* pvMoves = pv.moves();
     if (pvMoves->none()) { return ob; } // empty PV (no legal moves at root)
 
     {

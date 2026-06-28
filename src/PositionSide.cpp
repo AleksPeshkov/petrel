@@ -77,7 +77,7 @@ void PositionSide::setLeaperAttacks() {
 }
 
 void PositionSide::capture(Square from) {
-    Pi pi = this->pi(from);
+    Pi pi{ this->pi(from) };
     NonKingType ty{*typeOf(pi)};
     assert (!ty.is(King));
 
