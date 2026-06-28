@@ -6,16 +6,16 @@
 class Uci;
 
 class NodePerft : public PositionMoves {
-    NodePerft* const parent{nullptr};
+    NodePerft& parent;
     node_count_t perft = 0;
     Ply depth;
 
-    NodePerft (NodePerft* n) : parent{n}, depth{n->depth - 1_ply} {}
+    NodePerft (NodePerft& n) : parent{n}, depth{n.depth - 1_ply} {}
     ReturnStatus visit();
     ReturnStatus visitMove(Square from, Square to);
 
 public:
-    NodePerft (const PositionMoves& pos, Ply d) : PositionMoves{pos}, depth{d} {}
+    NodePerft (const PositionMoves& pos, Ply d) : PositionMoves{pos}, parent(*this), depth{d} {}
     ReturnStatus visitRoot();
 };
 
