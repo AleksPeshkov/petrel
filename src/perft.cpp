@@ -158,7 +158,7 @@ union BucketUnion {
 node_count_t TtPerft::get(Z z, Ply d) {
     ++reads;
 
-    auto origin = addr<BucketUnion>(z);
+    auto* origin = addr<BucketUnion>(z);
     auto o = *origin;
 
     if (o.u.d[0].isKeyMatch(z, d)) {

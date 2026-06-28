@@ -767,7 +767,7 @@ bool Node::isRepetition() const {
 
     if (ply > 4_ply) {
         // search tree repetitions (2-fold is draw); ply and ply-2 cannot be chess position repetitions
-        auto next = grandParent();
+        auto* next = grandParent();
         while (!next->zHash.none(z)) {
             next = next->grandParent();
             assert (next);
@@ -777,7 +777,10 @@ bool Node::isRepetition() const {
     }
 
     // game history repetitions
-    return rule50() >= ply && (isPv() ? The_uci.repetitions.has3(colorToMove(), z) : The_uci.repetitions.has2(colorToMove(), z));
+    return rule50() >= ply && (isPv()
+        ? The_uci.repetitions.has3(colorToMove(), z)
+        : The_uci.repetitions.has2(colorToMove(), z)
+    );
 }
 
 void savePv(const PositionMoves& p, const PrincipalVariation& pv, const Tt& tt) {
@@ -787,14 +790,14 @@ void savePv(const PositionMoves& p, const PrincipalVariation& pv, const Tt& tt) 
     Ply   ply   = 0_ply;
     Ply   depth = pv.depth();
     Score score = pv.score();
-    auto  pvMoves = pv.moves();
+    auto* pvMoves = pv.moves();
 
     for (Move move; (move = *pvMoves++).any();) {
         assert (score.isOk(ply));
         assert (pos.isPseudoLegal(move));
         assert ((pos.generateMoves(), pos.isPossibleMove(move)));
 
-        auto o = tt.addr<TtSlot>(pos.z());
+        auto* o = tt.addr<TtSlot>(pos.z());
         *o = TtSlot{pos.z(), score, ply, ExactScore, depth, move.ttMove()};
         ++tt.writes;
 
