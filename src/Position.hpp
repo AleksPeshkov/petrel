@@ -98,7 +98,7 @@ class Position {
     Rule50 rule50_; // number of halfmoves since last capture or pawn move, incremented or reset by makeMove()
 
     // copy parent position but flip sides
-    void flip(const Position* parent);
+    void flip(const Position& parent);
 
     enum MakeMoveFlags {
         Fast = 0,
@@ -135,16 +135,16 @@ protected:
     }
 
     // update the position without updating the zobrist hash (because it already updated)
-    void makeMoveFast(const Position*, Square, Square);
+    void makeMoveFast(const Position&, Square, Square);
 
     // make move directly inside position itself
     void makeMove(Square, Square);
 
     // update the position and its zobrist hash
-    void makeMove(const Position*, Square, Square, auto&& prefetch);
-    void makeMoveNoEval(const Position*, Square, Square, auto&& prefetch);
+    void makeMove(const Position&, Square, Square, auto&& prefetch);
+    void makeMoveNoEval(const Position&, Square, Square, auto&& prefetch);
 
-    void makeNullMove(const Position*);
+    void makeNullMove(const Position&);
 
     template <Side::_t> void setLegalEnPassant(Square);
     void setZobrist() { zobrist_ = generateZobrist(); }

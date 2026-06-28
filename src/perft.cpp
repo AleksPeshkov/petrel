@@ -267,8 +267,7 @@ void TtPerft::set(Z z, Ply d, node_count_t n) {
 }
 
 ReturnStatus NodePerft::visitRoot() {
-    NodePerft node{this};
-    const auto child = &node;
+    NodePerft child{*this};
 
     int moveCount = 0;
     for (Pi pi : MY.any()) {
@@ -277,7 +276,7 @@ ReturnStatus NodePerft::visitRoot() {
         for (Square to : bbMovesOf(pi)) {
             auto previousPerft = perft;
 
-            RETURN_IF_STOP (child->visitMove(from, to));
+            RETURN_IF_STOP (child.visitMove(from, to));
 
             The_uci.info_perft_currmove(++moveCount, toMove(from, to), perft - previousPerft);
         }
@@ -288,14 +287,13 @@ ReturnStatus NodePerft::visitRoot() {
 }
 
 ReturnStatus NodePerft::visit() {
-    NodePerft node{this};
-    const auto child = &node;
+    NodePerft child{*this};
 
     for (Pi pi : MY.any()) {
         Square from = MY.sq(pi);
 
         for (Square to : bbMovesOf(pi)) {
-            RETURN_IF_STOP (child->visitMove(from, to));
+            RETURN_IF_STOP (child.visitMove(from, to));
         }
     }
 
@@ -311,7 +309,7 @@ ReturnStatus NodePerft::visitMove(Square from, Square to) {
         case 1:
             RETURN_IF_STOP (The_uci.limits.countNode());
             makeMoveFast(parent, from, to);
-            parent->clearMove(from, to);
+            parent.clearMove(from, to);
             generateMoves();
             perft = movesTotal();
             break;
@@ -320,7 +318,7 @@ ReturnStatus NodePerft::visitMove(Square from, Square to) {
             assert (depth >= 2_ply);
             RETURN_IF_STOP (The_uci.limits.countNode());
             makeMoveNoEval(parent, from, to, [&](Z z){ The_uci.tt.prefetch<64>(z); });
-            parent->clearMove(from, to);
+            parent.clearMove(from, to);
             generateMoves();
 
             perft = static_cast<TtPerft&>(The_uci.tt).get(z(), depth - 2_ply);
@@ -333,6 +331,6 @@ ReturnStatus NodePerft::visitMove(Square from, Square to) {
         }
     }
 
-    parent->perft += perft;
+    parent.perft += perft;
     return ReturnStatus::Continue;
 }

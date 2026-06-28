@@ -5,13 +5,12 @@ Score Position::evaluate() const {
     return Score::clampEval(eval);
 }
 
-void Position::flip(const Position* parent) {
+void Position::flip(const Position& parent) {
     // copy from the parent position but swap sides
-    assert (parent);
-    accumulator.flip(parent->accumulator);
-    positionSide_[Side{My}] = parent->OP;
-    positionSide_[Side{Op}] = parent->MY;
-    rule50_ = parent->rule50_;
+    accumulator.flip(parent.accumulator);
+    positionSide_[Side{My}] = parent.OP;
+    positionSide_[Side{Op}] = parent.MY;
+    rule50_ = parent.rule50_;
 }
 
 void Position::makeMove(Square from, Square to) {
@@ -34,13 +33,13 @@ void Position::makeMoveNoEval(Square from, Square to) {
     //assert (z() == *generateZobrist()); // true, but slow to compute
 }
 
-void Position::makeNullMove(const Position* parent) {
+void Position::makeNullMove(const Position& parent) {
     flip(parent);
-    zobrist_ = parent->zobrist_;
+    zobrist_ = parent.zobrist_;
     // null move
     rule50_.next();
-    occupied_[Side{My}] = parent->occupied_[Side{Op}];
-    occupied_[Side{Op}] = parent->occupied_[Side{My}];
+    occupied_[Side{My}] = parent.occupied_[Side{Op}];
+    occupied_[Side{Op}] = parent.occupied_[Side{My}];
 
     // clear en passant status from the previous move
     if (MY.hasEnPassant()) {
@@ -53,7 +52,7 @@ void Position::makeNullMove(const Position* parent) {
     //assert (z() == *generateZobrist()); // true, but slow to compute
 }
 
-void Position::makeMoveFast(const Position* parent, Square from, Square to) {
+void Position::makeMoveFast(const Position& parent, Square from, Square to) {
     flip(parent);
 
     // current position flipped its sides relative to parent, so we make the move inplace for the Op

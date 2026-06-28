@@ -96,11 +96,11 @@ void Node::saveNode() {
 
 void Node::clearNode() {
     assert (hasParent());
-    pvPly = parent()->isPv() ? ply : parent()->pvPly;
-    pvIndex = PrincipalVariation::Index{+parent()->pvIndex + 1};
-    alpha = -parent()->beta;
-    beta = -parent()->alpha;
-    killer[0] = hasGrandParent() ? grandParent()->killer[0] : Move{};
+    pvPly = parent().isPv() ? ply : parent().pvPly;
+    pvIndex = PrincipalVariation::Index{+parent().pvIndex + 1};
+    alpha = -parent().beta;
+    beta = -parent().alpha;
+    killer[0] = hasGrandParent() ? grandParent().killer[0] : Move{};
     killer[1] = {};
 }
 
@@ -115,13 +115,13 @@ void Node::assertOk() const {
 }
 
 ReturnStatus Node::negamax(Ply R) {
-    child()->depth = depth - R; //TRICK: Ply >= 0
-    /* assert (child()->depth >= 0); */
-    child()->generateMoves();
-    RETURN_IF_STOP (child()->search());
+    child().depth = depth - R; //TRICK: Ply >= 0
+    /* assert (child().depth >= 0); */
+    child().generateMoves();
+    RETURN_IF_STOP (child().search());
     assertOk();
 
-    auto childScore = -child()->score;
+    auto childScore = -child().score;
 
     if (childScore <= alpha) {
         if (score.none() || score < childScore) {
@@ -129,16 +129,16 @@ ReturnStatus Node::negamax(Ply R) {
         }
     } else {
         // do not use R param as actual reduction can differ
-        auto childR = child()->currentR();
+        auto childR = child().currentR();
 
         // full depth research (unless it was a null move search)
         if (currentMove.any() && childR >= 2_ply) {
-            if (child()->isPv()) {
+            if (child().isPv()) {
                 // rare case (the first move from PV with reduced depth)
-                child()->alpha = -beta;
-                assert (child()->beta == -alpha);
+                child().alpha = -beta;
+                assert (child().beta == -alpha);
             } else {
-                assert (child()->alpha == child()->beta.minus1());
+                assert (child().alpha == child().beta.minus1());
             }
             return negamax();
         }
@@ -159,11 +159,11 @@ ReturnStatus Node::negamax(Ply R) {
         assert (isPv()); // alpha < childScore < beta, so current window cannot be zero
         assert (currentMove.any()); // null move in PV is not allowed
 
-        if (!child()->isPv()) {
-            child()->pvPly = child()->ply;
-            assert (child()->isPv());
-            child()->alpha = -beta;
-            assert (child()->beta == -alpha);
+        if (!child().isPv()) {
+            child().pvPly = child().ply;
+            assert (child().isPv());
+            child().alpha = -beta;
+            assert (child().beta == -alpha);
             // Principal Variation Search (PVS) research with full window and full depth
             return negamax();
         }
@@ -174,11 +174,11 @@ ReturnStatus Node::negamax(Ply R) {
         bestMove = currentMove;
 
         if (!isRoot()) {
-            child()->pvIndex = The_uci.pv.set(pvIndex, bestMove, child()->pvIndex);
+            child().pvIndex = The_uci.pv.set(pvIndex, bestMove, child().pvIndex);
         } else {
             // unfinished iteration, so report depth-1
-            pvIndex = The_uci.pv.set(depth - 1_ply, score, bestMove, child()->pvIndex);
-            child()->pvIndex = PrincipalVariation::Index{+pvIndex+1};
+            pvIndex = The_uci.pv.set(depth - 1_ply, score, bestMove, child().pvIndex);
+            child().pvIndex = PrincipalVariation::Index{+pvIndex+1};
 
             RETURN_IF_STOP (The_uci.limits.updateTimeStrategy(The_uci.pv));
 
@@ -186,14 +186,14 @@ ReturnStatus Node::negamax(Ply R) {
         }
 
         alpha = childScore;
-        child()->beta = -alpha;
+        child().beta = -alpha;
     }
 
     // set zero window for the next sibling move search
-    child()->alpha = child()->beta.minus1(); // can be either 1 centipawn or 1 mate distance ply
-    child()->pvPly = pvPly;
+    child().alpha = child().beta.minus1(); // can be either 1 centipawn or 1 mate distance ply
+    child().pvPly = pvPly;
 
-    assert (child()->beta == -alpha);
+    assert (child().beta == -alpha);
     return ReturnStatus::Continue;
 }
 
@@ -323,7 +323,7 @@ ReturnStatus Node::search() {
 // search all moves:
 
     // prepare empty child node to make moves into
-    child()->clearNode();
+    child().clearNode();
 
     if (depth <= 0_ply && !inCheck()) {
         assert (depth == 0_ply);
@@ -376,25 +376,25 @@ ReturnStatus Node::search() {
     if (hasParent()) {
         if (inCheck()) {
             RETURN_CUTOFF (searchIfPossible(
-                The_uci.counterCheck.get(colorToMove(), MY.sqKing(), parent()->currentMove)
+                The_uci.counterCheck.get(colorToMove(), MY.sqKing(), parent().currentMove)
             ));
         } else {
-            RETURN_CUTOFF (searchIfPossible(parent()->killer[0]));
+            RETURN_CUTOFF (searchIfPossible(parent().killer[0]));
 
-            if (parent()->currentMove.any()) {
-                RETURN_CUTOFF (contMove(CounterMove, parent()->currentMove)); // ply-1
+            if (parent().currentMove.any()) {
+                RETURN_CUTOFF (contMove(CounterMove, parent().currentMove)); // ply-1
             }
-            if (hasGrandParent() && grandParent()->currentMove.any()) {
-                RETURN_CUTOFF (contMove(FollowupMove, grandParent()->currentMove)); // ply-2
+            if (hasGrandParent() && grandParent().currentMove.any()) {
+                RETURN_CUTOFF (contMove(FollowupMove, grandParent().currentMove)); // ply-2
             }
 
-            RETURN_CUTOFF (searchIfPossible(parent()->killer[1]));
+            RETURN_CUTOFF (searchIfPossible(parent().killer[1]));
 
-            if (parent()->currentMove.any()) {
-                RETURN_CUTOFF (contMove(CounterMove, parent()->currentMove)); // ply-1
+            if (parent().currentMove.any()) {
+                RETURN_CUTOFF (contMove(CounterMove, parent().currentMove)); // ply-1
             }
-            if (hasGrandParent() && grandParent()->currentMove.any()) {
-                RETURN_CUTOFF (contMove(FollowupMove, grandParent()->currentMove)); // ply-2
+            if (hasGrandParent() && grandParent().currentMove.any()) {
+                RETURN_CUTOFF (contMove(FollowupMove, grandParent().currentMove)); // ply-2
             }
         }
     }
@@ -576,14 +576,14 @@ ReturnStatus Node::quiescence() {
     }
     if (alpha < score) {
         alpha = score;
-        child()->beta = -alpha;
+        child().beta = -alpha;
     }
 
-    assert (child()->alpha == -beta);
-    assert (child()->beta == -alpha);
+    assert (child().alpha == -beta);
+    assert (child().beta == -alpha);
 
-    assert (child()->alpha == -beta);
-    assert (child()->beta == -alpha);
+    assert (child().alpha == -beta);
+    assert (child().beta == -alpha);
 
     // impossible to capture the king, do not even try to save time
     return goodCaptures(OP.nonKing());
@@ -651,7 +651,7 @@ ReturnStatus Node::searchNullMove() {
 
     //TRICK: null move not counted as movesMade()
     currentMove = {};
-    child()->childNullMove();
+    child().childNullMove();
 
     return negamax(4_ply + (depth-2_ply)/4);
 }
@@ -674,7 +674,7 @@ ReturnStatus Node::searchMove(Move move, Ply R) {
 
     currentMove = move;
     clearMove(from, to);
-    child()->childMove(from, to);
+    child().childMove(from, to);
 
     return negamax(finalR(R));
 }
@@ -684,7 +684,7 @@ void Node::childMove(Square from, Square to) {
     The_uci.pv.clear(pvIndex);
 
     if (rule50() < 2_ply || ply <= 2_ply) { zHash = {}; }
-    else { zHash = ZHash{grandParent()->zHash, grandParent()->z()}; }
+    else { zHash = ZHash{grandParent().zHash, grandParent().z()}; }
 }
 
 constexpr Ply Node::finalR(Ply R) const {
@@ -703,8 +703,8 @@ void Node::updateHistory() {
         bestMove = Move{TtMove{bestMove.from(), bestMove.to(), CanBeKiller::No}, bestMove.moveType()};
 
         if (hasParent()) {
-            assert (parent()->currentMove.any());
-            The_uci.counterCheck.set(colorToMove(), MY.sqKing(), parent()->currentMove, bestMove);
+            assert (parent().currentMove.any());
+            The_uci.counterCheck.set(colorToMove(), MY.sqKing(), parent().currentMove, bestMove);
         }
     }
 
@@ -714,18 +714,18 @@ void Node::updateHistory() {
     assert (!inCheck());
 
     if (!hasParent()) { return; } // ply-1
-    insert_unique_pos(parent()->killer, bestMove);
-    if (parent()->currentMove.any()) {
-        The_uci.contMoves.set(CounterMove, colorToMove(), parent()->currentMove, bestMove);
+    insert_unique_pos(parent().killer, bestMove);
+    if (parent().currentMove.any()) {
+        The_uci.contMoves.set(CounterMove, colorToMove(), parent().currentMove, bestMove);
     }
 
     if (!hasGrandParent()) { return; } // ply-2
-    if (grandParent()->currentMove.any()) {
-        The_uci.contMoves.set(FollowupMove, colorToMove(), grandParent()->currentMove, bestMove);
+    if (grandParent().currentMove.any()) {
+        The_uci.contMoves.set(FollowupMove, colorToMove(), grandParent().currentMove, bestMove);
     }
 
     if (!hasAncestor(3_ply)) { return; } // ply-3
-    insert_unique_pos<1>(ancestor(3_ply)->killer, bestMove);
+    insert_unique_pos<1>(ancestor(3_ply).killer, bestMove);
 }
 
 constexpr Color Node::colorToMove() const { return The_uci.colorToMove(ply); }
@@ -771,9 +771,9 @@ bool Node::isRepetition() const {
 
     if (ply > 4_ply) {
         // search tree repetitions (2-fold is draw); ply and ply-2 cannot be chess position repetitions
-        auto* next = grandParent();
+        auto* next = &grandParent();
         while (!next->zHash.none(z)) {
-            next = next->grandParent();
+            next = &next->grandParent();
             assert (next);
             if (next->z() == z) { return true; }
         }
