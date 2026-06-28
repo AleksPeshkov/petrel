@@ -260,9 +260,9 @@ void Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
     }
 }
 
-void Position::makeMove(const Position* parent, Square from, Square to, auto&& prefetch) {
+void Position::makeMove(const Position& parent, Square from, Square to, auto&& prefetch) {
     flip(parent);
-    zobrist_ = parent->zobrist_;
+    zobrist_ = parent.zobrist_;
 
     auto flipPrefetch = [&]{
         zobrist_.flip();
@@ -279,9 +279,9 @@ void Position::makeMove(const Position* parent, Square from, Square to, auto&& p
     //assert (z() == generateZobrist().v()); // true, but slow to compute
 }
 
-void Position::makeMovePerft(const Position* parent, Square from, Square to, auto&& prefetch) {
+void Position::makeMovePerft(const Position& parent, Square from, Square to, auto&& prefetch) {
     flip(parent);
-    zobrist_ = parent->zobrist_;
+    zobrist_ = parent.zobrist_;
 
     // current position flipped its sides relative to parent, so we make the move inplace for the Op
     makeMove<Op, NoEval>(from, to, [&]{ zobrist_.flip(); prefetch(z()); });
