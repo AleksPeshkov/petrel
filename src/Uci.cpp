@@ -175,7 +175,6 @@ UciOutput& operator << (UciOutput& ob, HistoryMove move) {
     ob << ' ';
 
     if (move.none()) {
-        io::error("illegal move 0000 printed");
         ob << "0000";
         return ob;
     }
