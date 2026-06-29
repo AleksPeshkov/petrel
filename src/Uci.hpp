@@ -28,7 +28,7 @@ public:
 
     constexpr Side sideOf(Color::_t color) const { return Side{colorToMove_.is(color) ? My : Op}; }
     constexpr Color colorToMove(Ply ply = 0_ply) const { return Color{ ::distance(colorToMove_, ply) }; }
-    constexpr int fullMoveNumber() const { return fullMoveNumber_; }
+    constexpr auto fullMoveNumber(Ply ply = 0_ply) const { return fullMoveNumber_ + (+ply + +colorToMove_) / 2; }
 };
 
 struct UciLimits {
@@ -142,6 +142,7 @@ private:
     constexpr bool hasNewNodes() const { return lastInfoNodes_ != limits.getNodes(); }
     ostream& average_nps(ostream&) const;
     ostream& instant_nps(ostream&) const;
+    ostream& info_pv(ostream&) const;
 
     void info(std::string_view) const; // output to log file
     void log(io::char_type tag, std::string_view) const; // log messages to the logFile named by logFileName
@@ -158,11 +159,15 @@ public:
 
     constexpr ChessVariant chessVariant() const { return chessVariant_; }
     constexpr Color colorToMove(Ply ply = 0_ply) const { return position_.colorToMove(ply); }
+    constexpr auto fullMoveNumber(Ply ply = 0_ply) const { return position_.fullMoveNumber(ply); }
     constexpr const auto& moves() const { return position_.moves(); }
 
     void info_pv() const;
     void info_perft_depth(Ply, node_count_t) const;
     void info_perft_currmove(int moveCount, Move currentMove, node_count_t) const;
+
+    void move(ostream&, Move, Ply = 0_ply) const;
+    void fen(ostream&, const Position&, Ply = 0_ply) const;
 };
 
 extern Uci The_uci;
