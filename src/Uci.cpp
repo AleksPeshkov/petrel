@@ -141,104 +141,6 @@ void rtrim(std::string& str) {
     }
 }
 
-// std::ostringstream output buffer, flushed on destruction
-class Output : public std::ostringstream {
-protected:
-    const Uci& uci;
-    bool flush_;
-public:
-    Output (const Uci* _uci, bool flush = true) : std::ostringstream{}, uci{*_uci}, flush_{flush} {}
-    std::ostringstream& flush(bool _flush = true) { uci.output(view(), _flush); str({}); return *this; }
-    ~Output () { flush(flush_); }
-};
-
-// std::ostringstream UciMove capable output buffer, flushed on destruction
-class UciOutput : public Output {
-    Color colorToMove;
-public:
-    UciOutput(const Uci* _uci, bool flush = true) : Output{_uci, flush}, colorToMove{uci.colorToMove()} {}
-    ChessVariant chessVariant() const { return uci.chessVariant(); }
-    Color color() const { return colorToMove; }
-    Color flipColor() { colorToMove = ~colorToMove; return colorToMove; }
-    void resetRootColor() { colorToMove = uci.colorToMove(); }
-};
-
-// typesafe operator<< chaining
-UciOutput& operator << (UciOutput& ob, io::czstring message) {
-    static_cast<ostream&>(ob) << message; return ob;
-}
-
-// convert move to UCI format
-UciOutput& operator << (UciOutput& ob, Move move) {
-    bool isWhite{ob.color().is(White)};
-    ob.flipColor();
-    ob << ' ';
-
-    if (move.none()) {
-        ob << "0000";
-        return ob;
-    }
-
-    Square from{move.from()};
-    Square to{move.to()};
-
-    Square uciFrom{isWhite ? from : ~from};
-    Square uciTo{isWhite ? to : ~to};
-
-    if (!move.isSpecial()) {
-        ob << uciFrom << uciTo;
-        return ob;
-    }
-
-    // pawn promotion
-    if (from.on(Rank7)) {
-        // the type of a promoted pawn piece encoded in place of move to's rank
-        uciTo = Square{to.file(), isWhite ? Rank8 : Rank1};
-        ob << uciFrom << uciTo << PromoType{::promoTypeFrom(to.rank())};
-        return ob;
-    }
-
-    // en passant capture
-    if (from.on(Rank5) && to.on(Rank5)) {
-        // en passant capture move internally encoded as pawn captures pawn
-        ob << uciFrom << Square{to.file(), isWhite ? Rank6 : Rank3};
-        return ob;
-    }
-
-    //TRICK: castling is "pawn" move as it needs special handling
-    if (from.on(Rank1)) {
-        // castling move internally encoded as the rook captures own king
-
-        if (ob.chessVariant().is(Orthodox)) {
-            if (from.on(FileA)) { ob << uciTo << Square{File{FileC}, uciFrom.rank()}; return ob; }
-            if (from.on(FileH)) { ob << uciTo << Square{File{FileG}, uciFrom.rank()}; return ob; }
-        }
-
-        // Chess960:
-        ob << uciTo << uciFrom;
-        return ob;
-    }
-
-    // all the rest pawn moves have MoveType::Special
-    ob << uciFrom << uciTo;
-    return ob;
-}
-
-UciOutput& operator << (UciOutput& ob, const PrincipalVariation& pv) {
-    ob << pv.score();
-    auto* pvMoves = pv.moves();
-    if (pvMoves->none()) { return ob; } // empty PV (no legal moves at root)
-
-    {
-        ob << " pv";
-        for (Move move; (move = *pvMoves++).any(); ) {
-            ob << move;
-        }
-        ob.resetRootColor();
-    }
-    return ob;
-}
-
 istream& operator >> (istream& is, Square& sq) {
     auto before = is.tellg();
 
@@ -279,6 +181,7 @@ public:
 };
 
 istream& read(istream& is, FenToBoard& board) {
+    is >> std::ws;
     File file{FileA}; Rank rank{Rank8};
 
     for (io::char_type c{}; is.get(c); ) {
@@ -327,19 +230,19 @@ istream& read(istream& is, FenToBoard& board) {
 }
 
 bool FenToBoard::drop(Color color, PieceType ty, Square sq) {
-    //the position representaion cannot hold more then 16 total pieces per color
+    // the position representaion cannot hold more then 16 total pieces per color
     if (pieceCount[color] == Pi::size()) {
         io::error("invalid fen: too many total pieces");
         return false;
     }
 
-    //max one king per each color
+    // max one king per each color
     if (ty.is(King) && !pieces[color][PieceType{King}].empty()) {
         io::error("invalid fen: too many kings");
         return false;
     }
 
-    //illegal pawn location
+    // illegal pawn location
     if (ty.is(Pawn) && (sq.on(Rank1) || sq.on(Rank8))) {
         io::error("invalid fen: pawn on impossible rank");
         return false;
@@ -351,7 +254,7 @@ bool FenToBoard::drop(Color color, PieceType ty, Square sq) {
 }
 
 bool FenToBoard::dropPieces(Position& position, Color colorToMove_) {
-    //each side should have one king
+    // each side should have one king
     for (auto color : range<Color>()) {
         if (pieces[color][PieceType{King}].empty()) {
             io::error("invalid fen: king is missing");
@@ -473,7 +376,7 @@ public:
     }
 };
 
-ostream& fen(ostream& os, ChessVariant chessVariant, const Position& pos, Color colorToMove, int fullMoveNumber) {
+ostream& fen(ostream& os, const Position& pos, Color colorToMove, ChessVariant chessVariant, int fullMoveNumber) {
     const auto& whitePieces = pos.positionSide(Side{colorToMove.is(White) ? My : Op});
     const auto& blackPieces = pos.positionSide(Side{colorToMove.is(Black) ? My : Op});
 
@@ -485,16 +388,79 @@ ostream& fen(ostream& os, ChessVariant chessVariant, const Position& pos, Color 
         << ' ' << fullMoveNumber;
 }
 
-UciOutput& operator << (UciOutput& ob, const UciPosition& pos) {
-    fen(ob, ob.chessVariant(), pos, ob.color(), pos.fullMoveNumber());
-    return ob;
+
+// output move in UCI format
+ostream& move(ostream& os, Move move, Color colorToMove, ChessVariant chessVariant) {
+    bool isWhite{ colorToMove.is(White) };
+    os << ' ';
+
+    if (move.none()) {
+        os << "0000";
+        return os;
+    }
+
+    Square from{move.from()};
+    Square to{move.to()};
+
+    Square uciFrom{isWhite ? from : ~from};
+    Square uciTo{isWhite ? to : ~to};
+
+    if (!move.isSpecial()) {
+        os << uciFrom << uciTo;
+        return os;
+    }
+
+    // pawn promotion
+    if (from.on(Rank7)) {
+        // the type of a promoted pawn piece encoded in place of move to's rank
+        uciTo = Square{to.file(), isWhite ? Rank8 : Rank1};
+        os << uciFrom << uciTo << PromoType{::promoTypeFrom(to.rank())};
+        return os;
+    }
+
+    // en passant capture
+    if (from.on(Rank5) && to.on(Rank5)) {
+        // en passant capture move internally encoded as pawn captures pawn
+        os << uciFrom << Square{to.file(), isWhite ? Rank6 : Rank3};
+        return os;
+    }
+
+    //TRICK: castling is "pawn" move as it needs special handling
+    if (from.on(Rank1)) {
+        // castling move internally encoded as the rook captures own king
+
+        if (chessVariant.is(Orthodox)) {
+            if (from.on(FileA)) { os << uciTo << Square{File{FileC}, uciFrom.rank()}; return os; }
+            if (from.on(FileH)) { os << uciTo << Square{File{FileG}, uciFrom.rank()}; return os; }
+        }
+
+        // Chess960:
+        os << uciTo << uciFrom;
+        return os;
+    }
+
+    // all the rest pawn moves have MoveType::Special
+    os << uciFrom << uciTo;
+    return os;
 }
 
-UciOutput& info_fen(UciOutput& ob, const UciPosition& pos) {
-    ob << "info" << pos.evaluate();
-    ob << " fen " << pos;
-    return ob;
-}
+// std::ostringstream output buffer, flushed on destruction
+class Output {
+    static thread_local std::ostringstream ob;
+    bool flush_;
+    Output (const Output&) = delete;
+    Output& operator= (const Output&) = delete;
+public:
+    Output (bool flush = true) : flush_{flush} {}
+    ~Output () { flush(flush_); }
+    auto view() const { return ob.view(); }
+    void clear() { ob.str({}); ob.clear(); }
+    void flush(bool _flush = true) { The_uci.output(ob.view(), _flush); clear(); }
+
+    operator std::ostringstream& () const { return ob; }
+    template <typename T> Output& operator<<(T&& val) { ob << std::forward<T>(val); return *this; }
+};
+thread_local std::ostringstream Output::ob;
 
 } // anonymous namespace
 
@@ -507,12 +473,12 @@ istream& UciPosition::readMove(istream& is, Square& from, Square& to) const {
 
     if (!MY.has(from)) { return io::fail_pos(is, before); }
 
-    //convert special moves (castling, promotion, ep) to the internal move format
+    // convert special moves (castling, promotion, ep) to the internal move format
     if (MY.isPawn(from)) {
         if (from.on(Rank7)) {
             PromoType promo{Queen};
             is >> promo;
-            is.clear(); //promotion piece is optional
+            is.clear(); // promotion piece is optional
             to = Square{to.file(), ::rankOf(promo)};
             return is;
         }
@@ -522,12 +488,12 @@ istream& UciPosition::readMove(istream& is, Square& from, Square& to) const {
             return is;
         }
 
-        //else is normal pawn move
+        // else is normal pawn move
         return is;
     }
 
     if (MY.isKing(from)) {
-        if (MY.has(to)) { //Chess960 castling encoding
+        if (MY.has(to)) { // Chess960 castling encoding
             if (!MY.isCastling(to)) { return io::fail_pos(is, before); }
 
             std::swap(from, to);
@@ -545,7 +511,7 @@ istream& UciPosition::readMove(istream& is, Square& from, Square& to) const {
             from = Square{A1}; to = Square{E1};
             return is;
         }
-        //else is normal king move
+        // else is normal king move
     }
 
     return is;
@@ -581,7 +547,7 @@ istream& UciPosition::readBoard(istream& is) {
 
     is >> std::ws;
     if (is.eof()) {
-        //missing board data
+        // missing board data
         return io::fail_rewind(is);
     }
 
@@ -598,13 +564,12 @@ istream& UciPosition::readBoard(istream& is) {
 }
 
 istream& UciPosition::readCastling(istream& is) {
+    is >> std::ws;
     if (is.peek() == '-') { return is.ignore(); }
 
     for (io::char_type c{}; is.get(c) && !std::isblank(c); ) {
         if (std::isalpha(c)) {
-            Color color{std::isupper(c) ? White : Black};
-            Side side = sideOf(*color);
-
+            Side side{ sideOf(std::isupper(c) ? White : Black) };
             c = static_cast<io::char_type>(std::tolower(c));
 
             CastlingSide castlingSide;
@@ -618,17 +583,17 @@ istream& UciPosition::readCastling(istream& is) {
                 }
             }
         }
-        io::fail_char(is);
+        return io::fail_char(is);
     }
     return is;
 }
 
 istream& UciPosition::readEnPassant(istream& is) {
+    is >> std::ws;
     if (is.peek() == '-') { return is.ignore(); }
+    auto beforeSquare = is.tellg();
 
     Square ep;
-
-    auto beforeSquare = is.tellg();
     if (is >> ep) {
         if (!ep.on(colorToMove_.is(White) ? Rank6 : Rank3) || !setEnPassant(ep.file())) {
             return io::fail_pos(is, beforeSquare);
@@ -638,11 +603,8 @@ istream& UciPosition::readEnPassant(istream& is) {
 }
 
 void UciPosition::readFen(istream& is) {
-    is >> std::ws;
     readBoard(is);
-    is >> std::ws;
     readCastling(is);
-    is >> std::ws;
     readEnPassant(is);
 
     if (is && !is.eof()) {
@@ -858,15 +820,40 @@ void Uci::log(io::char_type tag, std::string_view message) const {
     }
 }
 
+void Uci::move(ostream& os, Move move, Ply ply) const {
+    ::move(os, move, colorToMove(ply), chessVariant());
+}
+
+void Uci::fen(ostream& os, const Position& pos, Ply ply) const {
+    ::fen(os, pos, colorToMove(ply), chessVariant(), fullMoveNumber(ply));
+}
+
+ostream& Uci::info_pv(ostream& os) const {
+    os << pv.score();
+
+    auto* pvMoves = pv.moves();
+    if (pvMoves->none()) { return os; } // empty PV (no legal moves at root)
+
+    os << " pv";
+    {
+        Color color{ colorToMove() };
+        for (Move move; (move = *pvMoves++).any(); ) {
+            ::move(os, move, color, chessVariant());
+            color = ~color;
+        }
+    }
+    return os;
+}
+
 void Uci::error(std::string_view prefix, std::string_view suffix) const {
-    UciOutput ob{this};
+    Output ob;
     ob << "petrel " << pid_ << " " << prefix << suffix << '\n';
 
     // search debugging info
     if (limits.getNodes() > 0) {
-        ob << "root fen " << position_;
+        ob << "root fen "; fen(ob, position_);
         ob << " node " << limits.getNodes() << " depth " << pv.depth();
-        ob << pv << '\n';
+        info_pv(ob) << '\n';
 
 #ifndef NDEBUG
     if (!debugPosition.empty()) { ob << debugPosition << '\n'; }
@@ -875,22 +862,22 @@ void Uci::error(std::string_view prefix, std::string_view suffix) const {
 
     }
 
-    auto error_message{ob.str()};
+    auto error_message{ ob.view() };
     std::cerr << error_message << std::flush;
     log('!', error_message);
 
-    ob.str({});
+    ob.clear();
 }
 
 #ifndef NDEBUG
 void Node::assert_fail(const char* assertion, const char* file, unsigned int line, const char* function) const {
-    UciOutput ob{&The_uci};
-    ob << "\nposition fen "; ::fen(ob, The_uci.chessVariant(), *this, The_uci.colorToMove(ply), 1);
-    ob << "\ncurrentMove" << currentMove;
+    Output ob;
+    ob << assertion;
+    ob << "\nposition fen "; The_uci.fen(ob, *this, ply);
+    ob << "\ncurrentMove"; The_uci.move(ob, currentMove, ply);
 
-    std::string message{assertion};
-    message += ob.str();
-    ob.str({});
+    std::string message{ ob.view() };
+    ob.clear();
 
     ::assert_fail(message.c_str(), file, line, function);
 }
@@ -935,7 +922,7 @@ void Uci::processInput(istream& is) {
 }
 
 void Uci::uciok() const {
-    Output ob{this};
+    Output ob;
     ob << "id name " << io::app_version;
     ob << "\nid author Aleks Peshkov";
     ob << "\noption name Debug Log File type string default " << (logFileName.empty() ? "<empty>" : logFileName);
@@ -1044,7 +1031,7 @@ void Uci::setoption() {
 
 void Uci::setDebugOn() {
     if (!leftUnparsedInput()) {
-        Output ob{this};
+        Output ob;
         ob << "info string debug is " << (debugOn_ ? "on" : "off");
         return;
     }
@@ -1155,8 +1142,9 @@ void Uci::readStartPos() {
 
 void Uci::position() {
     if (!leftUnparsedInput()) {
-        UciOutput ob{this};
-        ::info_fen(ob, position_);
+        Output ob;
+        ob << "info" << position_.evaluate();
+        ob << " fen "; fen(ob, position_);
         return;
     }
 
@@ -1238,8 +1226,8 @@ void Uci::go() {
 
     // error: search not started, report some bestmove without any search
     {
-        UciOutput ob{this};
-        ob << "bestmove" << pv.getMove(0_ply);
+        Output ob;
+        ob << "bestmove"; move(ob, pv.getMove(0_ply));
     }
 
     std::string bestmove; // empty
@@ -1348,37 +1336,37 @@ void Uci::info_pv() const {
     bool flush = true;
 #endif
 
-    UciOutput ob{this, flush};
-    ob << "info depth " << pv.depth(); instant_nps(ob); ob << pv;
+    Output ob{flush};
+    ob << "info depth " << pv.depth(); instant_nps(ob); info_pv(ob);
 }
 
 void Uci::info_bestmove() {
-    UciOutput ob{this};
+    Output ob;
     auto delayed = limits.pondering() || infinite_;
 
     if (hasNewNodes()) {
-        ob << "info depth " << pv.depth(); average_nps(ob); ob << pv;
+        ob << "info depth " << pv.depth(); average_nps(ob); info_pv(ob);
         if (delayed) { ob.flush(); } else { ob << '\n'; }
     }
 
-    ob << "bestmove" << pv.getMove(0_ply);
+    ob << "bestmove"; move(ob, pv.getMove(0_ply));
     if (go_.canPonder && pv.getMove(1_ply).any()) {
-        ob << " ponder" << pv.getMove(1_ply);
+        ob << " ponder"; move(ob, pv.getMove(1_ply), 1_ply);
     }
 
     if (delayed) {
-        std::string bestmove(ob.str());
+        std::string bestmove{ ob.view() };
         swapBestMove(bestmove); // save bestmove for later output
         if (!bestmove.empty()) { error("old bestmove ignored: ", bestmove); }
-        ob.str({}); // prevent sending now
+        ob.clear(); // prevent sending now
     }
 }
 
 void Uci::info_readyok() const {
-    UciOutput ob{this};
+    Output ob;
     ob << "readyok";
     if (hasNewNodes()) {
-        ob << "\ninfo depth " << pv.depth(); instant_nps(ob); ob << pv;
+        ob << "\ninfo depth " << pv.depth(); instant_nps(ob); info_pv(ob);
     }
 }
 
@@ -1396,21 +1384,21 @@ void Uci::perft() {
 }
 
 void Uci::info_perft_bestmove() const {
-    Output ob{this};
+    Output ob;
     if (hasNewNodes()) { ob << "info"; average_nps(ob) << '\n'; }
     ob << "bestmove 0000";
 }
 
 void Uci::info_perft_depth(Ply depth, node_count_t perft) const {
-    Output ob{this};
+    Output ob;
     ob << "info depth " << depth; average_nps(ob) << " perft " << perft;
 }
 
 void Uci::info_perft_currmove(int moveCount, Move currentMove, node_count_t perft) const {
-    UciOutput ob{this};
+    Output ob;
     ob << "info currmovenumber " << moveCount;
     instant_nps(ob);
-    ob << " currmove" << currentMove;
+    ob << " currmove"; move(ob, currentMove);
     ob << " perft " << perft;
 }
 
@@ -1469,7 +1457,7 @@ void Uci::bench(std::string_view goLimits) {
         }
 
         {
-            Output ob{this};
+            Output ob;
             ob << "\n# " << pos[1];
             ob << "\nposition fen " << fen;
             ob << "\ngo " << goLimits;
@@ -1494,7 +1482,7 @@ void Uci::bench(std::string_view goLimits) {
     if (benchTime > 0ms) {
         auto benchMicroseconds{ static_cast<unsigned long>(std::chrono::duration_cast<std::chrono::microseconds>(benchTime).count()) };
 
-        Output ob{this};
+        Output ob;
         ob << '\n'
             << Mega{ttWrites} << " tt-writes, " << Mega{ttHits} << " tt-hits, " << Mega{ttReads} << " tt-reads\n"
             << Mega{benchNodes} << " nodes " << Mega{(benchMicroseconds)} << " usec " << Mega{::nps(benchNodes, benchTime)} << " nps";
