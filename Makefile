@@ -4,8 +4,9 @@ BUILD_DIR := build
 TARGET ?= $(BUILD_DIR)/$(EXE)
 
 SRC_DIR := src
-TEST_DIR := tests/integration
-UNIT_TEST_DIR := tests/unit
+TESTS_DIR := tests
+INTEGRATION_TEST_DIR := $(TESTS_DIR)/integration
+UNIT_TEST_DIR := $(TESTS_DIR)/unit
 
 # Force CXX to clang++ unless user explicitly sets it
 ifeq ($(origin CXX), command line)
@@ -104,6 +105,7 @@ debug: $(BUILD_DIR)
 
 clean:
 	$(RM) $(BUILD_DIR)
+	@find $(TESTS_DIR) -name Makefile -execdir make clean --no-print-directory \;
 
 run: default
 	$(CLS)
@@ -115,7 +117,7 @@ bench: default
 
 perft: test
 	$(CLS)
-	$(TEST_DIR)/expect.sh $(TARGET) $(TEST_DIR)/perft.rc
+	$(INTEGRATION_TEST_DIR)/expect.sh $(TARGET) $(INTEGRATION_TEST_DIR)/perft.rc
 
 unit:
 	@cd $(UNIT_TEST_DIR) && $(MAKE) -s CXX='$(CXX)' run
