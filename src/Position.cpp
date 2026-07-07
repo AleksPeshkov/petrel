@@ -53,13 +53,11 @@ void Position::makeNullMove(const Position* parent) {
     //assert (z() == *generateZobrist()); // true, but slow to compute
 }
 
-void Position::makeMoveFast(const Position* parent, Square from, Square to) {
+void Position::makeMovePerft(const Position* parent, Square from, Square to) {
     flip(parent);
 
     // current position flipped its sides relative to parent, so we make the move inplace for the Op
     makeMove<Op, Fast>(from, to, []{});
-
-    //assert (z() == Z{} || z() == *generateZobrist()); // true, but slow to compute
 }
 
 bool Position::setEnPassant(File file) {
