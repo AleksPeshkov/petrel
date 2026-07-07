@@ -134,16 +134,15 @@ protected:
         return opAttackers > myAttackers;
     }
 
-    // update the position without updating the zobrist hash (because it already updated)
-    void makeMoveFast(const Position*, Square, Square);
+    // update the position without updating the zobrist hash (because it unneeded anymore)
+    void makeMovePerft(const Position*, Square, Square);
+    void makeMovePerft(const Position*, Square, Square, auto&& prefetch);
 
     // make move directly inside position itself
     void makeMove(Square, Square);
 
     // update the position and its zobrist hash
     void makeMove(const Position*, Square, Square, auto&& prefetch);
-    void makeMoveNoEval(const Position*, Square, Square, auto&& prefetch);
-
     void makeNullMove(const Position*);
 
     template <Side::_t> void setLegalEnPassant(Square);
