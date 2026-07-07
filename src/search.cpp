@@ -658,8 +658,8 @@ ReturnStatus Node::searchNullMove() {
 
 void Node::childNullMove() {
     makeNullMove(parent());
+    childZHash = {};
     tt = The_uci.tt.prefetch<TtSlot>(z());
-    zHash = {};
 }
 
 ReturnStatus Node::searchMove(Move move, Ply R) {
@@ -680,11 +680,12 @@ ReturnStatus Node::searchMove(Move move, Ply R) {
 }
 
 void Node::childMove(Square from, Square to) {
-    makeMove(parent(), from, to, [&](Z z){ tt = The_uci.tt.prefetch<TtSlot>(z); });
-    The_uci.pv.clear(pvIndex);
+    bool shouldResetZHash = makeMove(parent(), from, to, parent().childZHash, [&](Z z) {
+        tt = The_uci.tt.prefetch<TtSlot>(z);
+    });
 
-    if (rule50() < 2_ply || ply <= 2_ply) { zHash = {}; }
-    else { zHash = ZHash{grandParent().zHash, grandParent().z()}; }
+    childZHash = ply <= 1_ply || shouldResetZHash ? ZHash{} : ZHash{parent().zHash(), parent().z()};
+    The_uci.pv.clear(pvIndex);
 }
 
 constexpr Ply Node::finalR(Ply R) const {
@@ -772,7 +773,7 @@ bool Node::isRepetition() const {
     if (ply > 4_ply) {
         // search tree repetitions (2-fold is draw); ply and ply-2 cannot be chess position repetitions
         auto* next = &grandParent();
-        while (!next->zHash.none(z)) {
+        while (!next->zHash().none(z)) {
             next = &next->grandParent();
             assert (next);
             if (next->z() == z) { return true; }

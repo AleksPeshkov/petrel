@@ -36,8 +36,8 @@ void Position::makeMoveNoEval(Square from, Square to) {
 void Position::makeNullMove(const Position& parent) {
     flip(parent);
     zobrist_ = parent.zobrist_;
-    // null move
-    rule50_.next();
+    rule50_.next(); zHash_ = {}; // null move holds rule50, but not ZHash
+
     occupied_[Side{My}] = parent.occupied_[Side{Op}];
     occupied_[Side{Op}] = parent.occupied_[Side{My}];
 

@@ -95,6 +95,7 @@ class Position {
     array<Bb, Side> occupied_; // both color pieces combined, updated from positionSide[] after each move
 
     Zobrist zobrist_; // incrementally updated position hash
+    ZHash zHash_; // mini-hash of all previous reversible positions zobrist keys of the same color
     Rule50 rule50_; // number of halfmoves since last capture or pawn move, incremented or reset by makeMove()
 
     // copy parent position but flip sides
@@ -106,7 +107,9 @@ class Position {
         WithEval = 0b10,
         Full = WithZobrist | WithEval
     };
-    template <Side::_t, MakeMoveFlags> void makeMove(Square, Square, auto&& prefetch);
+
+    // return flag to reset child ZHash
+    template <Side::_t, MakeMoveFlags> bool makeMove(Square, Square, auto&& prefetch);
 
     Zobrist generateZobrist() const; // calculate Zobrist key from scratch
 
@@ -141,8 +144,8 @@ protected:
     // make move directly inside position itself
     void makeMove(Square, Square);
 
-    // update the position and its zobrist hash
-    void makeMove(const Position&, Square, Square, auto&& prefetch);
+    // update the position and its zobrist hash, return flag to reset child ZHash
+    bool makeMove(const Position&, Square, Square, ZHash, auto&& prefetch);
     void makeNullMove(const Position&);
 
     template <Side::_t> void setLegalEnPassant(Square);
@@ -152,7 +155,10 @@ protected:
 
 public:
     // position hash
-    constexpr Z z() const { return *zobrist_; }
+    constexpr auto z() const { return *zobrist_; }
+
+    // repetition hash
+    constexpr auto zHash() const { return zHash_; }
 
     // position static evaluation
     Score evaluate() const;
