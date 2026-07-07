@@ -24,8 +24,8 @@ protected:
     std::array<Move, 2> killer{}; // Killer heuristic
 
     PrincipalVariation::Index pvIndex{0}; // start of subPV for the current ply
-    ZHash zHash{}; // mini-hash of all previous reversible positions zobrist keys
     TtSlot* tt{nullptr}; // pointer to the slot in TT
+    ZHash childZHash; // updated from parent or reset caused by currentMove
 
     void clearNode(); // prepare empty node
     void assertOk() const;

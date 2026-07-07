@@ -512,4 +512,16 @@ public:
 static_assert (Z{Z::EnPassant, Square{A4}} == Z{Pawn, Square{A8}});
 static_assert (Z{Z::EnPassant, Square{B4}} == Z{Pawn, Square{B8}});
 
+// https://www.talkchess.com/forum/viewtopic.php?p=554664#p554664
+class ZHash {
+    using _t = u64_t;
+    _t v_;
+    static constexpr _t hash(Z z) { return ::singleton<_t>(z & 077); }
+
+public:
+    constexpr ZHash () : v_{0} {}
+    constexpr ZHash (ZHash zHash, Z z) : v_{zHash.v_ | hash(z)} {}
+    constexpr bool none(Z z) const { return (v_ & hash(z)) == 0; }
+};
+
 #endif
