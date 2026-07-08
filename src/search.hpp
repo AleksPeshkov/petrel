@@ -69,6 +69,7 @@ protected:
 
     constexpr Move counterMove() const;
     constexpr Move followupMove() const;
+    constexpr Move followupMove2() const;
 
     constexpr bool isRoot() const { return ply == 0_ply; } // ply == 0
     constexpr bool isPv() const { return ply == pvPly; } // ply == pvPly
