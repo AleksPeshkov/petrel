@@ -99,7 +99,7 @@ public: // used by search:
 //TODO: per search thread
     array<Node, Ply> searchStack;
     ContMoves<4> contMoves;
-    CheckMoves checkMoves;
+    CheckMoves<2> checkMoves;
     PrincipalVariation pv;
     std::array<Move, 6> rootBestMoves;
 

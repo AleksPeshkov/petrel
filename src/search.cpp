@@ -377,10 +377,9 @@ ReturnStatus Node::search() {
     RETURN_CUTOFF (goodCaptures(OP.nonKing()));
 
     if (hasParent()) {
+        //TODO: use game history move for root in check
         if (inCheck()) {
-            RETURN_CUTOFF (searchIfPossible(
-                The_uci.checkMoves.get(colorToMove(), MY.sqKing(), parent().currentMove)
-            ));
+            RETURN_CUTOFF (checkMove(parent().currentMove));
         } else {
             RETURN_CUTOFF (searchIfPossible(parent().killer[0]));
 
@@ -685,6 +684,18 @@ constexpr Ply Node::finalR(Ply R) const {
     if (inCheck()) { return depth >= 6_ply ? 2_ply : 1_ply; } // plus check extension
 
     return baseR + R;
+}
+
+// check evasion move history
+ReturnStatus Node::checkMove(Move checkingMove) {
+    for (auto i : range<decltype(The_uci.checkMoves)::Index>()) {
+        auto checkMove = The_uci.checkMoves.get(+i, colorToMove(), MY.sqKing(), checkingMove);
+        if (checkMove.none()) { break; } // insert_unique_compact() garantees no holes
+        if (isPossibleMove(checkMove)) {
+            return searchMove(checkMove);
+        }
+    }
+    return ReturnStatus::Continue;
 }
 
 // counter and folloup move heuristic

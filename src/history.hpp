@@ -118,19 +118,26 @@ public:
     }
 };
 
+template<int _Size>
 class CACHE_ALIGN CheckMoves {
-    using _t = array<Move, Color, Square, Square>;
+public:
+    static constexpr int Size = _Size;
+    struct Index : ::Index<Index, Size> { using ::Index<Index, Size>::Index; };
+
+private:
+    using _t = array<Move, Color, Square, Square, Index>;
     _t v_;
 
 public:
-    constexpr Move get(Color color, Square sqKing, Move checkMove) const {
-        assert (checkMove.any());
-        return v_[color][sqKing][checkMove.to()];
+    constexpr Move get(int i, Color color, Square sqKing, Move checkingMove) const {
+        assert (checkingMove.any());
+        return v_[color][sqKing][checkingMove.to()][Index{i}];
     }
 
-    constexpr void set(Color color, Square sqKing, Move checkMove, Move bestMove) {
-        assert (checkMove.any()); assert (bestMove.any());
-        v_[color][sqKing][checkMove.to()] = bestMove;
+    template <size_t Pos = 0>
+    constexpr void set(Color color, Square sqKing, Move checkingMove, Move bestMove) {
+        assert (checkingMove.any()); assert (bestMove.any());
+        ::insert_unique_compact<Pos>(v_[color][sqKing][checkingMove.to()], bestMove);
     }
 };
 

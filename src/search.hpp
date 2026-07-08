@@ -48,6 +48,7 @@ protected:
     [[nodiscard]] ReturnStatus goodNonCaptures(Pi, Bb, Ply R);
 
     [[nodiscard]] ReturnStatus contMove(ContIndex::_t, Move);
+    [[nodiscard]] ReturnStatus checkMove(Move);
 
     void childNullMove();
     void childMove(Square, Square);
