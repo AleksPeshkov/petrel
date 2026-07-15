@@ -1001,24 +1001,6 @@ void Uci::setoption() {
         return;
     }
 
-    if (consume("EvalFile")) {
-        consume("value");
-
-        inputLine >> std::ws;
-        std::string newFileName;
-        std::getline(inputLine, newFileName);
-        ::rtrim(newFileName);
-
-        if (newFileName.empty() || newFileName == "<empty>") {
-            info("EvalFile set <empty>");
-            setEmbeddedEval();
-            return;
-        }
-
-        loadEvalFile(newFileName);
-        return;
-    }
-
     if (consume("Hash")) {
         consume("value");
         setHash();
@@ -1074,46 +1056,6 @@ void Uci::setEmbeddedEval() {
     nnue.setEmbeddedEval();
     evalFileName.clear();
     ucinewgame();
-}
-
-void Uci::loadEvalFile(const std::string& fileName) {
-    std::ifstream file{fileName, std::ios::binary};
-
-    if (!file.is_open()) {
-        error("failed opening EvalFile ", fileName);
-        return;
-    }
-
-    file.seekg(0, std::ios::end);
-    auto fileSize = file.tellg();
-    file.seekg(std::ios::beg);
-
-    if (fileSize == std::streamsize(-1)) {
-        error("failed reading size of EvalFile ", fileName);
-        return;
-    }
-
-    if (static_cast<size_t>(fileSize) != sizeof(nnue)) {
-        error("EvalFile size mismatch, expected ", std::to_string(sizeof(nnue)) + ", file size " + std::to_string(fileSize));
-        return;
-    }
-
-    std::vector<char> buffer(sizeof(nnue));
-    file.read(buffer.data(), sizeof(nnue));
-    if (!file) {
-        error("failed reading EvalFile ", fileName);
-        return;
-    }
-
-    // everything is ok
-    std::memcpy(&nnue, buffer.data(), sizeof(nnue));
-
-    info("loaded EvalFile " + fileName);
-    evalFileName = std::move(fileName);
-
-    // reset accumulator bias state
-    ucinewgame();
-    return;
 }
 
 void Uci::setHash() {

@@ -45,8 +45,9 @@ struct CACHE_ALIGN Nnue {
     static constexpr int VECTOR_SIZE = sizeof(_t) / sizeof(i16_t);
     static constexpr int ACC_SIZE = 128; // 2*128 = (8*32) = 256 bytes
     static constexpr int SCALE = 400;
-    static constexpr int QA = 256;
+    static constexpr int QA = 1024;
     static constexpr int QB = 64;
+    static constexpr int QM = QA/2 - 1;
 
     struct FeatureIndex : ::Index<FeatureIndex, 768> {
         using Index::Index;
@@ -69,16 +70,15 @@ struct CACHE_ALIGN Nnue {
     W0 w0;    // feature weights, 768*(8*32) = 196608 bytes
     B0 b0;    // feature biases, (8*32) = 256 bytes
     W1 w1;    // accumulator weights, 2*(8*32) = 512 bytes
-    i16_t b1; // accumulator bias, 64 aligned bytes, total = 197440 bytes
+    i32_t b1; // accumulator bias, 64 aligned bytes, total = 197440 bytes
 
     // raw NNUE static evaluation
     constexpr i32_t evaluate(const W1& acc) {
 #if USE_AVX2
         i32x8_t sum8{0};
         for (auto i : range<AccTwinIndex>()) {
-            auto v = clamp(acc[i], i16x16x(0), i16x16x(QA-1)); // CReLU
-            auto vw = v * w1[i];
-            sum8 += static_cast<i32x8_t>(_mm256_madd_epi16(v, vw)); //SCReLU
+            auto v = clamp(acc[i], i16x16x(-QM), i16x16x(QM)); // CReLU
+            sum8 += static_cast<i32x8_t>(_mm256_madd_epi16(v, w1[i]));
         }
 
     #ifdef __clang__
@@ -90,17 +90,16 @@ struct CACHE_ALIGN Nnue {
 #else
         int32_t sum{0};
         for (auto i : range<AccTwinIndex>()) {
-            auto v = clamp(acc[i], i16x16x(0), i16x16x(QA-1)); // CReLU
-            auto vw = v * w1[i];
+            auto v = clamp(acc[i], i16x16x(-QM), i16x16x(QM)); // CReLU
 
             for (int j = 0; j < 16; ++j) {
-                sum += static_cast<i32_t>(v[j]) * static_cast<i32_t>(vw[j]);
+                sum += static_cast<i32_t>(v[j]) * static_cast<i32_t>(w1[i][j]);
             }
         }
 #endif
 
-        sum += static_cast<i32_t>(b1) * QA;
-        return static_cast<i32_t>((static_cast<i64_t>(sum) * SCALE) / (QA * QA * QB));
+        sum += static_cast<i32_t>(b1);
+        return static_cast<i32_t>((static_cast<i64_t>(sum) * SCALE) / (QA * QB));
     }
 
     // load from embedded binary data, defined in main.cpp
@@ -115,8 +114,25 @@ class CACHE_ALIGN Acc {
     using _t = array<Nnue::_t, Index>; // i16x16_t[8]
     _t v_;
 
-    constexpr void add(Nnue::FeatureIndex fi) { for (auto i : range<Index>()) { v_[i] += nnue.w0[fi][i]; } }
-    constexpr void sub(Nnue::FeatureIndex fi) { for (auto i : range<Index>()) { v_[i] -= nnue.w0[fi][i]; } }
+    constexpr void add(Nnue::FeatureIndex fi) {
+        for (auto i : range<Index>()) {
+            #if USE_AVX2
+                v_[i] = _mm256_adds_epi16(v_[i], nnue.w0[fi][i]);
+            #else
+                v_[i] += nnue.w0[fi][i];
+            #endif
+        }
+    }
+
+    constexpr void sub(Nnue::FeatureIndex fi) {
+        for (auto i : range<Index>()) {
+            #if USE_AVX2
+                v_[i] = _mm256_subs_epi16(v_[i], nnue.w0[fi][i]);
+            #else
+                v_[i] -= nnue.w0[fi][i];
+            #endif
+        }
+    }
 
 public:
     constexpr Acc() : v_{nnue.b0} {} // feature biases

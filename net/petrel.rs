@@ -13,7 +13,7 @@ fn main() {
     const CPU_THREADS: usize = 16;
     const LOSS_POW: f32 = 2.6;
 
-    const QA: i16 = 256;
+    const QA: i16 = 1024;
     const QB: i16 = 64;
 
     let mut trainer = ValueTrainerBuilder::default().use_threads(CPU_THREADS/2)
@@ -26,7 +26,7 @@ fn main() {
             SavedFormat::id("l0w").quantise::<i16>(QA),
             SavedFormat::id("l0b").quantise::<i16>(QA),
             SavedFormat::id("l1w").quantise::<i16>(QB),
-            SavedFormat::id("l1b").quantise::<i16>(QA * QB),
+            SavedFormat::id("l1b").quantise::<i32>(QA as i32 * QB as i32),
         ])
         // the basic `(768 -> N)x2 -> 1` inference
         .inputs(Chess768).dual_perspective()
@@ -34,23 +34,23 @@ fn main() {
             const ACCUMULATOR_SIZE: usize = 128;
 
             let l0 = builder.new_affine("l0", 768, ACCUMULATOR_SIZE);
-            let my_accumulator = l0.forward(my_inputs).screlu();
-            let op_accumulator = l0.forward(op_inputs).screlu();
+            let my_accumulator = l0.forward(my_inputs).hardtanh();
+            let op_accumulator = l0.forward(op_inputs).hardtanh();
             let accumulator = my_accumulator.concat(op_accumulator);
 
             let l1 = builder.new_affine("l1", 2 * ACCUMULATOR_SIZE, 1);
             l1.forward(accumulator)
         });
 
-    let superbatches: usize = 120;
+    let superbatches: usize = 360;
     let eval_scale: f32 = 800.0;
 
     let schedule = TrainingSchedule {
-        net_id: "petrel128".to_string(),
+        net_id: "bcrelu128-1024".to_string(),
         eval_scale,
         steps: TrainingSteps { batch_size: 16_384, batches_per_superbatch: 6_104, start_superbatch: 1, end_superbatch: superbatches },
         wdl_scheduler: wdl::LinearWDL { start: 0.0, end: 0.1 },
-        lr_scheduler: lr::LinearDecayLR { initial_lr: 0.001, final_lr: 0.0, final_superbatch: superbatches },
+        lr_scheduler: lr::LinearDecayLR { initial_lr: 0.0008, final_lr: 0.00001, final_superbatch: superbatches },
         save_rate: 10,
     };
 

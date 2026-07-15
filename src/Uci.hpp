@@ -132,7 +132,6 @@ private:
     void setHash();
     void setDebugOn();
     void setEmbeddedEval();
-    COLD void loadEvalFile(const std::string&);
 
     void swapBestMove(std::string&);
     void outputBestMove();
