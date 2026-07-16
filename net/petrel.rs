@@ -14,7 +14,12 @@ fn main() {
     const LOSS_POW: f32 = 2.6;
 
     const QA: i16 = 1024;
-    const QB: i16 = 64;
+    const QB: i16 = 8192;
+
+    const BULLET_CP_SCALE: f64 = 400.0;
+    const ENGINE_CP_SCALE: f64 = 512.0;
+    const RESCALE: f64 = BULLET_CP_SCALE / ENGINE_CP_SCALE;
+    const RESCALE_QB: f64 = (QB as f64) * RESCALE;
 
     let mut trainer = ValueTrainerBuilder::default().use_threads(CPU_THREADS/2)
         // map output into ranges [0, 1] to fit against our labels which
@@ -25,8 +30,8 @@ fn main() {
         .save_format(&[
             SavedFormat::id("l0w").quantise::<i16>(QA),
             SavedFormat::id("l0b").quantise::<i16>(QA),
-            SavedFormat::id("l1w").quantise::<i16>(QB),
-            SavedFormat::id("l1b").quantise::<i32>(QA as i32 * QB as i32),
+            SavedFormat::id("l1w").quantise::<i16>(RESCALE_QB),
+            SavedFormat::id("l1b").quantise::<i32>(RESCALE_QB * QA as f64),
         ])
         // the basic `(768 -> N)x2 -> 1` inference
         .inputs(Chess768).dual_perspective()
@@ -46,7 +51,7 @@ fn main() {
     let eval_scale: f32 = 800.0;
 
     let schedule = TrainingSchedule {
-        net_id: "bcrelu128-1024".to_string(),
+        net_id: "bcrelu-511-trap".to_string(),
         eval_scale,
         steps: TrainingSteps { batch_size: 16_384, batches_per_superbatch: 6_104, start_superbatch: 1, end_superbatch: superbatches },
         wdl_scheduler: wdl::LinearWDL { start: 0.0, end: 0.1 },

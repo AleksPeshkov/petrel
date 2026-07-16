@@ -44,9 +44,9 @@ struct CACHE_ALIGN Nnue {
     using _t = i16x16_t;
     static constexpr int VECTOR_SIZE = sizeof(_t) / sizeof(i16_t);
     static constexpr int ACC_SIZE = 128; // 2*128 = (8*32) = 256 bytes
-    static constexpr int SCALE = 400;
+    static constexpr int SCALE = 512; // rescaled from 400 to 512 during training
     static constexpr int QA = 1024;
-    static constexpr int QB = 64;
+    static constexpr int QB = 8192;
     static constexpr int QM = QA/2 - 1;
 
     struct FeatureIndex : ::Index<FeatureIndex, 768> {
@@ -98,8 +98,7 @@ struct CACHE_ALIGN Nnue {
         }
 #endif
 
-        sum += static_cast<i32_t>(b1);
-        return static_cast<i32_t>((static_cast<i64_t>(sum) * SCALE) / (QA * QB));
+        return (sum + b1) / (QA * QB / SCALE);
     }
 
     // load from embedded binary data, defined in main.cpp
