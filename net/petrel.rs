@@ -1,6 +1,9 @@
 use bullet_lib::{
     game::inputs::Chess768,
-    nn::optimiser::AdamW,
+    nn::{
+        InitSettings::Normal, Shape,
+        optimiser::{AdamW},
+    },
     trainer::{
         save::SavedFormat,
         schedule::{TrainingSchedule, TrainingSteps, lr, wdl},
@@ -13,13 +16,13 @@ fn main() {
     const CPU_THREADS: usize = 16;
     const LOSS_POW: f32 = 2.6;
 
-    const QA: i16 = 1024;
-    const QB: i16 = 8192;
+    const QUANT: f64 = 181.0; // input scale 1.0 = 181, clamp(x, -181, 181)^2
+    const QA: f64 = 4.0 * QUANT; // 724, engine actual activatiton: { c = (x+2)>>2, clamp(c, -181, +181)^2 }
+    const QUANT_LOG: i32 = 15; // (1 << 15) = 32768 ~= 32761 (QUANT * QUANT)
 
-    const BULLET_CP_SCALE: f64 = 400.0;
-    const ENGINE_CP_SCALE: f64 = 512.0;
-    const RESCALE: f64 = BULLET_CP_SCALE / ENGINE_CP_SCALE;
-    const RESCALE_QB: f64 = (QB as f64) * RESCALE;
+    const SCALE_LOG: i32 = 4; // extra QB quantization for better precision
+    const QB: f64 = (1 << (QUANT_LOG + SCALE_LOG)) as f64 / (QUANT * QUANT);
+    const QWDL: f64 = 400.0; // implicit output conversion 1.0 = 400 centipawns
 
     let mut trainer = ValueTrainerBuilder::default().use_threads(CPU_THREADS/2)
         // map output into ranges [0, 1] to fit against our labels which
@@ -29,37 +32,28 @@ fn main() {
         .optimiser(AdamW).loss_fn(|output, target| output.sigmoid().power_error(target, LOSS_POW))
         .save_format(&[
             SavedFormat::id("l0w").quantise::<i16>(QA),
-            SavedFormat::id("l0b").quantise::<i16>(QA),
-            SavedFormat::id("l1w").quantise::<i16>(RESCALE_QB),
-            SavedFormat::id("l1b").quantise::<i32>(RESCALE_QB * QA as f64),
+            SavedFormat::id("l1w").quantise::<i16>(QB * QWDL),
         ])
         // the basic `(768 -> N)x2 -> 1` inference
         .inputs(Chess768).dual_perspective()
         .build(|builder, my_inputs, op_inputs| {
             const ACCUMULATOR_SIZE: usize = 128;
 
-            let l0 = builder.new_affine("l0", 768, ACCUMULATOR_SIZE);
-            let my_accumulator = l0.forward(my_inputs).hardtanh();
-            let op_accumulator = l0.forward(op_inputs).hardtanh();
+            let l0w = builder.new_weights("l0w", Shape::new(ACCUMULATOR_SIZE, 768),
+                Normal{ mean: 0.0, stdev: (2.0 / 768.0 as f32).sqrt() }
+            );
+            let my_accumulator = l0w.matmul(my_inputs);
+            let op_accumulator = l0w.matmul(op_inputs);
             let accumulator = my_accumulator.concat(op_accumulator);
 
-            let l1 = builder.new_affine("l1", 2 * ACCUMULATOR_SIZE, 1);
-            l1.forward(accumulator)
+            let l1w = builder.new_weights("l1w", Shape::new(1, 2*ACCUMULATOR_SIZE),
+                Normal{ mean: 0.0, stdev: (2.0 / (2*ACCUMULATOR_SIZE) as f32).sqrt() }
+            );
+            l1w.matmul(accumulator.polytanh())
         });
 
-    let superbatches: usize = 360;
-    let eval_scale: f32 = 800.0;
-
-    let schedule = TrainingSchedule {
-        net_id: "bcrelu-511-trap".to_string(),
-        eval_scale,
-        steps: TrainingSteps { batch_size: 16_384, batches_per_superbatch: 6_104, start_superbatch: 1, end_superbatch: superbatches },
-        wdl_scheduler: wdl::LinearWDL { start: 0.0, end: 0.1 },
-        lr_scheduler: lr::LinearDecayLR { initial_lr: 0.0008, final_lr: 0.00001, final_superbatch: superbatches },
-        save_rate: 10,
-    };
-
     // loading directly from a `BulletFormat` file
+    let data_set_eval_scale: f32 = 800.0;
     let data_set: &[&str] = &[
         "data/test77nov-unfilt-test79-maraprmay-v6-dd.skip-see-ge0.wdl-pdist.iter-1.bullet.bin",
         "data/test77nov-unfilt-test79-maraprmay-v6-dd.skip-see-ge0.wdl-pdist.iter-2.bullet.bin",
@@ -75,6 +69,30 @@ fn main() {
         "data/test77nov-unfilt-test79-maraprmay-v6-dd.skip-see-ge0.wdl-pdist.iter-12.bullet.bin",
     ];
     let data_loader = DirectSequentialDataLoader::new(data_set);
+
+    let superbatches: usize = 120;
+    let warmup_superbatches: usize = 10;
+    let cosine_superbatches: usize = 20;
+
+    let initial_lr = 0.0003;
+
+    let schedule = TrainingSchedule {
+        net_id: "polytanh".to_string(),
+        eval_scale: data_set_eval_scale,
+        steps: TrainingSteps { batch_size: 16_384, batches_per_superbatch: 6_104, start_superbatch: 1, end_superbatch: superbatches },
+        wdl_scheduler: wdl::LinearWDL { start: 0.0, end: 0.0 },
+        lr_scheduler: lr::Sequence {
+            first:  lr::Sequence {
+                first:  lr::LinearDecayLR { initial_lr: initial_lr / warmup_superbatches as f32, final_lr: initial_lr, final_superbatch: warmup_superbatches },
+                second: lr::LinearDecayLR { initial_lr, final_lr: initial_lr, final_superbatch: superbatches - cosine_superbatches },
+                first_scheduler_final_superbatch: warmup_superbatches
+            },
+            second: lr::CosineDecayLR { initial_lr, final_lr: initial_lr / superbatches as f32, final_superbatch: superbatches },
+            first_scheduler_final_superbatch: superbatches - cosine_superbatches
+        },
+        save_rate: 10,
+    };
+
     let settings = LocalSettings { threads: 2, test_set: None, output_directory: "checkpoints", batch_queue_size: CPU_THREADS };
     trainer.run(&schedule, &settings, &data_loader);
 }

@@ -32,22 +32,34 @@ constexpr V clamp(V a, V b, V c) {
     return min(max(a, b), c);
 }
 
-/** NNUE evaluation. Net architecture and constants make it
- * compatible with the simple example provided by the bullet trainer:
- * https://github.com/jw1912/bullet/blob/main/examples/simple.rs
- *
- * Actual training script ../net/simple.rs
- **/
+template <typename V>
+constexpr V abs(V v) {
+#ifdef __clang__
+    return __builtin_elementwise_abs(v);
+#else
+    return v < 0 ? -v : v;
+#endif
+}
+
+constexpr i32x8_t madd16(i16x16_t w, i16x16_t v) {
+#if USE_AVX2
+    return static_cast<i32x8_t>(_mm256_madd_epi16(w, v));
+#else
+    // _mm256_madd_epi16 emulation
+    i32x8_t sum{};
+    for (int i = 0; i < 8; ++i) {
+        sum[i] = static_cast<i32_t>(w[2*i]) * static_cast<i32_t>(v[2*i])
+            + static_cast<i32_t>(w[2*i+1]) * static_cast<i32_t>(v[2*i+1]);
+    }
+    return sum;
+#endif
+}
 
 // (768 -> 128) x 2 -> 1
 struct CACHE_ALIGN Nnue {
     using _t = i16x16_t;
-    static constexpr int VECTOR_SIZE = sizeof(_t) / sizeof(i16_t);
+    static constexpr int VECTOR_SIZE = sizeof(_t) / sizeof(i16_t); // 16 elements
     static constexpr int ACC_SIZE = 128; // 2*128 = (8*32) = 256 bytes
-    static constexpr int SCALE = 512; // rescaled from 400 to 512 during training
-    static constexpr int QA = 1024;
-    static constexpr int QB = 8192;
-    static constexpr int QM = QA/2 - 1;
 
     struct FeatureIndex : ::Index<FeatureIndex, 768> {
         using Index::Index;
@@ -63,42 +75,53 @@ struct CACHE_ALIGN Nnue {
     struct AccIndex : Index<AccIndex, ACC_SIZE / VECTOR_SIZE> { using Index::Index; };
     struct AccTwinIndex : Index<AccTwinIndex, 2*AccIndex::size()> { using Index::Index; };
 
-    using B0 = array<_t, AccIndex>;
-    using W0 = array<B0, FeatureIndex>;
+    using W0 = array<_t, FeatureIndex, AccIndex>;
     using W1 = array<_t, AccTwinIndex>;
 
-    W0 w0;    // feature weights, 768*(8*32) = 196608 bytes
-    B0 b0;    // feature biases, (8*32) = 256 bytes
-    W1 w1;    // accumulator weights, 2*(8*32) = 512 bytes
-    i32_t b1; // accumulator bias, 64 aligned bytes, total = 197440 bytes
+    W0 w0; // feature weights, 768*(8*32) = 196608 bytes, feature biases = 0
+    W1 w1; // accumulator weights, 2*(8*32) = 512 bytes, accumulator bias = 0
 
-    // raw NNUE static evaluation
-    constexpr i32_t evaluate(const W1& acc) {
-#if USE_AVX2
-        i32x8_t sum8{0};
-        for (auto i : range<AccTwinIndex>()) {
-            auto v = clamp(acc[i], i16x16x(-QM), i16x16x(QM)); // CReLU
-            sum8 += static_cast<i32x8_t>(_mm256_madd_epi16(v, w1[i]));
-        }
+    static constexpr int QUANT = 181; // activation function limits
 
-    #ifdef __clang__
-        auto sum = __builtin_reduce_add(sum8);
-    #else
-        auto sum = sum8[0] + sum8[1] + sum8[2] + sum8[3] + sum8[4] + sum8[5] + sum8[6] + sum8[7];
-    #endif
+    // PolyTanh inference activation function: f(x) = x * (2 - |x|)
+    static constexpr i16x16_t polyTanh(i16x16_t x) {
+        auto c = clamp((x + 2) >> 2, i16x16x(-QUANT), i16x16x(QUANT));
+        return c * (2*QUANT - abs(c));
+    }
 
-#else
-        int32_t sum{0};
-        for (auto i : range<AccTwinIndex>()) {
-            auto v = clamp(acc[i], i16x16x(-QM), i16x16x(QM)); // CReLU
+    template <size_t BlockIdx, size_t... Is>
+    static constexpr i32x8_t madd4(const W1& w, const W1& v, std::index_sequence<Is...>) {
+        constexpr size_t START_IDX = BlockIdx * 4;
+        return ( ... + madd16(w[AccTwinIndex{START_IDX + Is}], polyTanh(v[AccTwinIndex{START_IDX + Is}])) );
+    }
 
-            for (int j = 0; j < 16; ++j) {
-                sum += static_cast<i32_t>(v[j]) * static_cast<i32_t>(w1[i][j]);
-            }
-        }
-#endif
+    template <size_t SHIFT, size_t... BlockIndices>
+    static constexpr i32x8_t addScaled(const W1& w, const W1& v, std::index_sequence<BlockIndices...>) {
+        constexpr int32_t ROUND_BIAS = 1 << (SHIFT - 1);
+        return ( ... + ((madd4<BlockIndices>(w, v, std::make_index_sequence<4>{}) + ROUND_BIAS) >> SHIFT) );
+    }
 
-        return (sum + b1) / (QA * QB / SCALE);
+    int32_t evaluate(const W1& acc) {
+        constexpr size_t TOTAL_MADD = AccTwinIndex::size();
+        constexpr size_t BLOCK_SIZE = 4; // safe when SCALE_LOG = 4,
+        constexpr size_t NUM_BLOCKS = TOTAL_MADD / BLOCK_SIZE; // 1 for 64, 2 for 128, 4 for 256 ...
+        constexpr size_t BLOCK_SHIFT = (std::bit_width(NUM_BLOCKS) - 1) + 3;
+
+        i32x8_t sum8 = addScaled<BLOCK_SHIFT>(this->w1, acc, std::make_index_sequence<NUM_BLOCKS>{});
+
+        #ifdef __clang__
+            i32_t sum = __builtin_reduce_add(sum8);
+        #else
+            i32_t sum = sum8[0] + sum8[1] + sum8[2] + sum8[3] + sum8[4] + sum8[5] + sum8[6] + sum8[7];
+        #endif
+
+        constexpr unsigned QUANT_LOG = 15; // (1 << 15) = 32768 ~= 32761 (QUANT * QUANT)
+        constexpr unsigned SCALE_LOG = 4; // extra W1 weights quantization
+
+        constexpr auto SHIFT = QUANT_LOG + SCALE_LOG - BLOCK_SHIFT;
+        constexpr auto ROUND_BIAS = 1 << (SHIFT - 1);
+        auto result = (sum + ROUND_BIAS) >> SHIFT; // symmetric signed rounding towards zero
+        return result;
     }
 
     // load from embedded binary data, defined in main.cpp
@@ -134,7 +157,7 @@ class CACHE_ALIGN Acc {
     }
 
 public:
-    constexpr Acc() : v_{nnue.b0} {} // feature biases
+    constexpr Acc() : v_{} {} // init feature biases, none for current net
 
     static constexpr void flip(Acc& my, Acc& op) {
         for (auto i : range<Index>()) { std::swap(my.v_[i], op.v_[i]); }
