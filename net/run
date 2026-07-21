@@ -1,0 +1,4 @@
+#!/bin/bash
+export RUST_BACKTRACE=1
+
+cd ../../bullet && cargo r -r --example petrel --features cpu --no-default-features
