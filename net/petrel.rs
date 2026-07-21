@@ -9,41 +9,37 @@ use bullet_lib::{
     value::{ValueTrainerBuilder, loader::DirectSequentialDataLoader},
 };
 
-const HIDDEN_SIZE: usize = 128;
-const QA: i16 = 256;
-const QB: i16 = 64;
-
 fn main() {
     const CPU_THREADS: usize = 16;
     const LOSS_POW: f32 = 2.6;
 
-    let mut trainer = ValueTrainerBuilder::default()
-        .use_threads(CPU_THREADS/2)
-        .inputs(Chess768)
-        .dual_perspective()
-        .save_format(&[
-            SavedFormat::id("l0w").round().quantise::<i16>(QA),
-            SavedFormat::id("l0b").round().quantise::<i16>(QA),
-            SavedFormat::id("l1w").round().quantise::<i16>(QB),
-            SavedFormat::id("l1b").round().quantise::<i16>(QA * QB),
-        ])
+    const QA: i16 = 256;
+    const QB: i16 = 64;
+
+    let mut trainer = ValueTrainerBuilder::default().use_threads(CPU_THREADS/2)
         // map output into ranges [0, 1] to fit against our labels which
         // are in the same range
         // `target` == wdl * game_result + (1 - wdl) * sigmoid(search score in centipawns / SCALE)
         // where `wdl` is determined by `wdl_scheduler`
-        .loss_fn(|output, target| output.sigmoid().power_error(target, LOSS_POW))
-        .optimiser(AdamW)
+        .optimiser(AdamW).loss_fn(|output, target| output.sigmoid().power_error(target, LOSS_POW))
+        .save_format(&[
+            SavedFormat::id("l0w").quantise::<i16>(QA),
+            SavedFormat::id("l0b").quantise::<i16>(QA),
+            SavedFormat::id("l1w").quantise::<i16>(QB),
+            SavedFormat::id("l1b").quantise::<i16>(QA * QB),
+        ])
         // the basic `(768 -> N)x2 -> 1` inference
-        .build(|builder, stm_inputs, ntm_inputs| {
-            // weights
-            let l0 = builder.new_affine("l0", 768, HIDDEN_SIZE);
-            let l1 = builder.new_affine("l1", 2 * HIDDEN_SIZE, 1);
+        .inputs(Chess768).dual_perspective()
+        .build(|builder, my_inputs, op_inputs| {
+            const ACCUMULATOR_SIZE: usize = 128;
 
-            // inference
-            let stm_hidden = l0.forward(stm_inputs).screlu();
-            let ntm_hidden = l0.forward(ntm_inputs).screlu();
-            let hidden_layer = stm_hidden.concat(ntm_hidden);
-            l1.forward(hidden_layer)
+            let l0 = builder.new_affine("l0", 768, ACCUMULATOR_SIZE);
+            let my_accumulator = l0.forward(my_inputs).screlu();
+            let op_accumulator = l0.forward(op_inputs).screlu();
+            let accumulator = my_accumulator.concat(op_accumulator);
+
+            let l1 = builder.new_affine("l1", 2 * ACCUMULATOR_SIZE, 1);
+            l1.forward(accumulator)
         });
 
     let superbatches: usize = 120;
