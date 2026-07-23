@@ -70,25 +70,39 @@ fn main() {
     ];
     let data_loader = DirectSequentialDataLoader::new(data_set);
 
-    let superbatches: usize = 120;
-    let warmup_superbatches: usize = 10;
-    let cosine_superbatches: usize = 20;
+    let peak_lr = 0.0003;
+    let superbatches: usize = 480;
 
-    let initial_lr = 0.0003;
+    let warmup_sb: usize = 20;
+    let peak_sb: usize = 320;
+
+    let cosine_sb: usize = 20;
+    let quiet_lr: f32 = peak_lr / 5.0;
+
+    let final_sb: usize = 20;
+    let final_lr: f32 = peak_lr / 100.0;
 
     let schedule = TrainingSchedule {
-        net_id: "polytanh".to_string(),
+        net_id: "polytanh480".to_string(),
         eval_scale: data_set_eval_scale,
         steps: TrainingSteps { batch_size: 16_384, batches_per_superbatch: 6_104, start_superbatch: 1, end_superbatch: superbatches },
         wdl_scheduler: wdl::LinearWDL { start: 0.0, end: 0.0 },
         lr_scheduler: lr::Sequence {
-            first:  lr::Sequence {
-                first:  lr::LinearDecayLR { initial_lr: initial_lr / warmup_superbatches as f32, final_lr: initial_lr, final_superbatch: warmup_superbatches },
-                second: lr::LinearDecayLR { initial_lr, final_lr: initial_lr, final_superbatch: superbatches - cosine_superbatches },
-                first_scheduler_final_superbatch: warmup_superbatches
+            first: lr::Sequence {
+                first: lr::Sequence {
+                    first: lr::LinearDecayLR { initial_lr: peak_lr / warmup_sb as f32, final_lr: peak_lr, final_superbatch: warmup_sb },
+                    first_scheduler_final_superbatch: warmup_sb,
+                    second: lr::LinearDecayLR { initial_lr: peak_lr, final_lr: peak_lr, final_superbatch: warmup_sb + peak_sb },
+                },
+                first_scheduler_final_superbatch: warmup_sb + peak_sb,
+                second: lr::Sequence {
+                    first: lr::CosineDecayLR { initial_lr: peak_lr, final_lr: quiet_lr, final_superbatch: warmup_sb + peak_sb + cosine_sb },
+                    first_scheduler_final_superbatch: warmup_sb + peak_sb + cosine_sb,
+                    second: lr::LinearDecayLR { initial_lr: quiet_lr, final_lr: quiet_lr, final_superbatch: superbatches - final_sb },
+                },
             },
-            second: lr::CosineDecayLR { initial_lr, final_lr: initial_lr / superbatches as f32, final_superbatch: superbatches },
-            first_scheduler_final_superbatch: superbatches - cosine_superbatches
+            first_scheduler_final_superbatch: superbatches - final_sb,
+            second: lr::CosineDecayLR { initial_lr: quiet_lr, final_lr, final_superbatch: superbatches },
         },
         save_rate: 10,
     };
