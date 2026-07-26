@@ -19,15 +19,12 @@ Petrel 3.5 rated `3436` Elo on the [CCRL Blitz](https://computerchess.org.uk/ccr
 ## Supported UCI options
 
 ```
-option name EvalFile type string default <empty>
 option name Debug Log File type string default <empty>
 option name Hash type spin min 2 max 16384 default 64
 option name Move Overhead type spin min 1 max 10000 default 1
 option name Ponder type check default false
 option name UCI_Chess960 type check default false
 ```
-If EvalFile option is `<empty>`, or file not found, or has invalid size: default embedded NNUE is used.
-
 Only input errors and a sparse search warnings will be written into `Debug Log File` (unless `debug on` is set
 then all engine input and output will be logged).
 

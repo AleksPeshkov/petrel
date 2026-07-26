@@ -89,7 +89,6 @@ class Uci {
 
     ChessVariant chessVariant_{Orthodox}; // castling moves and fen output format, engine accepts any castling input
     std::string logFileName; // no log by default
-    std::string evalFileName; // use embedded by default
 
 public: // used by search:
     SearchLimits limits; // inited from UciLimits and UciPosition
@@ -131,8 +130,6 @@ private:
     void setPositionMoves();
     void setHash();
     void setDebugOn();
-    void setEmbeddedEval();
-    COLD void loadEvalFile(const std::string&);
 
     void swapBestMove(std::string&);
     void outputBestMove();

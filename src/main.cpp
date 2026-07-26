@@ -22,19 +22,20 @@ constinit const PiOneMask piOneMask; // 256
 constinit const CastlingRules castlingRules; // 128
 constinit const PieceCountTable pieceCountTable; // 48 6*8
 
-// global const default nnue value
+// const default nnue value
 INCBIN(incbin_nnue, "net/quantised.bin");
 
-// global almost constant instance
-Nnue nnue;
+// global constant instance
+const Nnue nnue;
 
 // copy NNUE weigths from embedded binary
-void Nnue::setEmbeddedEval() {
+Nnue::Nnue() {
     assert (incbin_nnue_size == sizeof(Nnue));
     std::memcpy(this, incbin_nnue_data, sizeof(Nnue));
 }
 
 // global Uci instance
+//TRICK: should be declared after Nnue nnue to correctly init default startpos
 Uci The_uci(std::cout);
 
 void io::error(std::string_view message) {

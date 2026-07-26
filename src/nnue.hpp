@@ -71,8 +71,11 @@ struct CACHE_ALIGN Nnue {
     L1w l1w;   // 2*(8*32) = 512 bytes
     i16_t l1b; // 64 aligned bytes, total = 197440 bytes
 
+    // load from embedded binary data, defined in main.cpp
+    Nnue ();
+
     // raw NNUE static evaluation
-    constexpr i32_t evaluate(const L1w& accumulator) {
+    i32_t evaluate(const L1w& accumulator) const {
 #if USE_AVX2
         vi32x8_t add{0};
         for (auto i : range<AccumulatorIndex>()) {
@@ -102,12 +105,9 @@ struct CACHE_ALIGN Nnue {
         return static_cast<i32_t>((sum * SCALE) / (QA * QA * QB));
 #endif
     }
-
-    // load from embedded binary data, defined in main.cpp
-    void setEmbeddedEval();
 };
 
-extern Nnue nnue;
+extern const Nnue nnue;
 
 // 2x128 neurons, 512 bytes
 class CACHE_ALIGN Accumulator {
