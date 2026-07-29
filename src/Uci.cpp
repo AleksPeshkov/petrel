@@ -743,6 +743,7 @@ Uci::Uci(ostream& os) :
     pid_{System::getPid()},
     tt(64 * mebibyte)
 {
+    Nnue::validate_embedded_size();
     for (auto ply : range<Ply>()) { std::construct_at(&searchStack[ply], ply); }
     inputLine.clear();
     bestmove_.clear();

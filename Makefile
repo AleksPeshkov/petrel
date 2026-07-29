@@ -150,7 +150,7 @@ $(COMPILER_STAMP): FORCE | $(BUILD_DIR)
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp $(COMPILER_STAMP)
 	$(CXX) -c -o $@ $< -MMD -MP $(CXXFLAGS)
 
-$(BUILD_DIR)/main.o: $(SRC_DIR)/main.cpp $(NNUE_STAMP)
+$(BUILD_DIR)/nnue.o: $(SRC_DIR)/nnue.cpp $(NNUE_STAMP)
 
 $(NNUE_STAMP): $(BUILD_DIR)
 	@prev=$$(cat $(NNUE_STAMP) 2>/dev/null || echo ''); \

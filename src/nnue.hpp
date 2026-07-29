@@ -71,9 +71,6 @@ struct CACHE_ALIGN Nnue {
     L1w l1w;   // 2*(8*32) = 512 bytes
     i16_t l1b; // 64 aligned bytes, total = 197440 bytes
 
-    // load from embedded binary data, defined in main.cpp
-    Nnue ();
-
     // raw NNUE static evaluation
     i32_t evaluate(const L1w& accumulator) const {
 #if USE_AVX2
@@ -105,9 +102,11 @@ struct CACHE_ALIGN Nnue {
         return static_cast<i32_t>((sum * SCALE) / (QA * QA * QB));
 #endif
     }
+
+    static COLD void validate_embedded_size();
 };
 
-extern const Nnue nnue;
+extern constinit const Nnue& nnue;
 
 // 2x128 neurons, 512 bytes
 class CACHE_ALIGN Accumulator {
@@ -117,35 +116,32 @@ class CACHE_ALIGN Accumulator {
         using Fi = Nnue::FeatureIndex; // 768
         using _t = Nnue::_t; // vi16x16_t
 
-        static constexpr auto& w = nnue.l0w; // feauture weights
-        static constexpr auto& b = nnue.l0b; // feauture biases
-
         array<_t, Index> v_;
 
         constexpr void move(Index i, Side si, PieceType ty, Square from, Square to) {
-            v_[i] -= w[Fi{si, ty, from}][i];
-            v_[i] += w[Fi{si, ty, to}][i];
+            v_[i] -= nnue.l0w[Fi{si, ty, from}][i];
+            v_[i] += nnue.l0w[Fi{si, ty, to}][i];
         }
 
         constexpr void promote(Index i, Side si, Square from, PromoType promoted, Square to) {
-            v_[i] -= w[Fi{si, Pawn, from}][i];
-            v_[i] += w[Fi{si, promoted, to}][i];
+            v_[i] -= nnue.l0w[Fi{si, Pawn, from}][i];
+            v_[i] += nnue.l0w[Fi{si, promoted, to}][i];
         }
 
         constexpr void capture(Index i, Side si, NonKingType captured, Square to) {
-            v_[i] -= w[Fi{~si, captured, to}][i];
+            v_[i] -= nnue.l0w[Fi{~si, captured, to}][i];
         }
 
     public:
         constexpr AccumulatorSide() {
             for (auto i : range<Index>()) {
-                v_[i] = b[i];
+                v_[i] = nnue.l0b[i];
             }
         }
 
         constexpr void drop(Side si, PieceType ty, Square to) {
             for (auto i : range<Index>()) {
-                v_[i] += w[Fi{si, ty, to}][i];
+                v_[i] += nnue.l0w[Fi{si, ty, to}][i];
             }
         }
 
@@ -198,7 +194,7 @@ class CACHE_ALIGN Accumulator {
 
 public:
     // raw NNUE static evaluation
-    constexpr auto evaluate() const {
+    auto evaluate() const {
         return nnue.evaluate(accumulator);
     }
 

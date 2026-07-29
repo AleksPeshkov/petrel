@@ -1,15 +1,10 @@
 #include "common.hpp"
 #include "io.hpp"
-#include "nnue.hpp"
 #include "Bb.hpp"
 #include "Hyperbola.hpp"
 #include "PiMask.hpp"
 #include "Score.hpp"
 #include "Uci.hpp"
-
-#define INCBIN_PREFIX
-#define INCBIN_STYLE INCBIN_STYLE_SNAKE
-#include "incbin.h"
 
 /**
 * Startup constant initialization
@@ -21,18 +16,6 @@ constinit const AttacksFrom attacksFrom; // 3k 6*64*8
 constinit const PiOneMask piOneMask; // 256
 constinit const CastlingRules castlingRules; // 128
 constinit const PieceCountTable pieceCountTable; // 48 6*8
-
-// const default nnue value
-INCBIN(incbin_nnue, "net/quantised.bin");
-
-// global constant instance
-const Nnue nnue;
-
-// copy NNUE weigths from embedded binary
-Nnue::Nnue() {
-    assert (incbin_nnue_size == sizeof(Nnue));
-    std::memcpy(this, incbin_nnue_data, sizeof(Nnue));
-}
 
 // global Uci instance
 //TRICK: should be declared after Nnue nnue to correctly init default startpos
@@ -104,11 +87,6 @@ ostream& io::app_version(ostream& os) {
 }
 
 int main(int argc, const char* argv[]) {
-    if (incbin_nnue_size != sizeof(Nnue)) {
-        std::cerr << "petrel: fatal error: embedded NNUE data file has invalid size, expected " << sizeof(Nnue) << " bytes, \n";
-        return ENOEXEC;
-    }
-
     std::string initFileName;
     bool runBench = false;
     std::string benchLimits;
