@@ -1,6 +1,6 @@
 use bullet_lib::{
     game::inputs::Chess768,
-    nn::optimiser::AdamW,
+    nn::optimiser::{AdamW, AdamWParams},
     trainer::{
         save::SavedFormat,
         schedule::{TrainingSchedule, TrainingSteps, lr, wdl},
@@ -13,21 +13,42 @@ fn main() {
     const CPU_THREADS: usize = 16;
     const LOSS_POW: f32 = 2.6;
 
-    const QA: i16 = 256;
-    const QB: i16 = 64;
+    const ACC_SIZE: usize = 128;
+
+    const QA: f64 = 1024.0; // seems safe and large enough for 16-bit accumulator
+    const QB: f64 = 32.0;   // QB*WDL*2.5 < 32767
+    const WDL:f64 = 400.0;  // implicit output conversion 1.0 = 400 centipawns
 
     let mut trainer = ValueTrainerBuilder::default().use_threads(CPU_THREADS/2)
         .optimiser(AdamW).loss_fn(|output, target| output.sigmoid().power_error(target, LOSS_POW))
         .save_format(&[
-            SavedFormat::id("l0w").quantise::<i16>(QA),
-            SavedFormat::id("l0b").quantise::<i16>(QA),
-            SavedFormat::id("l1w").quantise::<i16>(QB),
-            SavedFormat::id("l1b").quantise::<i16>(QA * QB),
+            SavedFormat::id("l0w").transform(|store, weights| {
+                let engine: [usize; 6] = [4, 3, 2, 1, 0, 5];
+
+                let mut transformed = vec![0.0; weights.len()];
+
+                for side in 0..2 {
+                    for piece in 0..6 {
+                        for square in 0..64 {
+                            let from = (side*6*64 + piece * 64 + square) * ACC_SIZE;
+                            // pnbrqk -> qrbnpk; A1 = 0 -> H8 = 0
+                            let to = (side*6*64 + engine[piece]*64 + (square^63)) * ACC_SIZE;
+
+                            for i in 0..ACC_SIZE {
+                                // embed bias into kings weights
+                                let bias = if piece == 5 { store.get("l0b").values[i] / 2.0 } else { 0.0 };
+                                transformed[to + i] = weights[from + i] + bias;
+                            }
+                        }
+                    }
+                }
+                transformed
+            }).quantise::<i16>(QA),
+            SavedFormat::id("l1w").quantise::<i16>(QB * WDL),
+            SavedFormat::id("l1b").quantise::<i64>(16384.0 * QB * WDL),
         ])
         .inputs(Chess768).dual_perspective()
         .build(|builder, my_inputs, op_inputs| {
-            const ACC_SIZE: usize = 128;
-
             let l0 = builder.new_affine("l0", 768, ACC_SIZE);
             let my_accumulator = l0.forward(my_inputs);
             let op_accumulator = l0.forward(op_inputs);
@@ -37,19 +58,16 @@ fn main() {
             l1.forward(accumulator.screlu())
         });
 
-    let superbatches: usize = 120;
-    let eval_scale: f32 = 800.0;
+    trainer.optimiser.set_params_for_weight("l0w",
+        AdamWParams{ min_weight: -2.0, max_weight: 2.0, ..Default::default() }
+    );
 
-    let schedule = TrainingSchedule {
-        net_id: "petrel128".to_string(),
-        eval_scale,
-        steps: TrainingSteps { batch_size: 16_384, batches_per_superbatch: 6_104, start_superbatch: 1, end_superbatch: superbatches },
-        wdl_scheduler: wdl::LinearWDL { start: 0.0, end: 0.1 },
-        lr_scheduler: lr::LinearDecayLR { initial_lr: 0.001, final_lr: 0.0, final_superbatch: superbatches },
-        save_rate: 10,
-    };
+    trainer.optimiser.set_params_for_weight("l1w",
+        AdamWParams{ min_weight: -2.5, max_weight: 2.5, ..Default::default() }
+    );
 
     // loading directly from a `BulletFormat` file
+    let data_set_eval_scale: f32 = 800.0;
     let data_set: &[&str] = &[
         "data/test77nov-unfilt-test79-maraprmay-v6-dd.skip-see-ge0.wdl-pdist.iter-1.bullet.bin",
         "data/test77nov-unfilt-test79-maraprmay-v6-dd.skip-see-ge0.wdl-pdist.iter-2.bullet.bin",
@@ -65,6 +83,20 @@ fn main() {
         "data/test77nov-unfilt-test79-maraprmay-v6-dd.skip-see-ge0.wdl-pdist.iter-12.bullet.bin",
     ];
     let data_loader = DirectSequentialDataLoader::new(data_set);
+
+    let superbatches = 120;
+    let peak_lr = 0.001;
+    let final_lr = peak_lr / 100.0;
+
+    let schedule = TrainingSchedule {
+        net_id: "screlu-wdl".to_string(),
+        eval_scale: data_set_eval_scale,
+        steps: TrainingSteps { batch_size: 16_384, batches_per_superbatch: 6_104, start_superbatch: 1, end_superbatch: superbatches },
+        wdl_scheduler: wdl::LinearWDL { start: 0.0, end: 0.1 },
+        lr_scheduler: lr::LinearDecayLR { initial_lr: peak_lr, final_lr, final_superbatch: superbatches },
+        save_rate: 10,
+    };
+
     let settings = LocalSettings { threads: 2, test_set: None, output_directory: "checkpoints", batch_queue_size: CPU_THREADS };
     trainer.run(&schedule, &settings, &data_loader);
 }
