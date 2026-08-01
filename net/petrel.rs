@@ -89,11 +89,11 @@ fn main() {
     let final_lr = peak_lr / 100.0;
 
     let schedule = TrainingSchedule {
-        net_id: "screlu-51".to_string(),
+        net_id: "screlu-cosine".to_string(),
         eval_scale: data_set_eval_scale,
-        steps: TrainingSteps { batch_size: 16_384, batches_per_superbatch: 6_104, start_superbatch: 1, end_superbatch: superbatches },
-        wdl_scheduler: wdl::LinearWDL { start: 0.0, end: 0.1 },
-        lr_scheduler: lr::LinearDecayLR { initial_lr: peak_lr, final_lr, final_superbatch: superbatches },
+        steps: TrainingSteps { batch_size: 8192, batches_per_superbatch: 12208, start_superbatch: 1, end_superbatch: superbatches },
+        wdl_scheduler: wdl::CosineDecayWDL { start: 0.0, end: 0.05, final_superbatch: superbatches },
+        lr_scheduler: lr::CosineDecayLR { initial_lr: peak_lr, final_lr, final_superbatch: superbatches },
         save_rate: 10,
     };
 
