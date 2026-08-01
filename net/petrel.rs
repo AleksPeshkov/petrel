@@ -15,9 +15,9 @@ fn main() {
 
     const ACC_SIZE: usize = 128;
 
-    const QA: f64 = 1024.0; // seems safe and large enough for 16-bit accumulator
-    const QB: f64 = 16.0;   // QB*WDL*5 < 32767
-    const WDL:f64 = 400.0;  // implicit output conversion 1.0 = 400 centipawns
+    const QA: f32 = 1024.0; // seems safe and large enough for 16-bit accumulator
+    const QB: f32 = 8.0;    // QB*WDL*f_wdl <= 8191
+    const WDL:f32 = 400.0;  // implicit output conversion 1.0 = 400 centipawns
 
     let mut trainer = ValueTrainerBuilder::default().use_threads(CPU_THREADS/2)
         .optimiser(AdamW).loss_fn(|output, target| output.sigmoid().power_error(target, LOSS_POW))
@@ -45,7 +45,7 @@ fn main() {
                 transformed
             }).quantise::<i16>(QA),
             SavedFormat::id("l1w").quantise::<i16>(QB * WDL),
-            SavedFormat::id("l1b").quantise::<i64>(16384.0 * QB * WDL),
+            SavedFormat::id("l1b").quantise::<i32>(4096.0 * QB * WDL),
         ])
         .inputs(Chess768).dual_perspective()
         .build(|builder, my_inputs, op_inputs| {
@@ -59,11 +59,12 @@ fn main() {
         });
 
     trainer.optimiser.set_params_for_weight("l0w",
-        AdamWParams{ decay: 0.01, min_weight: -2.0, max_weight: 2.0, ..Default::default() }
+        AdamWParams{ decay: 0.02, min_weight: -2.0, max_weight: 2.0, ..Default::default() }
     );
 
+    let f_wdl = 8191.0 / (QB*WDL); // 2.5596875
     trainer.optimiser.set_params_for_weight("l1w",
-        AdamWParams{ decay: 0.02, min_weight: -5.0, max_weight: 5.0, ..Default::default() }
+        AdamWParams{ decay: 0.02, min_weight: -f_wdl, max_weight: f_wdl, ..Default::default() }
     );
 
     // loading directly from a `BulletFormat` file
@@ -85,14 +86,14 @@ fn main() {
     let data_loader = DirectSequentialDataLoader::new(data_set);
 
     let superbatches = 120;
-    let peak_lr = 0.001;
-    let final_lr = peak_lr / 100.0;
+    let peak_lr = 0.0004;
+    let final_lr = peak_lr / 40.0;
 
     let schedule = TrainingSchedule {
-        net_id: "screlu-cosine".to_string(),
+        net_id: "batch-4096".to_string(),
         eval_scale: data_set_eval_scale,
-        steps: TrainingSteps { batch_size: 8192, batches_per_superbatch: 12208, start_superbatch: 1, end_superbatch: superbatches },
-        wdl_scheduler: wdl::CosineDecayWDL { start: 0.0, end: 0.05, final_superbatch: superbatches },
+        steps: TrainingSteps { batch_size: 4096, batches_per_superbatch: 24416, start_superbatch: 1, end_superbatch: superbatches },
+        wdl_scheduler: wdl::CosineDecayWDL { start: 0.0, end: 0.1, final_superbatch: superbatches },
         lr_scheduler: lr::CosineDecayLR { initial_lr: peak_lr, final_lr, final_superbatch: superbatches },
         save_rate: 10,
     };
