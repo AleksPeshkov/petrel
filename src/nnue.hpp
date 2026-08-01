@@ -7,6 +7,7 @@
 using i16x16_t = i16_t __attribute__((vector_size(32)));
 using u16x16_t = u16_t __attribute__((vector_size(32)));
 using i32x8_t  = i32_t __attribute__((vector_size(32)));
+using i64x4_t  = i64_t __attribute__((vector_size(32)));
 
 constexpr i16x16_t i16x16x(i16_t e) { return i16x16_t{ e,e,e,e, e,e,e,e, e,e,e,e, e,e,e,e }; }
 
@@ -28,6 +29,15 @@ constexpr V min(V a, V b) {
     #endif
 }
 
+template <typename V>
+constexpr V abs(V v) {
+    #ifdef __clang__
+        return __builtin_elementwise_abs(v);
+    #else
+        return v < 0 ? -v : v;
+    #endif
+}
+
 constexpr i16x16_t clamp(i16x16_t a, int b, int c) {
     return min(max(a, i16x16x(b)), i16x16x(c));
 }
@@ -44,11 +54,18 @@ inline u16x16_t mulhi_u16(u16x16_t a, u16x16_t b) {
     #endif
 }
 
-inline i32_t hadd_i32(i32x8_t sum8) {
+inline i64x4_t unpack_add_i32(i32x8_t a) {
+    // signed extension from i32 to i64
+    i64x4_t low = __builtin_convertvector(__builtin_shufflevector(a, a, 0, 1, 2, 3), i64x4_t);
+    i64x4_t high = __builtin_convertvector(__builtin_shufflevector(a, a, 4, 5, 6, 7), i64x4_t);
+    return low + high;
+}
+
+inline i64_t hadd_i64(i64x4_t sum4) {
     #ifdef __clang__
-        return __builtin_reduce_add(sum8);
+        return __builtin_reduce_add(sum4);
     #else
-        return sum8[0] + sum8[1] + sum8[2] + sum8[3] + sum8[4] + sum8[5] + sum8[6] + sum8[7];
+        return sum4[0] + sum4[1] + sum4[2] + sum4[3];
     #endif
 }
 
@@ -74,39 +91,42 @@ struct CACHE_ALIGN Nnue {
 
     using _t = i16x16_t;
     static constexpr int Vector_size = sizeof(_t) / sizeof(i16_t);
-    static constexpr int Acc_neurons = 1024;
+    static constexpr int Acc_neurons = 128;
 
     struct AccIndex : Index<AccIndex, Acc_neurons / Vector_size> { using Index::Index; };
     struct DualAccIndex : Index<DualAccIndex, 2*AccIndex::size()> { using Index::Index; };
 
-    using W0 = array<_t, FeatureIndex, AccIndex>;
-    using W1 = array<_t, DualAccIndex>;
+    enum activation_enum { Pos, Neg };
+    struct HIndex : Index<HIndex, 2, activation_enum>{ using Index::Index; };
 
-    W0 w0;    // feature weights, 768*(64*32) = 1572864 bytes, feature biases embeded into kings weights
-    W1 w1;    // output weights, 2*(64*32) = 4096 bytes
-    i32_t b1; // output bias (64 byte aligned), total = 1577024 bytes
+    using W0 = array<_t, FeatureIndex, AccIndex>;
+    using W1 = array<_t, HIndex, DualAccIndex>;
+
+    W0 w0;    // feature weights, 768*128*2 = 196608 bytes, feature biases embeded into kings weights
+    W1 w1;    // output weights, 4*128*2 = 1024 bytes
+    i64_t b1; // output bias (64 byte aligned), total = 197696 bytes
 
     static constexpr u16x16_t squared(u16x16_t x1024) {
-        auto x = x1024 << 4; // [0 .. 16384]
-        return mulhi_u16(x+1, x); // x*x [0 .. 4096]
+        auto x2 = x1024 << 5; // 2*x [0 .. 32768]
+        return mulhi_u16(x2+1, x2); // x*x [ 0 .. 16384]
     }
 
-    static i32x8_t forward(i16x16_t x, i16x16_t w) {
-        auto x1024 = clamp(x, 0, 1024);
-        auto activated = squared(x1024); // [0 .. 4096]
-        return madd_i16(activated, w); // w = [-8191,+8191]
+    static i32x8_t forward(i16x16_t x, i16x16_t pos, i16x16_t neg) {
+        auto xx = squared(clamp(abs(x), 0, 1024));
+        // Squared Concatenated ReLU
+        return madd_i16(xx, x > 0 ? pos : neg);
     }
 
     using DualAcc = array<_t, DualAccIndex>;
     int32_t evaluate(const DualAcc& acc) const {
-        i32x8_t sum8{};
+        i64x4_t sum4{};
         for (auto i : range<DualAccIndex>()) {
-            // safe for up to 32 additions
-            sum8 += forward(acc[i], this->w1[i]);
+            auto sum8 = forward(acc[i], this->w1[HIndex{Pos}][i], this->w1[HIndex{Neg}][i]);
+            sum4 += unpack_add_i32(sum8);
         }
-        i32_t output = this->b1 + hadd_i32(sum8);
+        i64_t output = this->b1 + hadd_i64(sum4);
 
-        constexpr auto Scale = 15; // 12+3 (squared() x4096, QB=8)
+        constexpr auto Scale = 19; // 10+5+4 (QA=1024, QB=32, squared=16)
         auto result = output >> Scale;
         return result;
     }
