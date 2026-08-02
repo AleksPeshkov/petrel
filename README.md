@@ -6,16 +6,6 @@ Petrel's design goal is to be other engine's robust sparring partner particularl
 
 Petrel 3.5 rated `3436` Elo on the [CCRL Blitz](https://computerchess.org.uk/ccrl/404/cgi/engine_details.cgi?eng=Petrel%203.5%2064-bit) list; `3358` Elo on the [CCRL 40/15](https://computerchess.org.uk/ccrl/4040/cgi/engine_details.cgi?print=Details&each_game=0&eng=Petrel%203.5%2064-bit). Petrel 2.2 rated `2775` Elo on the [Ultimate Bullet Classical](https://e4e6.com/) list.
 
-## Features
-
-* [**Unique position representation**](https://www.chessprogramming.org/Piece-Sets) – Neither bitboards nor mailbox based on 128-bit SIMD vectors
-* [**Hyperbola Quintessence**](https://www.chessprogramming.org/Hyperbola_Quintessence) for sliding pieces attack generation
-* [**Incrementally updated attack tables**](https://www.chessprogramming.org/Attack_and_Defend_Maps)
-* Fast **Simplified SEE based on attack tables**
-* **Bulk legal move generation** directly from attack tables
-* Unorthodox search code framework without move lists or arrays (made moves filtered out of **bitset** of remaining moves)
-* Supports FRC add DFRC chess variants
-
 ## Supported UCI options
 
 ```
@@ -39,13 +29,23 @@ Options:
 ```
 You can provide a configuration file. This file should contain UCI commands. `--file` and `--bench` can be used together.
 
+## Features
+
+* [**Unique position representation**](https://www.chessprogramming.org/Piece-Sets) – neither bitboards nor mailbox, based on 128-bit SIMD vectors
+* [**Hyperbola Quintessence**](https://www.chessprogramming.org/Hyperbola_Quintessence) for sliding pieces attack generation
+* [**Incrementally updated attack tables**](https://www.chessprogramming.org/Attack_and_Defend_Maps)
+* **Bulk legal move generation** directly from attack tables
+* Unorthodox search framework (moves played out of unordered **bitset** of remaining legal moves)
+* Fast **Simplified SEE based on attack tables**
+* Supports FRC add DFRC chess variants
+
 ## Evaluation
 
-Very generic and not a point of author's interest.
+* Versions 1.x and 2.x use verbatim [**PeSTO** evaluation](https://www.chessprogramming.org/PeSTO%27s_Evaluation_Function)
+* Versions 3.x `(768 -> 128)*2 -> 1` (dual perspective accumulator, SCReLU activation) [NNUE](https://github.com/jw1912/bullet/blob/main/docs/1-basics.md).
+* Version 4.0 `(768 -> 1024)*2 -> 1`
 
-* Versions prior v3.0 use simple [**PeSTO** evaluation](https://www.chessprogramming.org/PeSTO%27s_Evaluation_Function)
-* Versions v3.0 and up use common bullet perspective [NNUE architecture](https://github.com/jw1912/bullet/blob/main/docs/1-basics.md):
-`768 -> (2*N) -> 1 (N=128)`
+NN trained with [bullet](https://github.com/AleksPeshkov/bullet) on Lc0 data filtered by Linrock (1B positions).
 
 ## Search
 
@@ -55,8 +55,6 @@ Very generic and not a point of author's interest.
 * **Null Move Pruning**
 * **SEE Pruning**
 * **Static Null Move Pruning**
-* **Razoring**
-* **Check extension**
 
 No history counters, thus no history pruning, corrhist, LMR, etc.
 
@@ -65,17 +63,19 @@ No history counters, thus no history pruning, corrhist, LMR, etc.
 Relatively sophisticated scheme:
 
 0. Hash move
-1. All queen promotions with capture, then without
+1. SEE non-losing queen promotions
 2. SEE non-losing captures sorted by **MVV/LVA**
-3. **Killer Move Heuristic** – 3 moves per ply
+3. **Killer Move Heuristic** – 2 moves per ply
 4. **Counter Move Heuristic** – 2 out of 4 moves in a slot
-5. **Follow-up Move Heuristic**  – 2 out of 4 moves in a slot
-6. Quiet moves from **SEE-unsafe** to **safe** squares
-7. Quiet moves from **safe** to **safe** squares
-8. Pawn quiet moves (plus all underpromotions) – Most advanced first
-8. King quiet moves
-10. SEE losing captures – Low valued pieces first
-11. SEE losing quiet moves – Low valued pieces first
+5. **Follow-up Move Heuristic** – 2 out of 4 moves in a slot
+6. Quiet QRBN moves from **SEE-unsafe** to **safe** squares
+7. Safe passed pawns moves
+8. Safe pawn moves threatening opponent pieces
+9. Quiet NBRQ moves from **safe** to **safe** squares
+10. King quiet moves
+11. Losing queen promotions and captures – low valued pieces first
+12. Remaining pawn moves – most advanced first
+13. SEE losing quiet moves – low valued pieces first
 
 ## Examples of petrel's games [[PGN1]](20251231_1705_petrel_3.2_N128_JA_2025-12-21_vs_EveAnn_3.6_64-bit.pgn) [[PGN2]](215_petrel_34_ja_2026-03-20_vs_schoenemann.pgn)
 <div align="center">

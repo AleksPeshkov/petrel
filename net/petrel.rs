@@ -45,7 +45,7 @@ fn main() {
                 transformed
             }).quantise::<i16>(QA),
             SavedFormat::id("l1w").quantise::<i16>(QB * WDL),
-            SavedFormat::id("l1b").quantise::<i32>(4096.0 * QB * WDL),
+            SavedFormat::id("l1b").quantise::<i64>(4096.0 * QB * WDL),
         ])
         .inputs(Chess768).dual_perspective()
         .build(|builder, my_inputs, op_inputs| {
@@ -59,7 +59,7 @@ fn main() {
         });
 
     trainer.optimiser.set_params_for_weight("l0w",
-        AdamWParams{ decay: 0.02, min_weight: -2.0, max_weight: 2.0, ..Default::default() }
+        AdamWParams{ decay: 0.01, min_weight: -2.0, max_weight: 2.0, ..Default::default() }
     );
 
     let f_wdl = 8191.0 / (QB*WDL); // 2.5596875
@@ -85,12 +85,12 @@ fn main() {
     ];
     let data_loader = DirectSequentialDataLoader::new(data_set);
 
-    let superbatches = 120;
+    let superbatches = 240;
     let peak_lr = 0.0004;
     let final_lr = peak_lr / 40.0;
 
     let schedule = TrainingSchedule {
-        net_id: "acc-1204".to_string(),
+        net_id: "1024-240".to_string(),
         eval_scale: data_set_eval_scale,
         steps: TrainingSteps { batch_size: 4096, batches_per_superbatch: 24416, start_superbatch: 1, end_superbatch: superbatches },
         wdl_scheduler: wdl::CosineDecayWDL { start: 0.0, end: 0.1, final_superbatch: superbatches },

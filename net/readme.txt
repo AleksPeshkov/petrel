@@ -6,5 +6,5 @@ Bullet with CPU backend with Petrel specific features.
 2) petrel.rs config based on https://github.com/jw1912/bullet/blob/main/examples/simple.rs and influenced by
 https://github.com/linrock/minifish/blob/main/training/HL64-q96-q144-hm--S2-T77novT79-lr125--S1-pdist-no-wm-lr15.rs
 
-3) data files from:
-https://huggingface.co/datasets/linrock/bullet-training-data/blob/main/S2/
+3) Lc0 data files processed by Linrock from:
+https://huggingface.co/datasets/linrock/bullet-training-data/tree/main/S2
