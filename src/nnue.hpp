@@ -52,7 +52,7 @@ struct CACHE_ALIGN Nnue {
 
     using _t = i16x16_t;
     static constexpr int VECTOR_SIZE = sizeof(_t) / sizeof(i16_t);
-    static constexpr int ACC_SIZE = 256;
+    static constexpr int ACC_SIZE = 512;
 
     struct AccIndex : Index<AccIndex, ACC_SIZE / VECTOR_SIZE> { using Index::Index; };
     struct AccTwinIndex : Index<AccTwinIndex, 2*AccIndex::size()> { using Index::Index; };
