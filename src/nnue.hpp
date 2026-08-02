@@ -5,100 +5,110 @@
 #include "Index.hpp"
 
 using i16x16_t = i16_t __attribute__((vector_size(32)));
+using u16x16_t = u16_t __attribute__((vector_size(32)));
 using i32x8_t  = i32_t __attribute__((vector_size(32)));
 
 constexpr i16x16_t i16x16x(i16_t e) { return i16x16_t{ e,e,e,e, e,e,e,e, e,e,e,e, e,e,e,e }; }
 
 template <typename V>
 constexpr V max(V a, V b) {
-#ifdef __clang__
-    return __builtin_elementwise_max(a, b);
-#else
-    return a > b ? a : b;
-#endif
+    #ifdef __clang__
+        return __builtin_elementwise_max(a, b);
+    #else
+        return a > b ? a : b;
+    #endif
 }
 
 template <typename V>
 constexpr V min(V a, V b) {
-#ifdef __clang__
-    return __builtin_elementwise_min(a, b);
-#else
-    return a < b ? a : b;
-#endif
+    #ifdef __clang__
+        return __builtin_elementwise_min(a, b);
+    #else
+        return a < b ? a : b;
+    #endif
 }
 
-template <typename V>
-constexpr V clamp(V a, V b, V c) {
-    return min(max(a, b), c);
+constexpr i16x16_t clamp(i16x16_t a, int b, int c) {
+    return min(max(a, i16x16x(b)), i16x16x(c));
 }
 
-/** NNUE evaluation. Net architecture and constants make it
- * compatible with the simple example provided by the bullet trainer:
- * https://github.com/jw1912/bullet/blob/main/examples/simple.rs
- *
- * Actual training script ../net/simple.rs
- **/
+constexpr u16x16_t mulhi_u16(u16x16_t a, u16x16_t b) {
+    #if USE_AVX2
+        return _mm256_mulhi_epu16(a, b);
+    #else
+        u16x16_t res{};
+        for (int i = 0; i < 16; ++i) {
+            res[i] = static_cast<u16_t>((static_cast<u32_t>(a[i]) * static_cast<u32_t>(b[i])) >> 16);
+        }
+        return res;
+    #endif
+}
 
-// (768 -> 128) x 2 -> 1
+inline i32_t hadd_i32(i32x8_t sum8) {
+    #ifdef __clang__
+        return __builtin_reduce_add(sum8);
+    #else
+        return sum8[0] + sum8[1] + sum8[2] + sum8[3] + sum8[4] + sum8[5] + sum8[6] + sum8[7];
+    #endif
+}
+
+constexpr i32x8_t madd_i16(i16x16_t w, i16x16_t v) {
+    #if USE_AVX2
+        return _mm256_madd_epi16(w, v);
+    #else
+        i32x8_t sum{};
+        for (int i = 0; i < 8; ++i) {
+            sum[i] = static_cast<i32_t>(w[2*i]) * static_cast<i32_t>(v[2*i])
+                + static_cast<i32_t>(w[2*i+1]) * static_cast<i32_t>(v[2*i+1]);
+        }
+        return sum;
+    #endif
+}
+
 struct CACHE_ALIGN Nnue {
     struct FeatureIndex : ::Index<FeatureIndex, 2*6*64> { using Index::Index;
-        //TODO: reshape feature indexing during net loading
-
-        static constexpr array<PieceType::_t, PieceType> pieceType = {Pawn, Knight, Bishop, Rook, Queen, King};
         constexpr FeatureIndex (Side si, PieceType ty, Square sq)
-            : Index{ 6*64*+si + 64*pieceType[ty] + (+sq ^ 077) }
+            : Index{ (+si * 6*64) + (+ty * 64) + (+sq) }
         {}
     };
 
     using _t = i16x16_t;
-    static constexpr int VECTOR_SIZE = sizeof(_t) / sizeof(i16_t);
-    static constexpr int ACC_SIZE = 128; // 2*128 = (8*32) = 256 bytes
+    static constexpr int Vector_size = sizeof(_t) / sizeof(i16_t);
+    static constexpr int Acc_neurons = 128;
 
-    struct AccIndex : Index<AccIndex, ACC_SIZE / VECTOR_SIZE> { using Index::Index; };
+    struct AccIndex : Index<AccIndex, Acc_neurons / Vector_size> { using Index::Index; };
     struct AccTwinIndex : Index<AccTwinIndex, 2*AccIndex::size()> { using Index::Index; };
 
     using W0 = array<_t, FeatureIndex, AccIndex>;
-    using B0 = array<_t, AccIndex>;
     using W1 = array<_t, AccTwinIndex>;
 
-    W0 w0;    // feature weights, 768*(8*32) = 196608 bytes
-    B0 b0;    // feature biases, (8*32) = 256 bytes
-    W1 w1;    // accumulator weights, 2*(8*32) = 512 bytes
-    i16_t b1; // accumulator bias, 64 aligned bytes, total = 197440 bytes
+    W0 w0;    // feature weights, 768*(8*32) = 196608 bytes, feature biases embeded into kings weights
+    W1 w1;    // output weights, 2*(8*32) = 512 bytes
+    i32_t b1; // output bias, total = 197184 bytes
 
-    // raw NNUE static evaluation
-    i32_t evaluate(const W1& acc) const {
-#if USE_AVX2
-        i32x8_t sum8{0};
+    static constexpr u16x16_t squared(u16x16_t x1024) {
+        auto x = x1024 << 4; // [0 .. 16384]
+        return mulhi_u16(x+1, x); // x*x [0 .. 4096]
+    }
+
+    static i32x8_t forward(i16x16_t x, i16x16_t w) {
+        auto x1024 = clamp(x, 0, 1024);
+        auto activated = squared(x1024); // [0 .. 4096]
+        return madd_i16(activated, w); // w = [-8191,+8191]
+    }
+
+    using AccTwin = array<_t, AccTwinIndex>;
+    int32_t evaluate(const AccTwin& acc) const {
+        i32x8_t sum8{};
         for (auto i : range<AccTwinIndex>()) {
-            auto v = clamp(acc[i], i16x16x(0), i16x16x(255)); // CReLU
-            auto vw = v * w1[i];
-            sum8 += static_cast<i32x8_t>(_mm256_madd_epi16(v, vw)); //SCReLU
+            // safe for up to 32 additions
+            sum8 += forward(acc[i], this->w1[i]);
         }
+        i32_t output = this->b1 + hadd_i32(sum8);
 
-    #ifdef __clang__
-        auto sum = __builtin_reduce_add(sum8);
-    #else
-        auto sum = sum8[0] + sum8[1] + sum8[2] + sum8[3] + sum8[4] + sum8[5] + sum8[6] + sum8[7];
-    #endif
-
-#else
-        int32_t sum{0};
-        for (auto i : range<AccTwinIndex>()) {
-            auto v = clamp(acc[i], i16x16x(0), i16x16x(255)); // CReLU
-            auto vw = v * w1[i];
-
-            for (int j = 0; j < 16; ++j) {
-                sum += static_cast<i32_t>(v[j]) * static_cast<i32_t>(vw[j]);
-            }
-        }
-#endif
-        constexpr int SCALE = 400;
-        constexpr int QA = 256;
-        constexpr int QB = 64;
-
-        sum += static_cast<i32_t>(b1) * QA;
-        return static_cast<i32_t>((static_cast<i64_t>(sum) * SCALE) / (QA * QA * QB));
+        constexpr auto Scale = 15; // 12+3 (squared() x4096, QB=8)
+        auto result = output >> Scale;
+        return result;
     }
 
     static COLD void validate_embedded_size();
@@ -133,7 +143,7 @@ class CACHE_ALIGN Acc {
     }
 
 public:
-    constexpr Acc() : v_{nnue.b0} {} // feature biases
+    constexpr Acc() : v_{} {} // feature biases = 0
 
     static constexpr void flip(Acc& my, Acc& op) {
         for (auto i : range<Index>()) { std::swap(my.v_[i], op.v_[i]); }
@@ -179,7 +189,7 @@ class AccTwin {
     array<Acc, Side> side;
 public:
     // raw NNUE static evaluation
-    auto evaluate() const { return nnue.evaluate(std::bit_cast<Nnue::W1>(side)); }
+    auto evaluate() const { return nnue.evaluate(std::bit_cast<Nnue::AccTwin>(side)); }
 
     constexpr AccTwin () : side{} {}
 
