@@ -52,7 +52,7 @@ struct CACHE_ALIGN Nnue {
 
     using _t = i16x16_t;
     static constexpr int VECTOR_SIZE = sizeof(_t) / sizeof(i16_t);
-    static constexpr int ACC_SIZE = 128; // 2*128 = (8*32) = 256 bytes
+    static constexpr int ACC_SIZE = 256;
 
     struct AccIndex : Index<AccIndex, ACC_SIZE / VECTOR_SIZE> { using Index::Index; };
     struct AccTwinIndex : Index<AccTwinIndex, 2*AccIndex::size()> { using Index::Index; };
@@ -61,10 +61,10 @@ struct CACHE_ALIGN Nnue {
     using B0 = array<_t, AccIndex>;
     using W1 = array<_t, AccTwinIndex>;
 
-    W0 w0;    // feature weights, 768*(8*32) = 196608 bytes
-    B0 b0;    // feature biases, (8*32) = 256 bytes
-    W1 w1;    // accumulator weights, 2*(8*32) = 512 bytes
-    i16_t b1; // accumulator bias, 64 aligned bytes, total = 197440 bytes
+    W0 w0;
+    B0 b0;
+    W1 w1;
+    i16_t b1;
 
     // raw NNUE static evaluation
     i32_t evaluate(const W1& acc) const {
