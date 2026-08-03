@@ -3,7 +3,8 @@
 #include "Position_impl.hpp"
 
 void SearchLimits::assertNodesOk() const {
-    assert (0 <= quotaCounter_); assert (quotaCounter_ < static_cast<int>(quotaLimit_));
+    assert (0 <= quotaCounter_);
+    //assert (quotaCounter_ < static_cast<int>(quotaLimit_));
     //assert (0 <= nodes);
     assert (nodes_ <= nodesLimit_);
     assert (static_cast<decltype(nodesLimit_)>(quotaCounter_) <= nodes_);

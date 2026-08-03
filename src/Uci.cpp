@@ -1348,7 +1348,7 @@ void Uci::info_bestmove() {
     Output ob;
     auto delayed = limits.pondering() || infinite_;
 
-    if (hasNewNodes()) {
+    if (limits.getNodes() > 0) {
         ob << "info depth " << pv.depth(); info_nps(ob); info_pv(ob);
         if (delayed) { ob.flush(); } else { ob << '\n'; }
     }
