@@ -42,18 +42,18 @@ constexpr Bound operator ~ (Bound bound) {
     return (bound == FailLow) ? FailHigh : (bound == FailHigh) ? FailLow : bound;
 }
 
-static constexpr int ScoreBitWidth = 14;
+static constexpr int ScoreBitWidth = 13;
 
-// position evaluation score, fits in 14 bits
+// position evaluation score, fits in 13 bits
 enum score_enum : i16_t {
-    NoScore = -singleton(ScoreBitWidth-1), //-8192 TRICK: assume two's complement
+    NoScore = -singleton(ScoreBitWidth-1), //-4096 TRICK: assume two's complement
     MinusInfinity = NoScore + 1, // no position should eval to it
 
-    MateLoss = MinusInfinity + 1, // -8190, mated in 0, only even negative values for mated positions
+    MateLoss = MinusInfinity + 1, // -4094, mated in 0, only even negative values for mated positions
 
     // ... negative mate range of scores (loss) ...
 
-    MinEval = MateLoss + Ply::size(), // -8126, minimal (negative) non mate score
+    MinEval = MateLoss + Ply::size(), // -4030, minimal (negative) non mate score
 
     // ... negative position static evaluation range of scores ...
 
@@ -61,16 +61,16 @@ enum score_enum : i16_t {
 
     //... positive position static evalutation range of scores ...
 
-    MaxEval = -MinEval, // 8126, maximal (positive) non mate score bound for a position
+    MaxEval = -MinEval, // 4030, maximal (positive) non mate score bound for a position
 
     // ... positive mate range of scores (win) ...
 
-    MateWin = -MateLoss, // 8190, mate in 0 (impossible), only odd positive values for positions winned with mate
+    MateWin = -MateLoss, // 4094, mate in 0 (impossible), only odd positive values for positions winned with mate
 
-    PlusInfinity = -MinusInfinity, // 8191, positive bound, no position should eval to it
+    PlusInfinity = -MinusInfinity, // 4095, positive bound, no position should eval to it
 };
 
-// position evaluation score, fits in 14 bits
+// position evaluation score, fits in 13 bits
 class Score {
 public:
     using _t = score_enum;
@@ -78,12 +78,22 @@ private:
     using Arg = Score;
     _t v_;
 public:
-    static constexpr int bit_width() { return ScoreBitWidth; }
-    static constexpr unsigned mask() { return singleton<unsigned>(bit_width()) - 1u; }
+    static constexpr int bit_width() { return std::bit_width(static_cast<size_t>(-static_cast<int>(NoScore))); }
+    static constexpr _t mask() { return static_cast<_t>(singleton(bit_width()) - 1u); }
 
     constexpr Score () : v_{NoScore} {}
     constexpr explicit Score (_t e) : v_{e} {}
     friend constexpr Score operator""_cp(unsigned long long);
+
+    template <typename P, typename S> constexpr P pack(S shift) { return ::pack<P>(v_ & mask(), shift); }
+
+    template <typename T, typename S>
+    static constexpr Score unpack(T packed, S shift) {
+        int extracted = (packed >> shift) & mask();
+        // sign extension
+        constexpr auto sign_shift{ ::bit_width<int>() - bit_width() };
+        return Score{static_cast<_t>((extracted << sign_shift) >> sign_shift)};
+    }
 
     static constexpr Score clampEval(int e)  { return Score{static_cast<_t>( std::clamp<int>(e, MinEval, MaxEval) )}; }
     static constexpr Score mateLoss(Ply ply) { return Score{static_cast<_t>(MateLoss + +ply)}; } // MateLoss + ply
@@ -131,7 +141,7 @@ public:
         return a.v_ < b.v_;
     }
 
-    constexpr unsigned tt(Ply ply) const {
+    constexpr Score tt(Ply ply) const {
         auto v = v_;
         assert (v != NoScore); assert (MateLoss <= v); assert (v < MateWin);
 
@@ -144,13 +154,12 @@ public:
             assert (MateLoss <= v); assert (v < MateWin);
         }
 
-        // convert signed to unsigned
-        return static_cast<unsigned>(v - NoScore);
+        return Score{v};
     }
 
-    static constexpr Score fromTt(unsigned n, Ply ply) {
-        // convert unsigned to signed
-        auto v = static_cast<_t>(+n + NoScore);
+    constexpr Score fromTt(Ply ply) {
+        auto v = v_;
+        assert (v != NoScore); assert (MateLoss <= v); assert (v < MateWin);
 
         if (v == NoScore) { return Score{NoScore}; } // empty TT entry
 

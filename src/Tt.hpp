@@ -146,7 +146,7 @@ public:
         TtMove _ttMove
     ) : v_{
         (z & ZMask)
-        | pack<_t>(_score.tt(_ply), ShiftScore)
+        | _score.tt(_ply).pack<_t>(ShiftScore)
         | pack<_t>(_bound, ShiftBound)
         | _draft.pack<_t>(ShiftDraft)
         | pack<_t>(*_ttMove, ShiftMove)
@@ -161,7 +161,7 @@ public:
 
     constexpr bool operator == (Z z) const { return (v_ & ZMask) == (z & ZMask); }
 
-    constexpr Score score(Ply ply) const { return Score::fromTt(::unpack(v_, ShiftScore, Score::mask()), ply); }
+    constexpr Score score(Ply ply) const { return Score::unpack(v_, ShiftScore).fromTt(ply); }
     constexpr Bound bound() const { return ::unpack(v_, ShiftBound, BoundMask); }
     constexpr Ply draft() const { return Ply::unpack(v_, ShiftDraft); }
     constexpr TtMove ttMove() const { return TtMove{::unpack(v_, ShiftMove, TtMove::mask())}; }

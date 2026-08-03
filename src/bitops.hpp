@@ -54,6 +54,11 @@ T narrow_cast(N n) {
     return r;
 }
 
+template <typename T>
+static constexpr int bit_width() {
+    return std::numeric_limits<T>::digits + std::numeric_limits<T>::is_signed;
+}
+
 template <typename P, typename T, typename S>
 constexpr P pack(T v, S shift) {
     return static_cast<P>(static_cast<P>(v) << shift);
