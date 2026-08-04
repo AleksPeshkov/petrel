@@ -13,7 +13,7 @@ fn main() {
     const CPU_THREADS: usize = 16;
     const LOSS_POW: f32 = 2.6;
 
-    const ACC_SIZE: usize = 128;
+    const ACC_SIZE: usize = 1024;
 
     const QA: f32 = 1024.0; // seems safe and large enough for 16-bit accumulator
     const QB: f32 = 8.0;    // QB*WDL*f_wdl <= 8191
@@ -90,7 +90,7 @@ fn main() {
     let final_lr = peak_lr / 40.0;
 
     let schedule = TrainingSchedule {
-        net_id: "batch-4096".to_string(),
+        net_id: "acc-1204".to_string(),
         eval_scale: data_set_eval_scale,
         steps: TrainingSteps { batch_size: 4096, batches_per_superbatch: 24416, start_superbatch: 1, end_superbatch: superbatches },
         wdl_scheduler: wdl::CosineDecayWDL { start: 0.0, end: 0.1, final_superbatch: superbatches },
