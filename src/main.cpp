@@ -39,7 +39,7 @@ void assert_fail(const char* assertion, const char* file, unsigned int line, con
 #endif
 
 ostream& io::app_version(ostream& os) {
-    os << "petrel";
+    os << "petrel 4.1";
 
 #ifdef VERSION
         os << ' ' << VERSION;
