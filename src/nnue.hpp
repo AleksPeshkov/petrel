@@ -32,7 +32,7 @@ constexpr i16x16_t clamp(i16x16_t a, int b, int c) {
     return min(max(a, i16x16x(b)), i16x16x(c));
 }
 
-constexpr u16x16_t mulhi_u16(u16x16_t a, u16x16_t b) {
+inline u16x16_t mulhi_u16(u16x16_t a, u16x16_t b) {
     #if USE_AVX2
         return _mm256_mulhi_epu16(a, b);
     #else
@@ -52,7 +52,7 @@ inline i32_t hadd_i32(i32x8_t sum8) {
     #endif
 }
 
-constexpr i32x8_t madd_i16(i16x16_t w, i16x16_t v) {
+inline i32x8_t madd_i16(i16x16_t w, i16x16_t v) {
     #if USE_AVX2
         return _mm256_madd_epi16(w, v);
     #else
@@ -74,7 +74,7 @@ struct CACHE_ALIGN Nnue {
 
     using _t = i16x16_t;
     static constexpr int Vector_size = sizeof(_t) / sizeof(i16_t);
-    static constexpr int Acc_neurons = 128;
+    static constexpr int Acc_neurons = 1024;
 
     struct AccIndex : Index<AccIndex, Acc_neurons / Vector_size> { using Index::Index; };
     struct AccTwinIndex : Index<AccTwinIndex, 2*AccIndex::size()> { using Index::Index; };
@@ -82,9 +82,9 @@ struct CACHE_ALIGN Nnue {
     using W0 = array<_t, FeatureIndex, AccIndex>;
     using W1 = array<_t, AccTwinIndex>;
 
-    W0 w0;    // feature weights, 768*(8*32) = 196608 bytes, feature biases embeded into kings weights
-    W1 w1;    // output weights, 2*(8*32) = 512 bytes
-    i32_t b1; // output bias, total = 197184 bytes
+    W0 w0;    // feature weights, 768*(64*32) = 1572864 bytes, feature biases embeded into kings weights
+    W1 w1;    // output weights, 2*(64*32) = 4096 bytes
+    i32_t b1; // output bias (64 byte aligned), total = 1577024 bytes
 
     static constexpr u16x16_t squared(u16x16_t x1024) {
         auto x = x1024 << 4; // [0 .. 16384]
