@@ -779,6 +779,7 @@ Uci::Uci(ostream& os) :
 
 void Uci::newGame() {
     tt.newGame();
+    ttAge = {};
     contMoves = {};
     checkMoves = {};
     go_.isNewGame = true;
@@ -1186,7 +1187,7 @@ void Uci::savePv() {
         auto eval = pos.inCheck() ? Score{} : pos.evaluate();
 
         auto* o = tt.addr<TtEntry>(pos.z());
-        *o = TtEntry{pos.z(), eval, score.tt(ply), ExactBound, depth, move.ttMove()};
+        *o = TtEntry{pos.z(), eval, score.tt(ply), ExactBound, depth, move.ttMove(), ttAge};
         ++tt.writes;
 
         pos.makeMove(move.from(), move.to());
