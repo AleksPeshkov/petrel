@@ -161,7 +161,7 @@ public:
         auto v = v_;
         assert (v != NoScore); assert (MateLoss <= v); assert (v < MateWin);
 
-        if (v == NoScore) { return Score{NoScore}; } // empty TT entry
+        if (v == NoScore) { return {}; } // empty TT entry
 
         assert (MateLoss <= v && v < MateWin);
         if (v < MinEval) {
@@ -169,7 +169,7 @@ public:
             if (!(v < MinEval)) {
                 // probably cash collision
                 assert (v < MinEval);
-                return Score{NoScore};
+                return {};
             }
         }
         else if (MaxEval < v) {
@@ -177,7 +177,7 @@ public:
             if (!(MaxEval < v)) {
                 // probably cash collision
                 assert (MaxEval < v);
-                return Score{NoScore};
+                return {};
             }
         }
 
