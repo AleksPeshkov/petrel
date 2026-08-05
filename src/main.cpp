@@ -18,7 +18,6 @@ constinit const CastlingRules castlingRules; // 128
 constinit const PieceCountTable pieceCountTable; // 48 6*8
 
 // global Uci instance
-//TRICK: should be declared after Nnue nnue to correctly init default startpos
 Uci The_uci(std::cout);
 
 void io::error(std::string_view message) {
