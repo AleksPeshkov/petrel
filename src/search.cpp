@@ -794,34 +794,6 @@ bool Node::isRepetition() const {
     );
 }
 
-void savePv(const PositionMoves& p, const PrincipalVariation& pv, const Tt& tt) {
-    // clone position
-    PositionMoves pos{p};
-
-    Ply   ply   = 0_ply;
-    Ply   depth = pv.depth();
-    Score score = pv.score();
-    auto* pvMoves = pv.moves();
-
-    for (Move move; (move = *pvMoves++).any();) {
-        assert (score.isOk(ply));
-        assert (pos.isPseudoLegal(move));
-        assert ((pos.generateMoves(), pos.isPossibleMove(move)));
-
-        auto* o = tt.addr<TtEntry>(pos.z());
-        *o = TtEntry{pos.z(), score.tt(ply), ExactScore, depth, move.ttMove()};
-        ++tt.writes;
-
-        //we cannot use makeZobrist() because of en passant legality validation
-        pos.makeMoveNoEval(move.from(), move.to());
-        score = -score;
-        depth = depth - 1_ply;
-        ply = ply + 1_ply;
-
-        if (depth == 0_ply) { break; }
-    }
-}
-
 ReturnStatus Node::searchRoot(const PositionMoves& pos) {
     static_cast<PositionMoves&>(*this) = pos;
     killers = {};
@@ -839,7 +811,7 @@ ReturnStatus Node::searchRoot(const PositionMoves& pos) {
 
         The_uci.info_pv();
         setMoves(The_uci.moves()); // refresh moves for next iteration
-        ::savePv(*this, The_uci.pv, The_uci.tt);
+        The_uci.savePv();
     }
 
     return ReturnStatus::Continue;

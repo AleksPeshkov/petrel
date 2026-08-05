@@ -93,7 +93,4 @@ public:
 
 class Tt;
 
-// update TT with latest PV (in case it have been overwritten)
-void savePv(const PositionMoves&, const PrincipalVariation&, const Tt&);
-
 #endif

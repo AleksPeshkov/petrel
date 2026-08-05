@@ -1168,6 +1168,34 @@ void Uci::setPositionMoves() {
     pv.set(position_.firstRootMove()); // some legal move in worst case
 }
 
+void Uci::savePv() {
+    // clone position
+    PositionMoves pos{position_};
+
+    Ply   ply   = 0_ply;
+    Ply   depth = pv.depth();
+    Score score = pv.score();
+    auto* pvMoves = pv.moves();
+
+    for (Move move; (move = *pvMoves++).any();) {
+        assert (score.isOk(ply));
+        assert (pos.isPseudoLegal(move));
+        assert ((pos.generateMoves(), pos.isPossibleMove(move)));
+
+        auto* o = tt.addr<TtEntry>(pos.z());
+        *o = TtEntry{pos.z(), score.tt(ply), ExactScore, depth, move.ttMove()};
+        ++tt.writes;
+
+        //we cannot use makeZobrist() because of en passant legality validation
+        pos.makeMoveNoEval(move.from(), move.to());
+        score = -score;
+        depth = depth - 1_ply;
+        ply = ply + 1_ply;
+
+        if (depth == 0_ply) { break; }
+    }
+}
+
 void Uci::go() {
     newSearch();
 
