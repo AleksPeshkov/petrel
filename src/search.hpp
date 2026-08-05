@@ -13,10 +13,10 @@ protected:
     Ply depth{0}; // remaining depth to horizon (should be set before search)
     Ply baseR{0}; // base R (depth reduction), same for all child moves
 
-    Score eval{NoScore}; // static evaluation of the current position
+    Score eval{}; // static evaluation of the current position
+    Score score{}; // best score found, alpha <= score < beta
     Score alpha{MateLoss}; // alpha-beta window lower margin
     Score beta{MateWin}; // alpha-beta window upper margin
-    Score score{NoScore}; // best score found, alpha <= score < beta
     Bound bound{FailLow}; // default FailLow, until Exact or FailHigh move will be found later
 
     Move currentMove{}; // last move made from *this into *child

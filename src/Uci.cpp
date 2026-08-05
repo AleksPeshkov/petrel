@@ -1155,7 +1155,7 @@ void Uci::setPositionMoves() {
         if (ttMove.none()) { break; }
         if (!position_.isPossibleMove(ttMove.from(), ttMove.to())) { break; }
 
-        Score score{NoScore};
+        Score score{};
         if (ttSlot.bound() == ExactScore) {
             score = ttSlot.score();
         }

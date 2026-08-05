@@ -192,8 +192,8 @@ ReturnStatus Node::negamax(Ply R) {
 
 ReturnStatus Node::search() {
     baseR = depth / 8;
-    score = Score{NoScore};
-    eval  = Score{NoScore};
+    eval  = {};
+    score = {};
     bound = FailLow;
     currentMove = {};
     bestMove = {};
