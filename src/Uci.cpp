@@ -1156,7 +1156,7 @@ void Uci::setPositionMoves() {
 
         Score score{NoScore};
         if (ttSlot.bound() == ExactScore) {
-            score = ttSlot.score(0_ply);
+            score = ttSlot.score();
         }
 
         pv.set(position_.toMove(ttMove), score);
