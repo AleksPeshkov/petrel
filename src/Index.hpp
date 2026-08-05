@@ -385,7 +385,10 @@ public:
         : v_ {static_cast<_t>(to.pack(ShiftTo) | from.pack(ShiftFrom) | ::pack(canBeKiller, ShiftKiller))}
     { assertOk(); }
 
-    constexpr _t operator * () const { return v_; }
+    template <typename T, typename S>
+    static constexpr TtMove unpack(T packed, S shift) { return TtMove{ ::unpack(packed, shift, mask()) }; }
+
+    constexpr int operator + () const { return +v_; }
 
     constexpr void assertOk() const { assert (v_ == null() || +from() != 0 || +to() != 0); } // check for canonical null move
     constexpr bool none() const { return v_ == null(); }
@@ -429,7 +432,7 @@ public:
     static constexpr _t null() { return 0; } // null move
     constexpr Move() : v_{null()} {}
     constexpr Move (TtMove ttMove, MoveType moveType)
-        : v_{static_cast<_t>(*ttMove | moveType.pack(ShiftType))}
+        : v_{static_cast<_t>(+ttMove | moveType.pack(ShiftType))}
     { assertOk(); }
 
     constexpr TtMove ttMove() const { return TtMove{v_}; }

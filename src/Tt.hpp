@@ -106,11 +106,7 @@ class TtSlot {
         ShiftBound = ShiftScore + Score::bit_width(),
         ShiftDraft = ShiftBound + 2,
         ShiftMove = ShiftDraft + Ply::bit_width(),
-        ShiftTo = ShiftMove,
-        ShiftFrom = ShiftTo + Square::bit_width(),
-        ShiftKiller = ShiftFrom + Square::bit_width(),
-        TotalBits = ShiftKiller + 1, // total size of all data fields
-        ZBits = 64 - TotalBits, // size of zobrist bitfield
+        ShiftZ = ShiftMove + TtMove::bit_width(), // total size of all data fields
     };
 
     using _t = u64_t;
@@ -122,10 +118,8 @@ class TtSlot {
             Score::_t score_ :Score::bit_width();
             Bound bound_ : 2;
             Ply::_t draft_ : Ply::bit_width();
-            Square::_t to_ : Square::bit_width();
-            Square::_t from_ : Square::bit_width();
-            CanBeKiller killer_ : 1;
-            Z::_t z_ : ZBits;
+            unsigned zmove_ : TtMove::bit_width();
+            Z::_t z_ : 64-ShiftZ;
         } u;
     };
     static_assert (sizeof(u) == sizeof(v_));
@@ -133,7 +127,8 @@ class TtSlot {
     _t v_;
 #endif
 
-    static constexpr _t ZMask{ U64(0xffff'ffff'ffff'ffff) << (64 - ZBits) };
+    static constexpr _t ZMask{ U64(0xffff'ffff'ffff'ffff) << ShiftZ };
+    static constexpr _t MoveZMask{ U64(0xffff'ffff'ffff'ffff) << ShiftMove };
 
 public:
     constexpr TtSlot () : v_{0} {}
@@ -144,18 +139,17 @@ public:
         Ply _draft,
         TtMove _ttMove
     ) : v_{
-        (z & ZMask)
+        (((static_cast<_t>(+_ttMove) << ShiftMove) ^ +z) & MoveZMask)
         | _score.pack<_t>(ShiftScore)
         | pack<_t>(_bound, ShiftBound)
         | _draft.pack<_t>(ShiftDraft)
-        | pack<_t>(*_ttMove, ShiftMove)
     } {
         static_assert (sizeof(TtSlot) == sizeof(u64_t));
 
         assert (score() == _score);
         assert (bound() == _bound);
         assert (draft() == _draft);
-        assert (ttMove() == _ttMove);
+        assert (ttMove(z) == _ttMove);
     }
 
     constexpr bool none() const { return v_ == 0; }
@@ -165,7 +159,7 @@ public:
     constexpr Score score() const { return Score::unpack(v_, ShiftScore); }
     constexpr Bound bound() const { return ::unpack(v_, ShiftBound, BoundMask); }
     constexpr Ply draft() const { return Ply::unpack(v_, ShiftDraft); }
-    constexpr TtMove ttMove() const { return TtMove{::unpack(v_, ShiftMove, TtMove::mask())}; }
+    constexpr TtMove ttMove(Z z) const { return TtMove::unpack(v_ ^ +z, ShiftMove); }
 };
 
 #endif
