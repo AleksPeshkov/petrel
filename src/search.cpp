@@ -100,8 +100,8 @@ void Node::clearNode() {
 void Node::assertOk() const {
     assert (alpha < beta);
     if (score.any()) {
-        assert (score < beta || bound == FailHigh);
-        assert (alpha <= score || bound == FailLow);
+        assert (score < beta || bound.is(FailHigh));
+        assert (alpha <= score || bound.is(FailLow));
     }
     assert (Score{MateLoss} <= alpha);
     assert (beta <= Score{MateWin});
@@ -162,7 +162,7 @@ ReturnStatus Node::negamax(Ply R) {
         }
 
         score = childScore;
-        bound = ExactScore;
+        bound = ExactBound;
         assert (currentMove.any()); // null move in PV is not allowed
         bestMove = currentMove;
 
@@ -260,11 +260,11 @@ ReturnStatus Node::search() {
 
         ++The_uci.tt.hits;
         Score ttScore = ttEntry.score().fromTt(ply);
-        Bound ttBound = ttEntry.bound(); assert (ttBound != NoBound);
+        Bound ttBound = ttEntry.bound(); assert (ttBound.any());
 
-        if (!isPv() && depth <= ttEntry.draft() && (ttBound == ExactScore
-            || (ttBound == FailHigh && beta <= ttScore)
-            || (ttBound == FailLow && ttScore <= alpha)
+        if (!isPv() && depth <= ttEntry.draft() && (ttBound.is(ExactBound)
+            || (ttBound.is(FailHigh) && beta <= ttScore)
+            || (ttBound.is(FailLow) && ttScore <= alpha)
         )) {
             score = ttScore;
             bound = ttBound;
@@ -273,9 +273,9 @@ ReturnStatus Node::search() {
 
         if (!inCheck()) {
             eval = evaluate();
-            if (ttScore.isEval() && (ttBound == ExactScore
-                || (ttBound == FailHigh && eval <= ttScore)
-                || (ttBound == FailLow && ttScore <= eval)
+            if (ttScore.isEval() && (ttBound.is(ExactBound)
+                || (ttBound.is(FailHigh) && eval <= ttScore)
+                || (ttBound.is(FailLow) && ttScore <= eval)
             )) {
                 eval = ttScore;
             }
@@ -478,7 +478,7 @@ ReturnStatus Node::search() {
 
     if (movesMade() == 0) {
         // not stalemate, all moves pruned
-        assert (bound == FailLow);
+        assert (bound.is(FailLow));
         assert (bestMove.none());
         assert (currentMove.none());
         assert (!inCheck());
@@ -486,12 +486,12 @@ ReturnStatus Node::search() {
         return ReturnStatus::Continue;
     }
 
-    if (bound == ExactScore) {
+    if (bound.is(ExactBound)) {
         assert (isPseudoLegal(bestMove));
         saveHistory();
         if (isRoot()) { ::insert_unique_compact(The_uci.rootBestMoves, bestMove); }
     } else {
-        assert (bound == FailLow);
+        assert (bound.is(FailLow));
         assert (bestMove.none() || isPseudoLegal(bestMove));
         assert (depth > 0_ply);
         assert (score.isOk(ply));

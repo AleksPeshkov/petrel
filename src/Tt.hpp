@@ -104,9 +104,9 @@ class TtEntry {
     enum {
         ShiftScore = 0,
         ShiftBound = ShiftScore + Score::bit_width(),
-        ShiftDraft = ShiftBound + 2,
-        ShiftMove = ShiftDraft + Ply::bit_width(),
-        ShiftZ = ShiftMove + TtMove::bit_width(), // total size of all data fields
+        ShiftDraft = ShiftBound + Bound::bit_width(),
+        ShiftMove  = ShiftDraft + Ply::bit_width(),
+        ShiftZ     = ShiftMove  + TtMove::bit_width(), // total size of all data fields
     };
 
     using _t = u64_t;
@@ -116,10 +116,10 @@ class TtEntry {
         _t v_;
         struct PACKED {
             Score::_t score_ :Score::bit_width();
-            Bound bound_ : 2;
-            Ply::_t draft_ : Ply::bit_width();
-            unsigned zmove_ : TtMove::bit_width();
-            Z::_t z_ : 64-ShiftZ;
+            Bound::_t bound_ :Bound::bit_width();
+            Ply::_t   draft_ :Ply::bit_width();
+            unsigned  zmove_ :TtMove::bit_width();
+            Z::_t z_ : (64 - ShiftZ); // remaining bits
         } u;
     };
     static_assert (sizeof(u) == sizeof(v_));
@@ -141,13 +141,13 @@ public:
     ) : v_{
         (((static_cast<_t>(+_ttMove) << ShiftMove) ^ +z) & MoveZMask)
         | _score.pack<_t>(ShiftScore)
-        | pack<_t>(_bound, ShiftBound)
+        | _bound.pack<_t>(ShiftBound)
         | _draft.pack<_t>(ShiftDraft)
     } {
         static_assert (sizeof(TtEntry) == sizeof(u64_t));
 
         assert (score() == _score);
-        assert (bound() == _bound);
+        assert (bound().is(_bound));
         assert (draft() == _draft);
         assert (ttMove(z) == _ttMove);
     }
@@ -157,7 +157,7 @@ public:
     constexpr bool operator == (Z z) const { return (v_ & ZMask) == (z & ZMask); }
 
     constexpr Score score() const { return Score::unpack(v_, ShiftScore); }
-    constexpr Bound bound() const { return ::unpack(v_, ShiftBound, BoundMask); }
+    constexpr Bound bound() const { return Bound::unpack(v_, ShiftBound); }
     constexpr Ply draft() const { return Ply::unpack(v_, ShiftDraft); }
     constexpr TtMove ttMove(Z z) const { return TtMove::unpack(v_ ^ +z, ShiftMove); }
 };
