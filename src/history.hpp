@@ -144,14 +144,14 @@ private:
     array<Move, Index> pv_;
 
     Ply depth_{0}; // latest PV iteration depth
-    Score score_{NoScore}; // latest PV score
+    Score score_{}; // latest PV score
 
 public:
     constexpr PrincipalVariation () {
         pv_[Index{0}] = {};
         pv_[Index{1}] = {};
         depth_ = 0_ply;
-        score_ = Score{NoScore};
+        score_ = {};
     }
 
     // clear child PV space: pv_[i] = {}

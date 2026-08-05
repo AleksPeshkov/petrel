@@ -60,7 +60,7 @@ class SearchLimits {
 
     time_strategy_t timeStrategy_{ExactTime}; // ExactTime = 0, EasyMove = 3, NormalMove = 5, HardMove = 8
     Move  lastMove_{}; // last best root move (for updating timeStrategy_)
-    Score lastScore_{NoScore}; // last best root move score (for updating timeStrategy_)
+    Score lastScore_{}; // last best root move score (for updating timeStrategy_)
     Ply hardMoveDepth_{0}; // iteration when HardMove triggered
 
 private:
