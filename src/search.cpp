@@ -1,3 +1,4 @@
+#include <atomic>
 #include "search.hpp"
 #include "Uci.hpp"
 #include "Position_impl.hpp"
@@ -190,6 +191,36 @@ ReturnStatus Node::negamax(Ply R) {
     return ReturnStatus::Continue;
 }
 
+namespace {
+
+struct TtRecord {
+    TtSlot ttSlot;
+    TtSlot* tt;
+    bool ttHit;
+};
+
+constexpr TtRecord probe(TtSlot* tt, Z z, TtAge ttAge) {
+    using std::bit_cast;
+    auto ttSlot = bit_cast<TtSlot>(bit_cast<std::atomic<u64_t>*>(tt)->load(std::memory_order_relaxed));
+    if (ttSlot == z) { return { ttSlot, tt, true }; }
+
+    auto tt2 = bit_cast<TtSlot*>(bit_cast<std::uintptr_t>(tt) ^ sizeof(TtSlot));
+    auto ttSlot2 = bit_cast<TtSlot>(bit_cast<std::atomic<u64_t>*>(tt2)->load(std::memory_order_relaxed));
+    if (ttSlot2 == z) { return { ttSlot2, tt2, true }; }
+
+    if (
+        (ttSlot2.any() && ttSlot.draft() <= ttSlot2.draft())
+        || ttAge.isOld(ttSlot.age()) // old
+        || ttSlot.none() // zeroed
+    ) {
+        return {ttSlot, tt, false};
+    } else {
+        return {ttSlot2, tt2, false};
+    }
+}
+
+} // end of anonymous namespace
+
 ReturnStatus Node::search() {
     baseR = depth / 8;
     eval  = {};
@@ -248,8 +279,10 @@ ReturnStatus Node::search() {
         if (depth == 0_ply) { break; }
 
         ++The_uci.tt.reads;
-        auto ttSlot = *tt; // copy full TT entry
-        if (ttSlot != z() || ttSlot.none()) { break; }
+        auto [ttSlot, ttPtr, ttHit] = ::probe(tt, z(), The_uci.ttAge);
+        tt = ttPtr; // place to write after completed search
+
+        if (!ttHit || ttSlot.none()) { break; }
 
         if (ttSlot.ttMove(z()).any()) [[likely]] {
             auto ttMove = ttSlot.ttMove(z());
@@ -276,6 +309,11 @@ ReturnStatus Node::search() {
         )) {
             score = ttScore;
             bound = ttBound;
+            if (!ttSlot.age().is(The_uci.ttAge)) {
+                // refresh age
+                ttSlot.setAge(The_uci.ttAge);
+                *tt = ttSlot;
+            }
             return ReturnStatus::Cutoff;
         }
 
@@ -711,7 +749,7 @@ void Node::saveNode() {
 
     if (depth == 0_ply) { return; }
 
-    *tt = TtSlot{ z(), eval, score.tt(ply), bound, depth, bestMove.ttMove() };
+    *tt = TtSlot{ z(), eval, score.tt(ply), bound, depth, bestMove.ttMove(), The_uci.ttAge };
     ++The_uci.tt.writes;
 }
 
@@ -827,7 +865,10 @@ ReturnStatus Node::searchRoot(const PositionMoves& pos) {
 
         The_uci.info_pv();
         setMoves(The_uci.moves()); // refresh moves for next iteration
-        The_uci.savePv();
+        The_uci.ttAge.nextAge();
+
+        // refresh PV in TT in case it was overwritten
+        if (The_uci.limits.getNodes() > 1'000000) { The_uci.savePv(); }
     }
 
     return ReturnStatus::Continue;

@@ -99,13 +99,44 @@ public:
 
 };
 
-// 8 byte, always replace slot, so no age field, only one score, depth and bound flags
+// Valid age is [1, 2, 3]
+class TtAge {
+public:
+    using _t = unsigned;
+
+    static constexpr int bit_width() { return 2; }
+    static constexpr _t mask() { return static_cast<_t>(singleton(bit_width()) - 1u); }
+
+    constexpr TtAge () : v_{1} {}
+    constexpr void nextAge() { v_ = next().v_; }
+
+    constexpr bool none() const { return v_ == 0; }
+    constexpr bool any() const { return !none(); }
+
+    constexpr bool is(TtAge age) const { return v_ == age.v_; }
+    constexpr bool isOld(TtAge age) const { return !is(age) && !is(age.next()); }
+
+    template <typename P, typename S>
+    constexpr P pack(S shift) { return ::pack<P>(v_, shift); }
+
+    template <typename T, typename S>
+    static constexpr TtAge unpack(T packed, S shift) { return TtAge{::unpack(packed, shift, mask())}; }
+
+private:
+    _t v_;
+
+    constexpr explicit TtAge (_t v) : v_{v} { assert (v <= mask()); }
+    constexpr TtAge next() const { return v_ == mask() ? TtAge{} : TtAge{v_ + 1}; }
+};
+
+// 8 byte
 class TtSlot {
     enum {
         ShiftEval  = 0,
         ShiftScore = ShiftEval  + Score::bit_width(),
         ShiftBound = ShiftScore + Score::bit_width(),
-        ShiftDraft = ShiftBound + Bound::bit_width(),
+        ShiftAge   = ShiftBound + Bound::bit_width(),
+        ShiftDraft = ShiftAge   + TtAge::bit_width(),
         ShiftMove  = ShiftDraft + Ply::bit_width(),
         ShiftZ     = ShiftMove  + TtMove::bit_width(), // total size of all data fields
     };
@@ -119,6 +150,7 @@ class TtSlot {
             Score::_t eval_  :Score::bit_width();
             Score::_t score_ :Score::bit_width();
             Bound::_t bound_ :Bound::bit_width();
+            TtAge::_t age_   :TtAge::bit_width();
             Ply::_t   draft_ :Ply::bit_width();
             unsigned  zmove_ :TtMove::bit_width();
             Z::_t z_ : (64 - ShiftZ); // remaining bits
@@ -140,19 +172,22 @@ public:
         Score _score,
         Bound _bound,
         Ply _draft,
-        TtMove _ttMove
+        TtMove _ttMove,
+        TtAge _age
     ) : v_{
         (((static_cast<_t>(+_ttMove) << ShiftMove) ^ +z) & MoveZMask)
         | _eval.pack<_t>(ShiftEval)
         | _score.pack<_t>(ShiftScore)
         | _bound.pack<_t>(ShiftBound)
         | _draft.pack<_t>(ShiftDraft)
+        | _age.pack<_t>(ShiftAge)
     } {
         static_assert (sizeof(TtSlot) == sizeof(u64_t));
 
         assert (score() == _score);
         assert (bound().is(_bound));
         assert (draft() == _draft);
+        assert (age().is(_age));
         assert (ttMove(z) == _ttMove);
     }
 
@@ -163,8 +198,14 @@ public:
     constexpr Score eval() const { return Score::unpack(v_, ShiftEval); }
     constexpr Score score() const { return Score::unpack(v_, ShiftScore); }
     constexpr Bound bound() const { return Bound::unpack(v_, ShiftBound); }
+    constexpr TtAge age() const { return TtAge::unpack(v_, ShiftAge); }
     constexpr Ply draft() const { return Ply::unpack(v_, ShiftDraft); }
     constexpr TtMove ttMove(Z z) const { return TtMove::unpack(v_ ^ +z, ShiftMove); }
+
+    constexpr void setAge(TtAge a) {
+        v_ ^= age().pack<_t>(ShiftAge); // clear previous
+        v_ |= a.pack<_t>(ShiftAge); // set new value
+    }
 };
 
 #endif
