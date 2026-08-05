@@ -1156,7 +1156,7 @@ void Uci::setPositionMoves() {
         if (!position_.isPossibleMove(ttMove.from(), ttMove.to())) { break; }
 
         Score score{};
-        if (ttEntry.bound() == ExactScore) {
+        if (ttEntry.bound().is(ExactBound)) {
             score = ttEntry.score();
         }
 
@@ -1183,7 +1183,7 @@ void Uci::savePv() {
         assert ((pos.generateMoves(), pos.isPossibleMove(move)));
 
         auto* o = tt.addr<TtEntry>(pos.z());
-        *o = TtEntry{pos.z(), score.tt(ply), ExactScore, depth, move.ttMove()};
+        *o = TtEntry{pos.z(), score.tt(ply), ExactBound, depth, move.ttMove()};
         ++tt.writes;
 
         //we cannot use makeZobrist() because of en passant legality validation

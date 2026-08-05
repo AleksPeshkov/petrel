@@ -30,17 +30,41 @@ constexpr Ply operator""_ply(unsigned long long n) { return Ply{static_cast<Ply:
 // color to move of the given ply
 constexpr Color::_t distance(Color c, Ply ply) { return static_cast<Color::_t>((+ply ^ +c) & Color::mask()); }
 
-enum Bound : u8_t {
+enum bound_enum {
     NoBound = 0, // default invalid value
     FailLow = 0b01, // upper bound
     FailHigh = 0b10, // lower bound
-    ExactScore = FailLow | FailHigh,
-    BoundMask = 0b11
+    ExactBound = FailLow | FailHigh,
 };
 
-constexpr Bound operator ~ (Bound bound) {
-    return (bound == FailLow) ? FailHigh : (bound == FailHigh) ? FailLow : bound;
-}
+class Bound {
+public:
+    using _t = bound_enum;
+
+    static constexpr int bit_width() { return 2; }
+    static constexpr _t mask() { return static_cast<_t>((1u << bit_width()) - 1); }
+
+    constexpr Bound () : v_{NoBound} {}
+    constexpr Bound(_t b) : v_{b} {}
+
+    template <typename P, typename S> constexpr P pack(S shift) { return ::pack<P>(v_ & mask(), shift); }
+
+    template <typename T, typename S>
+    static constexpr Bound unpack(T packed, S shift) { return static_cast<_t>(::unpack(packed, shift, mask())); }
+
+    constexpr bool none() const { return v_ == NoBound; }
+    constexpr bool any() const { return !none(); }
+    constexpr bool is(_t b) const { assert (any()); return v_ == b; }
+    constexpr bool is(Bound b) const { return is(b.v_); }
+
+    constexpr Bound operator ~ () const {
+        assert (any());
+        return is(FailLow) ? FailHigh : is(FailHigh) ? FailLow : *this;
+    }
+
+private:
+    _t v_;
+};
 
 static constexpr int ScoreBitWidth = 13;
 
