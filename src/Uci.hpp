@@ -163,6 +163,7 @@ public:
     void info_pv() const;
     void info_perft_depth(Ply, node_count_t) const;
     void info_perft_currmove(int moveCount, Move currentMove, node_count_t) const;
+    void savePv(); // update TT with latest PV (in case it have been overwritten)
 
     void move(ostream&, Move, Ply = 0_ply) const;
     void fen(ostream&, const Position&, Ply = 0_ply) const;
