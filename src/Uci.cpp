@@ -953,16 +953,54 @@ void Uci::uciok() const {
     Output ob;
     ob << "id name " << io::app_version;
     ob << "\nid author Aleks Peshkov";
-    ob << "\noption name Debug Log File type string default " << (logFileName.empty() ? "<empty>" : logFileName);
     ob << "\noption name Hash type spin min " << ::mebi(tt.minSize()) << " max " << ::mebi(tt.maxSize()) << " default " << ::mebi(tt.size());
     ob << "\noption name Move Overhead type spin min " << UciLimits::MoveOverheadDefault << " max 10000 default " << go_.moveOverhead;
     ob << "\noption name Ponder type check default " << (go_.canPonder ? "true" : "false");
     ob << "\noption name UCI_Chess960 type check default " << (chessVariant().is(Chess960) ? "true" : "false");
+    ob << "\noption name Debug type check default " << (debugOn_ ? "true" : "false");
+    ob << "\noption name Debug Log File type string default " << (logFileName.empty() ? "<empty>" : logFileName);
     ob << "\nuciok";
 }
 
 void Uci::setoption() {
     consume("name");
+
+    if (consume("Hash")) {
+        consume("value");
+        setHash();
+        return;
+    }
+
+    if (consume("Move Overhead")) {
+        consume("value");
+
+        TimeInterval moveOverhead{0};
+        inputLine >> moveOverhead;
+        go_.moveOverhead = std::max(go_.moveOverhead, UciLimits::MoveOverheadDefault);
+
+        if (!inputLine) { io::fail_rewind(inputLine); }
+        return;
+    }
+
+    if (consume("Ponder")) {
+        consume("value");
+
+        if (consume("true"))  { go_.canPonder = true; return; }
+        if (consume("false")) { go_.canPonder = false; return; }
+
+        io::fail_rewind(inputLine);
+        return;
+    }
+
+    if (consume("UCI_Chess960")) {
+        consume("value");
+
+        if (consume("true"))  { chessVariant_ = ChessVariant{Chess960}; return; }
+        if (consume("false")) { chessVariant_ = ChessVariant{Orthodox}; return; }
+
+        io::fail_rewind(inputLine);
+        return;
+    }
 
     if (consume("Debug Log File")) {
         consume("value");
@@ -1000,38 +1038,12 @@ void Uci::setoption() {
         return;
     }
 
-    if (consume("Hash")) {
-        consume("value");
-        setHash();
-        return;
-    }
-
-    if (consume("UCI_Chess960")) {
+    //TRICK: "Debug Log File" should be the first
+    if (consume("Debug")) {
         consume("value");
 
-        if (consume("true"))  { chessVariant_ = ChessVariant{Chess960}; return; }
-        if (consume("false")) { chessVariant_ = ChessVariant{Orthodox}; return; }
-
-        io::fail_rewind(inputLine);
-        return;
-    }
-
-    if (consume("Move Overhead")) {
-        consume("value");
-
-        TimeInterval moveOverhead{0};
-        inputLine >> moveOverhead;
-        go_.moveOverhead = std::max(go_.moveOverhead, UciLimits::MoveOverheadDefault);
-
-        if (!inputLine) { io::fail_rewind(inputLine); }
-        return;
-    }
-
-    if (consume("Ponder")) {
-        consume("value");
-
-        if (consume("true"))  { go_.canPonder = true; return; }
-        if (consume("false")) { go_.canPonder = false; return; }
+        if (consume("true"))  { debugOn_ = true; return; }
+        if (consume("false")) { debugOn_ = false; return; }
 
         io::fail_rewind(inputLine);
         return;
