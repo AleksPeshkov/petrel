@@ -250,18 +250,25 @@ ReturnStatus Node::search() {
 
         if (ttEntry.ttMove(z()).any()) {
             auto ttMove = ttEntry.ttMove(z());
-            if (!isPossibleMove(ttMove.from(), ttMove.to())) {
+            if (!isPossibleMove(ttMove.from(), ttMove.to())) [[unlikely]] {
+                // collision detection
                 break;
             }
             bestMove = toMove(ttMove);
         }
-        assert (bestMove.none() || isPossibleMove(bestMove));
+
+        Score ttScore = ttEntry.score().fromTt(ply);
+        if (ttScore.none()) [[unlikely]] {
+            //io::error("prevented TT collision due invalid mate score");
+            bestMove = {};
+            break;
+        }
 
         ++The_transpositionTable.hits;
-        Score ttScore = ttEntry.score().fromTt(ply);
         Bound ttBound = ttEntry.bound(); assert (ttBound.any());
 
-        if (!isPv() && depth <= ttEntry.draft() && (ttBound.is(ExactBound)
+        if (!isPv() && depth <= ttEntry.draft() &&
+            (ttBound.is(ExactBound)
             || (ttBound.is(FailHigh) && beta <= ttScore)
             || (ttBound.is(FailLow) && ttScore <= alpha)
         )) {
@@ -270,19 +277,23 @@ ReturnStatus Node::search() {
             return ReturnStatus::Cutoff;
         }
 
-        if (!inCheck()) {
-            eval = evaluate();
-            if (ttScore.isEval() && (ttBound.is(ExactBound)
-                || (ttBound.is(FailHigh) && eval <= ttScore)
-                || (ttBound.is(FailLow) && ttScore <= eval)
-            )) {
+        if (!inCheck() && ttScore.isEval()) {
+            if (ttBound.is(ExactBound)) {
                 eval = ttScore;
+            } else {
+                eval = evaluate();
+                if ((ttBound.is(FailHigh) && eval <= ttScore)
+                    || (ttBound.is(FailLow) && ttScore <= eval)
+                ) {
+                    eval = ttScore;
+                }
             }
         }
     } while(false);
 
     if (eval.none() && !inCheck()) { eval = evaluate(); }
     assert ((inCheck() && eval.none()) || (!inCheck() && eval.isEval()));
+    assert (bestMove.none() || isPossibleMove(bestMove));
 
     if (ply == MaxPly) {
         // no room to search deeper
