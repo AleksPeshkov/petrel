@@ -23,16 +23,6 @@ void Position::makeMove(Square from, Square to) {
     //assert (z() == *generateZobrist()); // true, but slow to compute
 }
 
-void Position::makeMoveNoEval(Square from, Square to) {
-    PositionSide::swap(MY, OP);
-    //skip accumulator.swap();
-
-    // the position just swapped its sides, so we make the move for the Op
-    makeMove<Op, NoEval>(from, to, []{});
-    zobrist_.flip();
-    //assert (z() == *generateZobrist()); // true, but slow to compute
-}
-
 void Position::makeNullMove(const Position& parent) {
     flip(parent);
     zobrist_ = parent.zobrist_;

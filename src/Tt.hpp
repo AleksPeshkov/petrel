@@ -102,7 +102,8 @@ public:
 // 8 byte, always replace slot, so no age field, only one score, depth and bound flags
 class TtSlot {
     enum {
-        ShiftScore = 0,
+        ShiftEval  = 0,
+        ShiftScore = ShiftEval  + Score::bit_width(),
         ShiftBound = ShiftScore + Score::bit_width(),
         ShiftDraft = ShiftBound + Bound::bit_width(),
         ShiftMove  = ShiftDraft + Ply::bit_width(),
@@ -115,6 +116,7 @@ class TtSlot {
     union {
         _t v_;
         struct PACKED {
+            Score::_t eval_  :Score::bit_width();
             Score::_t score_ :Score::bit_width();
             Bound::_t bound_ :Bound::bit_width();
             Ply::_t   draft_ :Ply::bit_width();
@@ -134,12 +136,14 @@ public:
     constexpr TtSlot () : v_{0} {}
 
     constexpr TtSlot (Z z,
+        Score _eval,
         Score _score,
         Bound _bound,
         Ply _draft,
         TtMove _ttMove
     ) : v_{
         (((static_cast<_t>(+_ttMove) << ShiftMove) ^ +z) & MoveZMask)
+        | _eval.pack<_t>(ShiftEval)
         | _score.pack<_t>(ShiftScore)
         | _bound.pack<_t>(ShiftBound)
         | _draft.pack<_t>(ShiftDraft)
@@ -156,6 +160,7 @@ public:
     constexpr bool any() const { return !none(); }
     constexpr bool operator == (Z z) const { return (v_ & ZMask) == (z & ZMask); }
 
+    constexpr Score eval() const { return Score::unpack(v_, ShiftEval); }
     constexpr Score score() const { return Score::unpack(v_, ShiftScore); }
     constexpr Bound bound() const { return Bound::unpack(v_, ShiftBound); }
     constexpr Ply draft() const { return Ply::unpack(v_, ShiftDraft); }
