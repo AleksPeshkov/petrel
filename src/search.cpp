@@ -245,7 +245,6 @@ ReturnStatus Node::search() {
         assert (cEval.none());
         assert (score.none());
         assert (bestMove.none());
-        if (depth == 0_ply) { break; }
 
         auto [ttEntry, ttPtr, ttHit] = TtEntry::probe(tt, z());
         this->tt = ttPtr; // pointer to write after completed search
@@ -709,8 +708,6 @@ void Node::saveNode() {
     assert (bestMove.none() || isPseudoLegal(bestMove));
     assert ((inCheck() && eval.none()) || (!inCheck() && eval.isEval() /*&& eval == evaluate()*/));
     assert (score.isOk(ply));
-
-    if (depth == 0_ply) { return; }
 
     TtEntry{ z(), eval, score.tt(ply), bound, depth, bestMove.ttMove() }.write(tt);
 }

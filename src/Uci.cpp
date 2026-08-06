@@ -1192,8 +1192,6 @@ void Uci::savePv() {
         score = -score;
         depth = depth - 1_ply;
         ply = ply + 1_ply;
-
-        if (depth == 0_ply) { break; }
     }
 }
 
