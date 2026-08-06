@@ -8,13 +8,14 @@ Petrel 4.0 rated `3536` Elo on the [CCRL Blitz](https://computerchess.org.uk/ccr
 ## Supported UCI options
 
 ```
-option name Debug Log File type string default <empty>
 option name Hash type spin min 0 max 16384 default 64
 option name Move Overhead type spin min 1 max 10000 default 1
 option name Ponder type check default false
 option name UCI_Chess960 type check default false
+option name Debug type check default false
+option name Debug Log File type string default <empty>
 ```
-Only input errors and a sparse search warnings will be written into `Debug Log File` (unless `debug on` is set
+Only input errors and a sparse search warnings will be written into `Debug Log File` (unless option `Debug true` or `debug on` is set
 then all engine input and output will be logged).
 
 ## Command-line options
