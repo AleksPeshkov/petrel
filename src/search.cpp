@@ -276,7 +276,6 @@ ReturnStatus Node::search() {
         assert (cEval.none());
         assert (score.none());
         assert (bestMove.none());
-        if (depth == 0_ply) { break; }
 
         ++The_uci.tt.reads;
         auto [ttSlot, ttPtr, ttHit] = ::probe(tt, z(), The_uci.ttAge);
@@ -746,8 +745,6 @@ void Node::saveNode() {
     assert ((inCheck() && eval.none()) || (!inCheck() && eval.isEval() /*&& eval == evaluate()*/));
     assert (score.isOk(ply));
     assert (tt);
-
-    if (depth == 0_ply) { return; }
 
     *tt = TtSlot{ z(), eval, score.tt(ply), bound, depth, bestMove.ttMove(), The_uci.ttAge };
     ++The_uci.tt.writes;
