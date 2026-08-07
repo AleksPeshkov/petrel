@@ -62,7 +62,7 @@ public:
     constexpr size_t size() const { return size_; }
 
     // 2MB to trigger linux huge page support if possible
-    static constexpr size_t minSize() { return 2 * 1024 * 1024; }
+    static constexpr size_t minSize() { return 1024 /*2 * 1024 * 1024*/; }
 
     // all currently available memory
     static size_t maxSize() { return ::bit_floor(System::getAvailableMemory()); }
