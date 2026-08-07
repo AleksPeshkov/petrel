@@ -122,22 +122,22 @@ class CACHE_ALIGN Acc {
     using _t = array<Nnue::_t, Index>; // i16x16_t[8]
     _t v_;
 
-    constexpr void add(Nnue::FeatureIndex fi) {
+    constexpr void move(Nnue::FeatureIndex from, Nnue::FeatureIndex to) {
         for (auto i : range<Index>()) {
             #if USE_AVX2
-                v_[i] = _mm256_adds_epi16(v_[i], nnue.w0[fi][i]);
+                v_[i] = _mm256_adds_epi16(v_[i], nnue.w0[to][i] - nnue.w0[from][i]);
             #else
-                v_[i] += nnue.w0[fi][i];
+                v_[i] += nnue.w0[to][i] - nnue.w0[from][i];
             #endif
         }
     }
 
-    constexpr void sub(Nnue::FeatureIndex fi) {
+    constexpr void capture(Nnue::FeatureIndex from, Nnue::FeatureIndex to, Nnue::FeatureIndex cap) {
         for (auto i : range<Index>()) {
             #if USE_AVX2
-                v_[i] = _mm256_subs_epi16(v_[i], nnue.w0[fi][i]);
+                v_[i] = _mm256_adds_epi16(v_[i], nnue.w0[to][i] - nnue.w0[from][i] - nnue.w0[cap][i]);
             #else
-                v_[i] -= nnue.w0[fi][i];
+                v_[i] += nnue.w0[to][i] - nnue.w0[from][i] - nnue.w0[cap][i];
             #endif
         }
     }
@@ -146,41 +146,51 @@ public:
     constexpr Acc() : v_{} {} // feature biases = 0
 
     static constexpr void flip(Acc& my, Acc& op) {
-        for (auto i : range<Index>()) { std::swap(my.v_[i], op.v_[i]); }
+        for (auto i : range<Index>()) {
+            std::swap(my.v_[i], op.v_[i]);
+        }
     }
 
     constexpr void drop(Side si, PieceType ty, Square to) {
-        add({ si, ty, to });
+        for (auto i : range<Index>()) {
+            #if USE_AVX2
+                v_[i] = _mm256_adds_epi16(v_[i], nnue.w0[{si, ty, to}][i]);
+            #else
+                v_[i] += nnue.w0[{si, ty, to}][i];
+            #endif
+        }
     }
 
     constexpr void move(Side si, PieceType ty, Square from, Square to) {
-        sub({ si, ty, from });
-        add({ si, ty, to });
-    }
-
-    constexpr void castle(Side si, Square kingFrom, Square kingTo, Square rookFrom, Square rookTo) {
-        move(si, King, kingFrom, kingTo);
-        move(si, Rook, rookFrom, rookTo);
-    }
-
-    constexpr void move(Side si, PieceType ty, Square from, Square to, NonKingType captured) {
-        move(si, ty, from, to);
-        sub({~si, captured, to});
-    }
-
-    constexpr void ep(Side si, Square from, Square to, Square ep) {
-        move(si, Pawn, from, to);
-        sub({~si, Pawn, ep});
+        move({si, ty, from}, {si, ty, to});
     }
 
     constexpr void promote(Side si, Square from, PromoType promoted, Square to) {
-        sub({si, Pawn, from});
-        add({si, promoted, to});
+        move({si, Pawn, from}, {si, promoted, to});
+    }
+
+    constexpr void move(Side si, PieceType ty, Square from, Square to, NonKingType captured) {
+        capture({si, ty, from}, {si, ty, to}, {~si, captured, to});
     }
 
     constexpr void promote(Side si, Square from, PromoType promoted, Square to, NonKingType captured) {
-        promote(si, from, promoted, to);
-        sub({~si, captured, to});
+        capture({si, Pawn, from}, {si, promoted, to}, {~si, captured, to});
+    }
+
+    constexpr void ep(Side si, Square from, Square to, Square ep) {
+        capture({si, Pawn, from}, {si, Pawn, to}, {~si, Pawn, ep});
+    }
+
+    constexpr void castle(Side si, Square kingFrom, Square kingTo, Square rookFrom, Square rookTo) {
+        for (auto i : range<Index>()) {
+            auto s1 = nnue.w0[{si, King, kingTo}][i] - nnue.w0[{si, King, kingFrom}][i];
+            auto s2 = nnue.w0[{si, Rook, rookTo}][i] - nnue.w0[{si, Rook, rookFrom}][i];
+            #if USE_AVX2
+                v_[i] = _mm256_adds_epi16(v_[i], s1 + s2);
+            #else
+                v_[i] += s1 + s2;
+            #endif
+        }
     }
 };
 
