@@ -10,7 +10,7 @@ MKDIR := mkdir -p
 
 # Compiler and flags
 CXX ?= clang++
-CXXFLAGS := -MMD -MP -std=c++20 -Wall -Wextra -g -I../../src -O0 -ggdb -DDEBUG -fsanitize=address,undefined
+CXXFLAGS := -MMD -MP -std=c++20 -Wall -Wextra -g -I../../src -I../../ -O0 -ggdb -DDEBUG -fsanitize=address,undefined
 CXXFLAGS += -mavx2
 
 ifeq ($(CXX), clang++)
