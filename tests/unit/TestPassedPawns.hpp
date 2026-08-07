@@ -1,9 +1,6 @@
 #include "Hyperbola.hpp"
 #include "Uci.hpp"
 
-Nnue nnue;
-void Nnue::setEmbeddedEval() {}
-
 constexpr const InBetween inBetween;
 constinit const AttacksFrom attacksFrom;
 constinit const PiOneMask piOneMask;
