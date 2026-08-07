@@ -6,19 +6,67 @@
 #include "Score.hpp"
 
 class Tt {
-    void* memory = nullptr;
-    size_t size_ = 0;
+public:
+    static constexpr size_t minSize() { return 64; }
+    static size_t maxSize() { return ::bit_floor(System::getAvailableMemory()); }
+
+    mutable node_count_t hits = 0;
+    mutable node_count_t reads = 0;
+    mutable node_count_t writes = 0;
+
+    Tt(size_t bytes) { setSize(bytes); }
+    ~Tt() { free(); }
+
+    constexpr size_t size() const { return size_; }
+    void setSize(size_t bytes) { allocate(bytes); zeroFill(); }
+    void newGame() { zeroFill(); }
+    void newSearch() { zeroed_ = false; reads = 0; writes = 0; hits = 0; }
+
+    template <typename T>
+    constexpr T* addr(Z z) const {
+        return static_cast<T*>( addr<sizeof(T)>(z) );
+    }
+
+    template <size_t Align>
+    void* prefetch(Z z) const {
+        auto ptr = addr<Align>(z);
+        __builtin_prefetch(ptr);
+        return ptr;
+    }
+
+    template <typename T>
+    T* prefetch(Z z) const {
+        return static_cast<T*>( prefetch<sizeof(T)>(z) );
+    }
+
+private:
+    void* allocated_{nullptr};
+    size_t size_{0};
+    bool zeroed_{false};
+
+    template <size_t Align>
+    constexpr void* addr(Z z) const {
+        static_assert (::isSingleton(Align));
+        auto mask = (size_-1) ^ (Align-1);
+        return static_cast<void*>( static_cast<char*>(allocated_) + (z & mask) );
+    }
+
+    Tt (const Tt&) = delete;
+    Tt& operator= (const Tt&) = delete;
 
     void free() {
         if (size_) {
-            System::freeAligned(memory);
-            memory = nullptr;
+            System::freeAligned(allocated_);
+            allocated_ = nullptr;
             size_ = 0;
         }
     }
 
     void zeroFill() {
-        std::memset(memory, 0, size_);
+        if (allocated_ && !zeroed_) {
+            std::memset(allocated_, 0, size_);
+            zeroed_ = true;
+        }
     }
 
     void allocate(size_t _bytes) {
@@ -29,74 +77,20 @@ class Tt {
             free();
 
             for (; bytes >= minBytes; bytes >>= 1) {
-                auto ptr = System::allocateAligned(bytes, minBytes);
+                // 2MB align to trigger linux huge page support if possible
+                auto ptr = System::allocateAligned(bytes, std::min<size_t>(bytes, 2*1024*1024));
 
                 if (ptr) {
-                    memory = ptr;
+                    allocated_ = ptr;
                     size_ = bytes;
+                    zeroed_ = false;
                     break;
                 }
             }
         }
 
         assert (bytes == size_);
-        zeroFill();
     }
-
-    template <size_t Align>
-    constexpr uintptr_t mask() const {
-        static_assert (isSingleton(Align));
-        return (size_-1) ^ (Align-1);
-    }
-
-    Tt (const Tt&) = delete;
-    Tt& operator= (const Tt&) = delete;
-public:
-    mutable node_count_t hits = 0;
-    mutable node_count_t reads = 0;
-    mutable node_count_t writes = 0;
-
-    Tt(size_t n = minSize()) { setSize(n); }
-    ~Tt() { free(); }
-
-    constexpr size_t size() const { return size_; }
-
-    // 2MB to trigger linux huge page support if possible
-    static constexpr size_t minSize() { return 2 * 1024 * 1024; }
-
-    // all currently available memory
-    static size_t maxSize() { return ::bit_floor(System::getAvailableMemory()); }
-
-    void setSize(size_t bytes) { allocate(bytes); }
-    void newGame() { zeroFill(); }
-    void newSearch() { reads = 0; writes = 0; hits = 0; }
-
-    template <size_t Align>
-    constexpr void* addr(Z z) const {
-        return static_cast<void*>( static_cast<char*>(memory) + (z & mask<Align>()) );
-    }
-
-    template <typename T>
-    constexpr T* addr(Z z) const {
-        return static_cast<T*>( addr<sizeof(T)>(z) );
-    }
-
-    void prefetch(void* ptr) const {
-        __builtin_prefetch(ptr);
-    }
-
-    template <size_t Align>
-    void* prefetch(Z z) const {
-        auto ptr = addr<Align>(z);
-        prefetch(ptr);
-        return ptr;
-    }
-
-    template <typename T>
-    T* prefetch(Z z) const {
-        return static_cast<T*>( prefetch<sizeof(T)>(z) );
-    }
-
 };
 
 // 8 byte, always replace slot, so no age field, only one score, depth and bound flags

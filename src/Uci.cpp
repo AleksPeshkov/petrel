@@ -1059,8 +1059,9 @@ void Uci::setHash() {
         return;
     }
 
-    io::char_type unit{'m'};
+    io::char_type unit{'m'}; // default is megabytes
     inputLine >> unit;
+    inputLine.clear();
 
     switch (std::tolower(unit)) {
         case 't':
@@ -1085,7 +1086,6 @@ void Uci::setHash() {
     }
 
     tt.setSize(quantity);
-    newGame();
 }
 
 void Uci::ucinewgame() {
