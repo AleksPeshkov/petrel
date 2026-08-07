@@ -646,7 +646,8 @@ ReturnStatus Node::searchNullMove() {
     currentMove = {};
     child().childNullMove();
 
-    return negamax(4_ply + (depth-2_ply)/4);
+    Ply R{(beta <= cEval - 400_cp)};
+    return negamax(4_ply + (depth-2_ply)/4 + R);
 }
 
 void Node::childNullMove() {
