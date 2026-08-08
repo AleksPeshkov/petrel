@@ -386,21 +386,21 @@ ReturnStatus Node::search() {
     } else {
         RETURN_CUTOFF (searchIfPossible(killers[0]));
 
-        bool deepHistory{ depth > ply };
+        bool isDeep{ depth > ply };
         if (counterMove().any()) {
-            RETURN_CUTOFF (contMove(deepHistory ? DeepCounterMove : CounterMove, counterMove())); // ply-1
+            RETURN_CUTOFF (contMove(isDeep ? DeepCounter : Counter, counterMove())); // ply-1
         }
         if (followupMove().any()) {
-            RETURN_CUTOFF (contMove(deepHistory ? DeepFollowupMove : FollowupMove, followupMove())); // ply-2
+            RETURN_CUTOFF (contMove(isDeep ? DeepFollowup : Followup, followupMove())); // ply-2
         }
 
         RETURN_CUTOFF (searchIfPossible(killers[1]));
 
         if (counterMove().any()) {
-            RETURN_CUTOFF (contMove(CounterMove, counterMove())); // ply-1
+            RETURN_CUTOFF (contMove(Counter, counterMove())); // ply-1
         }
         if (followupMove().any()) {
-            RETURN_CUTOFF (contMove(FollowupMove, followupMove())); // ply-2
+            RETURN_CUTOFF (contMove(Followup, followupMove())); // ply-2
         }
     }
 
@@ -740,21 +740,21 @@ void Node::saveHistory() {
 
     if (!hasParent()) { return; } // ply-1
 
-    bool deepHistory{ depth > ply };
+    bool isDeep{ depth > ply };
 
     if (counterMove().any()) {
-        The_uci.contMoves.set(CounterMove, colorToMove(), counterMove(), bestMove);
-        if (deepHistory) {
-            The_uci.contMoves.set(DeepCounterMove, colorToMove(), counterMove(), bestMove);
+        The_uci.contMoves.set(Counter, colorToMove(), counterMove(), bestMove);
+        if (isDeep) {
+            The_uci.contMoves.set(DeepCounter, colorToMove(), counterMove(), bestMove);
         }
     }
 
     if (!hasGrandParent()) { return; } // ply-2
     insert_unique_pos<1>(grandParent().killers, bestMove);
     if (followupMove().any()) {
-        The_uci.contMoves.set(FollowupMove, colorToMove(), followupMove(), bestMove);
-        if (deepHistory) {
-            The_uci.contMoves.set(DeepFollowupMove, colorToMove(), followupMove(), bestMove);
+        The_uci.contMoves.set(Followup, colorToMove(), followupMove(), bestMove);
+        if (isDeep) {
+            The_uci.contMoves.set(DeepFollowup, colorToMove(), followupMove(), bestMove);
         }
     }
 }
