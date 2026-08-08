@@ -87,17 +87,6 @@ ReturnStatus SearchLimits::updateTimeStrategy(const PrincipalVariation& pv) {
     return lastDeadlineReached();
 }
 
-void Node::saveNode() {
-    assert (bestMove.none() || isPseudoLegal(bestMove));
-    assert (score.isOk(ply));
-
-    if (depth > 0_ply) {
-        assert (tt);
-        *tt = TtEntry{ z(), score, ply, bound, depth, bestMove.ttMove() };
-        ++The_uci.tt.writes;
-    }
-}
-
 void Node::clearNode() {
     assert (hasParent());
     pvPly = parent().isPv() ? ply : parent().pvPly;
@@ -249,72 +238,51 @@ ReturnStatus Node::search() {
         }
     }
 
-    {
-        auto ttHit{false};
-        do {
-            if (depth == 0_ply) {
-                ttHit = false;
+    // lookup Transposition Table
+    do {
+        assert (eval.none());
+        assert (score.none());
+        assert (bestMove.none());
+        if (depth == 0_ply) { break; }
+
+        ++The_uci.tt.reads;
+        auto ttEntry = *tt; // copy full TT entry
+        if (ttEntry != z() || ttEntry.none()) { break; }
+
+        if (ttEntry.ttMove().any()) {
+            auto ttMove = ttEntry.ttMove();
+            if (!isPossibleMove(ttMove.from(), ttMove.to())) {
                 break;
             }
-
-            ++The_uci.tt.reads;
-            auto ttEntry = *tt; // copy full TT entry
-
-            ttHit = (ttEntry == z());
-            if (!ttHit) {
-                break;
-            }
-
-            Bound ttBound = ttEntry.bound();
-            Score ttScore = ttEntry.score(ply);
-            if (ttScore.none()) {
-                // cleared TT or collision
-                ttHit = false;
-                break;
-            }
-
-            if (ttEntry.ttMove().any()) {
-                auto ttMove = ttEntry.ttMove();
-                if (!isPossibleMove(ttMove.from(), ttMove.to())) {
-                    // unlikely collision
-                    ttHit = false;
-                    assert (bestMove.none());
-                    break;
-                }
-                bestMove = toMove(ttMove);
-            }
-            assert (bestMove.none() || isPossibleMove(bestMove));
-
-            ++The_uci.tt.hits;
-
-            if (!isPv() && depth <= ttEntry.draft()) {
-                if (ttBound == ExactScore
-                    || (ttBound == FailHigh && beta <= ttScore)
-                    || (ttBound == FailLow && ttScore <= alpha)
-                ) {
-                    score = ttScore;
-                    bound = ttBound;
-                    return ReturnStatus::Cutoff;
-                }
-            }
-
-            if (!inCheck()) {
-                eval = evaluate();
-                if (ttScore.isEval() &&
-                    (ttBound == ExactScore
-                        || (ttBound == FailHigh && eval <= ttScore)
-                        || (ttBound == FailLow && ttScore <= eval)
-                    )
-                ) {
-                    eval = ttScore;
-                }
-            }
-        } while(false);
-        if (!ttHit && !inCheck()) {
-            eval = evaluate();
+            bestMove = toMove(ttMove);
         }
-    }
+        assert (bestMove.none() || isPossibleMove(bestMove));
 
+        ++The_uci.tt.hits;
+        Score ttScore = ttEntry.score().fromTt(ply);
+        Bound ttBound = ttEntry.bound(); assert (ttBound != NoBound);
+
+        if (!isPv() && depth <= ttEntry.draft() && (ttBound == ExactScore
+            || (ttBound == FailHigh && beta <= ttScore)
+            || (ttBound == FailLow && ttScore <= alpha)
+        )) {
+            score = ttScore;
+            bound = ttBound;
+            return ReturnStatus::Cutoff;
+        }
+
+        if (!inCheck()) {
+            eval = evaluate();
+            if (ttScore.isEval() && (ttBound == ExactScore
+                || (ttBound == FailHigh && eval <= ttScore)
+                || (ttBound == FailLow && ttScore <= eval)
+            )) {
+                eval = ttScore;
+            }
+        }
+    } while(false);
+
+    if (eval.none() && !inCheck()) { eval = evaluate(); }
     assert ((inCheck() && eval.none()) || (!inCheck() && eval.isEval()));
 
     if (ply == MaxPly) {
@@ -602,9 +570,6 @@ ReturnStatus Node::quiescence() {
     assert (child().alpha == -beta);
     assert (child().beta == -alpha);
 
-    assert (child().alpha == -beta);
-    assert (child().beta == -alpha);
-
     // impossible to capture the king, do not even try to save time
     return goodCaptures(OP.nonKing());
 }
@@ -723,6 +688,17 @@ constexpr Move Node::followupMove() const {
     return hasGrandParent() ? grandParent().currentMove : Move{};
 }
 
+void Node::saveNode() {
+    assert (bestMove.none() || isPseudoLegal(bestMove));
+    assert (score.isOk(ply));
+    assert (tt);
+
+    if (depth == 0_ply) { return; }
+
+    *tt = TtEntry{ z(), score.tt(ply), bound, depth, bestMove.ttMove() };
+    ++The_uci.tt.writes;
+}
+
 void Node::saveHistory() {
     saveNode();
 
@@ -833,7 +809,7 @@ void savePv(const PositionMoves& p, const PrincipalVariation& pv, const Tt& tt) 
         assert ((pos.generateMoves(), pos.isPossibleMove(move)));
 
         auto* o = tt.addr<TtEntry>(pos.z());
-        *o = TtEntry{pos.z(), score, ply, ExactScore, depth, move.ttMove()};
+        *o = TtEntry{pos.z(), score.tt(ply), ExactScore, depth, move.ttMove()};
         ++tt.writes;
 
         //we cannot use makeZobrist() because of en passant legality validation

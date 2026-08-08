@@ -105,10 +105,10 @@ class TtEntry {
         ShiftScore = 0,
         ShiftBound = ShiftScore + Score::bit_width(),
         ShiftDraft = ShiftBound + 2,
-        ShiftTo = ShiftDraft + Ply::bit_width(),
+        ShiftMove = ShiftDraft + Ply::bit_width(),
+        ShiftTo = ShiftMove,
         ShiftFrom = ShiftTo + Square::bit_width(),
         ShiftKiller = ShiftFrom + Square::bit_width(),
-        ShiftMove = ShiftTo,
         TotalBits = ShiftKiller + 1, // total size of all data fields
         ZBits = 64 - TotalBits, // size of zobrist bitfield
     };
@@ -140,28 +140,29 @@ public:
 
     constexpr TtEntry (Z z,
         Score _score,
-        Ply _ply,
         Bound _bound,
         Ply _draft,
         TtMove _ttMove
     ) : v_{
         (z & ZMask)
-        | _score.tt(_ply).pack<_t>(ShiftScore)
+        | _score.pack<_t>(ShiftScore)
         | pack<_t>(_bound, ShiftBound)
         | _draft.pack<_t>(ShiftDraft)
         | pack<_t>(*_ttMove, ShiftMove)
     } {
         static_assert (sizeof(TtEntry) == sizeof(u64_t));
 
-        assert (score(_ply) == _score);
+        assert (score() == _score);
         assert (bound() == _bound);
         assert (draft() == _draft);
         assert (ttMove() == _ttMove);
     }
 
+    constexpr bool none() const { return v_ == 0; }
+    constexpr bool any() const { return !none(); }
     constexpr bool operator == (Z z) const { return (v_ & ZMask) == (z & ZMask); }
 
-    constexpr Score score(Ply ply) const { return Score::unpack(v_, ShiftScore).fromTt(ply); }
+    constexpr Score score() const { return Score::unpack(v_, ShiftScore); }
     constexpr Bound bound() const { return ::unpack(v_, ShiftBound, BoundMask); }
     constexpr Ply draft() const { return Ply::unpack(v_, ShiftDraft); }
     constexpr TtMove ttMove() const { return TtMove{::unpack(v_, ShiftMove, TtMove::mask())}; }

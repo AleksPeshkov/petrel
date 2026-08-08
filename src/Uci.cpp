@@ -1156,7 +1156,7 @@ void Uci::setPositionMoves() {
 
         Score score{NoScore};
         if (ttEntry.bound() == ExactScore) {
-            score = ttEntry.score(0_ply);
+            score = ttEntry.score();
         }
 
         pv.set(position_.toMove(ttMove), score);
