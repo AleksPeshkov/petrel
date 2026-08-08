@@ -1147,16 +1147,16 @@ void Uci::setPositionMoves() {
     }
 
     do {
-        auto ttSlot = *tt.addr<TtSlot>(position_.z());
-        if (ttSlot != position_.z()) { break; }
+        auto ttEntry = *tt.addr<TtEntry>(position_.z());
+        if (ttEntry != position_.z()) { break; }
 
-        auto ttMove = ttSlot.ttMove();
+        auto ttMove = ttEntry.ttMove();
         if (ttMove.none()) { break; }
         if (!position_.isPossibleMove(ttMove.from(), ttMove.to())) { break; }
 
         Score score{NoScore};
-        if (ttSlot.bound() == ExactScore) {
-            score = ttSlot.score(0_ply);
+        if (ttEntry.bound() == ExactScore) {
+            score = ttEntry.score(0_ply);
         }
 
         pv.set(position_.toMove(ttMove), score);

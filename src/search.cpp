@@ -93,7 +93,7 @@ void Node::saveNode() {
 
     if (depth > 0_ply) {
         assert (tt);
-        *tt = TtSlot{ z(), score, ply, bound, depth, bestMove.ttMove() };
+        *tt = TtEntry{ z(), score, ply, bound, depth, bestMove.ttMove() };
         ++The_uci.tt.writes;
     }
 }
@@ -258,23 +258,23 @@ ReturnStatus Node::search() {
             }
 
             ++The_uci.tt.reads;
-            auto ttSlot = *tt; // copy full TT entry
+            auto ttEntry = *tt; // copy full TT entry
 
-            ttHit = (ttSlot == z());
+            ttHit = (ttEntry == z());
             if (!ttHit) {
                 break;
             }
 
-            Bound ttBound = ttSlot.bound();
-            Score ttScore = ttSlot.score(ply);
+            Bound ttBound = ttEntry.bound();
+            Score ttScore = ttEntry.score(ply);
             if (ttScore.none()) {
                 // cleared TT or collision
                 ttHit = false;
                 break;
             }
 
-            if (ttSlot.ttMove().any()) {
-                auto ttMove = ttSlot.ttMove();
+            if (ttEntry.ttMove().any()) {
+                auto ttMove = ttEntry.ttMove();
                 if (!isPossibleMove(ttMove.from(), ttMove.to())) {
                     // unlikely collision
                     ttHit = false;
@@ -287,7 +287,7 @@ ReturnStatus Node::search() {
 
             ++The_uci.tt.hits;
 
-            if (!isPv() && depth <= ttSlot.draft()) {
+            if (!isPv() && depth <= ttEntry.draft()) {
                 if (ttBound == ExactScore
                     || (ttBound == FailHigh && beta <= ttScore)
                     || (ttBound == FailLow && ttScore <= alpha)
@@ -667,7 +667,7 @@ ReturnStatus Node::searchNullMove() {
 void Node::childNullMove() {
     makeNullMove(parent());
     childZHash = {};
-    tt = The_uci.tt.prefetch<TtSlot>(z());
+    tt = The_uci.tt.prefetch<TtEntry>(z());
 }
 
 ReturnStatus Node::searchMove(Move move, Ply R) {
@@ -689,7 +689,7 @@ ReturnStatus Node::searchMove(Move move, Ply R) {
 
 void Node::childMove(Square from, Square to) {
     bool shouldResetZHash = makeMove(parent(), from, to, parent().childZHash, [&](Z z) {
-        tt = The_uci.tt.prefetch<TtSlot>(z);
+        tt = The_uci.tt.prefetch<TtEntry>(z);
     });
 
     childZHash = ply <= 1_ply || shouldResetZHash ? ZHash{} : ZHash{parent().zHash(), parent().z()};
@@ -832,8 +832,8 @@ void savePv(const PositionMoves& p, const PrincipalVariation& pv, const Tt& tt) 
         assert (pos.isPseudoLegal(move));
         assert ((pos.generateMoves(), pos.isPossibleMove(move)));
 
-        auto* o = tt.addr<TtSlot>(pos.z());
-        *o = TtSlot{pos.z(), score, ply, ExactScore, depth, move.ttMove()};
+        auto* o = tt.addr<TtEntry>(pos.z());
+        *o = TtEntry{pos.z(), score, ply, ExactScore, depth, move.ttMove()};
         ++tt.writes;
 
         //we cannot use makeZobrist() because of en passant legality validation
@@ -851,7 +851,7 @@ ReturnStatus Node::searchRoot(const PositionMoves& pos) {
     killers = {};
 
     for (depth = 1_ply; depth.isOk(); ++depth) {
-        tt = The_uci.tt.prefetch<TtSlot>(z());
+        tt = The_uci.tt.prefetch<TtEntry>(z());
         alpha = Score{MateLoss};
         beta = Score{MateWin};
 

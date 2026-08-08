@@ -93,8 +93,8 @@ private:
     }
 };
 
-// 8 byte, always replace slot, so no age field, only one score, depth and bound flags
-class TtSlot {
+// 8 byte, always replace strategy, so no age field, only one score, depth and bound flags
+class TtEntry {
     enum {
         ShiftScore = 0,
         ShiftBound = ShiftScore + Score::bit_width(),
@@ -130,9 +130,9 @@ class TtSlot {
     static constexpr _t ZMask{ U64(0xffff'ffff'ffff'ffff) << (64 - ZBits) };
 
 public:
-    constexpr TtSlot () : v_{0} {}
+    constexpr TtEntry () : v_{0} {}
 
-    constexpr TtSlot (Z z,
+    constexpr TtEntry (Z z,
         Score _score,
         Ply _ply,
         Bound _bound,
@@ -145,7 +145,7 @@ public:
         | _draft.pack<_t>(ShiftDraft)
         | pack<_t>(*_ttMove, ShiftMove)
     } {
-        static_assert (sizeof(TtSlot) == sizeof(u64_t));
+        static_assert (sizeof(TtEntry) == sizeof(u64_t));
 
         assert (score(_ply) == _score);
         assert (bound() == _bound);
