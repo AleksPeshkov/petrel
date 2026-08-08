@@ -193,6 +193,7 @@ ReturnStatus Node::negamax(Ply R) {
 ReturnStatus Node::search() {
     baseR = depth / 8;
     eval  = {};
+    cEval = {};
     score = {};
     bound = FailLow;
     currentMove = {};
@@ -241,6 +242,7 @@ ReturnStatus Node::search() {
     // lookup Transposition Table
     do {
         assert (eval.none());
+        assert (cEval.none());
         assert (score.none());
         assert (bestMove.none());
         if (depth == 0_ply) { break; }
@@ -277,27 +279,30 @@ ReturnStatus Node::search() {
             return ReturnStatus::Cutoff;
         }
 
-        if (!inCheck() && ttScore.isEval()) {
-            if (ttBound.is(ExactBound)) {
-                eval = ttScore;
+        if (!inCheck()) [[likely]] {
+            // reuse saved eval
+            eval = ttEntry.eval();
+            assert (eval.isEval());
+            //assert (eval == evaluate()); // undetected collision
+
+            if (ttScore.isEval() && (ttBound.is(ExactBound)
+                || (ttBound.is(FailHigh) && eval <= ttScore)
+                || (ttBound.is(FailLow) && ttScore <= eval)
+            )) {
+                cEval = ttScore;
             } else {
-                eval = evaluate();
-                if ((ttBound.is(FailHigh) && eval <= ttScore) ||
-                    (ttBound.is(FailLow) && ttScore <= eval)
-                ) {
-                    eval = ttScore;
-                }
+                cEval = eval;
             }
         }
     } while(false);
 
-    if (eval.none() && !inCheck()) { eval = evaluate(); }
+    if (eval.none() && !inCheck()) { cEval = eval = evaluate(); }
     assert ((inCheck() && eval.none()) || (!inCheck() && eval.isEval()));
     assert (bestMove.none() || isPossibleMove(bestMove));
 
     if (ply == MaxPly) {
         // no room to search deeper
-        score = inCheck() ? Score::mateLoss(ply) : eval;
+        score = inCheck() ? Score::mateLoss(ply) : cEval;
         assert (currentMove.none());
         return ReturnStatus::Continue;
     }
@@ -317,14 +322,14 @@ ReturnStatus Node::search() {
     if (!isPv() && !inCheck()) {
         if (depth <= 3_ply) {
             auto delta = (depth == 1_ply) ? 50_cp : (depth == 2_ply) ? 150_cp : 200_cp;
-            if (Score{MinEval} <= beta && beta <= eval-delta) {
+            if (Score{MinEval} <= beta && beta <= cEval-delta) {
                 // Static Null Move Pruning (Reverse Futility Pruning)
-                score = eval;
+                score = cEval;
                 assert (currentMove.none());
                 return ReturnStatus::Cutoff;
             } else {
                 delta = (depth == 1_ply) ? 50_cp : (depth == 2_ply) ? 250_cp : 350_cp;
-                if (eval+delta < alpha && alpha <= Score{MaxEval}) {
+                if (cEval+delta < alpha && alpha <= Score{MaxEval}) {
                     // Razoring
                     return quiescence();
                 }
@@ -335,7 +340,7 @@ ReturnStatus Node::search() {
         if (
             depth >= 2_ply // overhead higher then gain at very low depth
             && MY.material().canNullMove() // avoid null move in late endgame
-            && Score{MinEval} <= beta && beta <= eval
+            && Score{MinEval} <= beta && beta <= cEval
         ) {
             RETURN_CUTOFF (searchNullMove());
         }
@@ -567,7 +572,7 @@ ReturnStatus Node::quiescence() {
     assert (!inCheck());
 
     // stand pat
-    score = eval;
+    score = cEval;
     if (beta <= score) {
         assert (currentMove.none());
         return ReturnStatus::Cutoff;
@@ -700,12 +705,13 @@ constexpr Move Node::followupMove() const {
 
 void Node::saveNode() {
     assert (bestMove.none() || isPseudoLegal(bestMove));
+    assert ((inCheck() && eval.none()) || (!inCheck() && eval.isEval() /*&& eval == evaluate()*/));
     assert (score.isOk(ply));
     assert (tt);
 
     if (depth == 0_ply) { return; }
 
-    *tt = TtEntry{ z(), score.tt(ply), bound, depth, bestMove.ttMove() };
+    *tt = TtEntry{ z(), eval, score.tt(ply), bound, depth, bestMove.ttMove() };
     ++The_uci.tt.writes;
 }
 

@@ -14,6 +14,7 @@ protected:
     Ply baseR{0}; // base R (depth reduction), same for all child moves
 
     Score eval{}; // static evaluation of the current position
+    Score cEval{}; // corrected static evaluation of the current position
     Score score{}; // best score found, alpha <= score < beta
     Score alpha{MateLoss}; // alpha-beta window lower margin
     Score beta{MateWin}; // alpha-beta window upper margin
