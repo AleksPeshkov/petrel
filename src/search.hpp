@@ -4,7 +4,7 @@
 #include "history.hpp"
 #include "PositionMoves.hpp"
 
-class TtSlot;
+class TtEntry;
 
 class Node : public PositionMoves {
 protected:
@@ -24,7 +24,7 @@ protected:
     std::array<Move, 2> killers{}; // Killer heuristic
 
     PrincipalVariation::Index pvIndex{0}; // start of subPV for the current ply
-    TtSlot* tt{nullptr}; // pointer to the slot in TT
+    TtEntry* tt{nullptr}; // pointer to the TT entry
     ZHash childZHash; // updated from parent or reset caused by currentMove
 
     void clearNode(); // prepare empty node
