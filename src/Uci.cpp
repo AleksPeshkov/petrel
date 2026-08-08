@@ -1147,10 +1147,11 @@ void Uci::setPositionMoves() {
     }
 
     do {
-        auto ttEntry = *tt.addr<TtEntry>(position_.z());
-        if (ttEntry != position_.z()) { break; }
+        auto z = position_.z();
+        auto ttEntry = *tt.addr<TtEntry>(z);
+        if (ttEntry != z || ttEntry.none()) { break; }
 
-        auto ttMove = ttEntry.ttMove();
+        auto ttMove = ttEntry.ttMove(z);
         if (ttMove.none()) { break; }
         if (!position_.isPossibleMove(ttMove.from(), ttMove.to())) { break; }
 

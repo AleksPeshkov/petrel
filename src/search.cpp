@@ -249,8 +249,8 @@ ReturnStatus Node::search() {
         auto ttEntry = *tt; // copy full TT entry
         if (ttEntry != z() || ttEntry.none()) { break; }
 
-        if (ttEntry.ttMove().any()) {
-            auto ttMove = ttEntry.ttMove();
+        if (ttEntry.ttMove(z()).any()) {
+            auto ttMove = ttEntry.ttMove(z());
             if (!isPossibleMove(ttMove.from(), ttMove.to())) {
                 break;
             }
