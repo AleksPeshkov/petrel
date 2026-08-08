@@ -148,9 +148,6 @@ protected:
     void makeMovePerft(const Position&, Square, Square);
     void makeMovePerft(const Position&, Square, Square, auto&& prefetch);
 
-    // make move directly inside position itself
-    void makeMove(Square, Square);
-
     // update the position and its zobrist hash, return flag to reset child ZHash
     bool makeMove(const Position&, Square, Square, ZHash, auto&& prefetch);
     void makeNullMove(const Position&);
@@ -170,8 +167,8 @@ public:
     // position static evaluation
     Score evaluate() const;
 
-    // update the position inside itself and its zobrist hash, but not NNUE accumulators
-    void makeMoveNoEval(Square, Square);
+    // make move directly inside position itself
+    void makeMove(Square, Square);
 
     // [0..6] startpos = 6, queens exchanged = 4, R vs R endgame = 1
     constexpr auto gamePhase() const { return Material::gamePhase(MY.material(), OP.material()); }

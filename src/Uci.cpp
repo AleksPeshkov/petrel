@@ -1180,14 +1180,16 @@ void Uci::savePv() {
     for (Move move; (move = *pvMoves++).any();) {
         assert (score.isOk(ply));
         assert (pos.isPseudoLegal(move));
-        assert ((pos.generateMoves(), pos.isPossibleMove(move)));
+
+        pos.generateMoves();
+        assert (pos.isPossibleMove(move));
+        auto eval = pos.inCheck() ? Score{} : pos.evaluate();
 
         auto* o = The_transpositionTable.addr<TtEntry>(pos.z());
-        *o = TtEntry{pos.z(), score.tt(ply), ExactBound, depth, move.ttMove()};
+        *o = TtEntry{pos.z(), eval, score.tt(ply), ExactBound, depth, move.ttMove()};
         ++The_transpositionTable.writes;
 
-        //we cannot use makeZobrist() because of en passant legality validation
-        pos.makeMoveNoEval(move.from(), move.to());
+        pos.makeMove(move.from(), move.to());
         score = -score;
         depth = depth - 1_ply;
         ply = ply + 1_ply;
