@@ -245,8 +245,7 @@ ReturnStatus Node::search() {
         assert (bestMove.none());
         if (depth == 0_ply) { break; }
 
-        ++The_uci.tt.reads;
-        auto ttEntry = *tt; // copy full TT entry
+        auto ttEntry = TtEntry::read(tt); // copy full TT entry
         if (ttEntry != z() || ttEntry.none()) { break; }
 
         if (ttEntry.ttMove(z()).any()) {
@@ -258,7 +257,7 @@ ReturnStatus Node::search() {
         }
         assert (bestMove.none() || isPossibleMove(bestMove));
 
-        ++The_uci.tt.hits;
+        ++The_transpositionTable.hits;
         Score ttScore = ttEntry.score().fromTt(ply);
         Bound ttBound = ttEntry.bound(); assert (ttBound.any());
 
@@ -632,7 +631,7 @@ ReturnStatus Node::searchNullMove() {
 void Node::childNullMove() {
     makeNullMove(parent());
     childZHash = {};
-    tt = The_uci.tt.prefetch<TtEntry>(z());
+    tt = The_transpositionTable.prefetch<TtEntry>(z());
 }
 
 ReturnStatus Node::searchMove(Move move, Ply R) {
@@ -654,7 +653,7 @@ ReturnStatus Node::searchMove(Move move, Ply R) {
 
 void Node::childMove(Square from, Square to) {
     bool shouldResetZHash = makeMove(parent(), from, to, parent().childZHash, [&](Z z) {
-        tt = The_uci.tt.prefetch<TtEntry>(z);
+        tt = The_transpositionTable.prefetch<TtEntry>(z);
     });
 
     childZHash = ply <= 1_ply || shouldResetZHash ? ZHash{} : ZHash{parent().zHash(), parent().z()};
@@ -691,12 +690,11 @@ constexpr Move Node::followupMove() const {
 void Node::saveNode() {
     assert (bestMove.none() || isPseudoLegal(bestMove));
     assert (score.isOk(ply));
-    assert (tt);
 
     if (depth == 0_ply) { return; }
 
-    *tt = TtEntry{ z(), score.tt(ply), bound, depth, bestMove.ttMove() };
-    ++The_uci.tt.writes;
+    TtEntry ttEntry{ z(), score.tt(ply), bound, depth, bestMove.ttMove() };
+    ttEntry.write(tt);
 }
 
 void Node::saveHistory() {
@@ -799,7 +797,7 @@ ReturnStatus Node::searchRoot(const PositionMoves& pos) {
     killers = {};
 
     for (depth = 1_ply; depth.isOk(); ++depth) {
-        tt = The_uci.tt.prefetch<TtEntry>(z());
+        tt = The_transpositionTable.prefetch<TtEntry>(z());
         alpha = Score{MateLoss};
         beta = Score{MateWin};
 
@@ -811,7 +809,9 @@ ReturnStatus Node::searchRoot(const PositionMoves& pos) {
 
         The_uci.info_pv();
         setMoves(The_uci.moves()); // refresh moves for next iteration
-        The_uci.savePv();
+
+        // refresh PV in TT in case it was overwritten
+        if (The_uci.limits.getNodes() > 1'000000) { The_uci.savePv(); }
     }
 
     return ReturnStatus::Continue;

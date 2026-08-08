@@ -4,6 +4,7 @@
 #include "Hyperbola.hpp"
 #include "PiMask.hpp"
 #include "Score.hpp"
+#include "Tt.hpp"
 #include "Uci.hpp"
 
 /**
@@ -17,8 +18,11 @@ constinit const PiOneMask piOneMask; // 256
 constinit const CastlingRules castlingRules; // 128
 constinit const PieceCountTable pieceCountTable; // 48 6*8
 
+// global TT instance
+Tt The_transpositionTable{64 * 1024 * 1024};
+
 // global Uci instance
-Uci The_uci(std::cout);
+Uci The_uci{std::cout};
 
 void io::error(std::string_view message) {
     The_uci.error(message);

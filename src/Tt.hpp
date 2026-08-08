@@ -1,6 +1,7 @@
 #ifndef TT_HPP
 #define TT_HPP
 
+#include <atomic>
 #include "System.hpp"
 #include "Index.hpp"
 #include "Score.hpp"
@@ -92,6 +93,7 @@ private:
         assert (bytes == size_);
     }
 };
+extern Tt The_transpositionTable;
 
 // 8 byte, always replace strategy, so no age field, only one score, depth and bound flags
 class TtEntry {
@@ -154,6 +156,17 @@ public:
     constexpr Bound bound() const { return Bound::unpack(v_, ShiftBound); }
     constexpr Ply draft() const { return Ply::unpack(v_, ShiftDraft); }
     constexpr TtMove ttMove(Z z) const { return TtMove::unpack(v_ ^ +z, ShiftMove); }
+
+    static TtEntry read(TtEntry* tt) {
+        ++The_transpositionTable.reads;
+        return std::bit_cast<TtEntry>(std::bit_cast<std::atomic<u64_t>*>(tt)->load(std::memory_order_relaxed));
+    }
+
+    TtEntry& write(TtEntry* tt) const {
+        std::bit_cast<std::atomic<u64_t>*>(tt)->store(this->v_, std::memory_order_relaxed);
+        ++The_transpositionTable.writes;
+        return const_cast<TtEntry&>(*this);
+    }
 };
 
 #endif

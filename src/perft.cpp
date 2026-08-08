@@ -317,16 +317,16 @@ ReturnStatus NodePerft::visitMove(Square from, Square to) {
         default: {
             assert (depth >= 2_ply);
             RETURN_IF_STOP (The_uci.limits.countNode());
-            makeMovePerft(parent, from, to, [&](Z z){ The_uci.tt.prefetch<64>(z); });
+            makeMovePerft(parent, from, to, [&](Z z){ The_transpositionTable.prefetch<64>(z); });
             parent.clearMove(from, to);
             generateMoves();
 
-            perft = static_cast<TtPerft&>(The_uci.tt).get(z(), depth - 2_ply);
+            perft = static_cast<TtPerft&>(The_transpositionTable).get(z(), depth - 2_ply);
 
             if (perft == NodeCountNone) {
                 perft = 0;
                 RETURN_IF_STOP(visit());
-                static_cast<TtPerft&>(The_uci.tt).set(z(), depth - 2_ply, perft);
+                static_cast<TtPerft&>(The_transpositionTable).set(z(), depth - 2_ply, perft);
             }
         }
     }

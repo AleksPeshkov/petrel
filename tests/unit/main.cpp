@@ -6,7 +6,8 @@
 #include "Uci.hpp"
 
 /* mocks */
-Uci The_uci(std::cout);
+Tt The_transpositionTable{1 * 1024 * 1024};
+Uci The_uci{std::cout};
 
 void io::error(std::string_view) {}
 
