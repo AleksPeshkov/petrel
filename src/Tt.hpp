@@ -1,13 +1,45 @@
 #ifndef TT_HPP
 #define TT_HPP
 
+#include <atomic>
 #include "System.hpp"
 #include "Index.hpp"
 #include "Score.hpp"
 
+// Valid age is [1, 2, 3]
+class TtAge {
+public:
+    using _t = unsigned;
+
+    static constexpr int bit_width() { return 2; }
+    static constexpr _t mask() { return singleton(bit_width()) - 1u; }
+
+    constexpr TtAge () : v_{1} {}
+    constexpr void nextAge() { v_ = next().v_; }
+
+    constexpr bool none() const { return v_ == 0; }
+    constexpr bool any() const { return !none(); }
+
+    constexpr bool is(TtAge age) const { return v_ == age.v_; }
+    constexpr bool isOld(TtAge age) const { return !is(age) && !is(age.next()); }
+
+    template <typename P, typename S>
+    constexpr P pack(S shift) { return ::pack<P>(v_, shift); }
+
+    template <typename T, typename S>
+    static constexpr TtAge unpack(T packed, S shift) { return TtAge{::unpack(packed, shift, mask())}; }
+
+private:
+    _t v_;
+
+    constexpr explicit TtAge (_t v) : v_{v} { assert (v <= mask()); }
+    constexpr TtAge next() const { return v_ == mask() ? TtAge{} : TtAge{v_ + 1}; }
+};
+
 class Tt {
     void* memory = nullptr;
     size_t size_ = 0;
+    TtAge age;
 
     void free() {
         if (size_) {
@@ -68,8 +100,15 @@ public:
     static size_t maxSize() { return ::bit_floor(System::getAvailableMemory()); }
 
     void setSize(size_t bytes) { allocate(bytes); }
-    void newGame() { zeroFill(); }
+    void newGame() { zeroFill(); age = {}; }
     void newSearch() { reads = 0; writes = 0; hits = 0; }
+
+    template <typename P, typename S>
+    constexpr P packAge(S shift) { return age.pack<P>(shift); }
+
+    constexpr void nextAge() { age.nextAge(); }
+    constexpr bool isAge(TtAge a) const { return age.is(a); }
+    constexpr bool isOld(TtAge a) const { return age.isOld(a); }
 
     template <size_t Align>
     constexpr void* addr(Z z) const {
@@ -98,36 +137,7 @@ public:
     }
 
 };
-
-// Valid age is [1, 2, 3]
-class TtAge {
-public:
-    using _t = unsigned;
-
-    static constexpr int bit_width() { return 2; }
-    static constexpr _t mask() { return singleton(bit_width()) - 1u; }
-
-    constexpr TtAge () : v_{1} {}
-    constexpr void nextAge() { v_ = next().v_; }
-
-    constexpr bool none() const { return v_ == 0; }
-    constexpr bool any() const { return !none(); }
-
-    constexpr bool is(TtAge age) const { return v_ == age.v_; }
-    constexpr bool isOld(TtAge age) const { return !is(age) && !is(age.next()); }
-
-    template <typename P, typename S>
-    constexpr P pack(S shift) { return ::pack<P>(v_, shift); }
-
-    template <typename T, typename S>
-    static constexpr TtAge unpack(T packed, S shift) { return TtAge{::unpack(packed, shift, mask())}; }
-
-private:
-    _t v_;
-
-    constexpr explicit TtAge (_t v) : v_{v} { assert (v <= mask()); }
-    constexpr TtAge next() const { return v_ == mask() ? TtAge{} : TtAge{v_ + 1}; }
-};
+extern Tt The_transpositionTable;
 
 // 8 byte
 class TtEntry {
@@ -172,22 +182,21 @@ public:
         Score _score,
         Bound _bound,
         Ply _draft,
-        TtMove _ttMove,
-        TtAge _age
+        TtMove _ttMove
     ) : v_{
         (((static_cast<_t>(+_ttMove) << ShiftMove) ^ +z) & MoveZMask)
         | _eval.pack<_t>(ShiftEval)
         | _score.pack<_t>(ShiftScore)
         | _bound.pack<_t>(ShiftBound)
         | _draft.pack<_t>(ShiftDraft)
-        | _age.pack<_t>(ShiftAge)
+        | The_transpositionTable.packAge<_t>(ShiftAge)
     } {
         static_assert (sizeof(TtEntry) == sizeof(u64_t));
 
         assert (score() == _score);
         assert (bound().is(_bound));
         assert (draft() == _draft);
-        assert (age().is(_age));
+        assert (The_transpositionTable.isAge(age()));
         assert (ttMove(z) == _ttMove);
     }
 
@@ -202,9 +211,21 @@ public:
     constexpr Ply draft() const { return Ply::unpack(v_, ShiftDraft); }
     constexpr TtMove ttMove(Z z) const { return TtMove::unpack(v_ ^ +z, ShiftMove); }
 
-    constexpr void setAge(TtAge a) {
+    constexpr TtEntry& setAge() {
         v_ ^= age().pack<_t>(ShiftAge); // clear previous
-        v_ |= a.pack<_t>(ShiftAge); // set new value
+        v_ |= The_transpositionTable.packAge<_t>(ShiftAge); // set new value
+        return *this;
+    }
+
+    static TtEntry read(TtEntry* tt) {
+        ++The_transpositionTable.reads;
+        return std::bit_cast<TtEntry>(std::bit_cast<std::atomic<u64_t>*>(tt)->load(std::memory_order_relaxed));
+    }
+
+    TtEntry& write(TtEntry* tt) const {
+        std::bit_cast<std::atomic<u64_t>*>(tt)->store(this->v_, std::memory_order_relaxed);
+        ++The_transpositionTable.writes;
+        return const_cast<TtEntry&>(*this);
     }
 };
 

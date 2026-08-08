@@ -91,9 +91,7 @@ constexpr nodes_type nps(nodes_type nodes, duration_type duration) {
     return (nodes * duration_type::period::den) / (static_cast<nodes_type>(duration.count()) * duration_type::period::num);
 }
 
-static constexpr size_t mebibyte = 1024 * 1024;
-
-template <typename T> static T mebi(T bytes) { return bytes / mebibyte; }
+template <typename T> static T mebi(T bytes) { return bytes / (1024 * 1024); }
 template <typename T> static constexpr T permil(T n, T m) { return (n * 1000) / m; }
 
 template <typename T> concept Formattable = requires(const T& t, ostream& os) { t.format(os); };
@@ -767,8 +765,7 @@ Uci::Uci(ostream& os) :
     out_{os},
     bestmove_(sizeof("bestmove a7a8q ponder h2h1q"), '\0'),
     logStartTime{::timeNow()},
-    pid_{System::getPid()},
-    tt(64 * mebibyte)
+    pid_{System::getPid()}
 {
     Nnue::validate_embedded_size();
     for (auto ply : range<Ply>()) { std::construct_at(&searchStack[ply], ply); }
@@ -778,8 +775,7 @@ Uci::Uci(ostream& os) :
 }
 
 void Uci::newGame() {
-    tt.newGame();
-    ttAge = {};
+    The_transpositionTable.newGame();
     contMoves = {};
     checkMoves = {};
     go_.isNewGame = true;
@@ -792,7 +788,7 @@ void Uci::newSearch() {
 
     lastInfoTime_ = lastNpsTime_ = limits.newSearch();
     lastInfoNodes_ = lastNpsNodes_ = 0;
-    tt.newSearch();
+    The_transpositionTable.newSearch();
     rootBestMoves = {};
 }
 
@@ -954,7 +950,9 @@ void Uci::uciok() const {
     Output ob;
     ob << "id name " << io::app_version;
     ob << "\nid author Aleks Peshkov";
-    ob << "\noption name Hash type spin min " << ::mebi(tt.minSize()) << " max " << ::mebi(tt.maxSize()) << " default " << ::mebi(tt.size());
+    ob << "\noption name Hash type spin min " << ::mebi(The_transpositionTable.minSize())
+        << " max " << ::mebi(The_transpositionTable.maxSize())
+        << " default " << ::mebi(The_transpositionTable.size());
     ob << "\noption name Move Overhead type spin min " << UciLimits::MoveOverheadDefault << " max 10000 default " << go_.moveOverhead;
     ob << "\noption name Ponder type check default " << (go_.canPonder ? "true" : "false");
     ob << "\noption name UCI_Chess960 type check default " << (chessVariant().is(Chess960) ? "true" : "false");
@@ -1097,7 +1095,7 @@ void Uci::setHash() {
         }
     }
 
-    tt.setSize(quantity);
+    The_transpositionTable.setSize(quantity);
     newGame();
 }
 
@@ -1149,7 +1147,7 @@ void Uci::setPositionMoves() {
 
     do {
         auto z = position_.z();
-        auto ttEntry = *tt.addr<TtEntry>(z);
+        auto ttEntry = TtEntry::read( The_transpositionTable.addr<TtEntry>(z) );
         if (ttEntry != z || ttEntry.none()) { break; }
 
         auto ttMove = ttEntry.ttMove(z);
@@ -1186,9 +1184,8 @@ void Uci::savePv() {
         assert (pos.isPossibleMove(move));
         auto eval = pos.inCheck() ? Score{} : pos.evaluate();
 
-        auto* o = tt.addr<TtEntry>(pos.z());
-        *o = TtEntry{pos.z(), eval, score.tt(ply), ExactBound, depth, move.ttMove(), ttAge};
-        ++tt.writes;
+        TtEntry ttEntry{ pos.z(), eval, score.tt(ply), ExactBound, depth, move.ttMove() };
+        ttEntry.write( The_transpositionTable.addr<TtEntry>(pos.z()) );
 
         pos.makeMove(move.from(), move.to());
         score = -score;
@@ -1482,9 +1479,9 @@ void Uci::bench(std::string_view goLimits) {
 
             benchTime += ::elapsedSince(searchStart);
             benchNodes += limits.getNodes();
-            ttHits += tt.hits;
-            ttReads += tt.reads;
-            ttWrites += tt.writes;
+            ttHits += The_transpositionTable.hits;
+            ttReads += The_transpositionTable.reads;
+            ttWrites += The_transpositionTable.writes;
         }
 
         info_bestmove();

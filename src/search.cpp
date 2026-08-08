@@ -199,18 +199,17 @@ struct TtRecord {
     bool ttHit;
 };
 
-constexpr TtRecord probe(TtEntry* tt, Z z, TtAge ttAge) {
-    using std::bit_cast;
-    auto ttEntry = bit_cast<TtEntry>(bit_cast<std::atomic<u64_t>*>(tt)->load(std::memory_order_relaxed));
+constexpr TtRecord probe(TtEntry* tt, Z z) {
+    auto ttEntry = TtEntry::read(tt);
     if (ttEntry == z) { return { ttEntry, tt, true }; }
 
-    auto tt2 = bit_cast<TtEntry*>(bit_cast<std::uintptr_t>(tt) ^ sizeof(TtEntry));
-    auto ttEntry2 = bit_cast<TtEntry>(bit_cast<std::atomic<u64_t>*>(tt2)->load(std::memory_order_relaxed));
+    auto tt2 = std::bit_cast<TtEntry*>(std::bit_cast<std::uintptr_t>(tt) ^ sizeof(TtEntry));
+    auto ttEntry2 = TtEntry::read(tt2);
     if (ttEntry2 == z) { return { ttEntry2, tt2, true }; }
 
     if (
         (ttEntry2.any() && ttEntry.draft() <= ttEntry2.draft())
-        || ttAge.isOld(ttEntry.age()) // old
+        || The_transpositionTable.isOld(ttEntry.age()) // old
         || ttEntry.none() // zeroed
     ) {
         return {ttEntry, tt, false};
@@ -278,9 +277,8 @@ ReturnStatus Node::search() {
         assert (bestMove.none());
         if (depth == 0_ply) { break; }
 
-        ++The_uci.tt.reads;
-        auto [ttEntry, ttPtr, ttHit] = ::probe(tt, z(), The_uci.ttAge);
-        tt = ttPtr; // place to write after completed search
+        auto [ttEntry, ttPtr, ttHit] = ::probe(tt, z());
+        this->tt = ttPtr; // pointer to write after completed search
 
         if (!ttHit || ttEntry.none()) { break; }
 
@@ -300,7 +298,7 @@ ReturnStatus Node::search() {
             break;
         }
 
-        ++The_uci.tt.hits;
+        ++The_transpositionTable.hits;
 
         Bound ttBound = ttEntry.bound(); assert (ttBound.any());
         if (!isPv() && depth <= ttEntry.draft() && (ttBound.is(ExactBound)
@@ -309,10 +307,10 @@ ReturnStatus Node::search() {
         )) {
             score = ttScore;
             bound = ttBound;
-            if (!ttEntry.age().is(The_uci.ttAge)) {
+            if (!The_transpositionTable.isAge(ttEntry.age())) {
                 // refresh age
-                ttEntry.setAge(The_uci.ttAge);
-                *tt = ttEntry;
+                ttEntry.setAge();
+                ttEntry.write(tt);
             }
             return ReturnStatus::Cutoff;
         }
@@ -685,7 +683,7 @@ ReturnStatus Node::searchNullMove() {
 void Node::childNullMove() {
     makeNullMove(parent());
     childZHash = {};
-    tt = The_uci.tt.prefetch<TtEntry>(z());
+    tt = The_transpositionTable.prefetch<TtEntry>(z());
 }
 
 ReturnStatus Node::searchMove(Move move, Ply R) {
@@ -707,7 +705,7 @@ ReturnStatus Node::searchMove(Move move, Ply R) {
 
 void Node::childMove(Square from, Square to) {
     bool shouldResetZHash = makeMove(parent(), from, to, parent().childZHash, [&](Z z) {
-        tt = The_uci.tt.prefetch<TtEntry>(z);
+        tt = The_transpositionTable.prefetch<TtEntry>(z);
     });
 
     childZHash = ply <= 1_ply || shouldResetZHash ? ZHash{} : ZHash{parent().zHash(), parent().z()};
@@ -745,12 +743,11 @@ void Node::saveNode() {
     assert (bestMove.none() || isPseudoLegal(bestMove));
     assert ((inCheck() && eval.none()) || (!inCheck() && eval.isEval() /*&& eval == evaluate()*/));
     assert (score.isOk(ply));
-    assert (tt);
 
     if (depth == 0_ply) { return; }
 
-    *tt = TtEntry{ z(), eval, score.tt(ply), bound, depth, bestMove.ttMove(), The_uci.ttAge };
-    ++The_uci.tt.writes;
+    TtEntry ttEntry{ z(), eval, score.tt(ply), bound, depth, bestMove.ttMove() };
+    ttEntry.write(tt);
 }
 
 void Node::saveHistory() {
@@ -853,7 +850,7 @@ ReturnStatus Node::searchRoot(const PositionMoves& pos) {
     killers = {};
 
     for (depth = 1_ply; depth.isOk(); ++depth) {
-        tt = The_uci.tt.prefetch<TtEntry>(z());
+        tt = The_transpositionTable.prefetch<TtEntry>(z());
         alpha = Score{MateLoss};
         beta = Score{MateWin};
 
@@ -865,7 +862,7 @@ ReturnStatus Node::searchRoot(const PositionMoves& pos) {
 
         The_uci.info_pv();
         setMoves(The_uci.moves()); // refresh moves for next iteration
-        The_uci.ttAge.nextAge();
+        The_transpositionTable.nextAge();
 
         // refresh PV in TT in case it was overwritten
         if (The_uci.limits.getNodes() > 1'000000) { The_uci.savePv(); }

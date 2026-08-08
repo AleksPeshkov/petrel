@@ -93,8 +93,6 @@ class Uci {
 public: // used by search:
     SearchLimits limits; // inited from UciLimits and UciPosition
     Repetitions repetitions;
-    Tt tt; // main transposition table
-    TtAge ttAge;
 
 //TODO: per search thread
     array<Node, Ply> searchStack;
