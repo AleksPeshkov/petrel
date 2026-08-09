@@ -381,10 +381,10 @@ ReturnStatus Node::search() {
         RETURN_CUTOFF (searchIfPossible(killers[1]));
 
         if (counterMove().any()) {
-            RETURN_CUTOFF (contMove(Counter, counterMove())); // ply-1
+            RETURN_CUTOFF (contMove(isDeep ? DeepCounter : Counter, counterMove())); // ply-1
         }
         if (followupMove().any()) {
-            RETURN_CUTOFF (contMove(Followup, followupMove())); // ply-2
+            RETURN_CUTOFF (contMove(isDeep ? DeepFollowup : Followup, followupMove())); // ply-2
         }
     }
 
