@@ -77,10 +77,10 @@ struct CACHE_ALIGN Nnue {
     static constexpr int Acc_neurons = 1024;
 
     struct AccIndex : Index<AccIndex, Acc_neurons / Vector_size> { using Index::Index; };
-    struct AccTwinIndex : Index<AccTwinIndex, 2*AccIndex::size()> { using Index::Index; };
+    struct DualAccIndex : Index<DualAccIndex, 2*AccIndex::size()> { using Index::Index; };
 
     using W0 = array<_t, FeatureIndex, AccIndex>;
-    using W1 = array<_t, AccTwinIndex>;
+    using W1 = array<_t, DualAccIndex>;
 
     W0 w0;    // feature weights, 768*(64*32) = 1572864 bytes, feature biases embeded into kings weights
     W1 w1;    // output weights, 2*(64*32) = 4096 bytes
@@ -97,10 +97,10 @@ struct CACHE_ALIGN Nnue {
         return madd_i16(activated, w); // w = [-8191,+8191]
     }
 
-    using AccTwin = array<_t, AccTwinIndex>;
-    int32_t evaluate(const AccTwin& acc) const {
+    using DualAcc = array<_t, DualAccIndex>;
+    int32_t evaluate(const DualAcc& acc) const {
         i32x8_t sum8{};
-        for (auto i : range<AccTwinIndex>()) {
+        for (auto i : range<DualAccIndex>()) {
             // safe for up to 32 additions
             sum8 += forward(acc[i], this->w1[i]);
         }
@@ -116,37 +116,16 @@ struct CACHE_ALIGN Nnue {
 
 extern constinit const Nnue& nnue;
 
-// 128 neurons, 256 bytes
 class CACHE_ALIGN Acc {
-    using Index = Nnue::AccIndex;
-    using _t = array<Nnue::_t, Index>; // i16x16_t[8]
-    _t v_;
-
-    constexpr void add(Nnue::FeatureIndex fi) {
-        for (auto i : range<Index>()) {
-            #if USE_AVX2
-                v_[i] = _mm256_adds_epi16(v_[i], nnue.w0[fi][i]);
-            #else
-                v_[i] += nnue.w0[fi][i];
-            #endif
-        }
-    }
-
-    constexpr void sub(Nnue::FeatureIndex fi) {
-        for (auto i : range<Index>()) {
-            #if USE_AVX2
-                v_[i] = _mm256_subs_epi16(v_[i], nnue.w0[fi][i]);
-            #else
-                v_[i] -= nnue.w0[fi][i];
-            #endif
-        }
-    }
-
 public:
-    constexpr Acc() : v_{} {} // feature biases = 0
+    using Fi = Nnue::FeatureIndex;
+    using AccIndex = Nnue::AccIndex;
+    using _t = Nnue::_t; // i16x16_t
 
-    static constexpr void flip(Acc& my, Acc& op) {
-        for (auto i : range<Index>()) { std::swap(my.v_[i], op.v_[i]); }
+    static constexpr void swap(Acc& my, Acc& op) {
+        for (auto i : range<AccIndex>()) {
+            std::swap(my.acc[i], op.acc[i]);
+        }
     }
 
     constexpr void drop(Side si, PieceType ty, Square to) {
@@ -182,24 +161,44 @@ public:
         promote(si, from, promoted, to);
         sub({~si, captured, to});
     }
+
+private:
+    array<_t, AccIndex> acc{}; // feature biases = 0
+
+    constexpr void add(Fi fi) {
+        for (auto i : range<AccIndex>()) {
+            #if USE_AVX2
+                acc[i] = _mm256_adds_epi16(acc[i], nnue.w0[fi][i]);
+            #else
+                acc[i] += nnue.w0[fi][i];
+            #endif
+        }
+    }
+
+    constexpr void sub(Fi fi) {
+        for (auto i : range<AccIndex>()) {
+            #if USE_AVX2
+                acc[i] = _mm256_subs_epi16(acc[i], nnue.w0[fi][i]);
+            #else
+                acc[i] -= nnue.w0[fi][i];
+            #endif
+        }
+    }
 };
 
-// 2x128 neurons, 512 bytes
-class AccTwin {
-    array<Acc, Side> side;
+class DualAcc {
+    array<Acc, Side> side{};
 public:
     // raw NNUE static evaluation
-    auto evaluate() const { return nnue.evaluate(std::bit_cast<Nnue::AccTwin>(side)); }
-
-    constexpr AccTwin () : side{} {}
+    auto evaluate() const { return nnue.evaluate(std::bit_cast<Nnue::DualAcc>(side)); }
 
     // copy parent accumulator but flip sides
-    constexpr void flip(const AccTwin& parent) {
+    constexpr void flip(const DualAcc& parent) {
         side[My] = parent.side[Op];
         side[Op] = parent.side[My];
     }
 
-    constexpr void flip() { Acc::flip(side[My], side[Op]); }
+    constexpr void swap() { Acc::swap(side[My], side[Op]); }
 
     constexpr void drop(Side si, PieceType ty, Square to) {
         side[si].drop(My, ty, to);
@@ -219,32 +218,26 @@ public:
     }
 
     constexpr void promote(Square from, PromoType promoted, Square to) {
-        assert (from.on(Rank7));
-        assert (to.on(Rank8));
+        assert (from.on(Rank7)); assert (to.on(Rank8));
         side[Op].promote(My, from, promoted, to);
         side[My].promote(Op, ~from, promoted, ~to);
     }
 
     constexpr void promote(Square from, PromoType promoted, Square to, NonKingType captured) {
-        assert (from.on(Rank7));
-        assert (to.on(Rank8));
+        assert (from.on(Rank7)); assert (to.on(Rank8));
         side[Op].promote(My, from, promoted, to, captured);
         side[My].promote(Op, ~from, promoted, ~to, captured);
     }
 
     constexpr void ep(Square from, Square to, Square ep) {
-        assert (from.on(Rank5));
-        assert (to.on(Rank6));
-        assert (ep.on(Rank5));
+        assert (from.on(Rank5)); assert (to.on(Rank6)); assert (ep.on(Rank5));
         side[Op].ep(My, from, to, ep);
         side[My].ep(Op, ~from, ~to, ~ep);
     }
 
     constexpr void castle(Square kingFrom, Square kingTo, Square rookFrom, Square rookTo) {
-        assert (kingFrom.on(Rank1));
-        assert (rookTo.on(Rank1));
-        assert (kingFrom != rookFrom);
-        assert (kingTo != rookTo);
+        assert (kingFrom != rookFrom); assert (kingTo != rookTo);
+        assert (kingFrom.on(Rank1)); assert (rookTo.on(Rank1));
         side[Op].castle(My, kingFrom, kingTo, rookFrom, rookTo);
         side[My].castle(Op, ~kingFrom, ~kingTo, ~rookFrom, ~rookTo);
     }
