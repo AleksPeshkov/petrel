@@ -10,6 +10,20 @@ using i32x8_t  = i32_t __attribute__((vector_size(32)));
 
 constexpr i16x16_t i16x16x(i16_t e) { return i16x16_t{ e,e,e,e, e,e,e,e, e,e,e,e, e,e,e,e }; }
 
+inline i16x16_t adds_i16(i16x16_t a, i16x16_t b) {
+    #ifdef __clang__
+        return __builtin_elementwise_add_sat(a, b);
+    #else
+        using i32x16_t = i32_t __attribute__((vector_size(64)));
+
+        i32x16_t sum = __builtin_convertvector(a, i32x16_t) + __builtin_convertvector(b, i32x16_t);
+        sum = (sum > 32767) ? 32767 : sum;
+        sum = (sum < -32768) ? -32768 : sum;
+
+        return __builtin_convertvector(sum, i16x16_t);
+    #endif
+}
+
 template <typename V>
 constexpr V max(V a, V b) {
     #ifdef __clang__
@@ -98,11 +112,11 @@ struct CACHE_ALIGN Nnue {
     }
 
     using DualAcc = array<_t, DualAccIndex>;
-    int32_t evaluate(const DualAcc& acc) const {
+    int32_t evaluate(const DualAcc& dual_acc) const {
         i32x8_t sum8{};
         for (auto n : range<DualAccIndex>()) {
             // safe for up to 32 additions
-            sum8 += forward(acc[n], this->w1[n]);
+            sum8 += forward(dual_acc[n], this->w1[n]);
         }
         i32_t output = this->b1 + hadd_i32(sum8);
 
@@ -123,65 +137,57 @@ public:
     using _t = Nnue::_t; // i16x16_t
 
     static constexpr void swap(Acc& my, Acc& op) {
-        for (auto i : range<AccIndex>()) {
-            std::swap(my.acc[i], op.acc[i]);
+        for (auto n : range<AccIndex>()) {
+            std::swap(my.acc[n], op.acc[n]);
         }
     }
 
     constexpr void drop(Side si, PieceType ty, Square to) {
-        add({ si, ty, to });
+        for (auto n : range<AccIndex>()) {
+            acc[n] = adds_i16(acc[n], nnue.w0[{si, ty, to}][n]);
+        }
     }
 
     constexpr void move(Side si, PieceType ty, Square from, Square to) {
-        sub({ si, ty, from });
-        add({ si, ty, to });
-    }
-
-    constexpr void castle(Side si, Square kingFrom, Square kingTo, Square rookFrom, Square rookTo) {
-        move(si, King, kingFrom, kingTo);
-        move(si, Rook, rookFrom, rookTo);
-    }
-
-    constexpr void move(Side si, PieceType ty, Square from, Square to, NonKingType captured) {
-        move(si, ty, from, to);
-        sub({~si, captured, to});
-    }
-
-    constexpr void ep(Side si, Square from, Square to, Square ep) {
-        move(si, Pawn, from, to);
-        sub({~si, Pawn, ep});
+        move({si, ty, from}, {si, ty, to});
     }
 
     constexpr void promote(Side si, Square from, PromoType promoted, Square to) {
-        sub({si, Pawn, from});
-        add({si, promoted, to});
+        move({si, Pawn, from}, {si, promoted, to});
+    }
+
+    constexpr void move(Side si, PieceType ty, Square from, Square to, NonKingType captured) {
+        capture({si, ty, from}, {si, ty, to}, {~si, captured, to});
     }
 
     constexpr void promote(Side si, Square from, PromoType promoted, Square to, NonKingType captured) {
-        promote(si, from, promoted, to);
-        sub({~si, captured, to});
+        capture({si, Pawn, from}, {si, promoted, to}, {~si, captured, to});
+    }
+
+    constexpr void ep(Side si, Square from, Square to, Square ep) {
+        capture({si, Pawn, from}, {si, Pawn, to}, {~si, Pawn, ep});
+    }
+
+    constexpr void castle(Side si, Square kingFrom, Square kingTo, Square rookFrom, Square rookTo) {
+        for (auto n : range<AccIndex>()) {
+            auto s1 = nnue.w0[{si, King, kingTo}][n] - nnue.w0[{si, King, kingFrom}][n];
+            auto s2 = nnue.w0[{si, Rook, rookTo}][n] - nnue.w0[{si, Rook, rookFrom}][n];
+            acc[n] = adds_i16(acc[n], s1 + s2);
+        }
     }
 
 private:
     array<_t, AccIndex> acc{}; // feature biases = 0
 
-    constexpr void add(Fi fi) {
-        for (auto i : range<AccIndex>()) {
-            #if USE_AVX2
-                acc[i] = _mm256_adds_epi16(acc[i], nnue.w0[fi][i]);
-            #else
-                acc[i] += nnue.w0[fi][i];
-            #endif
+    constexpr void move(Fi from, Fi to) {
+        for (auto n : range<AccIndex>()) {
+            acc[n] = adds_i16(acc[n], nnue.w0[to][n] - nnue.w0[from][n]);
         }
     }
 
-    constexpr void sub(Fi fi) {
-        for (auto i : range<AccIndex>()) {
-            #if USE_AVX2
-                acc[i] = _mm256_subs_epi16(acc[i], nnue.w0[fi][i]);
-            #else
-                acc[i] -= nnue.w0[fi][i];
-            #endif
+    constexpr void capture(Fi from, Fi to, Fi cap) {
+        for (auto n : range<AccIndex>()) {
+            acc[n] = adds_i16(acc[n], nnue.w0[to][n] - nnue.w0[from][n] - nnue.w0[cap][n]);
         }
     }
 };
