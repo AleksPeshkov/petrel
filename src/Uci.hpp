@@ -26,7 +26,7 @@ public:
 
     Move firstRootMove() const;
 
-    constexpr Side sideOf(Color::_t color) const { return Side{colorToMove_.is(color) ? My : Op}; }
+    constexpr Side sideOf(Color::_t color) const { return colorToMove_.is(color) ? My : Op; }
     constexpr Color colorToMove(Ply ply = 0_ply) const { return Color{ ::distance(colorToMove_, ply) }; }
     constexpr auto fullMoveNumber(Ply ply = 0_ply) const { return fullMoveNumber_ + (+ply + +colorToMove_) / 2; }
 };

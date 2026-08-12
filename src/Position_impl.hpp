@@ -6,8 +6,8 @@ template <Side::_t My>
 void Position::updateSliderAttacks(PiMask myAffected) {
     constexpr Side::_t Op{~My};
 
-    occupied_[Side{My}] = MY.bbSide() + ~OP.bbSide();
-    occupied_[Side{Op}] = OP.bbSide() + ~MY.bbSide();
+    occupied_[My] = MY.bbSide() + ~OP.bbSide();
+    occupied_[Op] = OP.bbSide() + ~MY.bbSide();
 
     myAffected &= MY.sliders();
     if (myAffected.any()) {

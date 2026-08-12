@@ -404,13 +404,13 @@ public:
 };
 
 ostream& fen(ostream& os, const Position& pos, Color colorToMove, ChessVariant chessVariant, int fullMoveNumber) {
-    const auto& whitePieces = pos.positionSide(Side{colorToMove.is(White) ? My : Op});
-    const auto& blackPieces = pos.positionSide(Side{colorToMove.is(Black) ? My : Op});
+    const auto& whitePieces = pos.positionSide(colorToMove.is(White) ? My : Op);
+    const auto& blackPieces = pos.positionSide(colorToMove.is(Black) ? My : Op);
 
     return os << BoardToFen(whitePieces, blackPieces)
         << ' ' << colorToMove
         << ' ' << CastlingToFen{whitePieces, blackPieces, chessVariant}
-        << ' ' << EnPassantToFen{pos.positionSide(Side{Op}), colorToMove}
+        << ' ' << EnPassantToFen{pos.positionSide(Op), colorToMove}
         << ' ' << pos.rule50()
         << ' ' << fullMoveNumber;
 }

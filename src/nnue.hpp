@@ -195,49 +195,49 @@ public:
 
     // copy parent accumulator but flip sides
     constexpr void flip(const AccTwin& parent) {
-        side[Side{My}] = parent.side[Side{Op}];
-        side[Side{Op}] = parent.side[Side{My}];
+        side[My] = parent.side[Op];
+        side[Op] = parent.side[My];
     }
 
-    constexpr void flip() { Acc::flip(side[Side{My}], side[Side{Op}]); }
+    constexpr void flip() { Acc::flip(side[My], side[Op]); }
 
     constexpr void drop(Side si, PieceType ty, Square to) {
-        side[si].drop(Side{My}, ty, to);
-        side[~si].drop(Side{Op}, ty, ~to);
+        side[si].drop(My, ty, to);
+        side[~si].drop(Op, ty, ~to);
     }
 
     constexpr void move(PieceType ty, Square from, Square to) {
         assert (from != to);
-        side[Side{Op}].move(Side{My}, ty, from, to);
-        side[Side{My}].move(Side{Op}, ty, ~from, ~to);
+        side[Op].move(My, ty, from, to);
+        side[My].move(Op, ty, ~from, ~to);
     }
 
     constexpr void move(PieceType ty, Square from, Square to, NonKingType captured) {
         assert (from != to);
-        side[Side{Op}].move(Side{My}, ty, from, to, captured);
-        side[Side{My}].move(Side{Op}, ty, ~from, ~to, captured);
+        side[Op].move(My, ty, from, to, captured);
+        side[My].move(Op, ty, ~from, ~to, captured);
     }
 
     constexpr void promote(Square from, PromoType promoted, Square to) {
         assert (from.on(Rank7));
         assert (to.on(Rank8));
-        side[Side{Op}].promote(Side{My}, from, promoted, to);
-        side[Side{My}].promote(Side{Op}, ~from, promoted, ~to);
+        side[Op].promote(My, from, promoted, to);
+        side[My].promote(Op, ~from, promoted, ~to);
     }
 
     constexpr void promote(Square from, PromoType promoted, Square to, NonKingType captured) {
         assert (from.on(Rank7));
         assert (to.on(Rank8));
-        side[Side{Op}].promote(Side{My}, from, promoted, to, captured);
-        side[Side{My}].promote(Side{Op}, ~from, promoted, ~to, captured);
+        side[Op].promote(My, from, promoted, to, captured);
+        side[My].promote(Op, ~from, promoted, ~to, captured);
     }
 
     constexpr void ep(Square from, Square to, Square ep) {
         assert (from.on(Rank5));
         assert (to.on(Rank6));
         assert (ep.on(Rank5));
-        side[Side{Op}].ep(Side{My}, from, to, ep);
-        side[Side{My}].ep(Side{Op}, ~from, ~to, ~ep);
+        side[Op].ep(My, from, to, ep);
+        side[My].ep(Op, ~from, ~to, ~ep);
     }
 
     constexpr void castle(Square kingFrom, Square kingTo, Square rookFrom, Square rookTo) {
@@ -245,8 +245,8 @@ public:
         assert (rookTo.on(Rank1));
         assert (kingFrom != rookFrom);
         assert (kingTo != rookTo);
-        side[Side{Op}].castle(Side{My}, kingFrom, kingTo, rookFrom, rookTo);
-        side[Side{My}].castle(Side{Op}, ~kingFrom, ~kingTo, ~rookFrom, ~rookTo);
+        side[Op].castle(My, kingFrom, kingTo, rookFrom, rookTo);
+        side[My].castle(Op, ~kingFrom, ~kingTo, ~rookFrom, ~rookTo);
     }
 };
 
