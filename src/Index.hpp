@@ -290,7 +290,9 @@ enum side_to_move_t {
     Op, // not side to move
 };
 constexpr side_to_move_t operator ~ (side_to_move_t si) { return static_cast<side_to_move_t>(si ^ 1); }
-struct Side : Index<Side, 2, side_to_move_t> { using Index::Index; };
+struct Side : Index<Side, 2, side_to_move_t> { using Index::Index;
+    constexpr Side (_t si) : Index{si} {}
+};
 
 enum chess_variant_t { Orthodox, Chess960 };
 struct ChessVariant : Index<ChessVariant, 2, chess_variant_t> { using Index::Index; };

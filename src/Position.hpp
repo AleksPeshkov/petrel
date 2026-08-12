@@ -6,15 +6,15 @@
 #include "Score.hpp"
 
 // side to move
-#define MY positionSide(Side{My})
+#define MY positionSide(My)
 
 // opponent side
-#define OP positionSide(Side{Op})
+#define OP positionSide(Op)
 
 // all occupied squares by both sides from the current side point of view
-#define OCCUPIED occupied(Side{My})
+#define OCCUPIED occupied(My)
 
-#define OP_OCCUPIED occupied(Side{Op})
+#define OP_OCCUPIED occupied(Op)
 
 // number of halfmoves without capture or pawn move
 class Rule50 {

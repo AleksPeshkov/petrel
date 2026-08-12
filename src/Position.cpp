@@ -8,8 +8,8 @@ Score Position::evaluate() const {
 void Position::flip(const Position& parent) {
     // copy from the parent position but swap sides
     accumulator.flip(parent.accumulator);
-    positionSide_[Side{My}] = parent.OP;
-    positionSide_[Side{Op}] = parent.MY;
+    positionSide_[My] = parent.OP;
+    positionSide_[Op] = parent.MY;
     rule50_ = parent.rule50_;
 }
 
@@ -38,8 +38,8 @@ void Position::makeNullMove(const Position& parent) {
     zobrist_ = parent.zobrist_;
     rule50_.next(); zHash_ = {}; // null move holds rule50, but not ZHash
 
-    occupied_[Side{My}] = parent.occupied_[Side{Op}];
-    occupied_[Side{Op}] = parent.occupied_[Side{My}];
+    occupied_[My] = parent.occupied_[Op];
+    occupied_[Op] = parent.occupied_[My];
 
     // clear en passant status from the previous move
     if (MY.hasEnPassant()) {
