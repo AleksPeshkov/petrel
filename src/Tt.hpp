@@ -21,7 +21,7 @@ public:
     constexpr bool any() const { return !none(); }
 
     constexpr bool is(TtAge age) const { return v_ == age.v_; }
-    constexpr bool isOld(TtAge age) const { return !is(age) && !is(age.next()); }
+    constexpr bool isFresh(TtAge age) const { return is(age) || is(age.next()); }
 
     template <typename P, typename S>
     constexpr P pack(S shift) { return ::pack<P>(v_, shift); }
@@ -108,7 +108,7 @@ public:
 
     constexpr void nextAge() { age.nextAge(); }
     constexpr bool isAge(TtAge a) const { return age.is(a); }
-    constexpr bool isOld(TtAge a) const { return age.isOld(a); }
+    constexpr bool isFresh(TtAge a) const { return age.isFresh(a); }
 
     template <size_t Align>
     constexpr void* addr(Z z) const {

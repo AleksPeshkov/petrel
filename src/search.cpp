@@ -201,17 +201,27 @@ struct TtRecord {
 
 constexpr TtRecord probe(TtEntry* tt, Z z) {
     auto ttEntry = TtEntry::read(tt);
-    if (ttEntry == z) { return { ttEntry, tt, true }; }
+    if (ttEntry == z) { return {ttEntry, tt, true}; }
 
     auto tt2 = std::bit_cast<TtEntry*>(std::bit_cast<std::uintptr_t>(tt) ^ sizeof(TtEntry));
     auto ttEntry2 = TtEntry::read(tt2);
-    if (ttEntry2 == z) { return { ttEntry2, tt2, true }; }
+    if (ttEntry2 == z) { return {ttEntry2, tt2, true}; }
 
-    if (
-        (ttEntry2.any() && ttEntry.draft() <= ttEntry2.draft())
-        || The_transpositionTable.isOld(ttEntry.age()) // old
-        || ttEntry.none() // zeroed
-    ) {
+    //TRICK: zeroed entry is never fresh
+    bool f1 = The_transpositionTable.isFresh(ttEntry.age());
+    bool f2 = The_transpositionTable.isFresh(ttEntry2.age());
+
+    // preserve fresh
+    if (f1 != f2) {
+        if (f2) {
+            return {ttEntry, tt, false};
+        } else {
+            return {ttEntry2, tt2, false};
+        }
+    }
+
+    // preserve deeper or other
+    if (ttEntry.draft() <= ttEntry2.draft()) {
         return {ttEntry, tt, false};
     } else {
         return {ttEntry2, tt2, false};
