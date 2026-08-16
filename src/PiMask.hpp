@@ -134,7 +134,7 @@ public:
     constexpr explicit PiMask (_t a) : BitArray{a} { assertOk(); }
     constexpr explicit PiMask (Pi pi) : BitArray{piOneMask[pi]} {}
 
-    static constexpr _t zero() { return ::x16(0); }
+    static constexpr _t zero() { return ::u8x16x(0); }
 
     using BitArray::any;
     static constexpr PiMask any(_t a) { return PiMask{a != zero()}; }
@@ -184,7 +184,7 @@ class PiSquare {
 
     constexpr void set(Pi pi, _t sq) { square[pi] = sq; }
 
-    constexpr PiMask at(_t sq) const { return PiMask{u8x16 == ::x16(sq)}; }
+    constexpr PiMask at(_t sq) const { return PiMask{u8x16 == ::u8x16x(sq)}; }
     constexpr bool has(_t sq) const { return at(sq).any(); }
     constexpr Pi pi(_t sq) const { assert (has(sq)); return at(sq).pi(); }
 
@@ -227,12 +227,12 @@ public:
     constexpr Square sq(Pi pi) const { assertOk(pi); return Square{square[pi]}; }
     constexpr Pi pi(Square sq) const { return pi(*sq); }
 
-    constexpr PiMask any() const { return PiMask{u8x16 != ::x16(Square::null())}; }
+    constexpr PiMask any() const { return PiMask{u8x16 != ::u8x16x(Square::null())}; }
 
     constexpr PiMask anyOn(Rank::_t rank) const {
         return PiMask{
-            (u8x16 & ::x16( static_cast<_t>(Square::null() ^ static_cast<_t>(File::mask())) ))
-            == ::x16( *Square{static_cast<File::_t>(0), rank} )
+            (u8x16 & ::u8x16x( static_cast<_t>(Square::null() ^ static_cast<_t>(File::mask())) ))
+            == ::u8x16x( *Square{static_cast<File::_t>(0), rank} )
         };
     }
 };
@@ -269,7 +269,7 @@ class PiType {
 
     constexpr bool has(Pi pi, element_type e) const { assertOk(pi); return (static_cast<u8_t>(type[pi]) & static_cast<u8_t>(e)) != 0; }
     constexpr bool is(Pi pi, PieceType::_t ty) const { assertOk(pi); return has(pi, element(ty)); }
-    constexpr PiMask any(element_type e) const { return PiMask::any(u8x16 & ::x16(e)); }
+    constexpr PiMask any(element_type e) const { return PiMask::any(u8x16 & ::u8x16x(e)); }
 
 public:
     constexpr PiType () {
@@ -349,8 +349,8 @@ class PiTrait {
         u8x16_t u8x16;
     };
 
-    constexpr PiMask any(element_type e) const { return PiMask::any(u8x16 & ::x16(static_cast<u8_t>(e))); }
-    constexpr void clear(element_type e) { u8x16 &= ::x16(0xff ^ static_cast<u8_t>(e)); }
+    constexpr PiMask any(element_type e) const { return PiMask::any(u8x16 & ::u8x16x(static_cast<u8_t>(e))); }
+    constexpr void clear(element_type e) { u8x16 &= ::u8x16x(0xff ^ static_cast<u8_t>(e)); }
 
     constexpr bool has(Pi pi, element_type e) const {
         return (static_cast<u8_t>(trait[pi]) & static_cast<u8_t>(e)) != 0;
@@ -457,7 +457,7 @@ public:
 
     PiOrder& forward(Pi pi) {
         // find index of pi in the shuffled vector
-        PiMask mask = PiMask{u8x16 == ::x16(+pi)};
+        PiMask mask = PiMask{u8x16 == ::u8x16x(+pi)};
         // shuffle selected pi to the first position
         u8x16 = ::shuffle(u8x16, std::bit_cast<u8x16_t>(shuffleToFront[mask.pi()]));
         assertOk();

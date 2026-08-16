@@ -7,7 +7,7 @@
 using u8x16_t =  u8_t __attribute__((vector_size(16)));
 using u64x2_t = u64_t __attribute__((vector_size(16)));
 
-constexpr u8x16_t x16(u8_t b) { return u8x16_t{ b,b,b,b, b,b,b,b, b,b,b,b, b,b,b,b }; }
+constexpr u8x16_t u8x16x(u8_t b) { return u8x16_t{ b,b,b,b, b,b,b,b, b,b,b,b, b,b,b,b }; }
 
 template <typename vector_type, typename mask_type>
 constexpr vector_type shuffle(vector_type vector, mask_type mask) {
