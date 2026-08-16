@@ -77,7 +77,7 @@ public:
         auto b64 = unpack2_lo32(c32, d32);
         auto r16 = unpack2_lo64(a64, b64);
 
-        auto fileVector = x16(1 << +sq.file());
+        auto fileVector = u8x16x(1 << +sq.file());
         return PiMask{ (r16 & fileVector) == fileVector };
     }
 
