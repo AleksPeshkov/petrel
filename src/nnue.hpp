@@ -91,7 +91,7 @@ struct CACHE_ALIGN Nnue {
 
     using _t = i16x16_t;
     static constexpr int Vector_size = sizeof(_t) / sizeof(i16_t);
-    static constexpr int Acc_neurons = 1536;
+    static constexpr int Acc_neurons = 1024;
 
     struct AccIndex : Index<AccIndex, Acc_neurons / Vector_size> { using Index::Index; };
     struct DualAccIndex : Index<DualAccIndex, 2*AccIndex::size()> { using Index::Index; };
