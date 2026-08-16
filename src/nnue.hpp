@@ -91,7 +91,7 @@ struct CACHE_ALIGN Nnue {
 
     using _t = i16x16_t;
     static constexpr int Vector_size = sizeof(_t) / sizeof(i16_t);
-    static constexpr int Acc_neurons = 128;
+    static constexpr int Acc_neurons = 1536;
 
     struct AccIndex : Index<AccIndex, Acc_neurons / Vector_size> { using Index::Index; };
     struct DualAccIndex : Index<DualAccIndex, 2*AccIndex::size()> { using Index::Index; };
@@ -102,9 +102,9 @@ struct CACHE_ALIGN Nnue {
     using W0 = array<_t, FeatureIndex, AccIndex>;
     using W1 = array<_t, HIndex, DualAccIndex>;
 
-    W0 w0;    // feature weights, 768*128*2 = 196608 bytes, feature biases embeded into kings weights
-    W1 w1;    // output weights, 4*128*2 = 1024 bytes
-    i64_t b1; // output bias (64 byte aligned), total = 197696 bytes
+    W0 w0;    // feature weights, feature biases embeded into kings weights
+    W1 w1;    // output weights
+    i64_t b1; // output bias (64 byte aligned), total = 2'371648 bytes
 
     static constexpr u16x16_t squared(u16x16_t x1024) {
         auto x2 = x1024 << 5; // 2*x [0 .. 32768]
