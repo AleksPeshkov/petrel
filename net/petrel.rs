@@ -1,5 +1,5 @@
 use bullet_lib::{
-    game::inputs::Chess768,
+    game::inputs::Chess768hm,
     nn::optimiser::{AdamW, AdamWParams},
     trainer::{
         save::SavedFormat,
@@ -48,7 +48,7 @@ fn main() {
             SavedFormat::id("l1w").quantise::<i16>(QB*WDL),
             SavedFormat::id("l1b").quantise::<i64>(16.0*QA * QB*WDL),
         ])
-        .inputs(Chess768).dual_perspective()
+        .inputs(Chess768hm).dual_perspective()
         .build(|builder, my_inputs, op_inputs| {
             let l0 = builder.new_affine("l0", 768, ACC_SIZE);
             let my_acc = l0.forward(my_inputs);
@@ -94,7 +94,7 @@ fn main() {
     let final_lr = peak_lr / 40.0;
 
     let schedule = TrainingSchedule {
-        net_id: "concatenated-screlu-2".to_string(),
+        net_id: "hm-concatenated-screlu".to_string(),
         eval_scale: data_set_eval_scale,
         steps: TrainingSteps { batch_size: 4096, batches_per_superbatch: 24416, start_superbatch: 1, end_superbatch: superbatches },
         wdl_scheduler: wdl::CosineDecayWDL { start: 0.0, end: 0.1, final_superbatch: superbatches },

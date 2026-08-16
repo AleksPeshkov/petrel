@@ -249,10 +249,16 @@ public:
     constexpr File file() const { return File::unpack(v_, FileShift); }
     constexpr Rank rank() const { return Rank::unpack(v_, RankShift); }
 
-    // flip side of the board
-    constexpr Square operator ~ () const {
-        return Square{static_cast<_t>(v_ ^ Rank{Rank::mask()}.pack(RankShift))};
-    }
+    constexpr Square operator^ (Square mask) const { return Square{static_cast<_t>(v_ ^ +mask)}; }
+
+    // flip side of the board (vertical mirror)
+    constexpr Square operator ~ () const { return *this ^ Square{static_cast<_t>(070)}; }
+
+    // horizontal mirror
+    constexpr Square mirror() const { return *this ^ Square{static_cast<_t>(7)}; }
+
+    // king dependant horizontal mirror mask
+    constexpr Square mirrorMask() const { return file() < File{FileD} ? Square{static_cast<_t>(0)} : Square{static_cast<_t>(7)}; }
 
     /// move pawn forward
     constexpr Square rankForward() const { return Square{static_cast<_t>(v_ + A8 - A7)}; }
