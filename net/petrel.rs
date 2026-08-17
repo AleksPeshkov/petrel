@@ -63,7 +63,7 @@ fn main() {
         });
 
     trainer.optimiser.set_params_for_weight("l0w",
-        AdamWParams{ decay: 0.02, min_weight: -2.0, max_weight: 2.0, ..Default::default() }
+        AdamWParams{ decay: 0.0, min_weight: -2.0, max_weight: 2.0, ..Default::default() }
     );
 
     let f_wdl = 32767.0 / (QB*WDL); // 5.11984375
@@ -89,12 +89,12 @@ fn main() {
     ];
     let data_loader = DirectSequentialDataLoader::new(data_set);
 
-    let superbatches = 240;
+    let superbatches = 360;
     let peak_lr = 0.0004;
-    let final_lr = peak_lr / 40.0;
+    let final_lr = peak_lr / 80.0;
 
     let schedule = TrainingSchedule {
-        net_id: "1024-hm".to_string(),
+        net_id: "1024-hm-0".to_string(),
         eval_scale: data_set_eval_scale,
         steps: TrainingSteps { batch_size: 4096, batches_per_superbatch: 24416, start_superbatch: 1, end_superbatch: superbatches },
         wdl_scheduler: wdl::CosineDecayWDL { start: 0.0, end: 0.1, final_superbatch: superbatches },
