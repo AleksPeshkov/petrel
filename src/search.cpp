@@ -586,6 +586,10 @@ ReturnStatus Node::quiescence() {
     assert (child().alpha == -beta);
     assert (child().beta == -alpha);
 
+    if (bestMove.any() && bestMove.canBeKiller() == CanBeKiller::No) {
+        RETURN_CUTOFF (searchMove(bestMove));
+    }
+
     // impossible to capture the king, do not even try to save time
     return goodCaptures(OP.nonKing());
 }
