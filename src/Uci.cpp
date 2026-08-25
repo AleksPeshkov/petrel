@@ -1148,7 +1148,7 @@ void Uci::setPositionMoves() {
 
     do {
         auto z = position_.z();
-        auto ttEntry = *The_transpositionTable.addr<TtEntry>(z);
+        auto ttEntry = TtEntry::read( The_transpositionTable.addr<TtEntry>(z) );
         if (ttEntry != z || ttEntry.none()) { break; }
 
         auto ttMove = ttEntry.ttMove(z);
@@ -1185,9 +1185,8 @@ void Uci::savePv() {
         assert (pos.isPossibleMove(move));
         auto eval = pos.inCheck() ? Score{} : pos.evaluate();
 
-        auto* o = The_transpositionTable.addr<TtEntry>(pos.z());
-        *o = TtEntry{pos.z(), eval, score.tt(ply), ExactBound, depth, move.ttMove()};
-        ++The_transpositionTable.writes;
+        TtEntry ttEntry{ pos.z(), eval, score.tt(ply), ExactBound, depth, move.ttMove() };
+        ttEntry.write( The_transpositionTable.addr<TtEntry>(pos.z()) );
 
         pos.makeMove(move.from(), move.to());
         score = -score;

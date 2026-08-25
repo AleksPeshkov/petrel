@@ -6,6 +6,36 @@
 #include "Index.hpp"
 #include "Score.hpp"
 
+// Valid age is [1, 2, 3]
+class TtAge {
+public:
+    using _t = unsigned;
+
+    static constexpr int bit_width() { return 2; }
+    static constexpr _t mask() { return singleton(bit_width()) - 1u; }
+
+    constexpr TtAge () : v_{1} {}
+    constexpr void nextAge() { v_ = next().v_; }
+
+    constexpr bool none() const { return v_ == 0; }
+    constexpr bool any() const { return !none(); }
+
+    constexpr bool is(TtAge age) const { return v_ == age.v_; }
+    constexpr bool isFresh(TtAge age) const { return is(age) || is(age.next()); }
+
+    template <typename P, typename S>
+    constexpr P pack(S shift) { return ::pack<P>(v_, shift); }
+
+    template <typename T, typename S>
+    static constexpr TtAge unpack(T packed, S shift) { return TtAge{::unpack(packed, shift, mask())}; }
+
+private:
+    _t v_;
+
+    constexpr explicit TtAge (_t v) : v_{v} { assert (v <= mask()); }
+    constexpr TtAge next() const { return v_ == mask() ? TtAge{} : TtAge{v_ + 1}; }
+};
+
 class Tt {
 public:
     static constexpr size_t minSize() { return 64; }
@@ -20,7 +50,7 @@ public:
 
     constexpr size_t size() const { return size_; }
     void setSize(size_t bytes) { allocate(bytes); zeroFill(); }
-    void newGame() { zeroFill(); }
+    void newGame() { zeroFill(); age = {}; }
     void newSearch() { zeroed_ = false; reads = 0; writes = 0; hits = 0; }
 
     template <typename T>
@@ -40,10 +70,18 @@ public:
         return static_cast<T*>( prefetch<sizeof(T)>(z) );
     }
 
+    template <typename P, typename S>
+    constexpr P packAge(S shift) { return age.pack<P>(shift); }
+
+    constexpr void nextAge() { age.nextAge(); }
+    constexpr bool isSameAge(TtAge a) const { return age.is(a); }
+    constexpr bool isFresh(TtAge a) const { return age.isFresh(a); }
+
 private:
     void* allocated_{nullptr};
     size_t size_{0};
     bool zeroed_{false};
+    TtAge age;
 
     template <size_t Align>
     constexpr void* addr(Z z) const {
@@ -95,13 +133,16 @@ private:
 };
 extern Tt The_transpositionTable;
 
-// 8 byte, always replace strategy, so no age field, only one score, depth and bound flags
+struct TtRecord;
+
+// 8 byte
 class TtEntry {
     enum {
         ShiftEval  = 0,
         ShiftScore = ShiftEval  + Score::bit_width(),
         ShiftBound = ShiftScore + Score::bit_width(),
-        ShiftDraft = ShiftBound + Bound::bit_width(),
+        ShiftAge   = ShiftBound + Bound::bit_width(),
+        ShiftDraft = ShiftAge   + TtAge::bit_width(),
         ShiftMove  = ShiftDraft + Ply::bit_width(),
         ShiftZ     = ShiftMove  + TtMove::bit_width(), // total size of all data fields
     };
@@ -115,6 +156,7 @@ class TtEntry {
             Score::_t eval_  :Score::bit_width();
             Score::_t score_ :Score::bit_width();
             Bound::_t bound_ :Bound::bit_width();
+            TtAge::_t age_   :TtAge::bit_width();
             Ply::_t   draft_ :Ply::bit_width();
             unsigned  zmove_ :TtMove::bit_width();
             Z::_t z_ : (64 - ShiftZ); // remaining bits
@@ -143,12 +185,14 @@ public:
         | _score.pack<_t>(ShiftScore)
         | _bound.pack<_t>(ShiftBound)
         | _draft.pack<_t>(ShiftDraft)
+        | The_transpositionTable.packAge<_t>(ShiftAge)
     } {
         static_assert (sizeof(TtEntry) == sizeof(u64_t));
 
         assert (score() == _score);
         assert (bound().is(_bound));
         assert (draft() == _draft);
+        assert (The_transpositionTable.isSameAge(age()));
         assert (ttMove(z) == _ttMove);
     }
 
@@ -159,8 +203,17 @@ public:
     constexpr Score eval() const { return Score::unpack(v_, ShiftEval); }
     constexpr Score score() const { return Score::unpack(v_, ShiftScore); }
     constexpr Bound bound() const { return Bound::unpack(v_, ShiftBound); }
+    constexpr TtAge age() const { return TtAge::unpack(v_, ShiftAge); }
     constexpr Ply draft() const { return Ply::unpack(v_, ShiftDraft); }
     constexpr TtMove ttMove(Z z) const { return TtMove::unpack(v_ ^ +z, ShiftMove); }
+
+    void refreshAge(TtEntry* tt) {
+        if (!The_transpositionTable.isSameAge(age())) {
+            v_ ^= age().pack<_t>(ShiftAge); // clear previous
+            v_ |= The_transpositionTable.packAge<_t>(ShiftAge); // set new value
+            write(tt);
+        }
+    }
 
     static TtEntry read(TtEntry* tt) {
         ++The_transpositionTable.reads;
@@ -172,6 +225,38 @@ public:
         ++The_transpositionTable.writes;
         return const_cast<TtEntry&>(*this);
     }
+
+    static constexpr TtRecord probe(TtEntry* tt, Z z);
 };
+
+struct TtRecord { TtEntry ttEntry; TtEntry* tt; bool ttHit; };
+constexpr TtRecord TtEntry::probe(TtEntry* tt, Z z) {
+    auto ttEntry = TtEntry::read(tt);
+    if (ttEntry == z) { return {ttEntry, tt, true}; }
+
+    auto tt2 = std::bit_cast<TtEntry*>(std::bit_cast<std::uintptr_t>(tt) ^ sizeof(TtEntry));
+    auto ttEntry2 = TtEntry::read(tt2);
+    if (ttEntry2 == z) { return {ttEntry2, tt2, true}; }
+
+    //TRICK: zeroed entry is never fresh
+    bool f1 = The_transpositionTable.isFresh(ttEntry.age());
+    bool f2 = The_transpositionTable.isFresh(ttEntry2.age());
+
+    // preserve fresh
+    if (f1 != f2) {
+        if (f2) {
+            return {ttEntry, tt, false};
+        } else {
+            return {ttEntry2, tt2, false};
+        }
+    }
+
+    // preserve deeper or other
+    if (ttEntry.draft() <= ttEntry2.draft()) {
+        return {ttEntry, tt, false};
+    } else {
+        return {ttEntry2, tt2, false};
+    }
+}
 
 #endif

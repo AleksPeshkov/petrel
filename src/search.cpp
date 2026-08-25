@@ -247,8 +247,10 @@ ReturnStatus Node::search() {
         assert (bestMove.none());
         if (depth == 0_ply) { break; }
 
-        auto ttEntry = TtEntry::read(tt); // copy full TT entry
-        if (ttEntry != z() || ttEntry.none()) { break; }
+        auto [ttEntry, ttPtr, ttHit] = TtEntry::probe(tt, z());
+        this->tt = ttPtr; // pointer to write after completed search
+
+        if (!ttHit || ttEntry.none()) { break; }
 
         if (ttEntry.ttMove(z()).any()) {
             auto ttMove = ttEntry.ttMove(z());
@@ -276,6 +278,7 @@ ReturnStatus Node::search() {
         )) {
             score = ttScore;
             bound = ttBound;
+            ttEntry.refreshAge(tt);
             return ReturnStatus::Cutoff;
         }
 
@@ -824,6 +827,7 @@ ReturnStatus Node::searchRoot(const PositionMoves& pos) {
 
         The_uci.info_pv();
         setMoves(The_uci.moves()); // refresh moves for next iteration
+        The_transpositionTable.nextAge();
 
         // refresh PV in TT in case it was overwritten
         if (The_uci.limits.getNodes() > 1'000000) { The_uci.savePv(); }
