@@ -2,6 +2,7 @@
 #include "io.hpp"
 #include "Bb.hpp"
 #include "Hyperbola.hpp"
+#include "nnue.hpp"
 #include "PiMask.hpp"
 #include "Score.hpp"
 #include "Tt.hpp"
@@ -10,6 +11,7 @@
 /**
 * Startup constant initialization
 */
+const Nnue nnue;
 constexpr const InBetween inBetween; // 32k 64*64*8, used by constexpr CastlingRules
 constinit const HyperbolaDir hyperbolaDir; // 4k 64*4*16
 constinit const HyperbolaSq hyperbolaSq; // 1k 64*16

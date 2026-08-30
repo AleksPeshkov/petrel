@@ -9,11 +9,11 @@ fn main() {
     const CPU_THREADS: usize = 16;
     const LOSS_POW: f32 = 2.6;
 
-    const ACC_SIZE: usize = 128;
+    const ACC_SIZE: usize = 1024;
 
-    const QA: f64 = 1024.0; // seems safe and large enough for 16-bit accumulator
-    const QB: f64 = 32.0;   // QB_LOG = 20 - QA_LOG - 4;
-    const WDL:f64 = 400.0;  // implicit output conversion 1.0 = 400 centipawns
+    const QA: f32 = 1024.0; // seems safe and large enough for 16-bit accumulator
+    const QB: f32 = 32.0;   // QB*WDL*f_wdl <= 32767
+    const WDL:f32 = 400.0;  // implicit output conversion 1.0 = 400 centipawns
 
     let mut trainer = ValueTrainerBuilder::default().use_threads(CPU_THREADS/2)
         .optimiser(AdamW).loss_fn(|output, target| output.sigmoid().power_error(target, LOSS_POW))
@@ -40,21 +40,20 @@ fn main() {
                 }
                 transformed
             }).quantise::<i16>(QA),
-            SavedFormat::id("l1w").quantise::<i16>(QB * WDL),
-            SavedFormat::id("l1b").quantise::<i64>(QA * 16.0 * QB * WDL),
+            SavedFormat::id("l1w").quantise::<i16>(QB*WDL),
+            SavedFormat::id("l1b").quantise::<i64>(QA * (QA*16.0 * QB*WDL)/32768.0), // 16384*400
         ])
         .inputs(Chess768).dual_perspective()
         .build(|builder, my_inputs, op_inputs| {
             let l0 = builder.new_affine("l0", 768, ACC_SIZE);
-            let my_accumulator = l0.forward(my_inputs);
-            let op_accumulator = l0.forward(op_inputs);
-            let accumulator = my_accumulator.concat(op_accumulator);
+            let my_acc = l0.forward(my_inputs);
+            let op_acc = l0.forward(op_inputs);
+            let dual_acc = my_acc.concat(op_acc);
 
-            let l1 = builder.new_affine("l1", 2 * ACC_SIZE, 1);
-            l1.forward(accumulator.screlu())
+            let l1 = builder.new_affine("l1", 2*ACC_SIZE, 1);
+            l1.forward(dual_acc.screlu())
         });
 
-    let checkpoint = "./checkpoints/petrel128-120/";
-    trainer.load_from_checkpoint(checkpoint);
-    trainer.save_to_checkpoint(checkpoint);
+    trainer.load_from_checkpoint("./checkpoints/1024-240-240/");
+    trainer.save_to_checkpoint("./checkpoints/1024-hrs-240/");
 }
