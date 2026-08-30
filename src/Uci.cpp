@@ -767,7 +767,6 @@ Uci::Uci(ostream& os) :
     logStartTime{::timeNow()},
     pid_{System::getPid()}
 {
-    Nnue::validate_embedded_size();
     for (auto ply : range<Ply>()) { std::construct_at(&searchStack[ply], ply); }
     inputLine.clear();
     bestmove_.clear();

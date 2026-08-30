@@ -7,6 +7,7 @@
 using i16x16_t = i16_t __attribute__((vector_size(32)));
 using u16x16_t = u16_t __attribute__((vector_size(32)));
 using i32x8_t  = i32_t __attribute__((vector_size(32)));
+using i64x4_t  = i64_t __attribute__((vector_size(32)));
 
 constexpr i16x16_t i16x16x(i16_t e) { return i16x16_t{ e,e,e,e, e,e,e,e, e,e,e,e, e,e,e,e }; }
 
@@ -42,27 +43,20 @@ constexpr V min(V a, V b) {
     #endif
 }
 
-constexpr i16x16_t clamp(i16x16_t a, int b, int c) {
-    return min(max(a, i16x16x(b)), i16x16x(c));
+constexpr i16x16_t clamp(i16x16_t a, int low, int high) {
+    return min(max(a, i16x16x(low)), i16x16x(high));
 }
 
-inline u16x16_t mulhi_u16(u16x16_t a, u16x16_t b) {
+inline i16x16_t mulhrs_i16(i16x16_t a, i16x16_t b) {
     #if USE_AVX2
-        return _mm256_mulhi_epu16(a, b);
+        return _mm256_mulhrs_epi16(a, b);
     #else
-        u16x16_t res{};
+        i16x16_t res{};
         for (int i = 0; i < 16; ++i) {
-            res[i] = static_cast<u16_t>((static_cast<u32_t>(a[i]) * static_cast<u32_t>(b[i])) >> 16);
+            auto prod = static_cast<int32_t>(a[i]) * static_cast<int32_t>(b[i]);
+            res[i] = static_cast<int16_t>((prod + 0x4000) >> 15);
         }
         return res;
-    #endif
-}
-
-inline i32_t hadd_i32(i32x8_t sum8) {
-    #ifdef __clang__
-        return __builtin_reduce_add(sum8);
-    #else
-        return sum8[0] + sum8[1] + sum8[2] + sum8[3] + sum8[4] + sum8[5] + sum8[6] + sum8[7];
     #endif
 }
 
@@ -76,6 +70,21 @@ inline i32x8_t madd_i16(i16x16_t w, i16x16_t v) {
                 + static_cast<i32_t>(w[2*i+1]) * static_cast<i32_t>(v[2*i+1]);
         }
         return sum;
+    #endif
+}
+
+inline i64x4_t unpack_add_i32(i32x8_t a) {
+    // signed extension from i32 to i64
+    i64x4_t low = __builtin_convertvector(__builtin_shufflevector(a, a, 0, 1, 2, 3), i64x4_t);
+    i64x4_t high = __builtin_convertvector(__builtin_shufflevector(a, a, 4, 5, 6, 7), i64x4_t);
+    return low + high;
+}
+
+inline i64_t hadd_i64(i64x4_t sum4) {
+    #ifdef __clang__
+        return __builtin_reduce_add(sum4);
+    #else
+        return sum4[0] + sum4[1] + sum4[2] + sum4[3];
     #endif
 }
 
@@ -98,37 +107,32 @@ struct CACHE_ALIGN Nnue {
 
     W0 w0;    // feature weights, 768*(64*32) = 1572864 bytes, feature biases embeded into kings weights
     W1 w1;    // output weights, 2*(64*32) = 4096 bytes
-    i32_t b1; // output bias (64 byte aligned), total = 1577024 bytes
+    i64_t b1; // output bias (64 byte aligned), total = 1577024 bytes
 
-    static constexpr u16x16_t squared(u16x16_t x1024) {
-        auto x = x1024 << 4; // [0 .. 16384]
-        return mulhi_u16(x+1, x); // x*x [0 .. 4096]
-    }
+    Nnue ();
 
     static i32x8_t forward(i16x16_t x, i16x16_t w) {
-        auto x1024 = clamp(x, 0, 1024);
-        auto activated = squared(x1024); // [0 .. 4096]
-        return madd_i16(activated, w); // w = [-8191,+8191]
+        auto c = clamp(x, 0, 1024);
+        auto cw = mulhrs_i16(c << 4, w);
+        return madd_i16(c, cw); // sum of two products
     }
 
     using DualAcc = array<_t, DualAccIndex>;
     int32_t evaluate(const DualAcc& dual_acc) const {
         i32x8_t sum8{};
         for (auto n : range<DualAccIndex>()) {
-            // safe for up to 32 additions
+            // safe for 64 additions (128 products)
             sum8 += forward(dual_acc[n], this->w1[n]);
         }
-        i32_t output = this->b1 + hadd_i32(sum8);
+        auto sum4 = unpack_add_i32(sum8);
+        i64_t output = this->b1 + hadd_i64(sum4);
 
-        constexpr auto Scale = 15; // 12+3 (squared() x4096, QB=8)
+        constexpr auto Scale = 14; // QA*QA: 2*10, QB: 5, shift: 4, mulhrs_i16: -15
         auto result = output >> Scale;
         return result;
     }
-
-    static COLD void validate_embedded_size();
 };
-
-extern constinit const Nnue& nnue;
+extern const Nnue nnue;
 
 class CACHE_ALIGN Acc {
 public:
