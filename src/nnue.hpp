@@ -91,7 +91,7 @@ inline i64_t hadd_i64(i64x4_t sum4) {
 struct CACHE_ALIGN Nnue {
     struct FeatureIndex : ::Index<FeatureIndex, 2*6*64> { using Index::Index;
         constexpr FeatureIndex (Side si, PieceType ty, Square sq)
-            : Index{ (+si * 6*64) + (+ty * 64) + (+sq) }
+            : Index{ (+si * 6*64) + (+ty * 64) + +sq }
         {}
     };
 
@@ -127,12 +127,14 @@ struct CACHE_ALIGN Nnue {
         auto sum4 = unpack_add_i32(sum8);
         i64_t output = this->b1 + hadd_i64(sum4);
 
-        constexpr auto Scale = 14; // QA*QA: 2*10, QB: 5, shift: 4, mulhrs_i16: -15
+        constexpr auto Scale = 13; // QA*QA: 2*10, QB: 4, shift: 4, mulhrs_i16: -15
         auto result = output >> Scale;
         return result;
     }
 };
 extern const Nnue nnue;
+
+class Position;
 
 class CACHE_ALIGN Acc {
 public:
@@ -146,42 +148,40 @@ public:
         }
     }
 
-    constexpr void drop(Side si, PieceType ty, Square to) {
+    // defined in Position.cpp
+    template <Side::_t>
+    void setup(const Position& pos, Square mirror);
+
+    constexpr void move(Square mirror, Side si, PieceType ty, Square from, Square to) {
+        move({si, ty, from^mirror}, {si, ty, to^mirror});
+    }
+
+    constexpr void promote(Square mirror, Side si, Square from, PromoType promoted, Square to) {
+        move({si, Pawn, from^mirror}, {si, promoted, to^mirror});
+    }
+
+    constexpr void move(Square mirror, Side si, PieceType ty, Square from, Square to, NonKingType captured) {
+        capture({si, ty, from^mirror}, {si, ty, to^mirror}, {~si, captured, to^mirror});
+    }
+
+    constexpr void promote(Square mirror, Side si, Square from, PromoType promoted, Square to, NonKingType captured) {
+        capture({si, Pawn, from^mirror}, {si, promoted, to^mirror}, {~si, captured, to^mirror});
+    }
+
+    constexpr void ep(Square mirror, Side si, Square from, Square to, Square ep) {
+        capture({si, Pawn, from^mirror}, {si, Pawn, to^mirror}, {~si, Pawn, ep^mirror});
+    }
+
+    constexpr void castle(Square mirror, Side si, Square kingFrom, Square kingTo, Square rookFrom, Square rookTo) {
         for (auto n : range<AccIndex>()) {
-            acc[n] = adds_i16(acc[n], nnue.w0[{si, ty, to}][n]);
-        }
-    }
-
-    constexpr void move(Side si, PieceType ty, Square from, Square to) {
-        move({si, ty, from}, {si, ty, to});
-    }
-
-    constexpr void promote(Side si, Square from, PromoType promoted, Square to) {
-        move({si, Pawn, from}, {si, promoted, to});
-    }
-
-    constexpr void move(Side si, PieceType ty, Square from, Square to, NonKingType captured) {
-        capture({si, ty, from}, {si, ty, to}, {~si, captured, to});
-    }
-
-    constexpr void promote(Side si, Square from, PromoType promoted, Square to, NonKingType captured) {
-        capture({si, Pawn, from}, {si, promoted, to}, {~si, captured, to});
-    }
-
-    constexpr void ep(Side si, Square from, Square to, Square ep) {
-        capture({si, Pawn, from}, {si, Pawn, to}, {~si, Pawn, ep});
-    }
-
-    constexpr void castle(Side si, Square kingFrom, Square kingTo, Square rookFrom, Square rookTo) {
-        for (auto n : range<AccIndex>()) {
-            auto s1 = nnue.w0[{si, King, kingTo}][n] - nnue.w0[{si, King, kingFrom}][n];
-            auto s2 = nnue.w0[{si, Rook, rookTo}][n] - nnue.w0[{si, Rook, rookFrom}][n];
+            auto s1 = nnue.w0[{si, King, kingTo^mirror}][n] - nnue.w0[{si, King, kingFrom^mirror}][n];
+            auto s2 = nnue.w0[{si, Rook, rookTo^mirror}][n] - nnue.w0[{si, Rook, rookFrom^mirror}][n];
             acc[n] = adds_i16(acc[n], s1 + s2);
         }
     }
 
 private:
-    array<_t, AccIndex> acc{}; // feature biases = 0
+    array<_t, AccIndex> acc{}; // feature biases embedded into kings weights
 
     constexpr void move(Fi from, Fi to) {
         for (auto n : range<AccIndex>()) {
@@ -197,60 +197,66 @@ private:
 };
 
 class DualAcc {
-    array<Acc, Side> side{};
 public:
+    using _t = Acc::_t;
+
     // raw NNUE static evaluation
     auto evaluate() const { return nnue.evaluate(std::bit_cast<Nnue::DualAcc>(side)); }
+
+    // defined in Position.cpp
+    void setup(const Position& pos);
 
     // copy parent accumulator but flip sides
     constexpr void flip(const DualAcc& parent) {
         side[My] = parent.side[Op];
         side[Op] = parent.side[My];
+        mirror[My] = parent.mirror[Op];
+        mirror[Op] = parent.mirror[My];
     }
 
-    constexpr void swap() { Acc::swap(side[My], side[Op]); }
-
-    constexpr void drop(Side si, PieceType ty, Square to) {
-        side[si].drop(My, ty, to);
-        side[~si].drop(Op, ty, ~to);
+    constexpr void swap() {
+        Acc::swap(side[My], side[Op]);
+        std::swap(mirror[My], mirror[Op]);
     }
 
     constexpr void move(PieceType ty, Square from, Square to) {
         assert (from != to);
-        side[Op].move(My, ty, from, to);
-        side[My].move(Op, ty, ~from, ~to);
+        side[Op].move(mirror[Op], My, ty, from, to);
+        side[My].move(~mirror[My], Op, ty, from, to);
     }
 
     constexpr void move(PieceType ty, Square from, Square to, NonKingType captured) {
         assert (from != to);
-        side[Op].move(My, ty, from, to, captured);
-        side[My].move(Op, ty, ~from, ~to, captured);
+        side[Op].move(mirror[Op], My, ty, from, to, captured);
+        side[My].move(~mirror[My], Op, ty, from, to, captured);
     }
 
     constexpr void promote(Square from, PromoType promoted, Square to) {
         assert (from.on(Rank7)); assert (to.on(Rank8));
-        side[Op].promote(My, from, promoted, to);
-        side[My].promote(Op, ~from, promoted, ~to);
+        side[Op].promote(mirror[Op], My, from, promoted, to);
+        side[My].promote(~mirror[My], Op, from, promoted, to);
     }
 
     constexpr void promote(Square from, PromoType promoted, Square to, NonKingType captured) {
         assert (from.on(Rank7)); assert (to.on(Rank8));
-        side[Op].promote(My, from, promoted, to, captured);
-        side[My].promote(Op, ~from, promoted, ~to, captured);
+        side[Op].promote(mirror[Op], My, from, promoted, to, captured);
+        side[My].promote(~mirror[My], Op, from, promoted, to, captured);
     }
 
     constexpr void ep(Square from, Square to, Square ep) {
         assert (from.on(Rank5)); assert (to.on(Rank6)); assert (ep.on(Rank5));
-        side[Op].ep(My, from, to, ep);
-        side[My].ep(Op, ~from, ~to, ~ep);
+        side[Op].ep(mirror[Op], My, from, to, ep);
+        side[My].ep(~mirror[My], Op, from, to, ep);
     }
 
-    constexpr void castle(Square kingFrom, Square kingTo, Square rookFrom, Square rookTo) {
-        assert (kingFrom != rookFrom); assert (kingTo != rookTo);
-        assert (kingFrom.on(Rank1)); assert (rookTo.on(Rank1));
-        side[Op].castle(My, kingFrom, kingTo, rookFrom, rookTo);
-        side[My].castle(Op, ~kingFrom, ~kingTo, ~rookFrom, ~rookTo);
-    }
+    // defined in Position.cpp
+    constexpr void moveKing(const Position&, Square from, Square to);
+    constexpr void moveKing(const Position&, Square from, Square to, NonKingType captured);
+    constexpr void castle(const Position&, Square kingFrom, Square kingTo, Square rookFrom, Square rookTo);
+
+private:
+    array<Acc, Side> side{};
+    array<Square, Side> mirror{};
 };
 
 #endif

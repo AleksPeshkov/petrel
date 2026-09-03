@@ -1,5 +1,5 @@
 use bullet_lib::{
-    game::inputs::Chess768,
+    game::inputs::Chess768hm,
     nn::optimiser::{AdamW, AdamWParams},
     trainer::{
         save::SavedFormat,
@@ -16,7 +16,7 @@ fn main() {
     const ACC_SIZE: usize = 1024;
 
     const QA: f32 = 1024.0; // seems safe and large enough for 16-bit accumulator
-    const QB: f32 = 32.0;   // QB*WDL*f_wdl <= 32767
+    const QB: f32 = 16.0;   // QB*WDL*f_wdl <= 32767
     const WDL:f32 = 400.0;  // implicit output conversion 1.0 = 400 centipawns
 
     let mut trainer = ValueTrainerBuilder::default().use_threads(CPU_THREADS/2)
@@ -45,9 +45,9 @@ fn main() {
                 transformed
             }).quantise::<i16>(QA),
             SavedFormat::id("l1w").quantise::<i16>(QB*WDL),
-            SavedFormat::id("l1b").quantise::<i64>(QA * (QA*16.0 * QB*WDL)/32768.0), // 16384*400
+            SavedFormat::id("l1b").quantise::<i64>(QA * (QA*16.0 * QB*WDL)/32768.0), // 8192*400
         ])
-        .inputs(Chess768).dual_perspective()
+        .inputs(Chess768hm).dual_perspective()
         .build(|builder, my_inputs, op_inputs| {
             let l0 = builder.new_affine("l0", 768, ACC_SIZE);
             let my_acc = l0.forward(my_inputs);
@@ -59,10 +59,10 @@ fn main() {
         });
 
     trainer.optimiser.set_params_for_weight("l0w",
-        AdamWParams{ decay: 0.01, min_weight: -2.0, max_weight: 2.0, ..Default::default() }
+        AdamWParams{ decay: 0.01, min_weight: -4.0, max_weight: 4.0, ..Default::default() }
     );
 
-    let f_wdl = 32767.0 / (QB*WDL); // 2.559921875
+    let f_wdl = 32767.0 / (QB*WDL); // 5.11984375
     trainer.optimiser.set_params_for_weight("l1w",
         AdamWParams{ decay: 0.02, min_weight: -f_wdl, max_weight: f_wdl, ..Default::default() }
     );
@@ -86,13 +86,15 @@ fn main() {
     let data_loader = DirectSequentialDataLoader::new(data_set);
 
     let final_superbatch = 240;
-    let peak_lr = 0.0004;
-    let final_lr = peak_lr / 40.0;
+    let peak_lr = 4e-4;
+    let final_lr = peak_lr / 100.0;
+    let batch_size = 16_384 /4;
+    let batches_per_superbatch = 6_104 * 4;
 
     let schedule = TrainingSchedule {
-        net_id: "1024-hrs".to_string(),
+        net_id: "1024-hm".to_string(),
         eval_scale: data_set_eval_scale,
-        steps: TrainingSteps { batch_size: 4096, batches_per_superbatch: 24416, start_superbatch: 1, end_superbatch: final_superbatch },
+        steps: TrainingSteps { batch_size, batches_per_superbatch, start_superbatch: 1, end_superbatch: final_superbatch },
         wdl_scheduler: wdl::CosineDecayWDL { start: 0.0, end: 0.1, final_superbatch },
         lr_scheduler: lr::CosineDecayLR { initial_lr: peak_lr, final_lr, final_superbatch },
         save_rate: 10,

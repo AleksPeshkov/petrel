@@ -1,5 +1,5 @@
 use bullet_lib::{
-    game::inputs::Chess768,
+    game::inputs::Chess768hm,
     nn::optimiser::AdamW,
     trainer::save::SavedFormat,
     value::ValueTrainerBuilder,
@@ -12,7 +12,7 @@ fn main() {
     const ACC_SIZE: usize = 1024;
 
     const QA: f32 = 1024.0; // seems safe and large enough for 16-bit accumulator
-    const QB: f32 = 32.0;   // QB*WDL*f_wdl <= 32767
+    const QB: f32 = 16.0;   // QB*WDL*f_wdl <= 32767
     const WDL:f32 = 400.0;  // implicit output conversion 1.0 = 400 centipawns
 
     let mut trainer = ValueTrainerBuilder::default().use_threads(CPU_THREADS/2)
@@ -43,7 +43,7 @@ fn main() {
             SavedFormat::id("l1w").quantise::<i16>(QB*WDL),
             SavedFormat::id("l1b").quantise::<i64>(QA * (QA*16.0 * QB*WDL)/32768.0), // 16384*400
         ])
-        .inputs(Chess768).dual_perspective()
+        .inputs(Chess768hm).dual_perspective()
         .build(|builder, my_inputs, op_inputs| {
             let l0 = builder.new_affine("l0", 768, ACC_SIZE);
             let my_acc = l0.forward(my_inputs);
@@ -54,6 +54,6 @@ fn main() {
             l1.forward(dual_acc.screlu())
         });
 
-    trainer.load_from_checkpoint("./checkpoints/1024-240-240/");
-    trainer.save_to_checkpoint("./checkpoints/1024-hrs-240/");
+    trainer.load_from_checkpoint("./checkpoints/1024-hm-120/");
+    trainer.save_to_checkpoint("./checkpoints/1024-hm-1-120/");
 }
