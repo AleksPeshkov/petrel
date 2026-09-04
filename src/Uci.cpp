@@ -74,7 +74,7 @@ bool consume(istream& is, czstring token) {
 namespace { // anonymous namespace
 
 istream& operator >> (istream& is, TimeInterval& timeInterval) {
-    int msecs;
+    int msecs{};
     if (is >> msecs) {
         if (msecs < 0) { msecs = 0; }
         timeInterval = std::chrono::duration_cast<TimeInterval>(std::chrono::milliseconds{msecs} );

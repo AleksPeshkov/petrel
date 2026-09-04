@@ -18,8 +18,10 @@
 
 // number of halfmoves without capture or pawn move
 class Rule50 {
-    int v_;
+    using _t = int;
+    _t v_;
     static constexpr int Draw = 100;
+    static constexpr bool isOk(int n) { return 0 <= n && n <= Draw; }
 
 public:
     constexpr Rule50() : v_{0} {}
@@ -33,8 +35,13 @@ public:
     friend ostream& operator << (ostream& os, Rule50 rule50) { return os << rule50.v_; }
 
     friend istream& operator >> (istream& is, Rule50& rule50) {
-        is >> rule50.v_;
-        if (is) { assert (0 <= rule50.v_ && rule50.v_ <= 100); }
+        auto before = is.tellg();
+
+        _t n{};
+        is >> n;
+        if (!is || !isOk(n)) { return io::fail_pos(is, before); }
+
+        rule50.v_ = n;
         return is;
     }
 };

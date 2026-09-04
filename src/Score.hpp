@@ -16,10 +16,10 @@ struct Ply : Index<Ply, 64> {
     friend ostream& operator << (ostream& os, Ply ply) { return os << ply.v_; }
 
     friend istream& operator >> (istream& is, Ply& ply) {
-        _t n;
+        _t n{};
         auto before = is.tellg();
         is >> n;
-        if (!isOk(n)) { return io::fail_pos(is, before); }
+        if (!is || !isOk(n)) { return io::fail_pos(is, before); }
         ply = Ply{n};
         return is;
     }
