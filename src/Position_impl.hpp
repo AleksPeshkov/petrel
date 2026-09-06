@@ -56,6 +56,81 @@ void Position::setLegalEnPassant(Square ep) {
     }
 }
 
+inline void DualAcc::setup(const Position& pos) {
+    mirror[My] = pos.positionSide(My).sqKing().mirrorMask();
+    side[My].setup<My>(pos, mirror[My]);
+
+    mirror[Op] = pos.positionSide(Op).sqKing().mirrorMask();
+    side[Op].setup<Op>(pos, mirror[Op]);
+}
+
+struct PiecesIndex : Index<PiecesIndex, 2*Pi::size()> { using Index::Index; };
+
+template <Side::_t AccMy>
+inline void Acc::setup(const Position& pos, Square mirror) {
+    assert (pos.positionSide(AccMy).sqKing().mirrorMask() == mirror);
+
+    int count{0};
+    array<Fi, PiecesIndex> fi;
+
+    auto& my{ pos.positionSide(AccMy) };
+    for (auto pi : my.any()) {
+        fi[PiecesIndex{count++}] = {My, my.typeOf(pi), my.sq(pi)^mirror};
+    }
+
+    //TRICK: flip pieces squares perspective for opposite side
+    auto op_mirror = ~mirror;
+    auto& op{ pos.positionSide(~AccMy) };
+    for (auto pi : op.any()) {
+        fi[PiecesIndex{count++}] = {Op, op.typeOf(pi), op.sq(pi)^op_mirror};
+    }
+
+    for (auto n : range<AccIndex>()) {
+        _t a{};
+        for (int i = 0; i < count; ++i) {
+            a = adds_i16(a, nnue.w0[ fi[PiecesIndex{i}]][n] );
+        }
+        acc[n] = a;
+    }
+}
+
+constexpr void DualAcc::moveKing(const Position& pos, Square from, Square to) {
+    assert (from != to);
+    if (+(from ^ to) & 4) {
+        // king crossed the horizontal middle line
+        mirror[Op] = mirror[Op].mirror();
+        side[Op].setup<Op>(pos, mirror[Op]);
+    } else {
+        side[Op].move(mirror[Op], My, King, from, to);
+    }
+    side[My].move(~mirror[My], Op, King, from, to);
+}
+
+constexpr void DualAcc::moveKing(const Position& pos, Square from, Square to, NonKingType captured) {
+    assert (from != to);
+    if (+(from ^ to) & 4) {
+        // king crossed the horizontal middle line
+        mirror[Op] = mirror[Op].mirror();
+        side[Op].setup<Op>(pos, mirror[Op]);
+    } else {
+        side[Op].move(mirror[Op], My, King, from, to, captured);
+    }
+    side[My].move(~mirror[My], Op, King, from, to, captured);
+}
+
+constexpr void DualAcc::castle(const Position& pos, Square kingFrom, Square kingTo, Square rookFrom, Square rookTo) {
+    assert (kingFrom != rookFrom); assert (kingTo != rookTo);
+    assert (kingFrom.on(Rank1)); assert (rookTo.on(Rank1));
+    if (+(kingFrom ^ kingTo) & 4) {
+        // king crossed the horizontal middle line
+        mirror[Op] = mirror[Op].mirror();
+        side[Op].setup<Op>(pos, mirror[Op]);
+    } else {
+        side[Op].castle(mirror[Op], My, kingFrom, kingTo, rookFrom, rookTo);
+    }
+    side[My].castle(~mirror[My], Op, kingFrom, kingTo, rookFrom, rookTo);
+}
+
 template <Side::_t My, Position::MakeMoveFlags Flags>
 bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
     constexpr Side::_t Op{~My};
@@ -190,7 +265,7 @@ bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
             MY.move(Pi{TheKing}, from, to);
             MY.updateMovedKing(to);
             updateSliderAttacks<My>(MY.affectedBy(from)); // king cannot affect enemy attacks
-            if constexpr (Flags & WithEval) { accumulator.move(King, from, to, captured); }
+            if constexpr (Flags & WithEval) { accumulator.moveKing(*this, from, to, captured); }
             return true; // end of king capture move
         } else {
             if constexpr (Flags & WithZobrist) {
@@ -202,7 +277,7 @@ bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
             MY.updateMovedKing(to);
             OP.setOpKing(~to);
             updateSliderAttacks<My>(MY.affectedBy(from, to)); // king cannot affect enemy attacks
-            if constexpr (Flags & WithEval) { accumulator.move(King, from, to); }
+            if constexpr (Flags & WithEval) { accumulator.moveKing(*this, from, to); }
             return shouldResetZHash; // end of king non-capture move
         }
     } // no king moves anymore
@@ -233,7 +308,7 @@ bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
             //TRICK: castling rook should attack 'kingFrom' square
             //TRICK: only first rank sliders can be affected
             updateSliderAttacks<My>(MY.affectedBy(rookFrom, kingFrom) & MY.anyOn(Rank1));
-            if constexpr (Flags & WithEval) { accumulator.castle(kingFrom, kingTo, rookFrom, rookTo); }
+            if constexpr (Flags & WithEval) { accumulator.castle(*this, kingFrom, kingTo, rookFrom, rookTo); }
             return true; // end of castling move
         }
 

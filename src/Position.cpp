@@ -63,13 +63,13 @@ bool Position::setEnPassant(File file) {
 }
 
 bool Position::dropValid(Side si, PieceType ty, Square to) {
-    accumulator.drop(si, ty, to);
     return positionSide(si).dropValid(ty, to);
 }
 
 bool Position::afterDrop() {
     PositionSide::finalSetup(MY, OP);
     updateSliderAttacks<Op>(OP.any(), MY.any());
+    accumulator.setup(*this);
     rule50_ = {};
 
     // opponent should not be in check
