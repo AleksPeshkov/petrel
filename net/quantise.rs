@@ -50,10 +50,13 @@ fn main() {
             let op_acc = l0.forward(op_inputs);
             let dual_acc = my_acc.concat(op_acc);
 
-            let l1 = builder.new_affine("l1", 2*ACC_SIZE, 1);
-            l1.forward(dual_acc.screlu())
+            // Concatenated ReLU
+            let concatenated = dual_acc.concat( dual_acc.neg() );
+
+            let l1 = builder.new_affine("l1", 4*ACC_SIZE, 1);
+            l1.forward(concatenated.screlu())
         });
 
-    trainer.load_from_checkpoint("./checkpoints/1k-hm3-s2-120/");
-    trainer.save_to_checkpoint("./checkpoints/1k-hm3-s2-120q32/");
+    trainer.load_from_checkpoint("./checkpoints/concat1-120/");
+    trainer.save_to_checkpoint("./checkpoints/concat1-120q32/");
 }

@@ -8,6 +8,7 @@ use bullet_lib::{
     },
     value::{ValueTrainerBuilder, loader::DirectSequentialDataLoader},
 };
+use std::ops::Neg;
 
 fn main() {
     const CPU_THREADS: usize = 16;
@@ -55,8 +56,11 @@ fn main() {
             let op_acc = l0.forward(op_inputs);
             let dual_acc = my_acc.concat(op_acc);
 
-            let l1 = builder.new_affine("l1", 2*ACC_SIZE, 1);
-            l1.forward(dual_acc.screlu())
+            // Concatenated ReLU
+            let concatenated = dual_acc.concat( dual_acc.neg() );
+
+            let l1 = builder.new_affine("l1", 4*ACC_SIZE, 1);
+            l1.forward(concatenated.screlu())
         });
 
     trainer.optimiser.set_params_for_weight("l0b", AdamWParams{ decay: 0.0, min_weight: -4.0, max_weight: 4.0, ..Default::default() });
@@ -88,7 +92,7 @@ fn main() {
     let batches_per_superbatch = 6_104;
 
     let schedule1 = TrainingSchedule {
-        net_id: "h1".to_string(),
+        net_id: "c1".to_string(),
         eval_scale: data_set_eval_scale,
         steps: TrainingSteps { batch_size, batches_per_superbatch, start_superbatch: 1, end_superbatch: final_superbatch },
         wdl_scheduler: wdl::CosineDecayWDL { start: 0.20, end: 0.10, final_superbatch },
@@ -99,7 +103,7 @@ fn main() {
 
     trainer.load_from_checkpoint(&format!("./{}/{}-{}", &settings.output_directory, &schedule1.net_id, schedule1.steps.end_superbatch));
     let schedule2 = TrainingSchedule {
-        net_id: "h2".to_string(),
+        net_id: "c2".to_string(),
         eval_scale: data_set_eval_scale,
         steps: TrainingSteps { batch_size: batch_size/4, batches_per_superbatch: batches_per_superbatch*4, start_superbatch: 1, end_superbatch: final_superbatch },
         wdl_scheduler: wdl::CosineDecayWDL { start: 0.10, end: 0.00, final_superbatch },

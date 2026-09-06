@@ -26,11 +26,11 @@ inline i16x16_t adds_i16(i16x16_t a, i16x16_t b) {
 }
 
 template <typename V>
-constexpr V max(V a, V b) {
+constexpr V abs(V v) {
     #ifdef __clang__
-        return __builtin_elementwise_max(a, b);
+        return __builtin_elementwise_abs(v);
     #else
-        return a > b ? a : b;
+        return v < 0 ? -v : v;
     #endif
 }
 
@@ -41,10 +41,6 @@ constexpr V min(V a, V b) {
     #else
         return a < b ? a : b;
     #endif
-}
-
-constexpr i16x16_t clamp(i16x16_t a, int low, int high) {
-    return min(max(a, i16x16x(low)), i16x16x(high));
 }
 
 inline i16x16_t mulhrs_i16(i16x16_t a, i16x16_t b) {
@@ -103,17 +99,21 @@ struct CACHE_ALIGN Nnue {
     using Acc = array<_t, AccIndex>;
     using DualAcc = array<Acc, Side>;
 
+    enum concatenated_enum { Pos, Neg };
+    struct ConcatIndex : Index<ConcatIndex, 2, concatenated_enum> { constexpr ConcatIndex (_t i) : Index{i} {} };
+
     using W0 = array<_t, FeatureIndex, AccIndex>;
-    using W1 = DualAcc;
+    using W1 = array<_t, Side, AccIndex, ConcatIndex>;
 
     W0 w0;    // feature weights, 768*(64*32) = 1572864 bytes, feature biases embeded into kings weights
-    W1 w1;    // output weights, 2*(64*32) = 4096 bytes
-    i64_t b1; // output bias (64 byte aligned), total = 1577024 bytes
+    W1 w1;    // output weights, 4*(64*32) = 8192 bytes
+    i64_t b1; // output bias (64 byte aligned), total = 1581120 bytes
 
     Nnue ();
 
-    static i32x8_t forward(i16x16_t x, i16x16_t w) {
-        auto c = clamp(x, 0, 1024);
+    static i32x8_t forward(i16x16_t x, i16x16_t pos, i16x16_t neg) {
+        auto w = x > 0 ? pos : neg;
+        auto c = min(abs(x), i16x16x(1024));
         auto c4 = c << 4;
         auto cw = mulhrs_i16(adds_i16(c4, c4), w); // ((c << 5) * w) >> 15
         return madd_i16(c, cw); // sum of two products
@@ -124,7 +124,7 @@ struct CACHE_ALIGN Nnue {
         for (auto si : range<Side>()) {
             for (auto n : range<AccIndex>()) {
                 // safe for 64 additions (128 products)
-                sum8 += forward(dacc[si][n], this->w1[si][n]);
+                sum8 += forward(dacc[si][n], this->w1[si][n][Pos], this->w1[si][n][Neg]);
             }
         }
         i64_t output = this->b1 + hadd_i64(unpack_add_i32(sum8));
