@@ -277,7 +277,7 @@ ReturnStatus Node::search() {
         )) {
             score = ttScore;
             bound = ttBound;
-            ttEntry.refreshAge(tt);
+            ttEntry.refresh(tt);
             return ReturnStatus::Cutoff;
         }
 

@@ -207,7 +207,10 @@ public:
     constexpr Ply draft() const { return Ply::unpack(v_, ShiftDraft); }
     constexpr TtMove ttMove(Z z) const { return TtMove::unpack(v_ ^ +z, ShiftMove); }
 
-    void refreshAge(TtEntry* tt) {
+    //TRICK: zeroed entry is never fresh
+    bool isFresh() const { return the_tt.isFresh(age()); }
+
+    void refresh(TtEntry* tt) {
         if (!the_tt.isSameAge(age())) {
             v_ ^= age().pack<_t>(ShiftAge); // clear previous
             v_ |= the_tt.packAge<_t>(ShiftAge); // set new value
@@ -220,10 +223,9 @@ public:
         return std::bit_cast<TtEntry>(std::bit_cast<std::atomic<u64_t>*>(tt)->load(std::memory_order_relaxed));
     }
 
-    TtEntry& write(TtEntry* tt) const {
+    void write(TtEntry* tt) const {
         std::bit_cast<std::atomic<u64_t>*>(tt)->store(this->v_, std::memory_order_relaxed);
         ++the_tt.writes;
-        return const_cast<TtEntry&>(*this);
     }
 
     static constexpr TtRecord probe(TtEntry* tt, Z z);
@@ -231,18 +233,19 @@ public:
 
 struct TtRecord { TtEntry ttEntry; TtEntry* tt; bool ttHit; };
 constexpr TtRecord TtEntry::probe(TtEntry* tt, Z z) {
-    auto ttEntry = TtEntry::read(tt);
+    // direct entry
+    auto ttEntry = read(tt);
     if (ttEntry == z) { return {ttEntry, tt, true}; }
 
+    // other entry
     auto tt2 = std::bit_cast<TtEntry*>(std::bit_cast<std::uintptr_t>(tt) ^ sizeof(TtEntry));
-    auto ttEntry2 = TtEntry::read(tt2);
+    auto ttEntry2 = read(tt2);
     if (ttEntry2 == z) { return {ttEntry2, tt2, true}; }
 
-    //TRICK: zeroed entry is never fresh
-    bool f1 = the_tt.isFresh(ttEntry.age());
-    bool f2 = the_tt.isFresh(ttEntry2.age());
-
     // preserve fresh
+    //TRICK: zeroed entry is never fresh
+    bool f1 = ttEntry.isFresh();
+    bool f2 = ttEntry2.isFresh();
     if (f1 != f2) {
         if (f2) {
             return {ttEntry, tt, false};
