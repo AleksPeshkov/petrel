@@ -1157,7 +1157,7 @@ void Uci::setPositionMoves() {
 
         Score score{};
         if (ttEntry.bound().is(ExactBound)) {
-            score = ttEntry.score();
+            score = ttEntry.score(0_ply);
         }
 
         pv.set(position_.toMove(ttMove), score);
@@ -1185,8 +1185,8 @@ void Uci::savePv() {
         assert (pos.isPossibleMove(move));
         auto eval = pos.inCheck() ? Score{} : pos.evaluate();
 
-        TtEntry ttEntry{ pos.z(), eval, score.tt(ply), ExactBound, depth, move.ttMove() };
-        ttEntry.write( the_tt.addr<TtEntry>(pos.z()) );
+        auto tt = the_tt.addr<TtEntry>(pos.z());
+        TtEntry{ pos.z(), eval, score, ply, ExactBound, depth, move.ttMove() }.write(tt);
 
         pos.makeMove(move.from(), move.to());
         score = -score;
