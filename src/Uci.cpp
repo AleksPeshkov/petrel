@@ -710,9 +710,6 @@ bool SearchLimits::setLimits(const UciLimits& go, const UciPosition& position) {
 
     const auto lookAheadMoves = 0 < go.movestogo && go.movestogo < LookAheadMoves ? go.movestogo : LookAheadMoves;
     const auto lookAheadTime = [&](Color color) { return go.time[color] + go.inc[color] * (lookAheadMoves - 1); };
-    const auto averageMoveTime = [&](Color color) {
-        return lookAheadTime(color) / (lookAheadMoves < LookAheadMoves ? lookAheadMoves : LookAheadMoves);
-    };
 
     // "maximum" time strategy: allocate 1/4 of all remaining time (including look ahead number of future time increments)
     auto maximumTime = lookAheadTime(my) / 4; // 25%
@@ -732,6 +729,11 @@ bool SearchLimits::setLimits(const UciLimits& go, const UciPosition& position) {
 
         maximumTime = std::min(maximumTime, availableTime);
     }
+
+    const auto averageMoveTime = [&](Color color) {
+        //TRICK: avoid integer division operation if possible
+        return lookAheadMoves < LookAheadMoves ? lookAheadTime(color)/lookAheadMoves : lookAheadTime(color)/LookAheadMoves;
+    };
 
     // "optimum" time strategy: allocate time evenly between look ahead number of moves
     auto optimumTime = averageMoveTime(my);
