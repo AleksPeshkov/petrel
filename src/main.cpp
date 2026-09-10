@@ -117,14 +117,14 @@ int main(int argc, const char* argv[]) {
             return EXIT_FAILURE;
         }
 
-        The_uci.processInput(initFile);
+        the_uci.processInput(initFile);
     }
 
     if (runBench) {
-        The_uci.bench(benchLimits);
+        the_uci.bench(benchLimits);
         return EXIT_SUCCESS;
     }
 
-    The_uci.processInput(std::cin);
+    the_uci.processInput(std::cin);
     return EXIT_SUCCESS;
 }

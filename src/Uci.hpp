@@ -167,7 +167,6 @@ public:
     void move(ostream&, Move, Ply = 0_ply) const;
     void fen(ostream&, const Position&, Ply = 0_ply) const;
 };
-
-extern Uci The_uci;
+extern Uci the_uci;
 
 #endif
