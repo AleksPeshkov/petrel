@@ -278,11 +278,11 @@ ReturnStatus NodePerft::visitRoot() {
 
             RETURN_IF_STOP (child.visitMove(from, to));
 
-            The_uci.info_perft_currmove(++moveCount, toMove(from, to), perft - previousPerft);
+            the_uci.info_perft_currmove(++moveCount, toMove(from, to), perft - previousPerft);
         }
     }
 
-    The_uci.info_perft_depth(depth, perft);
+    the_uci.info_perft_depth(depth, perft);
     return ReturnStatus::Continue;
 }
 
@@ -307,7 +307,7 @@ ReturnStatus NodePerft::visitMove(Square from, Square to) {
             break;
 
         case 1:
-            RETURN_IF_STOP (The_uci.limits.countNode());
+            RETURN_IF_STOP (the_uci.limits.countNode());
             makeMovePerft(parent, from, to);
             parent.clearMove(from, to);
             generateMoves();
@@ -316,7 +316,7 @@ ReturnStatus NodePerft::visitMove(Square from, Square to) {
 
         default: {
             assert (depth >= 2_ply);
-            RETURN_IF_STOP (The_uci.limits.countNode());
+            RETURN_IF_STOP (the_uci.limits.countNode());
             makeMovePerft(parent, from, to, [&](Z z){ The_transpositionTable.prefetch<64>(z); });
             parent.clearMove(from, to);
             generateMoves();
