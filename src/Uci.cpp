@@ -480,7 +480,7 @@ public:
     ~Output () { flush(flush_); }
     auto view() const { return ob.view(); }
     void clear() { ob.str({}); ob.clear(); }
-    void flush(bool _flush = true) { The_uci.output(ob.view(), _flush); clear(); }
+    void flush(bool _flush = true) { the_uci.output(ob.view(), _flush); clear(); }
 
     operator std::ostringstream& () const { return ob; }
     template <typename T> Output& operator<<(T&& val) { ob << std::forward<T>(val); return *this; }
@@ -897,8 +897,8 @@ void Uci::error(std::string_view prefix, std::string_view suffix) const {
 void Node::assert_fail(const char* assertion, const char* file, unsigned int line, const char* function) const {
     Output ob;
     ob << assertion;
-    ob << "\nposition fen "; The_uci.fen(ob, *this, ply);
-    ob << "\ncurrentMove"; The_uci.move(ob, currentMove, ply);
+    ob << "\nposition fen "; the_uci.fen(ob, *this, ply);
+    ob << "\ncurrentMove"; the_uci.move(ob, currentMove, ply);
 
     std::string message{ ob.view() };
     ob.clear();
