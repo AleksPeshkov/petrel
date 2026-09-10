@@ -10,8 +10,4 @@
 
 #include "bitops128.hpp"
 
-using u64x4_t = u64_t __attribute__((vector_size(32)));
-
-constexpr u64x4_t x4(u64_t n) { return u64x4_t{n, n, n, n}; }
-
 #endif
