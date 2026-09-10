@@ -267,7 +267,7 @@ ReturnStatus Node::search() {
             break;
         }
 
-        ++the_tt.hits;
+        ++the_ttMeta.hits;
         Bound ttBound = ttEntry.bound(); assert (ttBound.any());
 
         if (!isPv() && depth <= ttEntry.draft() &&
@@ -829,7 +829,7 @@ ReturnStatus Node::searchRoot(const PositionMoves& pos) {
 
         the_uci.info_pv();
         setMoves(the_uci.moves()); // refresh moves for next iteration
-        the_tt.nextAge();
+        the_ttMeta.nextAge();
 
         // refresh PV in TT in case it was overwritten
         if (the_uci.limits.getNodes() > 1'000000) { the_uci.savePv(); }

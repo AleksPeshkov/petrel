@@ -30,6 +30,10 @@ public:
 
 class TtPerft : public Tt {
 public:
+    node_count_t hits = 0;
+    node_count_t reads = 0;
+    node_count_t writes = 0;
+
     HashAge hashAge;
     HashAge getAge() const { return hashAge; }
     void nextAge() { hashAge.nextAge(); }
