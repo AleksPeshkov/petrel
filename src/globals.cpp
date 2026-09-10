@@ -24,10 +24,10 @@ constinit const PieceCountTable pieceCountTable; // 48 6*8
 Tt The_transpositionTable{64 * 1024 * 1024};
 
 // global Uci instance
-Uci The_uci{std::cout};
+Uci the_uci{std::cout};
 
 COLD void io::error(std::string_view prefix, std::string_view suffix) {
-    The_uci.error(prefix, suffix);
+    the_uci.error(prefix, suffix);
 }
 
 #ifndef NDEBUG
