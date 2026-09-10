@@ -18,6 +18,7 @@ fn main() {
     const QA: f32 = 1024.0; // seems safe and large enough for 16-bit accumulator
     const QB: f32 = 16.0;   // QB*WDL*f_wdl <= 32767
     const WDL:f32 = 400.0;  // implicit output conversion 1.0 = 400 centipawns
+    let f_wdl = 32767.0 / (QB*WDL); // 5.11984375
 
     let mut trainer = ValueTrainerBuilder::default().use_threads(CPU_THREADS/2)
         .optimiser(AdamW).loss_fn(|output, target| output.sigmoid().power_error(target, LOSS_POW))
@@ -58,14 +59,10 @@ fn main() {
             l1.forward(dual_acc.screlu())
         });
 
-    trainer.optimiser.set_params_for_weight("l0w",
-        AdamWParams{ decay: 0.005, min_weight: -4.0, max_weight: 4.0, ..Default::default() }
-    );
-
-    let f_wdl = 32767.0 / (QB*WDL); // 5.11984375
-    trainer.optimiser.set_params_for_weight("l1w",
-        AdamWParams{ decay: 0.03, min_weight: -f_wdl, max_weight: f_wdl, ..Default::default() }
-    );
+    trainer.optimiser.set_params_for_weight("l0b", AdamWParams{ decay: 0.0, min_weight: -4.0, max_weight: 4.0, ..Default::default() });
+    trainer.optimiser.set_params_for_weight("l0w", AdamWParams{ decay: 0.005, min_weight: -4.0, max_weight: 4.0, ..Default::default() });
+    trainer.optimiser.set_params_for_weight("l1b", AdamWParams{ decay: 0.03, min_weight: -1.0, max_weight: 1.0, ..Default::default() });
+    trainer.optimiser.set_params_for_weight("l1w", AdamWParams{ decay: 0.03, min_weight: -f_wdl, max_weight: f_wdl, ..Default::default() });
 
     // loading directly from a `BulletFormat` file
     let data_set_eval_scale: f32 = 800.0;
@@ -87,15 +84,15 @@ fn main() {
 
     let final_superbatch = 360;
     let peak_lr = 4e-4;
-    let final_lr = peak_lr / 100.0;
+    let final_lr = 1e-6;
     let batch_size = 16_384 / 4;
     let batches_per_superbatch = 6_104 * 4;
 
     let schedule = TrainingSchedule {
-        net_id: "1024-hm03".to_string(),
+        net_id: "1k-hm3".to_string(),
         eval_scale: data_set_eval_scale,
         steps: TrainingSteps { batch_size, batches_per_superbatch, start_superbatch: 1, end_superbatch: final_superbatch },
-        wdl_scheduler: wdl::CosineDecayWDL { start: 0.0, end: 0.2, final_superbatch },
+        wdl_scheduler: wdl::ConstantWDL { value: 0.0 },
         lr_scheduler: lr::CosineDecayLR { initial_lr: peak_lr, final_lr, final_superbatch },
         save_rate: 10,
     };

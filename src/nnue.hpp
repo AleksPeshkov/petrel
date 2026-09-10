@@ -127,7 +127,7 @@ struct CACHE_ALIGN Nnue {
         auto sum4 = unpack_add_i32(sum8);
         i64_t output = this->b1 + hadd_i64(sum4);
 
-        constexpr auto Scale = 14; // QA*QA: 2*10, QB: 5, shift: 4, mulhrs_i16: -15
+        constexpr auto Scale = 13; // QA*QA: 2*10, QB: 4, shift: 4, mulhrs_i16: -15
         auto result = output >> Scale;
         return result;
     }
