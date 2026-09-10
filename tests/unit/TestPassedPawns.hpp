@@ -1,12 +1,6 @@
 #include "Hyperbola.hpp"
 #include "Uci.hpp"
 
-constexpr const InBetween inBetween;
-constinit const AttacksFrom attacksFrom;
-constinit const PiOneMask piOneMask;
-constinit const CastlingRules castlingRules;
-constinit const PieceCountTable pieceCountTable; // 48 6*8
-
 void assertPassed(const char* fen, Square::_t sq, bool shouldBePassed, const char* msg) {
     UciPosition uciPosition;
     std::istringstream is{fen};
