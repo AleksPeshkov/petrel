@@ -1480,9 +1480,9 @@ void Uci::bench(std::string_view goLimits) {
 
             benchTime += ::elapsedSince(searchStart);
             benchNodes += limits.getNodes();
-            ttHits += the_tt.hits;
-            ttReads += the_tt.reads;
-            ttWrites += the_tt.writes;
+            ttHits += the_ttMeta.hits;
+            ttReads += the_ttMeta.reads;
+            ttWrites += the_ttMeta.writes;
         }
 
         info_bestmove();
