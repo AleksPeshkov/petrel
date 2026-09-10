@@ -8,9 +8,6 @@
 #include "Tt.hpp"
 #include "Uci.hpp"
 
-/**
-* Startup constant initialization
-*/
 const Nnue nnue;
 constexpr const InBetween inBetween; // 32k 64*64*8, used by constexpr CastlingRules
 constinit const HyperbolaDir hyperbolaDir; // 4k 64*4*16
@@ -21,7 +18,7 @@ constinit const CastlingRules castlingRules; // 128
 constinit const PieceCountTable pieceCountTable; // 48 6*8
 
 // global TT instance
-Tt The_transpositionTable{64 * 1024 * 1024};
+Tt the_tt{64 * 1024 * 1024};
 
 // global Uci instance
 Uci the_uci{std::cout};
