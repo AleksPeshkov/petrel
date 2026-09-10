@@ -1,8 +1,5 @@
 #include "Hyperbola.hpp"
 
-constinit const HyperbolaDir hyperbolaDir; // 4k 64*2*32
-constinit const HyperbolaSq hyperbolaSq; // 2k 64*32
-
 void test_hyperbola_rook_attack() {
     Square from{D4};
     Bb occupied = Bb{D1} + Bb{D4} + Bb{D7};  // includes slider
