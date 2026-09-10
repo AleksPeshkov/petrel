@@ -3,7 +3,9 @@
 <img src="petrel.gif" style="float:left; width: auto; height: auto;" alt="Petrel logo">
 Petrel is a conventional alpha-beta search engine, but some implementation details set it apart from others.
 
-Petrel 4.0 rated `3536` Elo on the [CCRL Blitz](https://computerchess.org.uk/ccrl/404/cgi/engine_details.cgi?eng=Petrel%204.0%2064-bit) list; `3440` Elo on the [CCRL 40/15](https://computerchess.org.uk/ccrl/4040/cgi/engine_details.cgi?print=Details&each_game=0&eng=Petrel%204.0%2064-bit).
+Petrel 4.0 rated `3536` Elo on the [CCRL Blitz](https://computerchess.org.uk/ccrl/404/cgi/engine_details.cgi?eng=Petrel%204.0%2064-bit) list.
+
+_The author does not tolerate CCRL 40/15 list and claim its Petrel's rating as illegal and corrupted._
 
 ## Supported UCI options
 
