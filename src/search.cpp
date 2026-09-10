@@ -167,15 +167,15 @@ ReturnStatus Node::negamax(Ply R) {
         bestMove = currentMove;
 
         if (!isRoot()) {
-            child().pvIndex = The_uci.pv.set(pvIndex, bestMove, child().pvIndex);
+            child().pvIndex = the_uci.pv.set(pvIndex, bestMove, child().pvIndex);
         } else {
             // unfinished iteration, so report depth-1
-            pvIndex = The_uci.pv.set(depth - 1_ply, score, bestMove, child().pvIndex);
+            pvIndex = the_uci.pv.set(depth - 1_ply, score, bestMove, child().pvIndex);
             child().pvIndex = PrincipalVariation::Index{+pvIndex+1};
 
-            RETURN_IF_STOP (The_uci.limits.updateTimeStrategy(The_uci.pv));
+            RETURN_IF_STOP (the_uci.limits.updateTimeStrategy(the_uci.pv));
 
-            if (depth > 1_ply) { The_uci.info_pv(); }
+            if (depth > 1_ply) { the_uci.info_pv(); }
         }
 
         alpha = childScore;
@@ -353,7 +353,7 @@ ReturnStatus Node::search() {
     }
 
     if (isRoot()) {
-        for (auto move : The_uci.rootBestMoves) {
+        for (auto move : the_uci.rootBestMoves) {
             if (move.none()) { break; }
             RETURN_CUTOFF (searchIfPossible(move));
         }
@@ -364,7 +364,7 @@ ReturnStatus Node::search() {
     if (inCheck()) {
         if (hasParent()) { //TODO: use game history move when root in check
             RETURN_CUTOFF (searchIfPossible(
-                The_uci.checkMoves.get(colorToMove(), MY.sqKing(), parent().currentMove)
+                the_uci.checkMoves.get(colorToMove(), MY.sqKing(), parent().currentMove)
             ));
         }
     } else {
@@ -505,7 +505,7 @@ ReturnStatus Node::search() {
     if (bound.is(ExactBound)) {
         assert (isPseudoLegal(bestMove));
         saveHistory();
-        if (isRoot()) { ::insert_unique_compact(The_uci.rootBestMoves, bestMove); }
+        if (isRoot()) { ::insert_unique_compact(the_uci.rootBestMoves, bestMove); }
     } else {
         assert (bound.is(FailLow));
         assert (bestMove.none() || isPseudoLegal(bestMove));
@@ -640,7 +640,7 @@ ReturnStatus Node::goodCaptures(PiMask victims) {
 }
 
 ReturnStatus Node::searchNullMove() {
-    RETURN_IF_STOP (The_uci.limits.countNode());
+    RETURN_IF_STOP (the_uci.limits.countNode());
 
     //TRICK: null move not counted as movesMade()
     currentMove = {};
@@ -657,7 +657,7 @@ void Node::childNullMove() {
 }
 
 ReturnStatus Node::searchMove(Move move, Ply R) {
-    RETURN_IF_STOP (The_uci.limits.countNode());
+    RETURN_IF_STOP (the_uci.limits.countNode());
 
     assert (move.any());
     assert (isPseudoLegal(move));
@@ -679,7 +679,7 @@ void Node::childMove(Square from, Square to) {
     });
 
     childZHash = ply <= 1_ply || shouldResetZHash ? ZHash{} : ZHash{parent().zHash(), parent().z()};
-    The_uci.pv.clear(pvIndex);
+    the_uci.pv.clear(pvIndex);
 }
 
 constexpr Ply Node::finalR(Ply R) const {
@@ -691,8 +691,8 @@ constexpr Ply Node::finalR(Ply R) const {
 
 // counter and folloup move heuristic
 ReturnStatus Node::contMove(ContIndex::_t ContType, Move move) {
-    for (auto i : range<decltype(The_uci.contMoves)::Index>()) {
-        auto contMove = The_uci.contMoves.get(ContType, i, colorToMove(), move);
+    for (auto i : range<decltype(the_uci.contMoves)::Index>()) {
+        auto contMove = the_uci.contMoves.get(ContType, i, colorToMove(), move);
         if (contMove.none()) { break; } // insert_unique_compact() garantees no holes
         if (isPossibleMove(contMove)) {
             return searchMove(contMove);
@@ -725,7 +725,7 @@ void Node::saveHistory() {
     if (inCheck()) {
         if (hasParent()) {
             assert (parent().currentMove.any());
-            The_uci.checkMoves.set(colorToMove(), MY.sqKing(), parent().currentMove, bestMove);
+            the_uci.checkMoves.set(colorToMove(), MY.sqKing(), parent().currentMove, bestMove);
         }
         return;
     }
@@ -737,23 +737,23 @@ void Node::saveHistory() {
     bool isDeep{ depth > ply };
 
     if (counterMove().any()) {
-        The_uci.contMoves.set(Counter, colorToMove(), counterMove(), bestMove);
+        the_uci.contMoves.set(Counter, colorToMove(), counterMove(), bestMove);
         if (isDeep) {
-            The_uci.contMoves.set(DeepCounter, colorToMove(), counterMove(), bestMove);
+            the_uci.contMoves.set(DeepCounter, colorToMove(), counterMove(), bestMove);
         }
     }
 
     if (!hasGrandParent()) { return; } // ply-2
     insert_unique_pos<1>(grandParent().killers, bestMove);
     if (followupMove().any()) {
-        The_uci.contMoves.set(Followup, colorToMove(), followupMove(), bestMove);
+        the_uci.contMoves.set(Followup, colorToMove(), followupMove(), bestMove);
         if (isDeep) {
-            The_uci.contMoves.set(DeepFollowup, colorToMove(), followupMove(), bestMove);
+            the_uci.contMoves.set(DeepFollowup, colorToMove(), followupMove(), bestMove);
         }
     }
 }
 
-constexpr Color Node::colorToMove() const { return The_uci.colorToMove(ply); }
+constexpr Color Node::colorToMove() const { return the_uci.colorToMove(ply); }
 
 // insufficient mate material
 bool Node::isDrawMaterial() const {
@@ -807,8 +807,8 @@ bool Node::isRepetition() const {
 
     // game history repetitions
     return rule50() >= ply && (isPv()
-        ? The_uci.repetitions.has3(colorToMove(), z)
-        : The_uci.repetitions.has2(colorToMove(), z)
+        ? the_uci.repetitions.has3(colorToMove(), z)
+        : the_uci.repetitions.has2(colorToMove(), z)
     );
 }
 
@@ -822,17 +822,17 @@ ReturnStatus Node::searchRoot(const PositionMoves& pos) {
         beta = Score{MateWin};
 
         RETURN_IF_STOP (search());
-        The_uci.pv.set(depth); // iteration fully completed
+        the_uci.pv.set(depth); // iteration fully completed
 
-        RETURN_IF_STOP (The_uci.limits.iterationDeadlineReached());
-        if (depth >= The_uci.limits.maxDepth()) { return ReturnStatus::Continue; }
+        RETURN_IF_STOP (the_uci.limits.iterationDeadlineReached());
+        if (depth >= the_uci.limits.maxDepth()) { return ReturnStatus::Continue; }
 
-        The_uci.info_pv();
-        setMoves(The_uci.moves()); // refresh moves for next iteration
+        the_uci.info_pv();
+        setMoves(the_uci.moves()); // refresh moves for next iteration
         The_transpositionTable.nextAge();
 
         // refresh PV in TT in case it was overwritten
-        if (The_uci.limits.getNodes() > 1'000000) { The_uci.savePv(); }
+        if (the_uci.limits.getNodes() > 1'000000) { the_uci.savePv(); }
     }
 
     return ReturnStatus::Continue;
