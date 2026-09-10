@@ -6,6 +6,9 @@
 #include "PiMask.hpp"
 
 using u32x4_t = u32_t __attribute__((vector_size(16)));
+using u64x4_t = u64_t __attribute__((vector_size(32)));
+
+constexpr u64x4_t u64x4x(u64_t n) { return u64x4_t{n, n, n, n}; }
 
 inline u64x2_t unpack2_lo32(u32x4_t a, u32x4_t b) {
     return __builtin_shufflevector(a, b, 0, 4, -1, -1 );
@@ -35,11 +38,11 @@ class CACHE_ALIGN PiBb {
     };
 
     constexpr void filter(u64_t bb) {
-        u64x4_t bb4 = x4(bb);
+        u64x4_t bb4 = u64x4x(bb);
         for (auto& v : u64x4) { v &= bb4; }
     }
 public:
-    constexpr PiBb() { for (auto& v : u64x4) { v = x4(0); } }
+    constexpr PiBb() { for (auto& v : u64x4) { v = u64x4x(0); } }
 
     void setAttacks(const PiBb& attacks) {
         for (auto i : range<4>()) { u64x4[i] = attacks.u64x4[i]; }

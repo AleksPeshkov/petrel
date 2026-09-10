@@ -189,11 +189,7 @@ class PiSquare {
     constexpr Pi pi(_t sq) const { assert (has(sq)); return at(sq).pi(); }
 
 public:
-    constexpr PiSquare () {
-        for (auto pi : range<Pi>()) {
-            square[pi] = Square::null();
-        }
-    }
+    constexpr PiSquare () { u8x16 = ::u8x16x(Square::null()); }
 
     constexpr bool isOk(Pi _pi) const { return !none(_pi) && pi(square[_pi]) == _pi; }
 
@@ -272,11 +268,7 @@ class PiType {
     constexpr PiMask any(element_type e) const { return PiMask::any(u8x16 & ::u8x16x(e)); }
 
 public:
-    constexpr PiType () {
-        for (auto pi : range<Pi>()) {
-            type[pi] = None;
-        }
-    }
+    constexpr PiType () { u8x16 = ::u8x16x(None); }
 
     constexpr bool isOk(Pi pi) const { return !none(pi) && ::isSingleton(static_cast<u8_t>(type[pi])); }
 
@@ -365,11 +357,7 @@ class PiTrait {
     }
 
 public:
-    constexpr PiTrait () {
-        for (auto pi : range<Pi>()) {
-            trait[pi] = None;
-        }
-    }
+    constexpr PiTrait () { u8x16 = ::u8x16x(None); }
 
     constexpr void clear(Pi pi) { trait[pi] = None; }
     constexpr bool none(Pi pi) const { return trait[pi] == None; }
