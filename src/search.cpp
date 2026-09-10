@@ -267,7 +267,7 @@ ReturnStatus Node::search() {
             break;
         }
 
-        ++The_transpositionTable.hits;
+        ++the_tt.hits;
         Bound ttBound = ttEntry.bound(); assert (ttBound.any());
 
         if (!isPv() && depth <= ttEntry.draft() &&
@@ -653,7 +653,7 @@ ReturnStatus Node::searchNullMove() {
 void Node::childNullMove() {
     makeNullMove(parent());
     childZHash = {};
-    tt = The_transpositionTable.prefetch<TtEntry>(z());
+    tt = the_tt.prefetch<TtEntry>(z());
 }
 
 ReturnStatus Node::searchMove(Move move, Ply R) {
@@ -675,7 +675,7 @@ ReturnStatus Node::searchMove(Move move, Ply R) {
 
 void Node::childMove(Square from, Square to) {
     bool shouldResetZHash = makeMove(parent(), from, to, parent().childZHash, [&](Z z) {
-        tt = The_transpositionTable.prefetch<TtEntry>(z);
+        tt = the_tt.prefetch<TtEntry>(z);
     });
 
     childZHash = ply <= 1_ply || shouldResetZHash ? ZHash{} : ZHash{parent().zHash(), parent().z()};
@@ -817,7 +817,7 @@ ReturnStatus Node::searchRoot(const PositionMoves& pos) {
     killers = {};
 
     for (depth = 1_ply; depth.isOk(); ++depth) {
-        tt = The_transpositionTable.prefetch<TtEntry>(z());
+        tt = the_tt.prefetch<TtEntry>(z());
         alpha = Score{MateLoss};
         beta = Score{MateWin};
 
@@ -829,7 +829,7 @@ ReturnStatus Node::searchRoot(const PositionMoves& pos) {
 
         the_uci.info_pv();
         setMoves(the_uci.moves()); // refresh moves for next iteration
-        The_transpositionTable.nextAge();
+        the_tt.nextAge();
 
         // refresh PV in TT in case it was overwritten
         if (the_uci.limits.getNodes() > 1'000000) { the_uci.savePv(); }
