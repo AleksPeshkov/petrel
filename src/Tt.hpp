@@ -131,7 +131,7 @@ private:
         assert (bytes == size_);
     }
 };
-extern Tt The_transpositionTable;
+extern Tt the_tt;
 
 struct TtRecord;
 
@@ -185,14 +185,14 @@ public:
         | _score.pack<_t>(ShiftScore)
         | _bound.pack<_t>(ShiftBound)
         | _draft.pack<_t>(ShiftDraft)
-        | The_transpositionTable.packAge<_t>(ShiftAge)
+        | the_tt.packAge<_t>(ShiftAge)
     } {
         static_assert (sizeof(TtEntry) == sizeof(u64_t));
 
         assert (score() == _score);
         assert (bound().is(_bound));
         assert (draft() == _draft);
-        assert (The_transpositionTable.isSameAge(age()));
+        assert (the_tt.isSameAge(age()));
         assert (ttMove(z) == _ttMove);
     }
 
@@ -208,21 +208,21 @@ public:
     constexpr TtMove ttMove(Z z) const { return TtMove::unpack(v_ ^ +z, ShiftMove); }
 
     void refreshAge(TtEntry* tt) {
-        if (!The_transpositionTable.isSameAge(age())) {
+        if (!the_tt.isSameAge(age())) {
             v_ ^= age().pack<_t>(ShiftAge); // clear previous
-            v_ |= The_transpositionTable.packAge<_t>(ShiftAge); // set new value
+            v_ |= the_tt.packAge<_t>(ShiftAge); // set new value
             write(tt);
         }
     }
 
     static TtEntry read(TtEntry* tt) {
-        ++The_transpositionTable.reads;
+        ++the_tt.reads;
         return std::bit_cast<TtEntry>(std::bit_cast<std::atomic<u64_t>*>(tt)->load(std::memory_order_relaxed));
     }
 
     TtEntry& write(TtEntry* tt) const {
         std::bit_cast<std::atomic<u64_t>*>(tt)->store(this->v_, std::memory_order_relaxed);
-        ++The_transpositionTable.writes;
+        ++the_tt.writes;
         return const_cast<TtEntry&>(*this);
     }
 
@@ -239,8 +239,8 @@ constexpr TtRecord TtEntry::probe(TtEntry* tt, Z z) {
     if (ttEntry2 == z) { return {ttEntry2, tt2, true}; }
 
     //TRICK: zeroed entry is never fresh
-    bool f1 = The_transpositionTable.isFresh(ttEntry.age());
-    bool f2 = The_transpositionTable.isFresh(ttEntry2.age());
+    bool f1 = the_tt.isFresh(ttEntry.age());
+    bool f2 = the_tt.isFresh(ttEntry2.age());
 
     // preserve fresh
     if (f1 != f2) {

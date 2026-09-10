@@ -774,7 +774,7 @@ Uci::Uci(ostream& os) :
 }
 
 void Uci::newGame() {
-    The_transpositionTable.newGame();
+    the_tt.newGame();
     contMoves = {};
     checkMoves = {};
     go_.isNewGame = true;
@@ -787,7 +787,7 @@ void Uci::newSearch() {
 
     lastInfoTime_ = lastNpsTime_ = limits.newSearch();
     lastInfoNodes_ = lastNpsNodes_ = 0;
-    The_transpositionTable.newSearch();
+    the_tt.newSearch();
     rootBestMoves = {};
 }
 
@@ -949,9 +949,9 @@ void Uci::uciok() const {
     Output ob;
     ob << "id name " << io::app_version;
     ob << "\nid author Aleks Peshkov";
-    ob << "\noption name Hash type spin min " << ::mebi(The_transpositionTable.minSize())
-        << " max " << ::mebi(The_transpositionTable.maxSize())
-        << " default " << ::mebi(The_transpositionTable.size());
+    ob << "\noption name Hash type spin min " << ::mebi(the_tt.minSize())
+        << " max " << ::mebi(the_tt.maxSize())
+        << " default " << ::mebi(the_tt.size());
     ob << "\noption name Move Overhead type spin min " << UciLimits::MoveOverheadDefault << " max 10000 default " << go_.moveOverhead;
     ob << "\noption name Ponder type check default " << (go_.canPonder ? "true" : "false");
     ob << "\noption name UCI_Chess960 type check default " << (chessVariant().is(Chess960) ? "true" : "false");
@@ -1096,7 +1096,7 @@ void Uci::setHash() {
         }
     }
 
-    The_transpositionTable.setSize(quantity);
+    the_tt.setSize(quantity);
     newGame();
 }
 
@@ -1148,7 +1148,7 @@ void Uci::setPositionMoves() {
 
     do {
         auto z = position_.z();
-        auto ttEntry = TtEntry::read( The_transpositionTable.addr<TtEntry>(z) );
+        auto ttEntry = TtEntry::read( the_tt.addr<TtEntry>(z) );
         if (ttEntry != z || ttEntry.none()) { break; }
 
         auto ttMove = ttEntry.ttMove(z);
@@ -1186,7 +1186,7 @@ void Uci::savePv() {
         auto eval = pos.inCheck() ? Score{} : pos.evaluate();
 
         TtEntry ttEntry{ pos.z(), eval, score.tt(ply), ExactBound, depth, move.ttMove() };
-        ttEntry.write( The_transpositionTable.addr<TtEntry>(pos.z()) );
+        ttEntry.write( the_tt.addr<TtEntry>(pos.z()) );
 
         pos.makeMove(move.from(), move.to());
         score = -score;
@@ -1478,9 +1478,9 @@ void Uci::bench(std::string_view goLimits) {
 
             benchTime += ::elapsedSince(searchStart);
             benchNodes += limits.getNodes();
-            ttHits += The_transpositionTable.hits;
-            ttReads += The_transpositionTable.reads;
-            ttWrites += The_transpositionTable.writes;
+            ttHits += the_tt.hits;
+            ttReads += the_tt.reads;
+            ttWrites += the_tt.writes;
         }
 
         info_bestmove();
