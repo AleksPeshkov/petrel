@@ -389,6 +389,13 @@ ReturnStatus Node::search() {
         }
     }
 
+    // not improving reduction
+    if (depth >= 12_ply && cEval.isEval()) {
+        if (hasAncestor(2_ply) && ancestor(2_ply).cEval.isEval()) {
+            if (cEval < ancestor(2_ply).cEval) { baseR += 1_ply; }
+        }
+    }
+
     do {
         // going to search only non-captures, mask out remaining unsafe captures to avoid redundant safety checks
         //TRICK: ~ is not a negate bitwise operation but byteswap -- flip opponent's bitboard
