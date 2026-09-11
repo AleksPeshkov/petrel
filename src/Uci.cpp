@@ -957,6 +957,7 @@ void Uci::uciok() const {
     ob << "\noption name UCI_Chess960 type check default " << (chessVariant().is(Chess960) ? "true" : "false");
     ob << "\noption name Debug type check default " << (debugOn_ ? "true" : "false");
     ob << "\noption name Debug Log File type string default " << (logFileName.empty() ? "<empty>" : logFileName);
+    ob << "\noption name Threads type spin min 1 max 1 default 1";
     ob << "\nuciok";
 }
 
