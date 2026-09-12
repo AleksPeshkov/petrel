@@ -76,7 +76,6 @@ public:
     static constexpr int size() { static_assert (Size >= 1); return Size; }
     static constexpr int bit_width() { return std::bit_width(size() - 1u); }
     static constexpr _t mask() { return static_cast<_t>(::singleton<unsigned>(bit_width()) - 1u); }
-    static constexpr _t last() { return static_cast<_t>(size() - 1); }
 
     static constexpr bool isOk(int n) { return 0 <= n && n < size(); }
     constexpr bool isOk() const { return isOk(v_); }
