@@ -191,7 +191,7 @@ ReturnStatus Node::negamax(Ply R) {
 }
 
 ReturnStatus Node::search() {
-    baseR = depth / 8;
+    baseR = Ply{+depth / 8};
     eval  = {};
     cEval = {};
     score = {};
@@ -209,11 +209,11 @@ ReturnStatus Node::search() {
                 return ReturnStatus::Continue;
             } else if (depth <= 3_ply && movesTotal() == 1) {
                 // single reply extension
-                depth = depth + 1_ply;
+                depth += 1_ply;
             }
 
             // check extension
-            depth = depth + 1_ply;
+            depth += 1_ply;
         } else {
             if (movesTotal() == 0) {
                 // stalemate
@@ -301,7 +301,7 @@ ReturnStatus Node::search() {
     assert ((inCheck() && eval.isNone()) || (!inCheck() && eval.isEval()));
     assert (bestMove.isNone() || isPossibleMove(bestMove));
 
-    if (ply == MaxPly) {
+    if (ply == Ply::last()) {
         // no room to search deeper
         score = inCheck() ? Score::mateLoss(ply) : cEval;
         assert (currentMove.isNone());
@@ -436,7 +436,7 @@ ReturnStatus Node::search() {
 
         if (depth <= 1_ply && !inCheck() && movesMade() >= 3) { break; }
 
-        if (depth >= 6_ply && movesMade() >= 5) { baseR = baseR + 1_ply; } // LMR
+        if (depth >= 6_ply && movesMade() >= 5) { baseR += 1_ply; } // LMR
 
         // safe officers moves
         while (safePieces.isAny()) {
@@ -647,8 +647,8 @@ ReturnStatus Node::searchNullMove() {
     currentMove = {};
     child().childNullMove();
 
-    Ply R{(beta <= cEval - 400_cp)};
-    return negamax(4_ply + (depth-2_ply)/4 + R);
+    Ply R{ beta <= cEval-400_cp }; // convert true to 1_ply
+    return negamax(4_ply + Ply{ +(depth-2_ply) / 4 } + R);
 }
 
 void Node::childNullMove() {
