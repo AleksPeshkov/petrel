@@ -41,7 +41,7 @@ struct UciLimits {
 
     node_count_t nodes{NodeCountMax}; // go nodes
     int movestogo{0}; // go movestogo
-    Ply depth{MaxPly}; // go depth
+    Ply depth{Ply::last()}; // go depth
 
     bool ponder{false}; // go ponder
     bool infinite{false}; // go infinite

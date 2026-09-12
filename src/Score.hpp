@@ -4,19 +4,23 @@
 #include "Index.hpp"
 
 // search tree distance in halfmoves
-struct Ply : Index<Ply, 64> {
-    static_assert(last() >= 2);
-    constexpr explicit Ply(_t n) : Index{std::clamp(n, 0, last())} {  assertOk(); }
-    friend constexpr Ply operator""_ply(unsigned long long);
-    friend constexpr Ply operator + (Ply a, Ply b) { return Ply{a.v_ + b.v_}; }
-    friend constexpr Ply operator - (Ply a, Ply b) { return Ply{a.v_ - b.v_}; }
-    friend constexpr Ply operator * (Ply a, int n) { return Ply{a.v_ * n}; }
-    friend constexpr Ply operator / (Ply a, int n) { return Ply{a.v_ / n}; }
+struct Ply : Index<Ply, 64, u8_t> {
+    static constexpr Ply last() { return Ply{ size() - 1 }; } // Ply is limited to [0 .. Ply::last()
+    /*static_assert(last() >= 2);*/
 
-    friend ostream& operator << (ostream& os, Ply ply) { return os << ply.v_; }
+    constexpr explicit Ply(int n) : Index{static_cast<_t>(n)} {  assertOk(); }
+    friend constexpr Ply operator""_ply(unsigned long long);
+
+    constexpr Ply& operator += (Ply b) { v_ = std::clamp(v_ + b.v_, 0, +last()); return *this; }
+    constexpr Ply& operator -= (Ply b) { v_ = std::clamp(v_ - b.v_, 0, +last()); return *this; }
+
+    friend constexpr Ply operator + (Ply a, Ply b) { return Ply{a} += b; }
+    friend constexpr Ply operator - (Ply a, Ply b) { return Ply{a} -= b; }
+
+    friend ostream& operator << (ostream& os, Ply ply) { return os << +ply.v_; }
 
     friend istream& operator >> (istream& is, Ply& ply) {
-        _t n{};
+        int n{-1};
         auto before = is.tellg();
         is >> n;
         if (!is || !isOk(n)) { return io::fail_pos(is, before); }
@@ -24,7 +28,6 @@ struct Ply : Index<Ply, 64> {
         return is;
     }
 };
-constexpr Ply MaxPly{Ply::last()}; // Ply is limited to [0 .. MaxPly]
 constexpr Ply operator""_ply(unsigned long long n) { return Ply{static_cast<Ply::_t>(n)}; }
 
 // color to move of the given ply
