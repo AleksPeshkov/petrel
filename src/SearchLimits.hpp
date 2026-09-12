@@ -41,7 +41,7 @@ class SearchLimits {
     // (0 <= quotaCounter_ && quotaCounter_ <= quotaLimit_)
     int quotaCounter_{0};
 
-    Ply maxDepth_{MaxPly}; // go depth
+    Ply maxDepth_{Ply::last()}; // go depth
 
     // set by 'stop' UCI command, read by search
     std::atomic_bool stop_{false};
