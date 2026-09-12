@@ -209,11 +209,11 @@ ReturnStatus Node::search() {
                 return ReturnStatus::Continue;
             } else if (depth <= 3_ply && movesTotal() == 1) {
                 // single reply extension
-                depth = depth + 1_ply;
+                depth += 1_ply;
             }
 
             // check extension
-            depth = depth + 1_ply;
+            depth += 1_ply;
         } else {
             if (movesTotal() == 0) {
                 // stalemate
@@ -436,7 +436,7 @@ ReturnStatus Node::search() {
 
         if (depth <= 1_ply && !inCheck() && movesMade() >= 3) { break; }
 
-        if (depth >= 6_ply && movesMade() >= 5) { baseR = baseR + 1_ply; } // LMR
+        if (depth >= 6_ply && movesMade() >= 5) { baseR += 1_ply; } // LMR
 
         // safe officers moves
         while (safePieces.any()) {
