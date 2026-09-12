@@ -125,8 +125,8 @@ public:
 
     constexpr bool none() const { assert (v_ == NoScore || any()); return v_ == NoScore; }
     constexpr bool any() const { return MateLoss <= v_ && v_ <= MateWin; } // MateLoss <= v_ <= MateWin
-    constexpr bool isEval() const { assert (any()); return MinEval <= v_ && v_ <= MaxEval; } // MinEval <= v_ <= MaxEval
-    constexpr bool isOk(Ply ply) const { assert (any()); return mateLoss(ply) <= *this && *this < mateWin(ply); }
+    constexpr bool isEval() const { assert (v_ == NoScore || any()); return MinEval <= v_ && v_ <= MaxEval; } // MinEval <= v_ <= MaxEval
+    constexpr bool isOk(Ply ply) const { assert (v_ == NoScore || any()); return mateLoss(ply) <= *this && *this < mateWin(ply); }
 
     // 1_ply || 1_cp
     constexpr Score minus1() const {
