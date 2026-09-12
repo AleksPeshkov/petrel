@@ -1189,8 +1189,8 @@ void Uci::savePv() {
 
         pos.makeMove(move.from(), move.to());
         score = -score;
-        depth = depth - 1_ply;
-        ply = ply + 1_ply;
+        depth -= 1_ply;
+        ply += 1_ply;
     }
 }
 
