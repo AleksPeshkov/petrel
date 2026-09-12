@@ -106,7 +106,7 @@ public:
     static constexpr _t mask() { return static_cast<_t>(singleton(bit_width()) - 1u); }
 
     constexpr Score () : v_{NoScore} {}
-    constexpr explicit Score (_t e) : v_{e} {}
+    constexpr explicit Score (_t e) : v_{e} { assertOk(); }
     friend constexpr Score operator""_cp(unsigned long long);
 
     template <typename P, typename S> constexpr P pack(S shift) { return ::pack<P>(v_ & mask(), shift); }
@@ -123,10 +123,13 @@ public:
     static constexpr Score mateLoss(Ply ply) { return Score{static_cast<_t>(MateLoss + +ply)}; } // MateLoss + ply
     static constexpr Score mateWin(Ply ply)  { return Score{static_cast<_t>(MateWin - +ply)}; } // MateWin - ply
 
-    constexpr bool isNone() const { assert (v_ == NoScore || isAny()); return v_ == NoScore; }
-    constexpr bool isAny() const { return MateLoss <= v_ && v_ <= MateWin; } // MateLoss <= v_ <= MateWin
-    constexpr bool isEval() const { assert (isAny()); return MinEval <= v_ && v_ <= MaxEval; } // MinEval <= v_ <= MaxEval
-    constexpr bool isOk(Ply ply) const { assert (isAny()); return mateLoss(ply) <= *this && *this < mateWin(ply); }
+    constexpr bool isOk() const { return v_ == NoScore || (MateLoss <= v_ && v_ <= MateWin); }
+    constexpr void assertOk() const { assert (isOk()); }
+
+    constexpr bool isNone() const { assertOk(); return v_ == NoScore; }
+    constexpr bool isAny() const { assertOk(); return !isNone(); }
+    constexpr bool isOk(Ply ply) const { assertOk(); return mateLoss(ply) <= *this && *this < mateWin(ply); }
+    constexpr bool isEval() const { assertOk(); return MinEval <= v_ && v_ <= MaxEval; } // MinEval <= v_ <= MaxEval
 
     // 1_ply || 1_cp
     constexpr Score minus1() const {
