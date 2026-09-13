@@ -93,7 +93,7 @@ void PositionMoves::excludePinnedMoves(PiMask opPinners) {
 
         if (occupiedPinLine.isSingleton() && occupiedPinLine.any(MY.bbSide())) {
             // we discovered a true pinned piece
-            Pi pinned = MY.pi(occupiedPinLine.index());
+            Pi pinned{ MY.pi(occupiedPinLine.index()) };
 
             // exclude all pinned piece moves except those over the pin line
             moves_.filter(pinned, pinLine + Bb{pinFrom});
@@ -110,8 +110,7 @@ void PositionMoves::generateCheckEvasions() {
     if (!checkers.isSingleton()) {
         moves_ = {}; // double check case: no moves except king's ones are possible
     } else { // common single checker case
-        Pi checker = checkers.pi();
-        Square checkFrom{~OP.sq(checker)};
+        Square checkFrom{~OP.sq( checkers.pi() )};
         Bb checkLine = ::inBetween(MY.sqKing(), checkFrom);
 
         // check evasion moves of all pieces

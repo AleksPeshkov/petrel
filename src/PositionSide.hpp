@@ -69,7 +69,7 @@ public:
     constexpr Bb bbPawnAttacks() const { assert (bbPawnAttacks_ == bbPawns_.forwardDiag()); return bbPawnAttacks_; }
 
     constexpr bool has(Square sq) const { assert (bbSide_.has(sq) == squares.has(sq)); return bbSide_.has(sq); }
-    constexpr Pi pi(Square sq) const { assert (has(sq)); Pi pi = squares.pi(sq); assertOk(pi); return pi; }
+    constexpr Pi pi(Square sq) const { assert (has(sq)); assertOk( squares.pi(sq) ); return squares.pi(sq); }
     constexpr Square sq(Pi pi) const { assertOk(pi); return squares.sq(pi); }
     constexpr Square sqKing() const { return sq(Pi{TheKing}); } // sq(TheKing)
     constexpr bool isKing(Square sq) const { return sqKing().is(sq); } // sq(TheKing)
@@ -129,8 +129,8 @@ public:
         //TODO: create isLegal(move)
         if (move.none()) { return false; }
 
-        Square from{move.from()};
-        Square to{move.to()};
+        Square from{ move.from() };
+        Square to{ move.to() };
 
         if (!has(from) || move.moveType() != moveType(from, to)) { return false; }
 
