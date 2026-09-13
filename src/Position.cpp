@@ -88,10 +88,7 @@ Zobrist Position::generateZobrist() const {
 }
 
 Zobrist Position::generateZobrist() const {
-    constexpr Side::_t Op{~My};
-
-    Zobrist z{generateZobrist<My>(), generateZobrist<Op>()};
+    Zobrist z{ generateZobrist<My>(), generateZobrist<Op>() };
     if (_(Op).hasEnPassant()) { z.opEnPassant(_(Op).sqEnPassant()); }
-
     return z;
 }
