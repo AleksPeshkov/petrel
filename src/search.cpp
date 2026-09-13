@@ -370,7 +370,7 @@ ReturnStatus Node::search() {
     } else {
         RETURN_CUTOFF (searchIfPossible(killers[0]));
 
-        bool isDeep{ depth > ply };
+        bool isDeep{ depth >= 10_ply };
         if (counterMove().any()) {
             RETURN_CUTOFF (contMove(isDeep ? DeepCounter : Counter, counterMove())); // ply-1
         }
@@ -743,7 +743,7 @@ void Node::saveHistory() {
 
     if (!hasParent()) { return; } // ply-1
 
-    bool isDeep{ depth > ply };
+    bool isDeep{ depth >= 8_ply };
 
     if (counterMove().any()) {
         the_uci.contMoves.set(Counter, colorToMove(), counterMove(), bestMove);
