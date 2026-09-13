@@ -29,10 +29,10 @@ public:
     constexpr Bb operator ~ () const { return Bb{::byteswap(v_)}; }
     constexpr void move(Square from, Square to) { assert (from != to); *this -= Bb{from}; *this += Bb{to}; }
 
-    constexpr Bb pForward() const { return *this >> 8u; }
-    constexpr Bb pBackward() const { return *this << 8u; }
-    constexpr Bb pForwardDiag() const { return (*this % Bb{FileH} >> 9u) | (*this % Bb{FileA} >> 7u); }
-    constexpr Bb pBackwardDiag() const { return (*this % Bb{FileH} << 7u) | (*this % Bb{FileA} << 9u); }
+    constexpr Bb forward() const { return *this >> 8u; }
+    constexpr Bb backward() const { return *this << 8u; }
+    constexpr Bb forwardDiag() const { return (*this % Bb{FileH} >> 9u) | (*this % Bb{FileA} >> 7u); }
+    constexpr Bb backwardDiag() const { return (*this % Bb{FileH} << 7u) | (*this % Bb{FileA} << 9u); }
 
     // bidirectional signed rank shift
     constexpr Bb shiftRank(signed r) { return Bb{ r >= 0 ? (v_ << 8*r) : (v_ >> -8*r) }; }
