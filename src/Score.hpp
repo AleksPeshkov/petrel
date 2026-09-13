@@ -57,8 +57,8 @@ public:
 
     constexpr bool isNone() const { return v_ == NoBound; }
     constexpr bool isAny() const { return !isNone(); }
-    constexpr bool is(_t b) const { assert (isAny()); return v_ == b; }
-    constexpr bool is(Bound b) const { return is(b.v_); }
+    constexpr bool is(Bound b) const { assert (isAny()); assert (b.isAny()); return v_ == b.v_; }
+    constexpr bool has(Bound b) const { return v_ & b.v_; }
 
     constexpr Bound operator ~ () const {
         assert (isAny());
