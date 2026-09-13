@@ -392,7 +392,7 @@ ReturnStatus Node::search() {
         // going to search only non-captures, mask out remaining unsafe captures to avoid redundant safety checks
         //TRICK: ~ is not a negate bitwise operation but byteswap -- flip opponent's bitboard
         //TODO: mask out pinned enemy pawns
-        Bb bbAvoid = ~(OP.bbPawnAttacks() | OP.bbSide());
+        const Bb bbAvoid{ ~(OP.bbPawnAttacks() | OP.bbSide()) };
         PiMask safePieces = {}; // pieces on safe squares
 
         // officers (Q, R, B/N order) moves from unsafe to safe squares
