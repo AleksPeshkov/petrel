@@ -118,7 +118,7 @@ void PositionSide::move(Pi pi, Officer officer, Square from, Square to) {
 }
 
 void PositionSide::movePawn(Square from, Square to) {
-    Pi pawn{pi(from)};
+    Pi pawn{ pi(from) };
     move(pawn, from, to);
     bbPawns_.move(from, to);
     bbPawnAttacks_ = bbPawns_.forwardDiag();
@@ -357,7 +357,7 @@ bool PositionSide::setValidCastling(File file) {
         return false;
     }
 
-    Square rookFrom(file, Rank1);
+    Square rookFrom{ file, Rank1 };
     if (!has(rookFrom)) {
         io::error("invalid fen castling: no castling piece found");
         return false;

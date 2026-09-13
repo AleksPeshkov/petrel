@@ -58,23 +58,18 @@ protected:
     constexpr Ply finalR(Ply) const;
 
     constexpr bool hasAncestor(Ply n) const { return ply >= n; }
-    constexpr bool hasDescendant(Ply n) const { return ply <= Ply{Ply::last()} - n; }
-    constexpr bool hasParent() const { return hasAncestor(1_ply); }
-    constexpr bool hasGrandParent() const { return hasAncestor(2_ply); }
+    constexpr bool hasDescendant(Ply n) const { return ply <= Ply::last() - n; }
+    constexpr bool hasParent() const { return !isRoot(); }
 
     constexpr auto& ancestor(Ply n) const { assert (hasAncestor(n)); return *(const_cast<Node*>(this) - +n); } // ply-n
     constexpr auto& descendant(Ply n) const { assert (hasDescendant(n)); return *(const_cast<Node*>(this) + +n); } // ply+n
     constexpr auto& parent() const { return ancestor(1_ply); } // previous (ply-1) opposite side to move node
-    constexpr auto& grandParent() const { return ancestor(2_ply); } // previous side to move node (ply-2)
     constexpr auto& child() const { return descendant(1_ply); } // child (ply+1) node to make moves into
-
-    constexpr Move counterMove() const;
-    constexpr Move followupMove() const;
 
     constexpr bool isRoot() const { return ply == 0_ply; } // ply == 0
     constexpr bool isPv() const { return ply == pvPly; } // ply == pvPly
     constexpr bool isCutNode() const { return (+ply - +pvPly) & 1; } // odd (ply - pvPly)
-    constexpr bool isAllNode() const { return !isPv() && !isCutNode(); } // even (plv - pvPly)
+    constexpr bool isAllNode() const { return !(isPv() || isCutNode()); } // even (plv - pvPly)
     constexpr Ply currentR() const { return parent().depth - depth; } // parent.depth - depth
 
     constexpr Color colorToMove() const; // current node side to move color
