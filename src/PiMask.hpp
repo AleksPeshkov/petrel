@@ -368,7 +368,7 @@ public:
     constexpr void clearCastlings() { clear(Castlings); }
 
     constexpr PiMask enPassantPawns() const { return any(EnPassants); }
-    constexpr Pi piEnPassant() const { Pi pi = enPassantPawns().pi(); return pi; }
+    constexpr Pi piEnPassant() const { return enPassantPawns().pi(); }
     constexpr bool isEnPassant(Pi pi) const { return has(pi, EnPassants); }
     constexpr void setEnPassant(Pi pi) { add(pi, EnPassants); }
     constexpr void clearEnPassant(Pi pi) { assert (isEnPassant(pi)); clear(pi, EnPassants); }
