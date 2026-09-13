@@ -520,16 +520,16 @@ ReturnStatus Node::search() {
 ReturnStatus Node::goodPawnsMovesTo(Bb target, Ply R) {
     Bb totallySafe = (Bb::full() % bbAttacked()) | (MY.bbPawnAttacks() % ~OP.bbPawnAttacks());
 
-    Bb canAttackFrom = (target.pBackwardDiag() % OCCUPIED).pBackward(); // squares from where pawns can move to attack target
+    Bb canAttackFrom = (target.backwardDiag() % OCCUPIED).backward(); // squares from where pawns can move to attack target
     for (Square from : MY.bbPawns() & canAttackFrom) {
-        Square to{ from.file(), from.rank().forward() }; assert (!OCCUPIED.has(to));
+        Square to{ from.forward() }; assert (!OCCUPIED.has(to));
         if ( bbMovesOf(MY.pi(from)).has(to) && (totallySafe.has(to) || !safeForOp(to)) ) {
             RETURN_CUTOFF (searchMove(from, to, R));
         }
     }
 
     // double push attacks
-    canAttackFrom = (canAttackFrom % OCCUPIED).pBackward() & Bb{Rank2};
+    canAttackFrom = (canAttackFrom % OCCUPIED).backward() & Bb{Rank2};
     for (Square from : MY.bbPawns() & canAttackFrom) {
         assert (!OCCUPIED.has(Square{ from.file(), Rank{Rank3} }));
         Square to{ from.file(), Rank{Rank4} }; assert (!OCCUPIED.has(to));

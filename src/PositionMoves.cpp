@@ -20,9 +20,9 @@ void PositionMoves::populateUnderpromotions() {
         // add underpromotions for each already generated legal queen promotion
         //TRICK: promoted piece type encoded inside pawn destination square rank
         Bb bb{moves_.bb(pi)};
-        bb += bb.pBackward(); // Rook, Rank7
-        bb |= bb.pBackward(); // Bishop, Rank6
-        bb |= bb.pBackward(); // Knight, Rank5
+        bb += bb.backward(); // Rook, Rank7
+        bb |= bb.backward(); // Bishop, Rank6
+        bb |= bb.backward(); // Knight, Rank5
         moves_.set(pi, bb);
     }
 }
@@ -49,8 +49,8 @@ void PositionMoves::generatePawnMoves() {
     for (Pi pi : MY.pawns()) {
         Square from{ MY.sq(pi) };
 
-        Bb bb{ Bb{from}.pForward() % OCCUPIED }; // push
-        bb += (bb & Bb{Rank3}).pForward() % OCCUPIED; // double push
+        Bb bb{ Bb{from.forward()} % OCCUPIED }; // push
+        bb += (bb & Bb{Rank3}).forward() % OCCUPIED; // double push
         bb += ::attacksFrom(Pawn, from) & ~OP.bbSide(); // captures
         moves_.set(pi, bb);
     }
@@ -59,20 +59,19 @@ void PositionMoves::generatePawnMoves() {
 template <Side::_t My>
 void PositionMoves::correctCheckEvasionsByPawns(Bb checkLine, Square checkFrom) {
     // simple pawn push over check line
-    Bb potentialBlockers = checkLine.pBackward();
+    Bb potentialBlockers = checkLine.backward();
 
     // illegal phantom diagonal captures to fix
-    Bb potentialInvalidCaptures = checkLine.pBackwardDiag();
+    Bb potentialInvalidCaptures = checkLine.backwardDiag();
 
     for (Square from : MY.bbPawns() & (potentialBlockers | potentialInvalidCaptures)) {
-        Bb bb = (Bb{from.rankForward()} & checkLine) + (::attacksFrom(Pawn, from) & Bb{checkFrom});
+        Bb bb = (Bb{from.forward()} & checkLine) + (::attacksFrom(Pawn, from) & Bb{checkFrom});
         moves_.set(MY.pi(from), bb);
     }
 
-    //TODO: refactor this
     // pawns double push over check line
-    Bb pawnJumpEvasions = MY.bbPawns() & Bb{Rank2} & checkLine.pBackward().pBackward();
-    pawnJumpEvasions %= OCCUPIED.pBackward(); // exlcude double push through occupied square
+    Bb pawnJumpEvasions = MY.bbPawns() & Bb{Rank2} & potentialBlockers.backward();
+    pawnJumpEvasions %= OCCUPIED.backward(); // exlcude double push through occupied square
     for (Square from : pawnJumpEvasions) {
         moves_.add(MY.pi(from), Square{from.file(), Rank4});
     }
