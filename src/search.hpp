@@ -74,7 +74,7 @@ protected:
     constexpr bool isRoot() const { return ply == 0_ply; } // ply == 0
     constexpr bool isPv() const { return ply == pvPly; } // ply == pvPly
     constexpr bool isCutNode() const { return (+ply - +pvPly) & 1; } // odd (ply - pvPly)
-    constexpr bool isAllNode() const { return !isPv() && !isCutNode(); } // even (plv - pvPly)
+    constexpr bool isAllNode() const { return !(isPv() || isCutNode()); } // even (plv - pvPly)
     constexpr Ply currentR() const { return parent().depth - depth; } // parent.depth - depth
 
     constexpr Color colorToMove() const; // current node side to move color
