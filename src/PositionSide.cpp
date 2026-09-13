@@ -86,7 +86,7 @@ void PositionSide::capture(Square from) {
     bbSide_ -= Bb{from};
     if (nonKing.is(Pawn)) {
         bbPawns_ -= Bb{from};
-        bbPawnAttacks_ = bbPawns_.pForwardDiag();
+        bbPawnAttacks_ = bbPawns_.forwardDiag();
     }
 
     material_.clear(nonKing);
@@ -124,7 +124,7 @@ void PositionSide::movePawn(Square from, Square to) {
     Pi pawn{pi(from)};
     move(pawn, from, to);
     bbPawns_.move(from, to);
-    bbPawnAttacks_ = bbPawns_.pForwardDiag();
+    bbPawnAttacks_ = bbPawns_.forwardDiag();
 
     assert (traits.isNone(pawn));
     if (to.isOn(Rank7)) { traits.setPromotable(pawn); }
@@ -146,7 +146,7 @@ Pi PositionSide::piPromoted(Square from, Officer officer, Square to) {
 
     // remove pawn
     bbPawns_ -= Bb{from};
-    bbPawnAttacks_ = bbPawns_.pForwardDiag();
+    bbPawnAttacks_ = bbPawns_.forwardDiag();
     attacks_.clear(pawn);
     squares.clear(pawn);
     traits.clear(pawn);
@@ -320,7 +320,7 @@ bool PositionSide::dropValid(Piece piece, Square to) {
         }
         if (to.isOn(Rank7)) { traits.setPromotable(pi);}
         bbPawns_ += Bb{to};
-        bbPawnAttacks_ = bbPawns_.pForwardDiag();
+        bbPawnAttacks_ = bbPawns_.forwardDiag();
     }
 
     assertOk(pi, piece, to);

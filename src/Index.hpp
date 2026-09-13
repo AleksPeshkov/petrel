@@ -200,8 +200,6 @@ enum rank_enum { Rank8, Rank7, Rank6, Rank5, Rank4, Rank3, Rank2, Rank1, };
 struct Rank : Index<Rank, 8, rank_enum> {
     constexpr Rank (Rank::_t rank = Rank1) : Index{rank} {}
 
-    constexpr Rank forward() const { return static_cast<Rank::_t>(v_ + Rank2 - Rank1); }
-
     constexpr io::char_type to_char() const { return static_cast<io::char_type>('8' - v_); }
     friend ostream& operator << (ostream& os, Rank rank) { return os << rank.to_char(); }
 
@@ -261,7 +259,7 @@ public:
     constexpr Square mirrorMask() const { return static_cast<_t>(file() < FileD ? 0 : 7); }
 
     /// move pawn forward
-    constexpr Square rankForward() const { return static_cast<_t>(v_ + A8 - A7); }
+    constexpr Square forward() const { return static_cast<_t>(v_ + A8 - A7); }
 
     constexpr bool isOn(Rank r) const { return rank() == r; }
     constexpr bool isOn(File f) const { return file() == f; }
