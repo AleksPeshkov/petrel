@@ -3,7 +3,7 @@
 
 #include "Position.hpp"
 
-using MovesNumber = int; // number of (legal) moves in the position
+using MovesNumber = u8_t; // number of (legal) moves in the position
 
 class PositionMoves : public Position {
     PiBb moves_; // generated strictly legal moves
@@ -35,10 +35,10 @@ public:
     constexpr const auto& moves() const { return moves_; }
 
     // total count of legal moves
-    constexpr MovesNumber movesTotal() const { return movesTotal_; }
+    constexpr int movesTotal() const { return movesTotal_; }
 
     // count of already made legal (non-null) moves
-    constexpr MovesNumber movesMade() const { return movesMade_; }
+    constexpr int movesMade() const { return movesMade_; }
 
     constexpr MoveType moveType(Square from, Square to) const { return MY.moveType(from, to); }
     constexpr Move toMove(TtMove ttMove) const { return Move{ttMove, moveType(ttMove.from(), ttMove.to())}; }
