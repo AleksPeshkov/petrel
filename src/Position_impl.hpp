@@ -225,15 +225,15 @@ bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
                 }
 
                 OP.capture(~to);
-                Pi promoted{MY.piPromoted(from, promoType, to)}; // promoted piece index can differ from pawn piece index
-                updateSliderAttacks<My>(MY.affectedBy(from) | PiMask{promoted}, OP.affectedBy(~from));
+                PiMask promoted{ MY.piPromoted(from, promoType, to) }; // promoted piece index can differ from pawn piece index
+                updateSliderAttacks<My>(MY.affectedBy(from) | promoted, OP.affectedBy(~from));
                 if constexpr (Flags & WithEval) { accumulator.promote(from, promoType, to, captured); }
                 return true; // end of pawn promotion move with capture
             } else {
                 if constexpr (Flags & WithZobrist) { flipPrefetch(); }
 
-                Pi promoted{MY.piPromoted(from, promoType, to)}; // promoted piece index can differ from pawn piece index
-                updateSliderAttacks<My>(MY.affectedBy(from, to) | PiMask{promoted}, OP.affectedBy(~from, ~to));
+                PiMask promoted{ MY.piPromoted(from, promoType, to) }; // promoted piece index can differ from pawn piece index
+                updateSliderAttacks<My>(MY.affectedBy(from, to) | promoted, OP.affectedBy(~from, ~to));
                 if constexpr (Flags & WithEval) { accumulator.promote(from, promoType, to); }
                 return true; // end of pawn promotion move without capture
             }
@@ -283,7 +283,7 @@ bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
     } // no king moves anymore
 
 // non-pawn non-king move (but can be castling):
-    Pi pi = MY.pi(from);
+    Pi pi{ MY.pi(from) };
     bool shouldResetZHash = false;
 
     if (MY.isCastling(pi)) [[unlikely]] {

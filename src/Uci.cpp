@@ -424,8 +424,8 @@ ostream& move(ostream& os, Move move, Color colorToMove, ChessVariant chessVaria
         return os;
     }
 
-    Square from{move.from()};
-    Square to{move.to()};
+    Square from{ move.from() };
+    Square to{ move.to() };
 
     Square uciFrom{isWhite ? from : ~from};
     Square uciTo{isWhite ? to : ~to};
@@ -501,7 +501,7 @@ istream& UciPosition::readMove(istream& is, Square& from, Square& to) const {
     // convert special moves (castling, promotion, ep) to the internal move format
     if (MY.isPawn(from)) {
         if (from.on(Rank7)) {
-            PromoType promo{Queen};
+            PromoType promo{Queen}; // default
             is >> promo;
             is.clear(); // promotion piece is optional
             to = Square{to.file(), ::rankOf(promo)};
