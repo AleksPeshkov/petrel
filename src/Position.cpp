@@ -77,9 +77,9 @@ bool Position::afterDrop() {
 }
 
 Bb Position::bbPassedPawns() const {
-    Bb blockers = ~(OP.bbPawns() | OP.bbPawnAttacks().pForward());
+    Bb blockers = ~(OP.bbPawns() | OP.bbPawnAttacks().forward());
     for (int i = 0; i < 5; ++i) {
-        blockers |= blockers.pBackward();
+        blockers |= blockers.backward();
     }
     return MY.bbPawns() % blockers;
 }
