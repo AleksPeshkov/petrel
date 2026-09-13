@@ -424,8 +424,8 @@ ostream& move(ostream& os, Move move, Color colorToMove, ChessVariant chessVaria
         return os;
     }
 
-    Square from{move.from()};
-    Square to{move.to()};
+    Square from{ move.from() };
+    Square to{ move.to() };
 
     Square uciFrom{isWhite ? from : ~from};
     Square uciTo{isWhite ? to : ~to};
@@ -1189,8 +1189,8 @@ void Uci::savePv() {
         assert (pos.isPossibleMove(move));
         auto eval = pos.inCheck() ? Score{} : pos.evaluate();
 
-        auto tt = the_tt.addr<TtEntry>(pos.z());
-        TtEntry{ pos.z(), eval, score, ply, ExactBound, depth, move.ttMove() }.write(tt);
+        auto p_ttEntry = the_tt.addr<TtEntry>(pos.z());
+        TtEntry{ pos.z(), eval, score, ply, ExactBound, depth, move.ttMove() }.write(p_ttEntry);
 
         pos.makeMove(move.from(), move.to());
         score = -score;
