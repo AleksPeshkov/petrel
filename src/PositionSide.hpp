@@ -10,9 +10,9 @@
 // (so the king piece is initially on E1 square regardless color)
 class PositionSide {
     PiBb attacks_; // squares attacked by a piece and pieces attacking to a square
+    PiSquare squares; // onboard square locations of the alive pieces or 'NoSquare' special value
     PiType types; // chess type of each alive piece: king, pawn, knignt, bishop, rook, queen
     PiTrait traits; // rooks with castling rights, pawns affected by en passant, pinner pieces, checker pieces
-    PiSquare squares; // onboard square locations of the alive pieces or 'NoSquare' special value
 
     Bb bbSide_; // bitboard of squares of all current side pieces
     Bb bbPawns_; // bitboard of squares of current side pawns
@@ -66,7 +66,7 @@ public:
     constexpr Bb bbPawns() const { return bbPawns_; }
 
     // bitboard of squares attacked by the given side pawns
-    constexpr Bb bbPawnAttacks() const { assert (bbPawnAttacks_ == bbPawns_.pForwardDiag()); return bbPawnAttacks_; }
+    constexpr Bb bbPawnAttacks() const { assert (bbPawnAttacks_ == bbPawns_.forwardDiag()); return bbPawnAttacks_; }
 
     constexpr bool has(Square sq) const { assert (bbSide_.has(sq) == squares.has(sq)); return bbSide_.has(sq); }
     constexpr Pi pi(Square sq) const { assert (has(sq)); Pi pi = squares.pi(sq); assertOk(pi); return pi; }
