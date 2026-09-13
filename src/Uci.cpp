@@ -424,8 +424,8 @@ ostream& move(ostream& os, Move move, Color colorToMove, ChessVariant chessVaria
         return os;
     }
 
-    Square from{move.from()};
-    Square to{move.to()};
+    Square from{ move.from() };
+    Square to{ move.to() };
 
     Square uciFrom{isWhite ? from : ~from};
     Square uciTo{isWhite ? to : ~to};

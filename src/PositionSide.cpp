@@ -123,7 +123,7 @@ void PositionSide::move(Pi pi, Piece ty, Square from, Square to) {
 }
 
 void PositionSide::movePawn(Square from, Square to) {
-    Pi pawn{pi(from)};
+    Pi pawn{ pi(from) };
     move(pawn, from, to);
     bbPawns_.move(from, to);
     bbPawnAttacks_ = bbPawns_.forwardDiag();
@@ -309,7 +309,7 @@ bool PositionSide::dropValid(Piece ty, Square to) {
     }
     bbSide_ += Bb{to};
 
-    Pi pi = ty.is(King) ? Pi{TheKing} : PieceSet{any() | PiMask{Pi{TheKing}}}.piFirstVacant();
+    Pi pi{ ty.is(King) ? Pi{TheKing} : PieceSet{any() | PiMask{Pi{TheKing}}}.piFirstVacant() };
 
     material_.drop(ty);
     types.drop(pi, ty);
@@ -335,7 +335,7 @@ bool PositionSide::setValidCastling(CastlingSide castlingSide) {
         return false;
     }
 
-    Square sqOuter{sqKing()};
+    Square sqOuter{ sqKing() };
     for (Pi rook : types.anyOf(Rook) & anyOn(Rank1)) {
         if (CastlingRules::castlingSide(sqOuter, sq(rook)).is(*castlingSide)) {
             sqOuter = sq(rook);
@@ -346,7 +346,7 @@ bool PositionSide::setValidCastling(CastlingSide castlingSide) {
         return false;
     }
 
-    Pi rook{pi(sqOuter)};
+    Pi rook{ pi(sqOuter) };
     if (isCastling(rook)) {
         io::error("invalid fen castling: rook is already set castling");
         return false;
@@ -362,13 +362,13 @@ bool PositionSide::setValidCastling(File file) {
         return false;
     }
 
-    Square rookFrom(file, Rank1);
+    Square rookFrom{ file, Rank1 };
     if (!has(rookFrom)) {
         io::error("invalid fen castling: no castling piece found");
         return false;
     }
 
-    Pi rook{pi(rookFrom)};
+    Pi rook{ pi(rookFrom) };
     if (!types.isRook(rook)) {
         io::error("invalid fen castling: castling piece is not rook");
         return false;

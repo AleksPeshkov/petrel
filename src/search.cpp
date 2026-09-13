@@ -254,8 +254,7 @@ ReturnStatus Node::search() {
         if (ttEntry.ttMove(z()).any()) {
             auto ttMove = ttEntry.ttMove(z());
             if (!isPossibleMove(ttMove.from(), ttMove.to())) [[unlikely]] {
-                // collision detection
-                break;
+                break; // collision detected
             }
             bestMove = toMove(ttMove);
         }
@@ -392,12 +391,12 @@ ReturnStatus Node::search() {
         // going to search only non-captures, mask out remaining unsafe captures to avoid redundant safety checks
         //TRICK: ~ is not a negate bitwise operation but byteswap -- flip opponent's bitboard
         //TODO: mask out pinned enemy pawns
-        Bb bbAvoid = ~(OP.bbPawnAttacks() | OP.bbSide());
+        const Bb bbAvoid{ ~(OP.bbPawnAttacks() | OP.bbSide()) };
         PiMask safePieces = {}; // pieces on safe squares
 
         // officers (Q, R, B/N order) moves from unsafe to safe squares
         for (Pi pi : MY.officers()) {
-            Square from = MY.sq(pi);
+            Square from{ MY.sq(pi) };
 
             if (!bbAttacked().has(from)) {
                 // piece is not attacked at all
@@ -423,8 +422,7 @@ ReturnStatus Node::search() {
 
         // safe passed pawns moves
         for (Square from : bbPassedPawns() % Bb{Rank7}) {
-            Pi pi = MY.pi(from);
-            for (Square to : bbMovesOf(pi)) {
+            for (Square to : bbMovesOf( MY.pi(from) )) {
                 if (MY.bbPawnAttacks().has(to) || !safeForOp(to)) {
                     RETURN_CUTOFF (searchMove(from, to, from.on(Rank6) ? 1_ply : 2_ply));
                 }
@@ -440,7 +438,8 @@ ReturnStatus Node::search() {
 
         // safe officers moves
         while (safePieces.any()) {
-            Pi pi = safePieces.piLast(); safePieces -= PiMask{pi};
+            Pi pi{ safePieces.piLast() };
+            safePieces -= PiMask{pi};
             RETURN_CUTOFF (goodNonCaptures(pi, bbMovesOf(pi) % bbAvoid, 3_ply));
         }
 
@@ -448,24 +447,24 @@ ReturnStatus Node::search() {
 
         // king quiet moves (always safe), castling is a rook move
         {
-            Pi pi{TheKing};
-            Square from{MY.sqKing()};
-            for (Square to : bbMovesOf(pi)) {
+            Square from{ MY.sqKing() };
+            for (Square to : bbMovesOf(Pi{ TheKing })) {
                 RETURN_CUTOFF (searchMove(from, to, 3_ply));
             }
         }
 
         // remaining (losing) queen promotion moves
         for (Pi pi : MY.promotables()) {
-            Square from{MY.sq(pi)};
-            Square to{from.file(), Rank8};
+            Square from{ MY.sq(pi) };
+            Square to{ from.file(), Rank8 };
             RETURN_CUTOFF (searchIfPossible(toMove(from, to, CanBeKiller::Yes), 3_ply));
         }
 
         // unsafe (losing) captures (N/B, R, Q order)
         for (PiMask pieces = MY.officers(); pieces.any(); ) {
-            Pi pi = pieces.piLast(); pieces -= PiMask{pi};
-            Square from{MY.sq(pi)};
+            Pi pi{ pieces.piLast() };
+            pieces -= PiMask{pi};
+            Square from{ MY.sq(pi) };
             for (Square to : bbMovesOf(pi) & ~OP.bbSide()) {
                 RETURN_CUTOFF (searchMove(from, to, 3_ply));
             }
@@ -474,8 +473,7 @@ ReturnStatus Node::search() {
         // all remaining pawn moves:
         // all underpromotions, losing passed pawns moves, the rest pawns moves
         for (Square from : MY.bbPawns()) {
-            Pi pi = MY.pi(from);
-            for (Square to : bbMovesOf(pi)) {
+            for (Square to : bbMovesOf( MY.pi(from) )) {
                 RETURN_CUTOFF (searchMove(from, to, 3_ply));
             }
         }
@@ -484,8 +482,9 @@ ReturnStatus Node::search() {
 
         // unsafe (losing) non-captures (N/B, R, Q order)
         for (PiMask pieces = MY.officers(); pieces.any(); ) {
-            Pi pi = pieces.piLast(); pieces -= PiMask{pi};
-            Square from{MY.sq(pi)};
+            Pi pi{ pieces.piLast() };
+            pieces -= PiMask{pi};
+            Square from{ MY.sq(pi) };
             for (Square to : bbMovesOf(pi)) {
                 RETURN_CUTOFF (searchMove(from, to, 4_ply));
             }
@@ -518,9 +517,9 @@ ReturnStatus Node::search() {
 
 // safe pawns pushes attacking non-pawns
 ReturnStatus Node::goodPawnsMovesTo(Bb target, Ply R) {
-    Bb totallySafe = (Bb::full() % bbAttacked()) | (MY.bbPawnAttacks() % ~OP.bbPawnAttacks());
+    Bb totallySafe{ (Bb::full() % bbAttacked()) | (MY.bbPawnAttacks() % ~OP.bbPawnAttacks()) };
 
-    Bb canAttackFrom = (target.backwardDiag() % OCCUPIED).backward(); // squares from where pawns can move to attack target
+    Bb canAttackFrom{ (target.backwardDiag() % OCCUPIED).backward() }; // squares from where pawns can move to attack target
     for (Square from : MY.bbPawns() & canAttackFrom) {
         Square to{ from.forward() }; assert (!OCCUPIED.has(to));
         if ( bbMovesOf(MY.pi(from)).has(to) && (totallySafe.has(to) || !safeForOp(to)) ) {
@@ -542,24 +541,20 @@ ReturnStatus Node::goodPawnsMovesTo(Bb target, Ply R) {
 }
 
 ReturnStatus Node::goodNonCaptures(Pi pi, Bb bbMoves, Ply R) {
-    Piece ty{ MY.piece(pi) };
-    assert (!ty.is(Pawn));
+    Piece ty{ MY.piece(pi) }; assert (!ty.is(Pawn));
     PiMask opLessValue{ OP.lessValue(ty) };
 
-    Square from{MY.sq(pi)};
+    Square from{ MY.sq(pi) };
     for (Square to : bbMoves) {
         assert (!OP.bbPawnAttacks().has(~to));
         assert (isQuietMove(pi, to));
 
         if (bbAttacked().has(to)) {
             if ((OP.attackersTo(~to) & opLessValue).any()) {
-                // square defended by less valued opponent's piece
-                continue;
+                continue; // square defended by less valued opponent's piece
             }
-
             if (!(MY.bbPawnAttacks().has(to) || safeForMe(to))) {
-                // skip move to the defended square
-                continue;
+                continue; // skip move to the defended square
             }
         }
 
@@ -598,11 +593,9 @@ ReturnStatus Node::quiescence() {
 ReturnStatus Node::goodCaptures(PiMask victims) {
     // queen promotion moves, with and without capture
     for (Pi pi : MY.promotables()) {
-        Bb queenPromos = bbMovesOf(pi) & Bb{Rank8}; // filter out underpromotions
-        Square from{MY.sq(pi)};
-        for (Square to : queenPromos) {
-            if (!safeForOp(to) || OP.bbSide().has(~to)) {
-                // move to safe square or always good promotion with capture
+        Square from{ MY.sq(pi) };
+        for (Square to : bbMovesOf(pi) & Bb{Rank8}) { // filter out underpromotions
+            if (OP.bbSide().has(~to) || !safeForOp(to)) { // promotion with capture (always good) or safe promotion move
                 RETURN_CUTOFF (searchMove(from, to, 1_ply, CanBeKiller::No));
             }
         }
@@ -610,10 +603,10 @@ ReturnStatus Node::goodCaptures(PiMask victims) {
 
     // MVV (most valuable victim) order
     for (Pi victim : victims) {
-        Square to = ~OP.sq(victim);
+        Square to{ ~OP.sq(victim) };
 
-        // exclude underpromotions, should be no queen promotions anymore
-        PiMask attackers = canMoveTo(to) % MY.promotables();
+        // exclude captures with underpromotions, should be no queen promotions anymore
+        PiMask attackers{ canMoveTo(to) % MY.promotables() };
         if (attackers.none()) { continue; }
 
         // simple SEE function, checks only two cases:
@@ -630,10 +623,9 @@ ReturnStatus Node::goodCaptures(PiMask victims) {
         }
 
         while (attackers.any()) {
-            // LVA (least valuable attacker) order
-            Pi pi = attackers.piLast(); attackers -= PiMask{pi};
-            Square from{MY.sq(pi)};
-            RETURN_CUTOFF (searchMove(from, to, 1_ply, CanBeKiller::No));
+            Pi pi{ attackers.piLast() }; // LVA (least valuable attacker) order
+            attackers -= PiMask{pi};
+            RETURN_CUTOFF (searchMove(MY.sq(pi), to, 1_ply, CanBeKiller::No));
         }
     }
 
@@ -647,7 +639,7 @@ ReturnStatus Node::searchNullMove() {
     currentMove = {};
     child().childNullMove();
 
-    Ply R{(beta <= cEval - 400_cp)};
+    Ply R{ beta <= cEval - 400_cp };
     return negamax(4_ply + (depth-2_ply)/4 + R);
 }
 
@@ -664,11 +656,11 @@ ReturnStatus Node::searchMove(Move move, Ply R) {
     assert (isPseudoLegal(move));
     assert (isPossibleMove(move));
 
-    Square from{move.from()};
-    Square to{move.to()};
+    Square from{ move.from() };
+    Square to{ move.to() };
 
-    currentMove = move;
     clearMove(from, to);
+    currentMove = move;
     child().childMove(from, to);
 
     return negamax(finalR(R));
@@ -679,7 +671,7 @@ void Node::childMove(Square from, Square to) {
         tt = the_tt.prefetch<TtEntry>(z);
     });
 
-    childZHash = ply <= 1_ply || shouldResetZHash ? ZHash{} : ZHash{parent().zHash(), parent().z()};
+    childZHash = ply <= 1_ply || shouldResetZHash ? ZHash{} : ZHash{ parent().zHash(), parent().z() };
     the_uci.pv.clear(pvIndex);
 }
 
@@ -693,7 +685,7 @@ constexpr Ply Node::finalR(Ply R) const {
 // counter and folloup move heuristic
 ReturnStatus Node::contMove(ContIndex::_t ContType, Move move) {
     for (auto i : range<decltype(the_uci.contMoves)::Index>()) {
-        auto contMove = the_uci.contMoves.get(ContType, i, colorToMove(), move);
+        auto contMove{ the_uci.contMoves.get(ContType, i, colorToMove(), move) };
         if (contMove.none()) { break; } // insert_unique_compact() garantees no holes
         if (isPossibleMove(contMove)) {
             return searchMove(contMove);

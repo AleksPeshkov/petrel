@@ -283,7 +283,7 @@ bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
     } // no king moves anymore
 
 // non-pawn non-king move (but can be castling):
-    Pi pi = MY.pi(from);
+    Pi pi{ MY.pi(from) };
     bool shouldResetZHash = false;
 
     if (MY.isCastling(pi)) [[unlikely]] {
