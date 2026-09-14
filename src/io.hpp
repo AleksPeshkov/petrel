@@ -24,7 +24,7 @@ namespace io {
 // defined in main.cpp
 
     ostream& app_version(ostream&);
-    COLD void error(std::string_view);
+    COLD void error(std::string_view, std::string_view = {});
 }
 
 using io::ostream;
