@@ -18,6 +18,7 @@ fn main() {
     const QA: f32 = 1024.0; // seems safe and large enough for 16-bit accumulator
     const QB: f32 = 16.0;   // QB*WDL*f_wdl <= 32767
     const WDL:f32 = 400.0;  // implicit output conversion 1.0 = 400 centipawns
+    let f_wdl = 32767.0 / (QB*WDL); // 5.11984375
 
     let mut trainer = ValueTrainerBuilder::default().use_threads(CPU_THREADS/2)
         .optimiser(AdamW).loss_fn(|output, target| output.sigmoid().power_error(target, LOSS_POW))
@@ -58,14 +59,10 @@ fn main() {
             l1.forward(dual_acc.screlu())
         });
 
-    trainer.optimiser.set_params_for_weight("l0w",
-        AdamWParams{ decay: 0.005, min_weight: -4.0, max_weight: 4.0, ..Default::default() }
-    );
-
-    let f_wdl = 32767.0 / (QB*WDL); // 5.11984375
-    trainer.optimiser.set_params_for_weight("l1w",
-        AdamWParams{ decay: 0.03, min_weight: -f_wdl, max_weight: f_wdl, ..Default::default() }
-    );
+    trainer.optimiser.set_params_for_weight("l0b", AdamWParams{ decay: 0.0, min_weight: -4.0, max_weight: 4.0, ..Default::default() });
+    trainer.optimiser.set_params_for_weight("l0w", AdamWParams{ decay: 0.005, min_weight: -4.0, max_weight: 4.0, ..Default::default() });
+    trainer.optimiser.set_params_for_weight("l1b", AdamWParams{ decay: 0.03, min_weight: -1.0, max_weight: 1.0, ..Default::default() });
+    trainer.optimiser.set_params_for_weight("l1w", AdamWParams{ decay: 0.03, min_weight: -f_wdl, max_weight: f_wdl, ..Default::default() });
 
     // loading directly from a `BulletFormat` file
     let data_set_eval_scale: f32 = 800.0;
@@ -84,22 +81,30 @@ fn main() {
         "data/test77nov-unfilt-test79-maraprmay-v6-dd.skip-see-ge0.wdl-pdist.iter-12.bullet.bin",
     ];
     let data_loader = DirectSequentialDataLoader::new(data_set);
+    let settings = LocalSettings { threads: CPU_THREADS/2, test_set: None, output_directory: "checkpoints", batch_queue_size: CPU_THREADS*4 };
 
-    let final_superbatch = 360;
-    let peak_lr = 4e-4;
-    let final_lr = peak_lr / 100.0;
-    let batch_size = 16_384 / 4;
-    let batches_per_superbatch = 6_104 * 4;
+    let final_superbatch = 120;
+    let batch_size = 16_384;
+    let batches_per_superbatch = 6_104;
 
-    let schedule = TrainingSchedule {
-        net_id: "1024-hm03".to_string(),
+    let schedule1 = TrainingSchedule {
+        net_id: "h1".to_string(),
         eval_scale: data_set_eval_scale,
         steps: TrainingSteps { batch_size, batches_per_superbatch, start_superbatch: 1, end_superbatch: final_superbatch },
-        wdl_scheduler: wdl::CosineDecayWDL { start: 0.0, end: 0.2, final_superbatch },
-        lr_scheduler: lr::CosineDecayLR { initial_lr: peak_lr, final_lr, final_superbatch },
+        wdl_scheduler: wdl::CosineDecayWDL { start: 0.20, end: 0.10, final_superbatch },
+        lr_scheduler: lr::CosineDecayLR { initial_lr: 1e-3, final_lr: 1e-5, final_superbatch },
         save_rate: 10,
     };
+    trainer.run(&schedule1, &settings, &data_loader);
 
-    let settings = LocalSettings { threads: CPU_THREADS/2, test_set: None, output_directory: "checkpoints", batch_queue_size: CPU_THREADS*4 };
-    trainer.run(&schedule, &settings, &data_loader);
+    trainer.load_from_checkpoint(&format!("./{}/{}-{}", &settings.output_directory, &schedule1.net_id, schedule1.steps.end_superbatch));
+    let schedule2 = TrainingSchedule {
+        net_id: "h2".to_string(),
+        eval_scale: data_set_eval_scale,
+        steps: TrainingSteps { batch_size: batch_size/4, batches_per_superbatch: batches_per_superbatch*4, start_superbatch: 1, end_superbatch: final_superbatch },
+        wdl_scheduler: wdl::CosineDecayWDL { start: 0.10, end: 0.00, final_superbatch },
+        lr_scheduler: lr::CosineDecayLR { initial_lr: 1e-4, final_lr: 1e-7, final_superbatch },
+        save_rate: 10,
+    };
+    trainer.run(&schedule2, &settings, &data_loader);
 }

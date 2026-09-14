@@ -54,6 +54,6 @@ fn main() {
             l1.forward(dual_acc.screlu())
         });
 
-    trainer.load_from_checkpoint("./checkpoints/1024-hm03-360/");
-    trainer.save_to_checkpoint("./checkpoints/1024-hm03-360q/");
+    trainer.load_from_checkpoint("./checkpoints/1k-hm3-s2-120/");
+    trainer.save_to_checkpoint("./checkpoints/1k-hm3-s2-120q32/");
 }
