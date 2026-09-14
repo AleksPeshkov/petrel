@@ -26,13 +26,13 @@ Tt The_transpositionTable{64 * 1024 * 1024};
 // global Uci instance
 Uci The_uci{std::cout};
 
-void io::error(std::string_view message) {
-    The_uci.error(message);
+COLD void io::error(std::string_view prefix, std::string_view suffix) {
+    The_uci.error(prefix, suffix);
 }
 
 #ifndef NDEBUG
 void assert_fail(const char* assertion, const char* file, unsigned int line, const char* func) {
-    io::error( std::string("Assertion failed (") + file + ":" + std::to_string(line) + "): " + func + ": " + assertion);
+    io::error( std::string("Assertion failed (") + file + ":" + std::to_string(line) + "): " + func + ": ", assertion);
     std::exit(EXIT_FAILURE); // graceful exit without core dump
     __builtin_unreachable();
 }
