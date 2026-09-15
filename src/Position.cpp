@@ -1,13 +1,11 @@
 #include "Position_impl.hpp"
 
 Score Position::evaluate() const {
-    auto eval = accumulator.evaluate();
-    return Score::clampEval(eval);
+    auto rawEval = nnue.evaluate(dacc_);
+    return Score::clampEval(rawEval);
 }
 
-void Position::flip(const Position& parent) {
-    // copy from the parent position but swap sides
-    accumulator.flip(parent.accumulator);
+void Position::copy_swap(const Position& parent) {
     positionSide_[My] = parent._(Op);
     positionSide_[Op] = parent._(My);
     rule50_ = parent.rule50_;
@@ -15,21 +13,25 @@ void Position::flip(const Position& parent) {
 
 void Position::makeMove(Square from, Square to) {
     PositionSide::swap(_(My), _(Op));
-    accumulator.swap();
 
     // the position just swapped its sides, so we make the move for the Op
-    makeMove<Op, Full>(from, to, []{});
+    makeMove<Op, NoEval>(*this, from, to, []{});
     zobrist_.flip();
+    nnUpdate();
     //assert (z() == *generateZobrist()); // true, but slow to compute
 }
 
 void Position::makeNullMove(const Position& parent) {
-    flip(parent);
+    copy_swap(parent);
     zobrist_ = parent.zobrist_;
     rule50_.next(); zHash_ = {}; // null move holds rule50, but not ZHash
 
     occupied_[My] = parent.occupied_[Op];
     occupied_[Op] = parent.occupied_[My];
+    dacc_[My] = parent.dacc_[Op];
+    dacc_[Op] = parent.dacc_[My];
+    hm_[My] = parent.hm_[Op];
+    hm_[Op] = parent.hm_[My];
 
     // clear en passant status from the previous move
     if (_(My).hasEnPassant()) {
@@ -62,8 +64,8 @@ bool Position::dropValid(Side side, Piece piece, Square to) {
 bool Position::afterDrop() {
     PositionSide::finalSetup(_(My), _(Op));
     updateSliderAttacks<Op>(_(Op).any(), _(My).any());
-    accumulator.setup(*this);
     rule50_ = {};
+    nnUpdate();
 
     // opponent should not be in check
     return _(My).checkers().isNone();

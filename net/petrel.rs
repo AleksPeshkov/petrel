@@ -17,8 +17,8 @@ fn main() {
 
     const QW0: f32 = 1024.0; // seems safe and large enough for 16-bit accumulator
     const WDL: f32 = 300.0;  // implicit output conversion 1.0 = 400 centipawns
-    const QW1: f32 = 32.0 * WDL; // 2^5 * WDL
-    const QB1: f32 = 16384.0 * WDL; // 2^14 * WDL
+    const QW1: f32 = 64.0 * WDL; // 2^6 * WDL
+    const QB1: f32 = 2048.0 * WDL; // 2^11 * WDL
 
     let mut trainer = ValueTrainerBuilder::default().use_threads(CPU_THREADS/2)
         .optimiser(AdamW).loss_fn(|output, target| output.sigmoid().power_error(target, LOSS_POW))
@@ -44,7 +44,26 @@ fn main() {
                 }
                 outputs
             }).quantise::<i16>(QW0),
-            SavedFormat::id("l1w").quantise::<i16>(QW1),
+
+            SavedFormat::id("l1w").rescale::<i16>(QW1).transform(|_, inputs| {
+                let mut outputs = vec![0.0; inputs.len()];
+                let mut odd = false; // parity count of odd weights
+
+                for i in 0..inputs.len() {
+                    // 0) we multiply positive value with signed _w_
+                    // 1) _mm256_mulhrs_epi16 rounds positive product up, negative also up (towards zero)
+                    // 2) rounding up happens only when _w_ lowest bit is one
+                    // 3) compensate systematic odd _w_ upward error by rounding down each other odd _w_
+                    let mut w = inputs[i] as i16;
+                    if (w & 1) != 0 {
+                        if odd { w -= 1; }
+                        odd = !odd;
+                    }
+                    outputs[i] = w as f32;
+                }
+                outputs
+            }).quantise_to_type::<i16>(),
+
             SavedFormat::id("l1b").quantise::<i32>(QB1),
         ])
         .inputs(Chess768hm).dual_perspective()
