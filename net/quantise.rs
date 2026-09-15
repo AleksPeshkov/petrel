@@ -26,7 +26,7 @@ fn main() {
                 for side in 0..2 {
                     for piece in 0..6 {
                         for square in 0..64 {
-                            let from = (side*6*64 + piece * 64 + square) * ACC_SIZE;
+                            let from = (side*6*64 + piece*64 + square) * ACC_SIZE;
                             // pnbrqk -> qrbnpk; A1 = 0 -> H8 = 0
                             let to = (side*6*64 + engine[piece]*64 + (square^63)) * ACC_SIZE;
 
@@ -48,10 +48,10 @@ fn main() {
             let l0 = builder.new_affine("l0", 768, ACC_SIZE);
             let my_acc = l0.forward(my_inputs);
             let op_acc = l0.forward(op_inputs);
-            let dual_acc = my_acc.concat(op_acc);
+            let dacc = my_acc.concat(op_acc);
 
             let l1 = builder.new_affine("l1", 2*ACC_SIZE, 1);
-            l1.forward(dual_acc.screlu())
+            l1.forward(dacc.screlu())
         });
 
     trainer.load_from_checkpoint("./checkpoints/1024-hm03-360/");

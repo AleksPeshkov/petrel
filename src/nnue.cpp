@@ -7,7 +7,7 @@
 
 struct CACHE_ALIGN IncbinNnue {
     Nnue::W0 w0; // feature weights, feature biases embeded into both sides kings weights
-    array<Nnue::_t, Nnue::DualAccIndex> w1; // output weights
+    Nnue::W1 w1; // output weights
     i64_t b1; // output bias, padded to 64 bytes
 };
 
@@ -23,21 +23,23 @@ Nnue::Nnue() {
     w0 = incbin.w0; // copy as is
     b1 = incbin.b1; // copy as is
 
-    for (auto n : range<DualAccIndex>()) {
-        auto w = incbin.w1[n];
-        for (int lane = 0; lane < 16; ++lane) {
-            // 1) rounding happens only when _w_ lowest bit is one
-            // 2) _mm256_mulhrs_epi16 rounds positive product up, negative -- towards zero
-            // 3) _mm256_madd_epi16 adds even and odd lanes together
-            // 4) compensate systematic upward error by rounding down odd _w_ on odd lane
-            if ((w[lane] & 1) && (lane & 1)) { w[lane] -= 1; }
+    for (auto side : range<Side>()) {
+        for (auto n : range<AccIndex>()) {
+            auto w = incbin.w1[side][n];
+            for (int lane = 0; lane < 16; ++lane) {
+                // 1) rounding happens only when _w_ lowest bit is one
+                // 2) _mm256_mulhrs_epi16 rounds positive product up, negative -- towards zero
+                // 3) _mm256_madd_epi16 adds even and odd lanes together
+                // 4) compensate systematic upward error by rounding down odd _w_ on odd lane
+                if ((w[lane] & 1) && (lane & 1)) { w[lane] -= 1; }
+            }
+            w1[side][n] = w;
         }
-        w1[n] = w;
     }
 
     #ifndef NDEBUG
         i16_t w_max = 0;
-        for (auto f : range<FeatureIndex>() ){
+        for (auto f : range<Fi>() ){
             for (auto n : range<AccIndex>()) {
                 auto w = w0[f][n];
                 for (int lane = 0; lane < 16; ++lane) {
@@ -48,12 +50,14 @@ Nnue::Nnue() {
         std::cout << "w0 max: " << w_max << std::endl;
 
         w_max = 0;
-        auto w_min = 4096;
-        for (auto n : range<DualAccIndex>()) {
-            auto w = w1[n];
-            for (int lane = 0; lane < 16; ++lane) {
-                if (w_min > std::abs(w[lane])) { w_min = std::abs(w[lane]); }
-                if (w_max < std::abs(w[lane])) { w_max = std::abs(w[lane]); }
+        auto w_min = 32768;
+        for (auto side : range<Side>()) {
+            for (auto n : range<AccIndex>()) {
+                auto w = w1[side][n];
+                for (int lane = 0; lane < 16; ++lane) {
+                    if (w_min > std::abs(w[lane])) { w_min = std::abs(w[lane]); }
+                    if (w_max < std::abs(w[lane])) { w_max = std::abs(w[lane]); }
+                }
             }
         }
         std::cout << "w1 min: " << w_min << std::endl;

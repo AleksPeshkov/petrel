@@ -253,10 +253,13 @@ public:
     constexpr Square operator ~ () const { return *this ^ Square{static_cast<_t>(070)}; }
 
     // horizontal mirror
-    constexpr Square mirror() const { return *this ^ Square{static_cast<_t>(7)}; }
+    constexpr Square hm() const { return *this ^ Square{static_cast<_t>(7)}; }
+
+    // move crossed the horizontal middle line
+    static constexpr bool crossed_middle(Square from, Square to) { return +(from ^ to) & 4; }
 
     // king dependant horizontal mirror mask
-    constexpr Square mirrorMask() const { return file() < File{FileD} ? Square{static_cast<_t>(0)} : Square{static_cast<_t>(7)}; }
+    constexpr Square hMask() const { return file() < File{FileD} ? Square{static_cast<_t>(0)} : Square{static_cast<_t>(7)}; }
 
     /// move pawn forward
     constexpr Square forward() const { return Square{static_cast<_t>(v_ + A8 - A7)}; }
