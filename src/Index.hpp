@@ -251,11 +251,8 @@ public:
     // flip side of the board (vertical mirror)
     constexpr Square operator ~ () const { return *this ^ static_cast<_t>(070); }
 
-    // horizontal mirror
-    constexpr Square mirror() const { return *this ^ static_cast<_t>(7); }
-
-    // king dependant horizontal mirror mask
-    constexpr Square mirrorMask() const { return static_cast<_t>(file() < FileD ? 0 : 7); }
+    // king move crossed the horizontal middle line
+    static constexpr bool isMidCrossed(Square from, Square to) { return +(from ^ to) & 4; }
 
     /// move pawn forward
     constexpr Square forward() const { return static_cast<_t>(v_ + A8 - A7); }
@@ -308,6 +305,8 @@ enum piece_index_enum : u8_t { PiKing = 0 }; // king index is always 0
 struct Pi : Index<Pi, 16, piece_index_enum> {
     constexpr Pi (_t pi = PiKing) : Index{pi} {}
 };
+
+struct PieceList : Index<PieceList, 2*Pi::size()> { using Index::Index; };
 
 enum piece_type_enum {
     Queen = 0,

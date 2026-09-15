@@ -56,83 +56,87 @@ void Position::setLegalEnPassant(Square ep) {
     }
 }
 
-inline void DualAcc::setup(const Position& pos) {
-    mirror[My] = pos.positionSide(My).sqKing().mirrorMask();
-    side[My].setup<My>(pos, mirror[My]);
+template <Side::_t My>
+void Position::nnUpdate() {
+    constexpr Side::_t Op{~My};
 
-    mirror[Op] = pos.positionSide(Op).sqKing().mirrorMask();
-    side[Op].setup<Op>(pos, mirror[Op]);
-}
-
-struct PiecesIndex : Index<PiecesIndex, 2*Pi::size()> { using Index::Index; };
-
-template <Side::_t AccMy>
-inline void Acc::setup(const Position& pos, Square mirror) {
-    assert (pos.positionSide(AccMy).sqKing().mirrorMask() == mirror);
-
+    array<Fi, PieceList> fi;
     int count{0};
-    array<Fi, PiecesIndex> fi;
 
-    auto& my{ pos.positionSide(AccMy) };
-    for (auto pi : my.any()) {
-        fi[PiecesIndex{count++}] = {My, my.piece(pi), my.sq(pi)^mirror};
+    // king's location dependant horizontal mirror mask
+    hm_[My] = Square{static_cast<Square::_t>(MY.sqKing().file() < FileD ? 0 : 7)};
+    for (auto pi : MY.any()) {
+        fi[PieceList{count++}] = {side_to_move_enum::My, MY.piece(pi), MY.sq(pi)^hm_[My]};
     }
 
     //TRICK: flip pieces squares perspective for opposite side
-    auto op_mirror = ~mirror;
-    auto& op{ pos.positionSide(~AccMy) };
-    for (auto pi : op.any()) {
-        fi[PiecesIndex{count++}] = {Op, op.piece(pi), op.sq(pi)^op_mirror};
+    auto m = ~hm_[My];
+    for (auto pi : OP.any()) {
+        fi[PieceList{count++}] = {side_to_move_enum::Op, OP.piece(pi), OP.sq(pi)^m};
     }
 
-    for (auto n : range<AccIndex>()) {
-        _t a{};
-        for (int i = 0; i < count; ++i) {
-            a = adds_i16(a, nnue.w0[ fi[PiecesIndex{i}]][n] );
-        }
-        acc[n] = a;
-    }
+    nnue.update(dacc_[My], fi, count);
 }
 
-constexpr void DualAcc::moveKing(const Position& pos, Square from, Square to) {
-    assert (from != to);
-    if (+(from ^ to) & 4) {
-        // king crossed the horizontal middle line
-        mirror[Op] = mirror[Op].mirror();
-        side[Op].setup<Op>(pos, mirror[Op]);
-    } else {
-        side[Op].move(mirror[Op], My, King, from, to);
-    }
-    side[My].move(~mirror[My], Op, King, from, to);
+inline void Position::nnUpdate() {
+    nnUpdate<My>();
+    nnUpdate<Op>();
 }
 
-constexpr void DualAcc::moveKing(const Position& pos, Square from, Square to, NonKingPiece captured) {
-    assert (from != to);
-    if (+(from ^ to) & 4) {
-        // king crossed the horizontal middle line
-        mirror[Op] = mirror[Op].mirror();
-        side[Op].setup<Op>(pos, mirror[Op]);
-    } else {
-        side[Op].move(mirror[Op], My, King, from, to, captured);
-    }
-    side[My].move(~mirror[My], Op, King, from, to, captured);
+constexpr void Position::nnUpdate(const Position& parent, Fi sub1, Fi add1) {
+    hm_[Op] = parent.hm_[My];
+    nnue.quiet(dacc_[Op], parent.dacc_[My], ~Fi{hm_[Op]}, sub1, add1); // ~Fi{} change piece's side
+
+    hm_[My] = parent.hm_[Op];
+    nnue.quiet(dacc_[My], parent.dacc_[Op], Fi{~hm_[My]}, sub1, add1); // Fi{~sq} square mask vertical flip
 }
 
-constexpr void DualAcc::castle(const Position& pos, Square kingFrom, Square kingTo, Square rookFrom, Square rookTo) {
-    assert (kingFrom != rookFrom); assert (kingTo != rookTo);
-    assert (kingFrom.isOn(Rank1)); assert (rookTo.isOn(Rank1));
-    if (+(kingFrom ^ kingTo) & 4) {
-        // king crossed the horizontal middle line
-        mirror[Op] = mirror[Op].mirror();
-        side[Op].setup<Op>(pos, mirror[Op]);
+constexpr void Position::nnUpdate(const Position& parent, Fi sub1, Fi add1, Fi sub2) {
+    hm_[Op] = parent.hm_[My];
+    nnue.capture(dacc_[Op], parent.dacc_[My], ~Fi{hm_[Op]}, sub1, add1, sub2); // ~Fi{} change piece's side
+
+    hm_[My] = parent.hm_[Op];
+    nnue.capture(dacc_[My], parent.dacc_[Op], Fi{~hm_[My]}, sub1, add1, sub2);  // Fi{~sq} square mask vertical flip
+}
+
+constexpr void Position::nnUpdate(const Position& parent, bool hm, Fi sub1, Fi add1) {
+    if (hm) {
+        nnUpdate<Op>(); // recalculate all pieces
     } else {
-        side[Op].castle(mirror[Op], My, kingFrom, kingTo, rookFrom, rookTo);
+        hm_[Op] = parent.hm_[My];
+        nnue.quiet(dacc_[Op], parent.dacc_[My], ~Fi{hm_[Op]}, sub1, add1); // ~Fi{} change piece's side
     }
-    side[My].castle(~mirror[My], Op, kingFrom, kingTo, rookFrom, rookTo);
+
+    hm_[My] = parent.hm_[Op];
+    nnue.quiet(dacc_[My], parent.dacc_[Op], Fi{~hm_[My]}, sub1, add1); // Fi{~sq} square mask vertical flip
+}
+
+constexpr void Position::nnUpdate(const Position& parent, bool hm, Fi sub1, Fi add1, Fi sub2) {
+    if (hm) {
+        nnUpdate<Op>(); // recalculate all pieces
+    } else {
+        hm_[Op] = parent.hm_[My];
+        nnue.capture(dacc_[Op], parent.dacc_[My], ~Fi{hm_[Op]}, sub1, add1, sub2); // ~Fi{} change piece's side
+    }
+
+    hm_[My] = parent.hm_[Op];
+    nnue.capture(dacc_[My], parent.dacc_[Op], Fi{~hm_[My]}, sub1, add1, sub2); // Fi{~sq} square mask vertical flip
+}
+
+constexpr void Position::nnUpdate(const Position& parent, bool hm, Fi sub1, Fi add1, Fi sub2, Fi add2) {
+    if (hm) {
+        nnUpdate<Op>(); // recalculate all pieces
+    } else {
+        hm_[Op] = parent.hm_[My];
+        nnue.castling(dacc_[Op], parent.dacc_[My], ~Fi{hm_[Op]}, sub1, add1, sub2, add2); // ~Fi{} change piece's side
+    }
+
+    hm_[My] = parent.hm_[Op];
+    nnue.castling(dacc_[My], parent.dacc_[Op], Fi{~hm_[My]}, sub1, add1, sub2, add2); // Fi{~sq} square mask vertical flip
 }
 
 template <Side::_t My, Position::make_move_flags_enum Flags>
-bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
+bool Position::makeMove(const Position& parent, Square from, Square to, auto&& flipPrefetch) {
     constexpr Side::_t Op{~My};
 
     // assumes that the given move is valid and legal
@@ -158,7 +162,7 @@ bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
             OP.capture(Pawn, ~ep); //TRICK: also clears en passant victim
             MY.movePawn(from, to);
             updateSliderAttacks<My>(MY.affectedBy(from, to, ep), OP.affectedBy(~from, ~to, ~ep));
-            if constexpr (Flags & WithEval) { accumulator.ep(from, to, ep); }
+            if constexpr (Flags & WithEval) { nnUpdate(parent, {My,Pawn,from}, {My,Pawn,to}, {Op,Pawn,ep}); }
             return true; // end of en passant capture move
         }
 
@@ -187,7 +191,7 @@ bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
                 OP.capture(captured, ~to);
                 MY.movePawn(from, to);
                 updateSliderAttacks<My>(MY.affectedBy(from), OP.affectedBy(~from));
-                if constexpr (Flags & WithEval) { accumulator.move(Pawn, from, to, captured); }
+                if constexpr (Flags & WithEval) { nnUpdate(parent, {My,Pawn,from}, {My,Pawn,to}, {Op,captured,to}); }
                 return true; // end of simple pawn capture move
             } else {
                 if (from.isOn(Rank2) && to.isOn(Rank4)) {
@@ -205,7 +209,7 @@ bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
                     MY.movePawn(from, to);
                     updateSliderAttacks<My>(MY.affectedBy(from, to), OP.affectedBy(~from, ~to));
                 }
-                if constexpr (Flags & WithEval) { accumulator.move(Pawn, from, to); }
+                if constexpr (Flags & WithEval) { nnUpdate(parent, {My,Pawn,from}, {My,Pawn,to}); }
                 return true; // end of simple pawn push move
             }
         } else [[unlikely]] {
@@ -226,14 +230,14 @@ bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
                 OP.capture(captured, ~to);
                 PiMask promoted{ MY.piPromoted(from, officer, to) }; // promoted piece index can differ from pawn piece index
                 updateSliderAttacks<My>(MY.affectedBy(from) | promoted, OP.affectedBy(~from));
-                if constexpr (Flags & WithEval) { accumulator.promote(from, officer, to, captured); }
+                if constexpr (Flags & WithEval) { nnUpdate(parent, {My,Pawn,from}, {My,officer,to}, {Op,captured,to}); }
                 return true; // end of pawn promotion move with capture
             } else {
                 if constexpr (Flags & WithZobrist) { flipPrefetch(); }
 
                 PiMask promoted{ MY.piPromoted(from, officer, to) }; // promoted piece index can differ from pawn piece index
                 updateSliderAttacks<My>(MY.affectedBy(from, to) | promoted, OP.affectedBy(~from, ~to));
-                if constexpr (Flags & WithEval) { accumulator.promote(from, officer, to); }
+                if constexpr (Flags & WithEval) { nnUpdate(parent, {My,Pawn,from}, {My,officer,to}); }
                 return true; // end of pawn promotion move without capture
             }
         } // promotion or not
@@ -264,7 +268,7 @@ bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
             MY.move(PiKing, from, to);
             MY.updateMovedKing(to);
             updateSliderAttacks<My>(MY.affectedBy(from)); // king cannot affect enemy attacks
-            if constexpr (Flags & WithEval) { accumulator.moveKing(*this, from, to, captured); }
+            if constexpr (Flags & WithEval) { nnUpdate(parent, Square::isMidCrossed(from, to), {My,King,from}, {My,King,to}, {Op,captured,to}); }
             return true; // end of king capture move
         } else {
             if constexpr (Flags & WithZobrist) {
@@ -276,7 +280,7 @@ bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
             MY.updateMovedKing(to);
             OP.setOpKing(~to);
             updateSliderAttacks<My>(MY.affectedBy(from, to)); // king cannot affect enemy attacks
-            if constexpr (Flags & WithEval) { accumulator.moveKing(*this, from, to); }
+            if constexpr (Flags & WithEval) { nnUpdate(parent, Square::isMidCrossed(from, to), {My,King,from}, {My,King,to}); }
             return shouldResetZHash; // end of king non-capture move
         }
     } // no king moves anymore
@@ -307,7 +311,7 @@ bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
             //TRICK: castling rook should attack 'kingFrom' square
             //TRICK: only first rank sliders can be affected
             updateSliderAttacks<My>(MY.affectedBy(rookFrom, kingFrom) & MY.any(Rank1));
-            if constexpr (Flags & WithEval) { accumulator.castle(*this, kingFrom, kingTo, rookFrom, rookTo); }
+            if constexpr (Flags & WithEval) { nnUpdate(parent, Square::isMidCrossed(kingFrom, kingTo), {My,King,kingFrom}, {My,King,kingTo}, {My,Rook,rookFrom}, {My,Rook,rookTo}); }
             return true; // end of castling move
         }
 
@@ -333,7 +337,7 @@ bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
         OP.capture(captured, ~to);
         MY.move(pi, officer, from, to);
         updateSliderAttacks<My>(MY.affectedBy(from) | PiMask{pi}, OP.affectedBy(~from));
-        if constexpr (Flags & WithEval) { accumulator.move(officer, from, to, captured); }
+        if constexpr (Flags & WithEval) { nnUpdate(parent, {My,officer,from}, {My,officer,to}, {Op,captured,to}); }
         return true; // end of officer's capture
     } else {
         if constexpr (Flags & WithZobrist) {
@@ -343,13 +347,13 @@ bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
 
         MY.move(pi, officer, from, to);
         updateSliderAttacks<My>(MY.affectedBy(from, to), OP.affectedBy(~from, ~to));
-        if constexpr (Flags & WithEval) { accumulator.move(officer, from, to); }
+        if constexpr (Flags & WithEval) { nnUpdate(parent, {My,officer,from}, {My,officer,to}); }
         return shouldResetZHash; // end of officers's noncapture move
     }
 }
 
 bool Position::makeMove(const Position& parent, Square from, Square to, ZHash zHash, auto&& prefetch) {
-    flip(parent);
+    copy_swap(parent);
     zHash_ = zHash;
     zobrist_ = parent.zobrist_;
 
@@ -361,7 +365,7 @@ bool Position::makeMove(const Position& parent, Square from, Square to, ZHash zH
     };
 
     // current position flipped its sides relative to parent, so we make the move inplace for the Op
-    bool shouldResetZHash = makeMove<Op, Full>(from, to, flipPrefetch);
+    bool shouldResetZHash = makeMove<Op, Full>(parent, from, to, flipPrefetch);
     //assert (z() == generateZobrist().v()); // true, but slow to compute
 
     prefetch(z()); // prefetch again after NNUE update
@@ -369,12 +373,12 @@ bool Position::makeMove(const Position& parent, Square from, Square to, ZHash zH
 }
 
 void Position::makeMovePerft(const Position& parent, Square from, Square to, auto&& prefetch) {
-    flip(parent);
+    copy_swap(parent);
     //zHash_ = {}; shouldResetZHash_ = false;// unused
     zobrist_ = parent.zobrist_;
 
     // current position flipped its sides relative to parent, so we make the move inplace for the Op
-    makeMove<Op, NoEval>(from, to, [&]{ zobrist_.flip(); prefetch(z()); });
+    makeMove<Op, NoEval>(parent, from, to, [&]{ zobrist_.flip(); prefetch(z()); });
 
     //assert (z() == generateZobrist().v()); // true, but slow to compute
 }
