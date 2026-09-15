@@ -270,19 +270,19 @@ ReturnStatus NodePerft::visit() {
 }
 
 void Position::makeMovePerft(const Position& parent, Square from, Square to) {
-    flip(parent);
+    copy_swap(parent);
 
     // current position flipped its sides relative to parent, so we make the move inplace for the Op
-    makeMove<Op, Fast>(from, to, []{});
+    makeMove<Op, Fast>(parent, from, to, []{});
 }
 
 void Position::makeMovePerft(const Position& parent, Square from, Square to, auto&& prefetch) {
-    flip(parent);
+    copy_swap(parent);
     //zHash_ = {}; shouldResetZHash_ = false;// unused
     zobrist_ = parent.zobrist_;
 
     // current position flipped its sides relative to parent, so we make the move inplace for the Op
-    makeMove<Op, NoEval>(from, to, [&]{ zobrist_.flip(); prefetch(z()); });
+    makeMove<Op, NoEval>(parent, from, to, [&]{ zobrist_.flip(); prefetch(z()); });
 
     //assert (z() == generateZobrist().v()); // true, but slow to compute
 }
