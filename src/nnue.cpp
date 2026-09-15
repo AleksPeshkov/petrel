@@ -5,58 +5,64 @@
 #define INCBIN_ALIGNMENT_INDEX 6
 #include "incbin.h"
 
-struct CACHE_ALIGN IncbinNnue {
-    Nnue::W0 w0; // feature weights, feature biases embeded into both sides kings weights
-    array<Nnue::_t, Nnue::DualAccIndex> w1; // output weights
-    i64_t b1; // output bias, padded to 64 bytes
-};
+INCBIN(Nnue, incbin_nnue, "net/quantised.bin");
+constinit const Nnue& nnue = *incbin_nnue_data;
 
-INCBIN(IncbinNnue, incbin_nnue, "net/quantised.bin");
-
-Nnue::Nnue() {
+void Nnue::validate_embedded() const {
     if (incbin_nnue_size != sizeof(Nnue)) {
         std::cerr << "petrel: fatal error: invalid embedded NNUE file size: " << incbin_nnue_size << ", expected " << sizeof(Nnue) << " bytes\n";
         std::exit(EXIT_FAILURE);
     }
 
-    const IncbinNnue& incbin = *incbin_nnue_data;
-    w0 = incbin.w0; // copy as is
-    b1 = incbin.b1; // copy as is
-
-    for (auto n : range<DualAccIndex>()) {
-        auto w = incbin.w1[n];
-        for (int lane = 0; lane < 16; ++lane) {
-            // 1) rounding happens only when _w_ lowest bit is one
-            // 2) _mm256_mulhrs_epi16 rounds positive product up, negative -- towards zero
-            // 3) _mm256_madd_epi16 adds even and odd lanes together
-            // 4) compensate systematic upward error by rounding down odd _w_ on odd lane
-            if ((w[lane] & 1) && (lane & 1)) { w[lane] -= 1; }
-        }
-        w1[n] = w;
-    }
-
     #ifndef NDEBUG
-        i16_t w_max = 0;
-        for (auto f : range<FeatureIndex>() ){
+        using lane_t = i16_t;
+
+        constexpr int W0_count = sizeof(W0) / sizeof(lane_t);
+        const lane_t W0_top = 1536;
+        const lane_t W0_bottom = -2048;
+        int w0_at_top = 0;
+        int w0_at_bottom = 0;
+
+        lane_t w0_max = -32767;
+        lane_t w0_min = 32767;
+        i64_t w0_sum = 0;
+
+        for (auto f : range<Fi>()) {
             for (auto n : range<AccIndex>()) {
                 auto w = w0[f][n];
                 for (int lane = 0; lane < 16; ++lane) {
-                    if (w_max < std::abs(w[lane])) { w_max = std::abs(w[lane]); }
+                    if (w0_min > w[lane]) { w0_min = w[lane]; }
+                    if (w0_max < w[lane]) { w0_max = w[lane]; }
+                    if (w[lane] >= W0_top) { ++w0_at_top; }
+                    if (w[lane] <= W0_bottom) { ++w0_at_bottom; }
+                    w0_sum += std::abs(w[lane]);
                 }
             }
         }
-        std::cout << "w0 max: " << w_max << std::endl;
+        std::cout << "min w0 = " << w0_min << ", <= " << W0_bottom << ": " << w0_at_bottom << " out of " << W0_count << std::endl;
+        std::cout << "max w0 = " << w0_max << ", >= " << W0_top << ": " << w0_at_top << " out of " << W0_count << std::endl;
+        std::cout << "ave |w0| = " << (w0_sum + W0_count/2) / W0_count << std::endl;
 
-        w_max = 0;
-        auto w_min = 4096;
-        for (auto n : range<DualAccIndex>()) {
-            auto w = w1[n];
+        constexpr auto W1_count = sizeof(W1) / sizeof(i16_t);
+        int w1_min = 32767;
+        int w1_max = -32767;
+        int w1_over_16k = 0;
+        i64_t w1_sum = 0;
+        for (auto n : range<AccIndex>()) {
+            auto w1_my = abs(w1[My][n]);
+            auto w1_op = abs(w1[Op][n]);
+            auto w = max(w1_my, w1_op);
             for (int lane = 0; lane < 16; ++lane) {
-                if (w_min > std::abs(w[lane])) { w_min = std::abs(w[lane]); }
-                if (w_max < std::abs(w[lane])) { w_max = std::abs(w[lane]); }
+                if (w1_min > w[lane]) { w1_min = w[lane]; }
+                if (w1_max < w[lane]) { w1_max = w[lane]; }
+                if (w1_my[lane] > 16383) { ++w1_over_16k; }
+                if (w1_op[lane] > 16383) { ++w1_over_16k; }
+                w1_sum += w1_my[lane];
+                w1_sum += w1_op[lane];
             }
         }
-        std::cout << "w1 min: " << w_min << std::endl;
-        std::cout << "w1 max: " << w_max << std::endl;
+        std::cout << "min max(|w1_my|,|w1_op|) = " << w1_min << std::endl;
+        std::cout << "max |w1| = " << w1_max << ", > 16383: " << w1_over_16k << " out of " << W1_count << std::endl;
+        std::cout << "ave |w1| = " << (w1_sum + W1_count/2) / W1_count << std::endl;
     #endif
 }

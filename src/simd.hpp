@@ -56,13 +56,23 @@ constexpr Vector max(Vector a, Vector b) {
 }
 
 template <VectorLike Vector>
+constexpr Vector min(Vector a, element_t<Vector> hi) {
+    return min(a, splat<Vector>(hi));
+}
+
+template <VectorLike Vector>
+constexpr Vector max(Vector a, element_t<Vector> lo) {
+    return max(a, splat<Vector>(lo));
+}
+
+template <VectorLike Vector>
 constexpr Vector relu(Vector v) {
     return max(v, Vector{});
 }
 
 template <VectorLike Vector>
-constexpr Vector clamp(Vector v, element_t<Vector> low, element_t<Vector> high) {
-    return min(max(v, splat<Vector>(low)), splat<Vector>(high));
+constexpr Vector clamp(Vector v, element_t<Vector> lo, element_t<Vector> hi) {
+    return min(max(v, lo), hi);
 }
 
 template <VectorLike Vector, VectorLike Mask>
