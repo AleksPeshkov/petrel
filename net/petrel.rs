@@ -18,6 +18,7 @@ fn main() {
     const QA: f32 = 1024.0; // seems safe and large enough for 16-bit accumulator
     const QB: f32 = 16.0;   // QB*WDL*f_wdl <= 32767
     const WDL:f32 = 400.0;  // implicit output conversion 1.0 = 400 centipawns
+    let f_wdl = 32767.0 / (QB*WDL); // 5.11984375
 
     let mut trainer = ValueTrainerBuilder::default().use_threads(CPU_THREADS/2)
         .optimiser(AdamW).loss_fn(|output, target| output.sigmoid().power_error(target, LOSS_POW))
@@ -30,7 +31,7 @@ fn main() {
                 for side in 0..2 {
                     for piece in 0..6 {
                         for square in 0..64 {
-                            let from = (side*6*64 + piece * 64 + square) * ACC_SIZE;
+                            let from = (side*6*64 + piece*64 + square) * ACC_SIZE;
                             // pnbrqk -> qrbnpk; A1 = 0 -> H8 = 0
                             let to = (side*6*64 + engine[piece]*64 + (square^63)) * ACC_SIZE;
 
@@ -52,20 +53,14 @@ fn main() {
             let l0 = builder.new_affine("l0", 768, ACC_SIZE);
             let my_acc = l0.forward(my_inputs);
             let op_acc = l0.forward(op_inputs);
-            let dual_acc = my_acc.concat(op_acc);
+            let dacc = my_acc.concat(op_acc);
 
             let l1 = builder.new_affine("l1", 2*ACC_SIZE, 1);
-            l1.forward(dual_acc.screlu())
+            l1.forward(dacc.screlu())
         });
 
-    trainer.optimiser.set_params_for_weight("l0w",
-        AdamWParams{ decay: 0.005, min_weight: -4.0, max_weight: 4.0, ..Default::default() }
-    );
-
-    let f_wdl = 32767.0 / (QB*WDL); // 5.11984375
-    trainer.optimiser.set_params_for_weight("l1w",
-        AdamWParams{ decay: 0.03, min_weight: -f_wdl, max_weight: f_wdl, ..Default::default() }
-    );
+    trainer.optimiser.set_params_for_weight("l0w", AdamWParams{ decay: 0.005, min_weight: -4.0, max_weight: 4.0, ..Default::default() });
+    trainer.optimiser.set_params_for_weight("l1w", AdamWParams{ decay: 0.03, min_weight: -f_wdl, max_weight: f_wdl, ..Default::default() });
 
     // loading directly from a `BulletFormat` file
     let data_set_eval_scale: f32 = 800.0;
@@ -84,6 +79,7 @@ fn main() {
         "data/test77nov-unfilt-test79-maraprmay-v6-dd.skip-see-ge0.wdl-pdist.iter-12.bullet.bin",
     ];
     let data_loader = DirectSequentialDataLoader::new(data_set);
+    let settings = LocalSettings { threads: CPU_THREADS/2, test_set: None, output_directory: "checkpoints", batch_queue_size: CPU_THREADS*4 };
 
     let final_superbatch = 360;
     let peak_lr = 4e-4;
@@ -100,6 +96,5 @@ fn main() {
         save_rate: 10,
     };
 
-    let settings = LocalSettings { threads: CPU_THREADS/2, test_set: None, output_directory: "checkpoints", batch_queue_size: CPU_THREADS*4 };
     trainer.run(&schedule, &settings, &data_loader);
 }

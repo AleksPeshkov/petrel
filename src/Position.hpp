@@ -97,16 +97,13 @@ public:
 };
 
 class Position {
-    DualAcc accumulator; // NNUE evaluation accumulators (a pair from each side perspective)
+    DualAcc dacc; // static evaluation NNUE accumulators (a pair from each side perspective)
     array<PositionSide, Side> positionSide_; // copied from the parent, updated incrementally
     array<Bb, Side> occupied_; // both color pieces combined, updated from positionSide[] after each move
 
     Zobrist zobrist_; // incrementally updated position hash
     ZHash zHash_; // mini-hash of all previous reversible positions zobrist keys of the same color
     Rule50 rule50_; // number of halfmoves since last capture or pawn move, incremented or reset by makeMove()
-
-    // copy parent position but flip sides
-    void flip(const Position& parent);
 
     enum make_move_flags_enum {
         Fast = 0,
@@ -123,6 +120,9 @@ class Position {
     template <Side::_t> Zobrist generateZobrist() const;
     template <Side::_t> void updateSliderAttacks(PiMask);
     template <Side::_t> void updateSliderAttacks(PiMask, PiMask);
+
+    // copy parent position but swap sides
+    void copy_swap(const Position& parent);
 
 protected:
     constexpr PositionSide& positionSide(Side side) { return positionSide_[side]; }

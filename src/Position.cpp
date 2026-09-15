@@ -1,13 +1,12 @@
 #include "Position_impl.hpp"
 
 Score Position::evaluate() const {
-    auto eval = accumulator.evaluate();
+    auto eval = dacc.evaluate();
     return Score::clampEval(eval);
 }
 
-void Position::flip(const Position& parent) {
-    // copy from the parent position but swap sides
-    accumulator.flip(parent.accumulator);
+void Position::copy_swap(const Position& parent) {
+    dacc.copy_swap(parent.dacc);
     positionSide_[My] = parent.OP;
     positionSide_[Op] = parent.MY;
     rule50_ = parent.rule50_;
@@ -15,7 +14,7 @@ void Position::flip(const Position& parent) {
 
 void Position::makeMove(Square from, Square to) {
     PositionSide::swap(MY, OP);
-    accumulator.swap();
+    dacc.swap();
 
     // the position just swapped its sides, so we make the move for the Op
     makeMove<Op, Full>(from, to, []{});
@@ -24,7 +23,7 @@ void Position::makeMove(Square from, Square to) {
 }
 
 void Position::makeNullMove(const Position& parent) {
-    flip(parent);
+    copy_swap(parent);
     zobrist_ = parent.zobrist_;
     rule50_.next(); zHash_ = {}; // null move holds rule50, but not ZHash
 
@@ -43,7 +42,7 @@ void Position::makeNullMove(const Position& parent) {
 }
 
 void Position::makeMovePerft(const Position& parent, Square from, Square to) {
-    flip(parent);
+    copy_swap(parent);
 
     // current position flipped its sides relative to parent, so we make the move inplace for the Op
     makeMove<Op, Fast>(from, to, []{});
@@ -69,7 +68,7 @@ bool Position::dropValid(Side side, Piece ty, Square to) {
 bool Position::afterDrop() {
     PositionSide::finalSetup(MY, OP);
     updateSliderAttacks<Op>(OP.any(), MY.any());
-    accumulator.setup(*this);
+    dacc.setup(*this);
     rule50_ = {};
 
     // opponent should not be in check
