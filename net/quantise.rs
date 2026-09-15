@@ -41,7 +41,7 @@ fn main() {
                 transformed
             }).quantise::<i16>(QA),
             SavedFormat::id("l1w").quantise::<i16>(QB*WDL),
-            SavedFormat::id("l1b").quantise::<i64>(QA * (QA*16.0 * QB*WDL)/32768.0), // 16384*400
+            SavedFormat::id("l1b").quantise::<i64>(QA*QB*WDL), // 32768*400
         ])
         .inputs(Chess768hm).dual_perspective()
         .build(|builder, my_inputs, op_inputs| {
@@ -55,5 +55,5 @@ fn main() {
         });
 
     trainer.load_from_checkpoint("./checkpoints/1024-hm03-360/");
-    trainer.save_to_checkpoint("./checkpoints/1024-hm03-360q32/");
+    trainer.save_to_checkpoint("./checkpoints/1024-hm03-360q/");
 }

@@ -114,7 +114,8 @@ struct CACHE_ALIGN Nnue {
 
     static i32x8_t forward(i16x16_t x, i16x16_t w) {
         auto c = clamp(x, 0, 1024);
-        auto cw = mulhrs_i16(c << 4, w);
+        auto c4 = c << 4;
+        auto cw = mulhrs_i16(adds_i16(c4, c4), w); // ((c << 5) * w) >> 15
         return madd_i16(c, cw); // sum of two products
     }
 
@@ -128,7 +129,7 @@ struct CACHE_ALIGN Nnue {
         }
         i64_t output = this->b1 + hadd_i64(unpack_add_i32(sum8));
 
-        constexpr auto Scale = 14; // QA*QA: 2*10, QB: 5, shift: 4, mulhrs_i16: -15
+        constexpr auto Scale = 15; // QA*QA: 2*10, QB: 5, shift: 5, mulhrs_i16: -15
         auto result = output >> Scale;
         return result;
     }
