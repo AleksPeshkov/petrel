@@ -100,10 +100,11 @@ struct CACHE_ALIGN Nnue {
     static constexpr int Acc_neurons = 1024;
 
     struct AccIndex : Index<AccIndex, Acc_neurons / Vector_size> { using Index::Index; };
-    struct DualAccIndex : Index<DualAccIndex, 2*AccIndex::size()> { using Index::Index; };
+    using Acc = array<_t, AccIndex>;
+    using DualAcc = array<Acc, Side>;
 
     using W0 = array<_t, FeatureIndex, AccIndex>;
-    using W1 = array<_t, DualAccIndex>;
+    using W1 = DualAcc;
 
     W0 w0;    // feature weights, 768*(64*32) = 1572864 bytes, feature biases embeded into kings weights
     W1 w1;    // output weights, 2*(64*32) = 4096 bytes
@@ -117,15 +118,15 @@ struct CACHE_ALIGN Nnue {
         return madd_i16(c, cw); // sum of two products
     }
 
-    using DualAcc = array<_t, DualAccIndex>;
-    int32_t evaluate(const DualAcc& dual_acc) const {
+    int32_t evaluate(const DualAcc& dacc) const {
         i32x8_t sum8{};
-        for (auto n : range<DualAccIndex>()) {
-            // safe for 64 additions (128 products)
-            sum8 += forward(dual_acc[n], this->w1[n]);
+        for (auto si : range<Side>()) {
+            for (auto n : range<AccIndex>()) {
+                // safe for 64 additions (128 products)
+                sum8 += forward(dacc[si][n], this->w1[si][n]);
+            }
         }
-        auto sum4 = unpack_add_i32(sum8);
-        i64_t output = this->b1 + hadd_i64(sum4);
+        i64_t output = this->b1 + hadd_i64(unpack_add_i32(sum8));
 
         constexpr auto Scale = 14; // QA*QA: 2*10, QB: 5, shift: 4, mulhrs_i16: -15
         auto result = output >> Scale;
@@ -137,13 +138,10 @@ extern const Nnue nnue;
 class Position;
 
 class CACHE_ALIGN Acc {
+    using Index = Nnue::AccIndex;
 public:
-    using Fi = Nnue::FeatureIndex;
-    using AccIndex = Nnue::AccIndex;
-    using _t = Nnue::_t; // i16x16_t
-
     static constexpr void swap(Acc& my, Acc& op) {
-        for (auto n : range<AccIndex>()) {
+        for (auto n : range<Index>()) {
             std::swap(my.acc[n], op.acc[n]);
         }
     }
@@ -173,7 +171,7 @@ public:
     }
 
     constexpr void castle(Square mirror, Side si, Square kingFrom, Square kingTo, Square rookFrom, Square rookTo) {
-        for (auto n : range<AccIndex>()) {
+        for (auto n : range<Index>()) {
             auto s1 = nnue.w0[{si, King, kingTo^mirror}][n] - nnue.w0[{si, King, kingFrom^mirror}][n];
             auto s2 = nnue.w0[{si, Rook, rookTo^mirror}][n] - nnue.w0[{si, Rook, rookFrom^mirror}][n];
             acc[n] = adds_i16(acc[n], s1 + s2);
@@ -181,16 +179,18 @@ public:
     }
 
 private:
-    array<_t, AccIndex> acc{}; // feature biases embedded into kings weights
+    using Fi = Nnue::FeatureIndex;
+
+    Nnue::Acc acc{}; // feature biases embedded into kings weights
 
     constexpr void move(Fi from, Fi to) {
-        for (auto n : range<AccIndex>()) {
+        for (auto n : range<Index>()) {
             acc[n] = adds_i16(acc[n], nnue.w0[to][n] - nnue.w0[from][n]);
         }
     }
 
     constexpr void capture(Fi from, Fi to, Fi cap) {
-        for (auto n : range<AccIndex>()) {
+        for (auto n : range<Index>()) {
             acc[n] = adds_i16(acc[n], nnue.w0[to][n] - nnue.w0[from][n] - nnue.w0[cap][n]);
         }
     }
@@ -198,55 +198,53 @@ private:
 
 class DualAcc {
 public:
-    using _t = Acc::_t;
-
     // raw NNUE static evaluation
-    auto evaluate() const { return nnue.evaluate(std::bit_cast<Nnue::DualAcc>(side)); }
+    auto evaluate() const { return nnue.evaluate(std::bit_cast<Nnue::DualAcc>(dacc)); }
 
     // defined in Position.cpp
     void setup(const Position& pos);
 
     // copy parent accumulator but flip sides
     constexpr void flip(const DualAcc& parent) {
-        side[My] = parent.side[Op];
-        side[Op] = parent.side[My];
+        dacc[My] = parent.dacc[Op];
+        dacc[Op] = parent.dacc[My];
         mirror[My] = parent.mirror[Op];
         mirror[Op] = parent.mirror[My];
     }
 
     constexpr void swap() {
-        Acc::swap(side[My], side[Op]);
+        Acc::swap(dacc[My], dacc[Op]);
         std::swap(mirror[My], mirror[Op]);
     }
 
     constexpr void move(PieceType ty, Square from, Square to) {
         assert (from != to);
-        side[Op].move(mirror[Op], My, ty, from, to);
-        side[My].move(~mirror[My], Op, ty, from, to);
+        dacc[Op].move(mirror[Op], My, ty, from, to);
+        dacc[My].move(~mirror[My], Op, ty, from, to);
     }
 
     constexpr void move(PieceType ty, Square from, Square to, NonKingType captured) {
         assert (from != to);
-        side[Op].move(mirror[Op], My, ty, from, to, captured);
-        side[My].move(~mirror[My], Op, ty, from, to, captured);
+        dacc[Op].move(mirror[Op], My, ty, from, to, captured);
+        dacc[My].move(~mirror[My], Op, ty, from, to, captured);
     }
 
     constexpr void promote(Square from, PromoType promoted, Square to) {
         assert (from.on(Rank7)); assert (to.on(Rank8));
-        side[Op].promote(mirror[Op], My, from, promoted, to);
-        side[My].promote(~mirror[My], Op, from, promoted, to);
+        dacc[Op].promote(mirror[Op], My, from, promoted, to);
+        dacc[My].promote(~mirror[My], Op, from, promoted, to);
     }
 
     constexpr void promote(Square from, PromoType promoted, Square to, NonKingType captured) {
         assert (from.on(Rank7)); assert (to.on(Rank8));
-        side[Op].promote(mirror[Op], My, from, promoted, to, captured);
-        side[My].promote(~mirror[My], Op, from, promoted, to, captured);
+        dacc[Op].promote(mirror[Op], My, from, promoted, to, captured);
+        dacc[My].promote(~mirror[My], Op, from, promoted, to, captured);
     }
 
     constexpr void ep(Square from, Square to, Square ep) {
         assert (from.on(Rank5)); assert (to.on(Rank6)); assert (ep.on(Rank5));
-        side[Op].ep(mirror[Op], My, from, to, ep);
-        side[My].ep(~mirror[My], Op, from, to, ep);
+        dacc[Op].ep(mirror[Op], My, from, to, ep);
+        dacc[My].ep(~mirror[My], Op, from, to, ep);
     }
 
     // defined in Position.cpp
@@ -255,7 +253,7 @@ public:
     constexpr void castle(const Position&, Square kingFrom, Square kingTo, Square rookFrom, Square rookTo);
 
 private:
-    array<Acc, Side> side{};
+    array<Acc, Side> dacc{};
     array<Square, Side> mirror{};
 };
 

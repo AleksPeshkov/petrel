@@ -58,10 +58,10 @@ void Position::setLegalEnPassant(Square ep) {
 
 inline void DualAcc::setup(const Position& pos) {
     mirror[My] = pos.positionSide(My).sqKing().mirrorMask();
-    side[My].setup<My>(pos, mirror[My]);
+    dacc[My].setup<My>(pos, mirror[My]);
 
     mirror[Op] = pos.positionSide(Op).sqKing().mirrorMask();
-    side[Op].setup<Op>(pos, mirror[Op]);
+    dacc[Op].setup<Op>(pos, mirror[Op]);
 }
 
 struct PiecesIndex : Index<PiecesIndex, 2*Pi::size()> { using Index::Index; };
@@ -85,8 +85,8 @@ inline void Acc::setup(const Position& pos, Square mirror) {
         fi[PiecesIndex{count++}] = {Op, op.typeOf(pi), op.sq(pi)^op_mirror};
     }
 
-    for (auto n : range<AccIndex>()) {
-        _t a{};
+    for (auto n : range<Index>()) {
+        Nnue::_t a{};
         for (int i = 0; i < count; ++i) {
             a = adds_i16(a, nnue.w0[ fi[PiecesIndex{i}]][n] );
         }
@@ -99,11 +99,11 @@ constexpr void DualAcc::moveKing(const Position& pos, Square from, Square to) {
     if (+(from ^ to) & 4) {
         // king crossed the horizontal middle line
         mirror[Op] = mirror[Op].mirror();
-        side[Op].setup<Op>(pos, mirror[Op]);
+        dacc[Op].setup<Op>(pos, mirror[Op]);
     } else {
-        side[Op].move(mirror[Op], My, King, from, to);
+        dacc[Op].move(mirror[Op], My, King, from, to);
     }
-    side[My].move(~mirror[My], Op, King, from, to);
+    dacc[My].move(~mirror[My], Op, King, from, to);
 }
 
 constexpr void DualAcc::moveKing(const Position& pos, Square from, Square to, NonKingType captured) {
@@ -111,11 +111,11 @@ constexpr void DualAcc::moveKing(const Position& pos, Square from, Square to, No
     if (+(from ^ to) & 4) {
         // king crossed the horizontal middle line
         mirror[Op] = mirror[Op].mirror();
-        side[Op].setup<Op>(pos, mirror[Op]);
+        dacc[Op].setup<Op>(pos, mirror[Op]);
     } else {
-        side[Op].move(mirror[Op], My, King, from, to, captured);
+        dacc[Op].move(mirror[Op], My, King, from, to, captured);
     }
-    side[My].move(~mirror[My], Op, King, from, to, captured);
+    dacc[My].move(~mirror[My], Op, King, from, to, captured);
 }
 
 constexpr void DualAcc::castle(const Position& pos, Square kingFrom, Square kingTo, Square rookFrom, Square rookTo) {
@@ -124,11 +124,11 @@ constexpr void DualAcc::castle(const Position& pos, Square kingFrom, Square king
     if (+(kingFrom ^ kingTo) & 4) {
         // king crossed the horizontal middle line
         mirror[Op] = mirror[Op].mirror();
-        side[Op].setup<Op>(pos, mirror[Op]);
+        dacc[Op].setup<Op>(pos, mirror[Op]);
     } else {
-        side[Op].castle(mirror[Op], My, kingFrom, kingTo, rookFrom, rookTo);
+        dacc[Op].castle(mirror[Op], My, kingFrom, kingTo, rookFrom, rookTo);
     }
-    side[My].castle(~mirror[My], Op, kingFrom, kingTo, rookFrom, rookTo);
+    dacc[My].castle(~mirror[My], Op, kingFrom, kingTo, rookFrom, rookTo);
 }
 
 template <Side::_t My, Position::MakeMoveFlags Flags>
