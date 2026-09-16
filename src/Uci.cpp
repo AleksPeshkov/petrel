@@ -439,7 +439,7 @@ ostream& move(ostream& os, Move move, Color colorToMove, ChessVariant chessVaria
     if (from.on(Rank7)) {
         // the type of a promoted pawn piece encoded in place of move to's rank
         uciTo = Square{to.file(), isWhite ? Rank8 : Rank1};
-        os << uciFrom << uciTo << PromoType{::promoTypeFrom(to.rank())};
+        os << uciFrom << uciTo << ::officerFrom(to.rank());
         return os;
     }
 
@@ -501,10 +501,10 @@ istream& UciPosition::readMove(istream& is, Square& from, Square& to) const {
     // convert special moves (castling, promotion, ep) to the internal move format
     if (MY.isPawn(from)) {
         if (from.on(Rank7)) {
-            PromoType promo{Queen};
-            is >> promo;
+            Officer promoted{Queen}; // default
+            is >> promoted;
             is.clear(); // promotion piece is optional
-            to = Square{to.file(), ::rankOf(promo)};
+            to = Square{to.file(), ::rankOf(promoted)};
             return is;
         }
 

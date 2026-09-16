@@ -156,15 +156,15 @@ public:
         move({si, ty, from^mirror}, {si, ty, to^mirror});
     }
 
-    constexpr void promote(Square mirror, Side si, Square from, PromoType promoted, Square to) {
+    constexpr void promote(Square mirror, Side si, Square from, Officer promoted, Square to) {
         move({si, Pawn, from^mirror}, {si, promoted, to^mirror});
     }
 
-    constexpr void move(Square mirror, Side si, PieceType ty, Square from, Square to, NonKingType captured) {
+    constexpr void move(Square mirror, Side si, PieceType ty, Square from, Square to, NonKingPiece captured) {
         capture({si, ty, from^mirror}, {si, ty, to^mirror}, {~si, captured, to^mirror});
     }
 
-    constexpr void promote(Square mirror, Side si, Square from, PromoType promoted, Square to, NonKingType captured) {
+    constexpr void promote(Square mirror, Side si, Square from, Officer promoted, Square to, NonKingPiece captured) {
         capture({si, Pawn, from^mirror}, {si, promoted, to^mirror}, {~si, captured, to^mirror});
     }
 
@@ -225,19 +225,19 @@ public:
         side[My].move(~mirror[My], Op, ty, from, to);
     }
 
-    constexpr void move(PieceType ty, Square from, Square to, NonKingType captured) {
+    constexpr void move(PieceType ty, Square from, Square to, NonKingPiece captured) {
         assert (from != to);
         side[Op].move(mirror[Op], My, ty, from, to, captured);
         side[My].move(~mirror[My], Op, ty, from, to, captured);
     }
 
-    constexpr void promote(Square from, PromoType promoted, Square to) {
+    constexpr void promote(Square from, Officer promoted, Square to) {
         assert (from.on(Rank7)); assert (to.on(Rank8));
         side[Op].promote(mirror[Op], My, from, promoted, to);
         side[My].promote(~mirror[My], Op, from, promoted, to);
     }
 
-    constexpr void promote(Square from, PromoType promoted, Square to, NonKingType captured) {
+    constexpr void promote(Square from, Officer promoted, Square to, NonKingPiece captured) {
         assert (from.on(Rank7)); assert (to.on(Rank8));
         side[Op].promote(mirror[Op], My, from, promoted, to, captured);
         side[My].promote(~mirror[My], Op, from, promoted, to, captured);
@@ -251,7 +251,7 @@ public:
 
     // defined in Position.cpp
     constexpr void moveKing(const Position&, Square from, Square to);
-    constexpr void moveKing(const Position&, Square from, Square to, NonKingType captured);
+    constexpr void moveKing(const Position&, Square from, Square to, NonKingPiece captured);
     constexpr void castle(const Position&, Square kingFrom, Square kingTo, Square rookFrom, Square rookTo);
 
 private:

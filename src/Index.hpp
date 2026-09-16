@@ -319,30 +319,30 @@ enum piece_type_enum {
 template <> struct CharMap<piece_type_enum> { static constexpr io::czstring The_string = "qrbnpk"; };
 
 // Queen, Rook, Bishop
-struct SliderType : Index<SliderType, 3, piece_type_enum> { using Index::Index; };
+struct Slider : Index<Slider, 3, piece_type_enum> { using Index::Index; };
 
 // Queen, Rook, Bishop, Knight
-struct PromoType : IndexChar<PromoType, 4, piece_type_enum> { using IndexChar::IndexChar; };
+struct Officer : IndexChar<Officer, 4, piece_type_enum> { using IndexChar::IndexChar; };
 
  // Queen, Rook, Bishop, Knight, Pawn
-struct NonKingType : Index<NonKingType, 5, piece_type_enum> { using Index::Index; };
+struct NonKingPiece : Index<NonKingPiece, 5, piece_type_enum> { using Index::Index; };
 
 // Queen, Rook, Bishop, Knight, Pawn, King
 struct PieceType : IndexChar<PieceType, 6, piece_type_enum> {
     constexpr PieceType (PieceType::_t ty) : IndexChar{ty} {}
-    constexpr PieceType (SliderType ty) : IndexChar{*ty} {}
-    constexpr PieceType (PromoType ty) : IndexChar{*ty} {}
-    constexpr PieceType (NonKingType ty) : IndexChar{*ty} {}
+    constexpr PieceType (Slider ty) : IndexChar{*ty} {}
+    constexpr PieceType (Officer ty) : IndexChar{*ty} {}
+    constexpr PieceType (NonKingPiece ty) : IndexChar{*ty} {}
 };
 
 constexpr bool isSlider(piece_type_enum ty) { return ty < Knight; } // Queen, Rook, Bishop
 constexpr bool isLeaper(piece_type_enum ty) { return ty >= Knight; } // Knight, Pawn, King
 
 // encoding of the promoted piece type inside "to" square
-constexpr Rank rankOf(PromoType ty) { return Rank{static_cast<Rank::_t>(*ty)}; }
+constexpr Rank rankOf(Officer ty) { return Rank{static_cast<Rank::_t>(*ty)}; }
 
 // decoding promoted piece type from move destination square rank
-constexpr PromoType promoTypeFrom(Rank rank) { return PromoType{static_cast<PromoType::_t>(*rank)}; }
+constexpr Officer officerFrom(Rank rank) { return Officer{static_cast<Officer::_t>(*rank)}; }
 
 // continue or stop search
 enum class ReturnStatus {
@@ -469,8 +469,8 @@ public:
         constexpr Index (PieceType::_t ty) : Base{ty} {}
         constexpr Index (zobrist_index_enum ty) : Base{ty} {}
         constexpr Index (PieceType ty) : Base{*ty} {}
-        constexpr Index (NonKingType ty) : Base{*ty} {}
-        constexpr Index (PromoType ty) : Base{*ty} {}
+        constexpr Index (NonKingPiece ty) : Base{*ty} {}
+        constexpr Index (Officer ty) : Base{*ty} {}
     };
 
 private:
