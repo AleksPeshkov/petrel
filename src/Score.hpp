@@ -239,7 +239,7 @@ class PieceCountTable {
         struct {
             u16_t centipawns; // material evaluation (pawn = 80)
             u8_t officers; // sum of Q = 12, R = 6, B/N = 4 (startpos total PieceMatMax = 40)
-            array<u8_t, NonKingType> count; // number of pieces of the given type
+            array<u8_t, NonKingPiece> count; // number of pieces of the given type
         } s;
         u64_t n;
         static_assert (sizeof(s) == sizeof(n));
@@ -258,7 +258,7 @@ public:
             v_[ty].s.centipawns = centipawns[ty];
             v_[ty].s.officers = officers[ty];
 
-            for (auto i : range<NonKingType>()) {
+            for (auto i : range<NonKingPiece>()) {
                 v_[ty].s.count[i] = (ty == PieceType{*i});
             }
         }
@@ -276,15 +276,15 @@ public:
     constexpr Material () { v_.n = 0; }
 
     void drop(PieceType ty) { v_.n += ::pieceCountTable[ty].n; }
-    void clear(NonKingType ty) { v_.n -= ::pieceCountTable[ty].n; }
+    void clear(NonKingPiece ty) { v_.n -= ::pieceCountTable[ty].n; }
 
-    void promote(PromoType ty) {
-        clear(NonKingType{Pawn});
+    void promote(Officer ty) {
+        clear(NonKingPiece{Pawn});
         drop(ty);
     }
 
-    constexpr int count(NonKingType::_t ty) const {
-        return v_.s.count[NonKingType{ty}];
+    constexpr int count(NonKingPiece::_t ty) const {
+        return v_.s.count[NonKingPiece{ty}];
     }
 
     // any queen, rook or pawn

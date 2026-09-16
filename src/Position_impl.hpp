@@ -106,7 +106,7 @@ constexpr void DualAcc::moveKing(const Position& pos, Square from, Square to) {
     side[My].move(~mirror[My], Op, King, from, to);
 }
 
-constexpr void DualAcc::moveKing(const Position& pos, Square from, Square to, NonKingType captured) {
+constexpr void DualAcc::moveKing(const Position& pos, Square from, Square to, NonKingPiece captured) {
     assert (from != to);
     if (+(from ^ to) & 4) {
         // king crossed the horizontal middle line
@@ -148,7 +148,7 @@ bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
             if constexpr (Flags & WithZobrist) {
                 zobrist_.opEnPassant(OP.sqEnPassant());
                 zobrist_.move(Pawn, from, to);
-                zobrist_.opCapture(NonKingType{Pawn}, ~ep);
+                zobrist_.opCapture(NonKingPiece{Pawn}, ~ep);
                 flipPrefetch();
                 rule50_ = {}; zHash_ = {}; // ep capture resets rule50
             }
@@ -179,7 +179,7 @@ bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
             if constexpr (Flags & WithZobrist) { zobrist_.move(Pawn, from, to); }
 
             if (OP.has(~to)) {
-                NonKingType captured{*OP.typeAt(~to)};
+                NonKingPiece captured{*OP.typeAt(~to)};
                 if constexpr (Flags & WithZobrist) {
                     zobrist_.opCapture(captured, ~to);
                     flipPrefetch();
@@ -212,12 +212,12 @@ bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
         } else [[unlikely]] {
             // pawn promotion
 
-            PromoType promoType{::promoTypeFrom(to.rank())}; // decode promoted piece
+            Officer officer{ ::officerFrom(to.rank()) }; // decode promoted piece
             to = {to.file(), Rank8}; //TRICK: correct move destination square
-            if constexpr (Flags & WithZobrist) { zobrist_.promote(from, promoType, to); }
+            if constexpr (Flags & WithZobrist) { zobrist_.promote(from, officer, to); }
 
             if (OP.has(~to)) [[unlikely]] {
-                NonKingType captured{*OP.typeAt(~to)};
+                NonKingPiece captured{*OP.typeAt(~to)};
                 if constexpr (Flags & WithZobrist) {
                     if (OP.isCastling(~to)) [[unlikely]] { zobrist_.opCastling(~to); } // captured the rook with castling right
                     zobrist_.opCapture(captured, ~to);
@@ -225,16 +225,16 @@ bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
                 }
 
                 OP.capture(~to);
-                PiMask promoted{ MY.piPromoted(from, promoType, to) }; // promoted piece index can differ from pawn piece index
+                PiMask promoted{ MY.piPromoted(from, officer, to) }; // promoted piece index can differ from pawn piece index
                 updateSliderAttacks<My>(MY.affectedBy(from) | promoted, OP.affectedBy(~from));
-                if constexpr (Flags & WithEval) { accumulator.promote(from, promoType, to, captured); }
+                if constexpr (Flags & WithEval) { accumulator.promote(from, officer, to, captured); }
                 return true; // end of pawn promotion move with capture
             } else {
                 if constexpr (Flags & WithZobrist) { flipPrefetch(); }
 
-                PiMask promoted{ MY.piPromoted(from, promoType, to) }; // promoted piece index can differ from pawn piece index
+                PiMask promoted{ MY.piPromoted(from, officer, to) }; // promoted piece index can differ from pawn piece index
                 updateSliderAttacks<My>(MY.affectedBy(from, to) | promoted, OP.affectedBy(~from, ~to));
-                if constexpr (Flags & WithEval) { accumulator.promote(from, promoType, to); }
+                if constexpr (Flags & WithEval) { accumulator.promote(from, officer, to); }
                 return true; // end of pawn promotion move without capture
             }
         } // promotion or not
@@ -252,7 +252,7 @@ bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
         }
 
         if (OP.has(~to)) {
-            NonKingType captured{*OP.typeAt(~to)};
+            NonKingPiece captured{*OP.typeAt(~to)};
             if constexpr (Flags & WithZobrist) {
                 if (OP.isCastling(~to)) [[unlikely]] { zobrist_.opCastling(~to); } // captured the rook with castling right
                 zobrist_.opCapture(captured, ~to);
@@ -319,11 +319,11 @@ bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
         }
     }
 
-    PromoType promoType{*MY.typeOf(pi)}; // officers: Q, R, B, N
-    if constexpr (Flags & WithZobrist) { zobrist_.move(promoType, from, to); }
+    Officer officer{*MY.typeOf(pi)}; // officers: Q, R, B, N
+    if constexpr (Flags & WithZobrist) { zobrist_.move(officer, from, to); }
 
     if (OP.has(~to)) {
-        NonKingType captured{*OP.typeAt(~to)};
+        NonKingPiece captured{*OP.typeAt(~to)};
         if constexpr (Flags & WithZobrist) {
             if (OP.isCastling(~to)) { zobrist_.opCastling(~to); } // captured the rook with castling right
             zobrist_.opCapture(captured, ~to);
@@ -332,9 +332,9 @@ bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
         }
 
         OP.capture(~to);
-        MY.move(pi, promoType, from, to);
+        MY.move(pi, officer, from, to);
         updateSliderAttacks<My>(MY.affectedBy(from) | PiMask{pi}, OP.affectedBy(~from));
-        if constexpr (Flags & WithEval) { accumulator.move(promoType, from, to, captured); }
+        if constexpr (Flags & WithEval) { accumulator.move(officer, from, to, captured); }
         return true; // end of officer's capture
     } else {
         if constexpr (Flags & WithZobrist) {
@@ -342,9 +342,9 @@ bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
             rule50_.next(); // zHash_ kept, unless moved rook with castling right
         }
 
-        MY.move(pi, promoType, from, to);
+        MY.move(pi, officer, from, to);
         updateSliderAttacks<My>(MY.affectedBy(from, to), OP.affectedBy(~from, ~to));
-        if constexpr (Flags & WithEval) { accumulator.move(promoType, from, to); }
+        if constexpr (Flags & WithEval) { accumulator.move(officer, from, to); }
         return shouldResetZHash; // end of officers's noncapture move
     }
 }
