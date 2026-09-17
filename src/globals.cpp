@@ -1,6 +1,5 @@
 #include "common.hpp"
 #include "io.hpp"
-#include "nnue.hpp"
 #include "Bb.hpp"
 #include "Hyperbola.hpp"
 #include "PiMask.hpp"
@@ -8,7 +7,6 @@
 #include "Tt.hpp"
 #include "Uci.hpp"
 
-const Nnue nnue;
 constexpr const InBetween inBetween; // 32k 64*64*8, used by constexpr CastlingRules
 constinit const HyperbolaDir hyperbolaDir; // 4k 64*4*16
 constinit const HyperbolaSq hyperbolaSq; // 1k 64*16
