@@ -85,7 +85,7 @@ void PositionMoves::excludePinnedMoves(PiMask opPinners) {
     for (Pi pinner : opPinners) {
         Square pinFrom{~OP.sq(pinner)};
 
-        assert (::attacksFrom(OP.typeOf(pinner), pinFrom).has(MY.sqKing()));
+        assert (::attacksFrom(OP.piece(pinner), pinFrom).has(MY.sqKing()));
 
         Bb pinLine = ::inBetween(MY.sqKing(), pinFrom);
         Bb occupiedPinLine = pinLine & OCCUPIED;

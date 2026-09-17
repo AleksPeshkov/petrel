@@ -61,7 +61,7 @@ public:
 
     constexpr Zobrist& flip() { v_ = ~v_; return *this; }
 
-    void operator () (PieceType ty, Square sq) { my(ty, sq); }
+    void operator () (Piece ty, Square sq) { my(ty, sq); }
     void castling(Square sq)  { assert (sq.on(Rank1)); my(Z::Castling, sq); }
     void enPassant(Square sq) { assert (sq.on(Rank4)); my(Z::EnPassant, sq); }
 
@@ -69,7 +69,7 @@ public:
     void opCastling(Square sq)  { assert (sq.on(Rank1)); op(Z::Castling, sq); }
     void opEnPassant(Square sq) { assert (sq.on(Rank4)); op(Z::EnPassant, sq); }
 
-    void move(PieceType ty, Square from, Square to) {
+    void move(Piece ty, Square from, Square to) {
         assert (from != to);
         my(ty, from);
         my(ty, to);
@@ -175,7 +175,7 @@ public:
 
 // initial position setup in class UciPosition:
 
-    bool dropValid(Side, PieceType, Square);
+    bool dropValid(Side, Piece, Square);
     bool afterDrop();
     bool setEnPassant(File);
 

@@ -260,11 +260,11 @@ class PiType {
         u8x16_t u8x16;
     };
 
-    constexpr element_type element(PieceType::_t ty) const { return static_cast<element_type>(::singleton<u8_t>(ty)); }
-    constexpr element_type element(PieceType ty) const { return element(*ty); }
+    constexpr element_type element(Piece::_t ty) const { return static_cast<element_type>(::singleton<u8_t>(ty)); }
+    constexpr element_type element(Piece ty) const { return element(*ty); }
 
     constexpr bool has(Pi pi, element_type e) const { assertOk(pi); return (static_cast<u8_t>(type[pi]) & static_cast<u8_t>(e)) != 0; }
-    constexpr bool is(Pi pi, PieceType::_t ty) const { assertOk(pi); return has(pi, element(ty)); }
+    constexpr bool is(Pi pi, Piece::_t ty) const { assertOk(pi); return has(pi, element(ty)); }
     constexpr PiMask any(element_type e) const { return PiMask::any(u8x16 & ::u8x16x(e)); }
 
 public:
@@ -278,17 +278,17 @@ public:
         constexpr void assertOk(Pi) const {}
     #endif
 
-    void drop(Pi pi, PieceType ty) { assert (none(pi)); assert (!pi.is(TheKing) || ty.is(King)); type[pi] = element(*ty); }
+    void drop(Pi pi, Piece ty) { assert (none(pi)); assert (!pi.is(TheKing) || ty.is(King)); type[pi] = element(*ty); }
     void clear(Pi pi) { assertOk(pi); assert (!pi.is(TheKing)); assert (!is(pi, King)); type[pi] = None; }
 
     constexpr bool none(Pi pi) const { return type[pi] == None; }
     constexpr bool isPawn(Pi pi) const { return is(pi, Pawn); }
     constexpr bool isRook(Pi pi) const { return is(pi, Rook); }
     constexpr bool isSlider(Pi pi) const { assertOk(pi); return has(pi, Sliders); }
-    constexpr PieceType typeOf(Pi pi) const { assertOk(pi); return PieceType{static_cast<PieceType::_t>( ::lsb(static_cast<unsigned>(type[pi])) )}; }
+    constexpr Piece piece(Pi pi) const { assertOk(pi); return Piece{static_cast<Piece::_t>( ::lsb(static_cast<unsigned>(type[pi])) )}; }
 
     constexpr PiMask any() const { return PiMask::any(u8x16); }
-    constexpr PiMask anyOf(PieceType::_t ty) const { assert (!PieceType{ty}.is(King)); return any(element(ty)); }
+    constexpr PiMask anyOf(Piece::_t ty) const { assert (!Piece{ty}.is(King)); return any(element(ty)); }
 
     constexpr PiMask sliders() const { return any(Sliders); } // Q, R, B
     constexpr PiMask leapers() const { return any(Leapers); } // K, P, N
@@ -296,8 +296,8 @@ public:
     constexpr PiMask nonKing() const { return any(NonK); } // Q, R, B, K, P
 
     // less valuable pieces than given piece type
-    constexpr PiMask lessValue(PieceType ty) const {
-        constexpr array<element_type, PieceType> LessValue = {
+    constexpr PiMask lessValue(Piece ty) const {
+        constexpr array<element_type, Piece> LessValue = {
             NonQK, // Queen
             PNB,   // Rook
             Pawns, // Bishop
@@ -309,8 +309,8 @@ public:
     }
 
     // less or equal value pieces than given piece type
-    constexpr PiMask lessOrEqualValue(PieceType ty) const {
-        constexpr array<element_type, PieceType> LessOrEqualValue = {
+    constexpr PiMask lessOrEqualValue(Piece ty) const {
+        constexpr array<element_type, Piece> LessOrEqualValue = {
             NonK,  // Queen
             NonQK, // Rook
             PNB,   // Bishop

@@ -39,7 +39,7 @@ int PositionSide::countAttackersTo(Square sq0, Bb occupied) const {
 
     for (auto pi2 : sliders2) {
         Square sq2{sq(pi2)};
-        if (!::attacksFrom(typeOf(pi2), sq0).has(sq2)) {
+        if (!::attacksFrom(piece(pi2), sq0).has(sq2)) {
             sliders2 -= PiMask{pi2};
         }
     }
@@ -72,13 +72,13 @@ void PositionSide::setLeaperAttacks() {
     assert (traits.checkers().none());
 
     for (Pi pi : types.leapers()) {
-        setLeaperAttack(pi, typeOf(pi), sq(pi));
+        setLeaperAttack(pi, piece(pi), sq(pi));
     }
 }
 
 void PositionSide::capture(Square from) {
     Pi pi{ this->pi(from) };
-    NonKingPiece ty{*typeOf(pi)};
+    NonKingPiece ty{*piece(pi)};
     assert (!ty.is(King));
 
     assertOk(pi, ty, from);
@@ -98,14 +98,14 @@ void PositionSide::capture(Square from) {
 
 void PositionSide::move(Pi pi, Square from, Square to) {
     assert (from != to);
-    assertOk(pi, typeOf(pi), from);
+    assertOk(pi, piece(pi), from);
 
     squares.set(pi, to);
     bbSide_.move(from, to);
 }
 
 // simple non king, non pawn move
-void PositionSide::move(Pi pi, PieceType ty, Square from, Square to) {
+void PositionSide::move(Pi pi, Piece ty, Square from, Square to) {
     assert (!ty.is(King)); assert (!ty.is(Pawn));
 
     move(pi, from, to);
@@ -201,7 +201,7 @@ void PositionSide::castle(Square kingFrom, Square kingTo, Pi rook, Square rookFr
     assertOk(rook, Rook, rookTo);
 }
 
-void PositionSide::setLeaperAttack(Pi pi, PieceType ty, Square sq) {
+void PositionSide::setLeaperAttack(Pi pi, Piece ty, Square sq) {
     assertOk(pi, ty, sq);
     assert (::isLeaper(*ty));
     assert (traits.none(pi) || traits.isPromotable(pi));
@@ -227,7 +227,7 @@ void PositionSide::setOpKing(Square king) {
 
     traits.clearPinners();
     for (Pi pi : types.sliders()) {
-        if (::attacksFrom(typeOf(pi), sq(pi)).has(opKing)) {
+        if (::attacksFrom(piece(pi), sq(pi)).has(opKing)) {
             traits.setPinner(pi);
         }
     }
@@ -240,7 +240,7 @@ void PositionSide::updateSliders(PiMask affectedSliders, Bb occupiedBb) {
     Hyperbola blockers{ occupiedBb };
 
     for (Pi pi : affectedSliders) {
-        Bb attack = blockers.attack(Slider{*typeOf(pi)}, sq(pi));
+        Bb attack = blockers.attack(Slider{*piece(pi)}, sq(pi));
         attacks_.set(pi, attack);
 
         assert (!attack.has(opKing)); // king cannot be left in check
@@ -255,7 +255,7 @@ void PositionSide::updateSlidersCheckers(PiMask affectedSliders, Bb occupiedBb) 
     Hyperbola blockers{ occupiedBb - Bb{opKing} };
 
     for (Pi pi : affectedSliders) {
-        Bb attack = blockers.attack(Slider{*typeOf(pi)}, sq(pi));
+        Bb attack = blockers.attack(Slider{*piece(pi)}, sq(pi));
         attacks_.set(pi, attack);
 
         if (attack.has(opKing)) {
@@ -302,7 +302,7 @@ bool PositionSide::isPinned(Bb occupied) const {
     return false;
 }
 
-bool PositionSide::dropValid(PieceType ty, Square to) {
+bool PositionSide::dropValid(Piece ty, Square to) {
     if (bbSide_.has(to)) {
         io::error("invalid fen: square already occupied");
         return false;

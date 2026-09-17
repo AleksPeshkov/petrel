@@ -328,11 +328,11 @@ struct Officer : IndexChar<Officer, 4, piece_type_t> { using IndexChar::IndexCha
 struct NonKingPiece : Index<NonKingPiece, 5, piece_type_t> { using Index::Index; };
 
 // Queen, Rook, Bishop, Knight, Pawn, King
-struct PieceType : IndexChar<PieceType, 6, piece_type_t> {
-    constexpr PieceType (PieceType::_t ty) : IndexChar{ty} {}
-    constexpr PieceType (Slider ty) : IndexChar{*ty} {}
-    constexpr PieceType (Officer ty) : IndexChar{*ty} {}
-    constexpr PieceType (NonKingPiece ty) : IndexChar{*ty} {}
+struct Piece : IndexChar<Piece, 6, piece_type_t> {
+    constexpr Piece (Piece::_t ty) : IndexChar{ty} {}
+    constexpr Piece (Slider ty) : IndexChar{*ty} {}
+    constexpr Piece (Officer ty) : IndexChar{*ty} {}
+    constexpr Piece (NonKingPiece ty) : IndexChar{*ty} {}
 };
 
 constexpr bool isSlider(piece_type_t ty) { return ty < Knight; } // Queen, Rook, Bishop
@@ -466,9 +466,9 @@ public:
     enum zobrist_index_t { Castling = 6, EnPassant = 7 };
     struct Index : ::Index<Index, 8> {
         using Base = ::Index<Index, 8>;
-        constexpr Index (PieceType::_t ty) : Base{ty} {}
+        constexpr Index (Piece::_t ty) : Base{ty} {}
         constexpr Index (zobrist_index_t ty) : Base{ty} {}
-        constexpr Index (PieceType ty) : Base{*ty} {}
+        constexpr Index (Piece ty) : Base{*ty} {}
         constexpr Index (NonKingPiece ty) : Base{*ty} {}
         constexpr Index (Officer ty) : Base{*ty} {}
     };
