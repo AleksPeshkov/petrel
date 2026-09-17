@@ -56,6 +56,6 @@ fn main() {
             l1.forward(dacc.screlu())
         });
 
-    trainer.load_from_checkpoint("./checkpoints/1024-hm03-360/");
+    trainer.load_from_checkpoint("./checkpoints/1x1-120/");
     trainer.save_to_checkpoint("./quantised/");
 }
