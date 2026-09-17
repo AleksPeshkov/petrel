@@ -311,6 +311,8 @@ struct CastlingSide : IndexChar<CastlingSide, 2, castling_side_enum> { using Ind
 enum piece_index_enum : u8_t { TheKing }; // king index is always 0
 struct Pi : Index<Pi, 16, piece_index_enum> { using Index::Index; };
 
+struct PieceList : Index<PieceList, 2*Pi::size()> { using Index::Index; };
+
 enum piece_type_enum {
     Queen = 0,
     Rook = 1,
