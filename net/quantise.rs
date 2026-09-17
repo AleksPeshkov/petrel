@@ -28,7 +28,7 @@ fn main() {
                         for square in 0..64 {
                             let from = (side*6*64 + piece*64 + square) * ACC_SIZE;
                             // pnbrqk -> qrbnpk; A1 = 0 -> H8 = 0
-                            let to = (side*6*64 + engine[piece]*64 + (square^63)) * ACC_SIZE;
+                            let to = (engine[piece]*128 + side*64 + (square^63)) * ACC_SIZE;
 
                             for i in 0..ACC_SIZE {
                                 // embed bias into kings weights
