@@ -16,6 +16,7 @@ fn main() {
     const ACC_SIZE: usize = 1024;
 
     const QA: f32 = 1024.0; // seems safe and large enough for 16-bit accumulator
+    const QF: f32 = 2048.0; // balanced precision of QA*QA in i16
     const QB: f32 = 16.0;   // QB*WDL*f_wdl <= 32767
     const WDL:f32 = 400.0;  // implicit output conversion 1.0 = 400 centipawns
     let f_wdl = 32767.0 / (QB*WDL); // 5.11984375
@@ -46,7 +47,7 @@ fn main() {
                 transformed
             }).quantise::<i16>(QA),
             SavedFormat::id("l1w").quantise::<i16>(QB*WDL),
-            SavedFormat::id("l1b").quantise::<i64>(QA * (QA*16.0 * QB*WDL)/32768.0), // 8192*400
+            SavedFormat::id("l1b").quantise::<i32>(QF*QB*WDL),
         ])
         .inputs(Chess768hm).dual_perspective()
         .build(|builder, my_inputs, op_inputs| {

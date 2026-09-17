@@ -73,18 +73,11 @@ inline i32x8_t madd_i16(i16x16_t w, i16x16_t v) {
     #endif
 }
 
-inline i64x4_t unpack_add_i32(i32x8_t a) {
-    // signed extension from i32 to i64
-    i64x4_t low = __builtin_convertvector(__builtin_shufflevector(a, a, 0, 1, 2, 3), i64x4_t);
-    i64x4_t high = __builtin_convertvector(__builtin_shufflevector(a, a, 4, 5, 6, 7), i64x4_t);
-    return low + high;
-}
-
-inline i64_t hadd_i64(i64x4_t sum4) {
+inline i32_t hadd_i32(i32x8_t sum8) {
     #ifdef __clang__
-        return __builtin_reduce_add(sum4);
+        return __builtin_reduce_add(sum8);
     #else
-        return sum4[0] + sum4[1] + sum4[2] + sum4[3];
+        return sum4[0] + sum4[1] + sum4[2] + sum4[3] + sum4[4] + sum4[5] + sum4[6] + sum4[7];
     #endif
 }
 
@@ -110,28 +103,21 @@ struct CACHE_ALIGN Nnue {
 
     using W0 = array<_t, Fi, AccIndex>;
     using W1 = DualAcc;
-    using B1 = i64_t;
-
-    Nnue ();
-
-    static i32x8_t forward(i16x16_t x, i16x16_t w) {
-        auto c = clamp(x, 0, 1024);
-        auto cw = mulhrs_i16(c << 4, w);
-        return madd_i16(c, cw); // sum of two products
-    }
+    using B1 = i32_t;
 
     i32_t evaluate(const DualAcc& dacc) const {
         i32x8_t sum8{};
         for (auto side : range<Side>()) {
             for (auto n : range<AccIndex>()) {
-                // safe for 64 additions (128 products)
-                sum8 += forward(dacc[side][n], this->w1[side][n]);
+                auto c13 = clamp(dacc[side][n], 0, 1024) << 3; // 2^13
+                auto cc11 = mulhrs_i16(c13, c13); // QF = 2^11
+                auto ccw = madd_i16(cc11, this->w1[side][n]); // sum of two products, QF*QB
+                sum8 += ccw;
             }
         }
-        i64_t output = this->b1 + hadd_i64(unpack_add_i32(sum8));
+        i32_t output = this->b1 + hadd_i32(sum8); // QF*QB*WDL
 
-        constexpr auto Scale = 14; // QA*QA: 2*10, QB: 5, shift: 4, mulhrs_i16: -15
-        auto result = output >> Scale;
+        auto result = output >> 15; // QF*QB = 2^11 * 2^4
         return result;
     }
 
@@ -165,11 +151,13 @@ struct CACHE_ALIGN Nnue {
         }
     }
 
+    COLD void validate_embedded() const;
+
 private:
     W0 w0; // feature weights, 768*(64*32) = 1572864 bytes, feature biases embeded into kings weights
     W1 w1; // output weights, 2*(64*32) = 4096 bytes
     B1 b1; // output bias (64 byte aligned), total = 1577024 bytes
 };
-extern const Nnue nnue;
+extern constinit const Nnue& nnue;
 
 #endif
