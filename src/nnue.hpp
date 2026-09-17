@@ -90,7 +90,7 @@ inline i64_t hadd_i64(i64x4_t sum4) {
 
 struct CACHE_ALIGN Nnue {
     struct FeatureIndex : ::Index<FeatureIndex, 2*6*64> { using Index::Index;
-        constexpr FeatureIndex (Side side, PieceType ty, Square sq)
+        constexpr FeatureIndex (Side side, Piece ty, Square sq)
             : Index{ (+side * 6*64) + (+ty * 64) + (+sq) }
         {}
     };
@@ -152,7 +152,7 @@ public:
     template <Side::_t>
     void setup(const Position& pos, Square mirror);
 
-    constexpr void move(Square mirror, Side si, PieceType ty, Square from, Square to) {
+    constexpr void move(Square mirror, Side si, Piece ty, Square from, Square to) {
         move({si, ty, from^mirror}, {si, ty, to^mirror});
     }
 
@@ -160,7 +160,7 @@ public:
         move({si, Pawn, from^mirror}, {si, promoted, to^mirror});
     }
 
-    constexpr void move(Square mirror, Side si, PieceType ty, Square from, Square to, NonKingPiece captured) {
+    constexpr void move(Square mirror, Side si, Piece ty, Square from, Square to, NonKingPiece captured) {
         capture({si, ty, from^mirror}, {si, ty, to^mirror}, {~si, captured, to^mirror});
     }
 
@@ -219,13 +219,13 @@ public:
         std::swap(mirror[My], mirror[Op]);
     }
 
-    constexpr void move(PieceType ty, Square from, Square to) {
+    constexpr void move(Piece ty, Square from, Square to) {
         assert (from != to);
         side[Op].move(mirror[Op], My, ty, from, to);
         side[My].move(~mirror[My], Op, ty, from, to);
     }
 
-    constexpr void move(PieceType ty, Square from, Square to, NonKingPiece captured) {
+    constexpr void move(Piece ty, Square from, Square to, NonKingPiece captured) {
         assert (from != to);
         side[Op].move(mirror[Op], My, ty, from, to, captured);
         side[My].move(~mirror[My], Op, ty, from, to, captured);
