@@ -62,7 +62,7 @@ bool Position::setEnPassant(File file) {
     return true;
 }
 
-bool Position::dropValid(Side side, PieceType ty, Square to) {
+bool Position::dropValid(Side side, Piece ty, Square to) {
     return positionSide(side).dropValid(ty, to);
 }
 
@@ -88,7 +88,7 @@ template <Side::_t My>
 Zobrist Position::generateZobrist() const {
     Zobrist z{};
 
-    for (Pi pi : MY.any()) { z(MY.typeOf(pi), MY.sq(pi));}
+    for (Pi pi : MY.any()) { z(MY.piece(pi), MY.sq(pi));}
     for (Pi rook : MY.castlingRooks()) { z.castling(MY.sq(rook)); }
 
     return z;
