@@ -124,27 +124,27 @@ extern const InBetween inBetween;
 
 //attack bitboards of the piece types on the empty board (3k)
 class CACHE_ALIGN AttacksFrom {
-    array<Bb, PieceType, Square> attack;
+    array<Bb, Piece, Square> attack;
 public:
     consteval AttacksFrom () {
         for (auto sq: range<Square>()) {
-            attack[PieceType{Rook}][sq]   = sq.bbFile() + sq.bbRank();
-            attack[PieceType{Bishop}][sq] = sq.bbDiagonal() + sq.bbAntidiag();
-            attack[PieceType{Queen}][sq]  = attack[PieceType{Rook}][sq] + attack[PieceType{Bishop}][sq];
+            attack[Piece{Rook}][sq]   = sq.bbFile() + sq.bbRank();
+            attack[Piece{Bishop}][sq] = sq.bbDiagonal() + sq.bbAntidiag();
+            attack[Piece{Queen}][sq]  = attack[Piece{Rook}][sq] + attack[Piece{Bishop}][sq];
 
-            attack[PieceType{Pawn}][sq] = sq.bb(-1, Rank3 - Rank2) + sq.bb(+1, Rank3 - Rank2);
+            attack[Piece{Pawn}][sq] = sq.bb(-1, Rank3 - Rank2) + sq.bb(+1, Rank3 - Rank2);
 
-            attack[PieceType{Knight}][sq] =
+            attack[Piece{Knight}][sq] =
                 sq.bb(+2, +1) + sq.bb(+2, -1) + sq.bb(+1, +2) + sq.bb(+1, -2) +
                 sq.bb(-2, -1) + sq.bb(-2, +1) + sq.bb(-1, -2) + sq.bb(-1, +2);
 
-            attack[PieceType{King}][sq] =
+            attack[Piece{King}][sq] =
                 sq.bb(+1, +1) + sq.bb(+1, 0) + sq.bb(0, +1) + sq.bb(+1, -1) +
                 sq.bb(-1, -1) + sq.bb(-1, 0) + sq.bb(0, -1) + sq.bb(-1, +1);
         }
     }
 
-    constexpr Bb operator() (PieceType ty, Square sq) const { return attack[ty][sq]; }
+    constexpr Bb operator() (Piece ty, Square sq) const { return attack[ty][sq]; }
 };
 extern const AttacksFrom attacksFrom;
 

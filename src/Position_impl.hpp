@@ -75,14 +75,14 @@ inline void Acc::setup(const Position& pos, Square mirror) {
 
     auto& my{ pos.positionSide(AccMy) };
     for (auto pi : my.any()) {
-        fi[PiecesIndex{count++}] = {My, my.typeOf(pi), my.sq(pi)^mirror};
+        fi[PiecesIndex{count++}] = {My, my.piece(pi), my.sq(pi)^mirror};
     }
 
     //TRICK: flip pieces squares perspective for opposite side
     auto op_mirror = ~mirror;
     auto& op{ pos.positionSide(~AccMy) };
     for (auto pi : op.any()) {
-        fi[PiecesIndex{count++}] = {Op, op.typeOf(pi), op.sq(pi)^op_mirror};
+        fi[PiecesIndex{count++}] = {Op, op.piece(pi), op.sq(pi)^op_mirror};
     }
 
     for (auto n : range<AccIndex>()) {
@@ -179,7 +179,7 @@ bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
             if constexpr (Flags & WithZobrist) { zobrist_.move(Pawn, from, to); }
 
             if (OP.has(~to)) {
-                NonKingPiece captured{*OP.typeAt(~to)};
+                NonKingPiece captured{*OP.pieceAt(~to)};
                 if constexpr (Flags & WithZobrist) {
                     zobrist_.opCapture(captured, ~to);
                     flipPrefetch();
@@ -217,7 +217,7 @@ bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
             if constexpr (Flags & WithZobrist) { zobrist_.promote(from, officer, to); }
 
             if (OP.has(~to)) [[unlikely]] {
-                NonKingPiece captured{*OP.typeAt(~to)};
+                NonKingPiece captured{*OP.pieceAt(~to)};
                 if constexpr (Flags & WithZobrist) {
                     if (OP.isCastling(~to)) [[unlikely]] { zobrist_.opCastling(~to); } // captured the rook with castling right
                     zobrist_.opCapture(captured, ~to);
@@ -252,7 +252,7 @@ bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
         }
 
         if (OP.has(~to)) {
-            NonKingPiece captured{*OP.typeAt(~to)};
+            NonKingPiece captured{*OP.pieceAt(~to)};
             if constexpr (Flags & WithZobrist) {
                 if (OP.isCastling(~to)) [[unlikely]] { zobrist_.opCastling(~to); } // captured the rook with castling right
                 zobrist_.opCapture(captured, ~to);
@@ -319,11 +319,11 @@ bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
         }
     }
 
-    Officer officer{*MY.typeOf(pi)}; // officers: Q, R, B, N
+    Officer officer{*MY.piece(pi)}; // officers: Q, R, B, N
     if constexpr (Flags & WithZobrist) { zobrist_.move(officer, from, to); }
 
     if (OP.has(~to)) {
-        NonKingPiece captured{*OP.typeAt(~to)};
+        NonKingPiece captured{*OP.pieceAt(~to)};
         if constexpr (Flags & WithZobrist) {
             if (OP.isCastling(~to)) { zobrist_.opCastling(~to); } // captured the rook with castling right
             zobrist_.opCapture(captured, ~to);
