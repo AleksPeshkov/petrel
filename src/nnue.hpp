@@ -114,23 +114,22 @@ struct CACHE_ALIGN Nnue {
     Nnue ();
 
     static i32x8_t forward(i16x16_t x, i16x16_t w) {
-        auto c = clamp(x, 0, 1024);
-        auto cw = mulhrs_i16(c << 4, w);
-        return madd_i16(c, cw); // sum of two products
+        auto c13 = clamp(x, 0, 1024) << 3; // 2^13
+        auto cc11 = mulhrs_i16(c13, c13); // QF = 2^11
+        return madd_i16(cc11, w); // sum of two products, QF*QB
     }
 
     int32_t evaluate(const DualAcc& dacc) const {
         i32x8_t sum8{};
         for (auto side : range<Side>()) {
             for (auto n : range<AccIndex>()) {
-                // safe for 64 additions (128 products)
+                // safe for 32 additions (64 products)
                 sum8 += forward(dacc[side][n], this->w1[side][n]);
             }
         }
-        i64_t output = this->b1 + hadd_i64(unpack_add_i32(sum8));
+        i64_t output = this->b1 + hadd_i64(unpack_add_i32(sum8)); // QF*QB*WDL
 
-        constexpr auto Scale = 14; // QA*QA: 2*10, QB: 5, shift: 4, mulhrs_i16: -15
-        auto result = output >> Scale;
+        auto result = output >> 16; // QF*QB = 2^11 * 2^5
         return result;
     }
 };

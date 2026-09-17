@@ -46,7 +46,7 @@ fn main() {
                 transformed
             }).quantise::<i16>(QA),
             SavedFormat::id("l1w").quantise::<i16>(QB*WDL),
-            SavedFormat::id("l1b").quantise::<i64>(QA * (QA*16.0 * QB*WDL)/32768.0), // 8192*400
+            SavedFormat::id("l1b").quantise::<i64>(QA*QB*WDL), // 16384*400
         ])
         .inputs(Chess768hm).dual_perspective()
         .build(|builder, my_inputs, op_inputs| {

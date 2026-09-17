@@ -21,21 +21,8 @@ Nnue::Nnue() {
 
     const IncbinNnue& incbin = *incbin_nnue_data;
     w0 = incbin.w0; // copy as is
+    w1 = incbin.w1; // copy as is
     b1 = incbin.b1; // copy as is
-
-    for (auto side : range<Side>()) {
-        for (auto n : range<AccIndex>()) {
-            auto w = incbin.w1[side][n];
-            for (int lane = 0; lane < 16; ++lane) {
-                // 1) rounding happens only when _w_ lowest bit is one
-                // 2) _mm256_mulhrs_epi16 rounds positive product up, negative -- towards zero
-                // 3) _mm256_madd_epi16 adds even and odd lanes together
-                // 4) compensate systematic upward error by rounding down odd _w_ on odd lane
-                if ((w[lane] & 1) && (lane & 1)) { w[lane] -= 1; }
-            }
-            w1[side][n] = w;
-        }
-    }
 
     #ifndef NDEBUG
         i16_t w_max = 0;
