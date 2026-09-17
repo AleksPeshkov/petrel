@@ -89,9 +89,9 @@ inline i64_t hadd_i64(i64x4_t sum4) {
 }
 
 // NNUE feature layer index
-struct Fi : ::Index<Fi, 2*6*64, i16_t> { using Index::Index;
+struct Fi : ::Index<Fi, 6*2*64, i16_t> { using Index::Index;
     constexpr Fi (Side side, Piece ty, Square sq)
-        : Index{ static_cast<_t>((+side*6*64) + (+ty*64) + (+sq)) }
+        : Index{ static_cast<_t>((+ty*128) + (+side*64) + (+sq)) }
     {}
 };
 
