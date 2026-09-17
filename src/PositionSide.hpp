@@ -41,18 +41,18 @@ class PositionSide {
             assert (traits.isCastling(pi) <= sq.on(Rank1));
         }
 
-        constexpr void assertOk(Pi pi, PieceType ty, Square sq) const {
+        constexpr void assertOk(Pi pi, Piece ty, Square sq) const {
             assert (squares.sq(pi) == sq);
-            assert (types.typeOf(pi) == ty);
+            assert (types.piece(pi) == ty);
             assertOk(pi);
         }
     #else
         constexpr void assertOk(Pi) const {}
-        constexpr void assertOk(Pi, PieceType, Square) const {}
+        constexpr void assertOk(Pi, Piece, Square) const {}
     #endif
 
     void setLeaperAttacks();
-    void setLeaperAttack(Pi, PieceType, Square);
+    void setLeaperAttack(Pi, Piece, Square);
     void setPinner(Pi, Slider, Square);
 
 public:
@@ -75,8 +75,8 @@ public:
     constexpr bool isKing(Square sq) const { return sqKing().is(sq); } // sq(TheKing)
     constexpr PiMask anyOn(Rank::_t rank) const { Rank{rank}.assertOk(); return squares.anyOn(rank); }
 
-    constexpr PieceType typeOf(Pi pi) const { assertOk(pi); return types.typeOf(pi); }
-    constexpr PieceType typeAt(Square sq) const { return typeOf(pi(sq)); }
+    constexpr Piece piece(Pi pi) const { assertOk(pi); return types.piece(pi); }
+    constexpr Piece pieceAt(Square sq) const { return piece(pi(sq)); }
 
     // all onboard pieces of the given side
     constexpr PiMask any() const { assert (squares.any() == types.any()); return squares.any(); }
@@ -86,10 +86,10 @@ public:
     constexpr PiMask pawns() const { return types.anyOf(Pawn); }
 
     // pieces of less value than given piece type
-    constexpr PiMask lessValue(PieceType ty) const { return types.lessValue(ty); }
+    constexpr PiMask lessValue(Piece ty) const { return types.lessValue(ty); }
 
     // pieces of less or equal value than given piece type
-    constexpr PiMask lessOrEqualValue(PieceType ty) const { return types.lessOrEqualValue(ty); }
+    constexpr PiMask lessOrEqualValue(Piece ty) const { return types.lessOrEqualValue(ty); }
 
     constexpr PiMask castlingRooks() const { return traits.castlingRooks(); }
     constexpr bool isCastling(Pi pi) const { assertOk(pi); return traits.isCastling(pi); }
@@ -121,8 +121,8 @@ public:
         // pawn move || castling || null move
         if (isPawn(from) || isKing(to) || from == to) { return MoveType{MoveSpecial}; }
 
-        constexpr MoveType::_t fromPieceType[] = { MoveQN, MoveRB, MoveRB, MoveQN, MoveSpecial, MoveKing };
-        return MoveType{fromPieceType[+typeAt(from)]};
+        constexpr MoveType::_t fromPiece[] = { MoveQN, MoveRB, MoveRB, MoveQN, MoveSpecial, MoveKing };
+        return MoveType{fromPiece[+pieceAt(from)]};
     }
 
     constexpr bool isPseudoLegal(Move move) const {
@@ -150,7 +150,7 @@ public:
 
     void setOpKing(Square);
     void move(Pi, Square, Square);
-    void move(Pi, PieceType, Square, Square);
+    void move(Pi, Piece, Square, Square);
     void movePawn(Square, Square);
     void castle(Square kingFrom, Square kingTo, Pi rook, Square rookFrom, Square rookTo);
     Pi piPromoted(Square, Officer, Square);
@@ -167,7 +167,7 @@ public:
     void updateSlidersCheckers(PiMask, Bb);
 
     // used only during initial position setup
-    bool dropValid(PieceType, Square);
+    bool dropValid(Piece, Square);
     static void finalSetup(PositionSide&, PositionSide&);
 
 //friend class UciPosition;

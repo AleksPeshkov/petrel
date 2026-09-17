@@ -407,7 +407,7 @@ ReturnStatus Node::search() {
 
             assert (OP.attackersTo(~from).any());
 
-            if (OP.attackersTo(~from).none(OP.lessOrEqualValue(MY.typeOf(pi)))) {
+            if (OP.attackersTo(~from).none(OP.lessOrEqualValue(MY.piece(pi)))) {
                 // attacked by more valuable attacker
 
                 if (MY.bbPawnAttacks().has(from) || safeForMe(from)) {
@@ -542,9 +542,10 @@ ReturnStatus Node::goodPawnsMovesTo(Bb target, Ply R) {
 }
 
 ReturnStatus Node::goodNonCaptures(Pi pi, Bb bbMoves, Ply R) {
-    PieceType ty = MY.typeOf(pi);
+    Piece ty{ MY.piece(pi) };
     assert (!ty.is(Pawn));
-    PiMask opLessValue = OP.lessValue(ty);
+    PiMask opLessValue{ OP.lessValue(ty) };
+
     Square from{MY.sq(pi)};
     for (Square to : bbMoves) {
         assert (!OP.bbPawnAttacks().has(~to));
@@ -625,7 +626,7 @@ ReturnStatus Node::goodCaptures(PiMask victims) {
         //TODO: check if defending pawn is pinned and cannot recapture
         //TODO: try killer heuristics for uncertain and bad captures
         if (OP.bbPawnAttacks().has(~to) || !safeForMe(to)) {
-            attackers &= MY.lessOrEqualValue(OP.typeOf(victim));
+            attackers &= MY.lessOrEqualValue(OP.piece(victim));
         }
 
         while (attackers.any()) {
