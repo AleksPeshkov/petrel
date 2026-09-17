@@ -1,4 +1,5 @@
 #include <set>
+#include "nnue.hpp"
 #include "perft.hpp"
 #include "search.hpp"
 #include "System.hpp"
@@ -769,6 +770,7 @@ Uci::Uci(ostream& os) :
     logStartTime{::timeNow()},
     pid_{System::getPid()}
 {
+    nnue.validate_embedded();
     for (auto ply : range<Ply>()) { std::construct_at(&searchStack[ply], ply); }
     inputLine.clear();
     bestmove_.clear();
