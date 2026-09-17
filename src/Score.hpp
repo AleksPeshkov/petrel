@@ -241,26 +241,26 @@ class PieceCountTable {
         static_assert (sizeof(s) == sizeof(n));
     };
 
-    array<element_type, PieceType> v_;
+    array<element_type, Piece> v_;
 
 public:
     using _t = element_type;
 
     consteval PieceCountTable () {
-        constexpr array<u16_t, PieceType> centipawns = { 960, 480, 320, 320, 80, 0 }; // material eval: 12/6/4/4/1 * 80cp
-        constexpr array<u8_t, PieceType> officers = { 12, 6, 4, 4, 0, 0 }; // non pawn pieces values
+        constexpr array<u16_t, Piece> centipawns = { 960, 480, 320, 320, 80, 0 }; // material eval: 12/6/4/4/1 * 80cp
+        constexpr array<u8_t, Piece> officers = { 12, 6, 4, 4, 0, 0 }; // non pawn pieces values
 
-        for (auto ty : range<PieceType>()) {
+        for (auto ty : range<Piece>()) {
             v_[ty].s.centipawns = centipawns[ty];
             v_[ty].s.officers = officers[ty];
 
             for (auto i : range<NonKingPiece>()) {
-                v_[ty].s.count[i] = (ty == PieceType{*i});
+                v_[ty].s.count[i] = (ty == Piece{*i});
             }
         }
     }
 
-    constexpr _t operator[] (PieceType ty) const { return v_[ty]; }
+    constexpr _t operator[] (Piece ty) const { return v_[ty]; }
 };
 extern const PieceCountTable pieceCountTable;
 
@@ -271,7 +271,7 @@ class Material {
 public:
     constexpr Material () { v_.n = 0; }
 
-    void drop(PieceType ty) { v_.n += ::pieceCountTable[ty].n; }
+    void drop(Piece ty) { v_.n += ::pieceCountTable[ty].n; }
     void clear(NonKingPiece ty) { v_.n -= ::pieceCountTable[ty].n; }
 
     void promote(Officer ty) {

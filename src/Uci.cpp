@@ -168,10 +168,10 @@ class FenToBoard {
     };
     using Squares = std::set<Square, SquareImportance>;
 
-    array<Squares, Color, PieceType> pieces;
+    array<Squares, Color, Piece> pieces;
     array<int, Color> pieceCount = {{0, 0}};
 
-    bool drop(Color, PieceType, Square);
+    bool drop(Color, Piece, Square);
 
 public:
     friend istream& read(istream&, FenToBoard&);
@@ -207,7 +207,7 @@ istream& read(istream& is, FenToBoard& board) {
             Color color{std::isupper(c) ? White : Black};
             c = static_cast<io::char_type>(std::tolower(c));
 
-            PieceType ty{Queen};
+            Piece ty{Queen};
             if (!ty.from_char(c)) {
                 io::fail_char(is);
                 io::error("invalid fen: invalid char");
@@ -254,7 +254,7 @@ istream& read(istream& is, FenToBoard& board) {
     return is;
 }
 
-bool FenToBoard::drop(Color color, PieceType ty, Square sq) {
+bool FenToBoard::drop(Color color, Piece ty, Square sq) {
     // the position representaion cannot hold more then 16 total pieces per color
     if (pieceCount[color] == Pi::size()) {
         io::error("invalid fen: too many total pieces");
@@ -262,7 +262,7 @@ bool FenToBoard::drop(Color color, PieceType ty, Square sq) {
     }
 
     // max one king per each color
-    if (ty.is(King) && !pieces[color][PieceType{King}].empty()) {
+    if (ty.is(King) && !pieces[color][Piece{King}].empty()) {
         io::error("invalid fen: too many kings");
         return false;
     }
@@ -281,7 +281,7 @@ bool FenToBoard::drop(Color color, PieceType ty, Square sq) {
 bool FenToBoard::dropPieces(Position& position, Color colorToMove_) {
     // each side should have one king
     for (auto color : range<Color>()) {
-        if (pieces[color][PieceType{King}].empty()) {
+        if (pieces[color][Piece{King}].empty()) {
             io::error("invalid fen: king is missing");
             return false;
         }
@@ -292,7 +292,7 @@ bool FenToBoard::dropPieces(Position& position, Color colorToMove_) {
     for (auto color : range<Color>()) {
         Side side{colorToMove_.is(color) ? My : Op};
 
-        for (auto ty : range<PieceType>()) {
+        for (auto ty : range<Piece>()) {
             while (!pieces[color][ty].empty()) {
                 auto piece = pieces[color][ty].begin();
 
@@ -326,13 +326,13 @@ public:
 
                 if (board.whitePieces.has(sq)) {
                     if (emptySqCount != 0) { os << emptySqCount; emptySqCount = 0; }
-                    os << static_cast<io::char_type>(std::toupper( PieceType{board.whitePieces.typeAt(sq)}.to_char() ));
+                    os << static_cast<io::char_type>(std::toupper( Piece{board.whitePieces.pieceAt(sq)}.to_char() ));
                     continue;
                 }
 
                 if (board.blackPieces.has(~sq)) {
                     if (emptySqCount != 0) { os << emptySqCount; emptySqCount = 0; }
-                    os << board.blackPieces.typeAt(~sq);
+                    os << board.blackPieces.pieceAt(~sq);
                     continue;
                 }
 
