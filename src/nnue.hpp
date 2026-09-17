@@ -89,10 +89,14 @@ inline i64_t hadd_i64(i64x4_t sum4) {
 }
 
 // NNUE feature layer index
-struct Fi : ::Index<Fi, 6*2*64, i16_t> { using Index::Index;
-    constexpr Fi (Side side, Piece ty, Square sq)
-        : Index{ static_cast<_t>((+ty*128) + (+side*64) + (+sq)) }
-    {}
+struct Fi : ::Index<Fi, 6*2*64, i16_t> {
+    constexpr Fi () : Index{} {}
+    constexpr explicit Fi (_t v) : Index{v} {}
+    constexpr Fi (Side side, Piece ty, Square sq) : Fi{ static_cast<_t>((+ty*128) + (+side*64) + (+sq)) } {}
+    constexpr Fi (Square sqFlip) : Fi{ static_cast<_t>(+sqFlip) } {}
+
+    constexpr Fi operator ^ (Fi mask) const { return Fi{ static_cast<_t>(v_ ^ mask.v_) }; }
+    constexpr Fi operator ~ () const { return Fi{ static_cast<_t>(v_ ^ 64) }; } // change side
 };
 
 struct CACHE_ALIGN Nnue {
@@ -106,10 +110,6 @@ struct CACHE_ALIGN Nnue {
 
     using W0 = array<_t, Fi, AccIndex>;
     using W1 = DualAcc;
-
-    W0 w0;    // feature weights, 768*(64*32) = 1572864 bytes, feature biases embeded into kings weights
-    W1 w1;    // output weights, 2*(64*32) = 4096 bytes
-    i64_t b1; // output bias (64 byte aligned), total = 1577024 bytes
 
     Nnue ();
 
@@ -132,127 +132,42 @@ struct CACHE_ALIGN Nnue {
         auto result = output >> 16; // QF*QB = 2^11 * 2^5
         return result;
     }
+
+    constexpr void quiet(Acc& current, const Acc& parent, Fi m, Fi sub1, Fi add1) const {
+        for (auto n : range<AccIndex>()) {
+            current[n] = adds_i16(parent[n], this->w0[add1^m][n] - this->w0[sub1^m][n]);
+        }
+    }
+
+    constexpr void capture(Acc& current, const Acc& parent, Fi m, Fi sub1, Fi add1, Fi sub2) const {
+        for (auto n : range<AccIndex>()) {
+            current[n] = adds_i16(parent[n], this->w0[add1^m][n] - this->w0[sub1^m][n] - this->w0[sub2^m][n]);
+        }
+    }
+
+    constexpr void castling(Acc& current, const Acc& parent, Fi m, Fi sub1, Fi add1, Fi sub2, Fi add2) const {
+        for (auto n : range<AccIndex>()) {
+            auto s1 = this->w0[add1^m][n] - this->w0[sub1^m][n];
+            auto s2 = this->w0[add2^m][n] - this->w0[sub2^m][n];
+            current[n] = adds_i16(parent[n], s1 + s2);
+        }
+    }
+
+    constexpr void update(Acc& current, const array<Fi, PieceList>& fi, int count) const {
+        for (auto n : range<AccIndex>()) {
+            _t a{}; // bias = 0
+            for (int i = 0; i < count; ++i) {
+                a = adds_i16(a, this->w0[ fi[PieceList{i}]][n] );
+            }
+            current[n] = a;
+        }
+    }
+
+private:
+    W0 w0;    // feature weights, 768*(64*32) = 1572864 bytes, feature biases embeded into kings weights
+    W1 w1;    // output weights, 2*(64*32) = 4096 bytes
+    i64_t b1; // output bias (64 byte aligned), total = 1577024 bytes
 };
 extern const Nnue nnue;
-
-class Position;
-
-class CACHE_ALIGN Acc {
-    using Index = Nnue::AccIndex;
-public:
-    static constexpr void swap(Acc& my, Acc& op) {
-        for (auto n : range<Index>()) {
-            std::swap(my.acc[n], op.acc[n]);
-        }
-    }
-
-    // defined in Position.cpp
-    template <Side::_t>
-    void setup(const Position& pos, Square sqFlip);
-
-    constexpr void move(Square sqFlip, Side si, Piece ty, Square from, Square to) {
-        move({si, ty, from^sqFlip}, {si, ty, to^sqFlip});
-    }
-
-    constexpr void promote(Square sqFlip, Side si, Square from, Officer promoted, Square to) {
-        move({si, Pawn, from^sqFlip}, {si, promoted, to^sqFlip});
-    }
-
-    constexpr void move(Square sqFlip, Side si, Piece ty, Square from, Square to, NonKingPiece captured) {
-        capture({si, ty, from^sqFlip}, {si, ty, to^sqFlip}, {~si, captured, to^sqFlip});
-    }
-
-    constexpr void promote(Square sqFlip, Side si, Square from, Officer promoted, Square to, NonKingPiece captured) {
-        capture({si, Pawn, from^sqFlip}, {si, promoted, to^sqFlip}, {~si, captured, to^sqFlip});
-    }
-
-    constexpr void ep(Square sqFlip, Side si, Square from, Square to, Square ep) {
-        capture({si, Pawn, from^sqFlip}, {si, Pawn, to^sqFlip}, {~si, Pawn, ep^sqFlip});
-    }
-
-    constexpr void castle(Square sqFlip, Side si, Square kingFrom, Square kingTo, Square rookFrom, Square rookTo) {
-        for (auto n : range<Index>()) {
-            auto s1 = nnue.w0[{si, King, kingTo^sqFlip}][n] - nnue.w0[{si, King, kingFrom^sqFlip}][n];
-            auto s2 = nnue.w0[{si, Rook, rookTo^sqFlip}][n] - nnue.w0[{si, Rook, rookFrom^sqFlip}][n];
-            acc[n] = adds_i16(acc[n], s1 + s2);
-        }
-    }
-
-private:
-    Nnue::Acc acc; // feature biases embedded into kings weights
-
-    constexpr void move(Fi from, Fi to) {
-        for (auto n : range<Index>()) {
-            acc[n] = adds_i16(acc[n], nnue.w0[to][n] - nnue.w0[from][n]);
-        }
-    }
-
-    constexpr void capture(Fi from, Fi to, Fi cap) {
-        for (auto n : range<Index>()) {
-            acc[n] = adds_i16(acc[n], nnue.w0[to][n] - nnue.w0[from][n] - nnue.w0[cap][n]);
-        }
-    }
-};
-
-class DualAcc {
-public:
-    // raw NNUE static evaluation
-    auto evaluate() const { return nnue.evaluate(std::bit_cast<Nnue::DualAcc>(dacc)); }
-
-    // defined in Position.cpp
-    void setup(const Position& pos);
-
-    // copy parent accumulator but swap sides
-    constexpr void copy_swap(const DualAcc& parent) {
-        dacc[My] = parent.dacc[Op];
-        dacc[Op] = parent.dacc[My];
-        sqFlip[My] = parent.sqFlip[Op];
-        sqFlip[Op] = parent.sqFlip[My];
-    }
-
-    constexpr void swap() {
-        Acc::swap(dacc[My], dacc[Op]);
-        std::swap(sqFlip[My], sqFlip[Op]);
-    }
-
-    constexpr void move(Piece ty, Square from, Square to) {
-        assert (from != to);
-        dacc[Op].move(sqFlip[Op], My, ty, from, to);
-        dacc[My].move(~sqFlip[My], Op, ty, from, to);
-    }
-
-    constexpr void move(Piece ty, Square from, Square to, NonKingPiece captured) {
-        assert (from != to);
-        dacc[Op].move(sqFlip[Op], My, ty, from, to, captured);
-        dacc[My].move(~sqFlip[My], Op, ty, from, to, captured);
-    }
-
-    constexpr void promote(Square from, Officer promoted, Square to) {
-        assert (from.on(Rank7)); assert (to.on(Rank8));
-        dacc[Op].promote(sqFlip[Op], My, from, promoted, to);
-        dacc[My].promote(~sqFlip[My], Op, from, promoted, to);
-    }
-
-    constexpr void promote(Square from, Officer promoted, Square to, NonKingPiece captured) {
-        assert (from.on(Rank7)); assert (to.on(Rank8));
-        dacc[Op].promote(sqFlip[Op], My, from, promoted, to, captured);
-        dacc[My].promote(~sqFlip[My], Op, from, promoted, to, captured);
-    }
-
-    constexpr void ep(Square from, Square to, Square ep) {
-        assert (from.on(Rank5)); assert (to.on(Rank6)); assert (ep.on(Rank5));
-        dacc[Op].ep(sqFlip[Op], My, from, to, ep);
-        dacc[My].ep(~sqFlip[My], Op, from, to, ep);
-    }
-
-    // defined in Position.cpp
-    constexpr void moveKing(const Position&, Square from, Square to);
-    constexpr void moveKing(const Position&, Square from, Square to, NonKingPiece captured);
-    constexpr void castle(const Position&, Square kingFrom, Square kingTo, Square rookFrom, Square rookTo);
-
-private:
-    array<Acc, Side> dacc;
-    array<Square, Side> sqFlip;
-};
 
 #endif

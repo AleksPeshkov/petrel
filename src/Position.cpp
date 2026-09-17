@@ -1,12 +1,11 @@
 #include "Position_impl.hpp"
 
 Score Position::evaluate() const {
-    auto eval = dacc.evaluate();
-    return Score::clampEval(eval);
+    auto rawEval = nnue.evaluate(dacc_);
+    return Score::clampEval(rawEval);
 }
 
 void Position::copy_swap(const Position& parent) {
-    dacc.copy_swap(parent.dacc);
     positionSide_[My] = parent.OP;
     positionSide_[Op] = parent.MY;
     rule50_ = parent.rule50_;
@@ -14,11 +13,11 @@ void Position::copy_swap(const Position& parent) {
 
 void Position::makeMove(Square from, Square to) {
     PositionSide::swap(MY, OP);
-    dacc.swap();
 
     // the position just swapped its sides, so we make the move for the Op
-    makeMove<Op, Full>(from, to, []{});
+    makeMove<Op, NoEval>(*this, from, to, []{});
     zobrist_.flip();
+    nnUpdate();
     //assert (z() == *generateZobrist()); // true, but slow to compute
 }
 
@@ -29,6 +28,10 @@ void Position::makeNullMove(const Position& parent) {
 
     occupied_[My] = parent.occupied_[Op];
     occupied_[Op] = parent.occupied_[My];
+    dacc_[My] = parent.dacc_[Op];
+    dacc_[Op] = parent.dacc_[My];
+    hm_[My] = parent.hm_[Op];
+    hm_[Op] = parent.hm_[My];
 
     // clear en passant status from the previous move
     if (MY.hasEnPassant()) {
@@ -45,7 +48,7 @@ void Position::makeMovePerft(const Position& parent, Square from, Square to) {
     copy_swap(parent);
 
     // current position flipped its sides relative to parent, so we make the move inplace for the Op
-    makeMove<Op, Fast>(from, to, []{});
+    makeMove<Op, Fast>(parent, from, to, []{});
 }
 
 bool Position::setEnPassant(File file) {
@@ -68,8 +71,8 @@ bool Position::dropValid(Side side, Piece ty, Square to) {
 bool Position::afterDrop() {
     PositionSide::finalSetup(MY, OP);
     updateSliderAttacks<Op>(OP.any(), MY.any());
-    dacc.setup(*this);
     rule50_ = {};
+    nnUpdate();
 
     // opponent should not be in check
     return MY.checkers().none();
