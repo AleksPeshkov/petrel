@@ -96,5 +96,17 @@ fn main() {
         save_rate: 10,
     };
 
-    trainer.run(&schedule, &settings, &data_loader);
+    //trainer.run(&schedule, &settings, &data_loader);
+
+    trainer.load_from_checkpoint(&format!("./{}/{}-{}", &settings.output_directory, &schedule.net_id, schedule.steps.end_superbatch));
+    let schedule2 = TrainingSchedule {
+        net_id: "h2".to_string(),
+        eval_scale: data_set_eval_scale,
+        steps: TrainingSteps { batch_size: batch_size/4, batches_per_superbatch: batches_per_superbatch*4, start_superbatch: 1, end_superbatch: final_superbatch },
+        wdl_scheduler: wdl::CosineDecayWDL { start: 0.20, end: 0.10, final_superbatch },
+        lr_scheduler: lr::CosineDecayLR { initial_lr: 1e-4, final_lr: 1e-7, final_superbatch },
+        save_rate: 10,
+    };
+
+    trainer.run(&schedule2, &settings, &data_loader);
 }
