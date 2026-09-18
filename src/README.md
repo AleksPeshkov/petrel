@@ -28,8 +28,7 @@ Conventions Used in the Source Code
 
 Overloaded operators:
 
-- operator `~` is used to flip squares, bitboards, zobrist hashes, and other data structures to convert data from the opposite side point of view.
-   The flip operation reverses the byte order inside bitboards and zobrist hashes, switches ranks within squares.
+- operator `~` is used to flip squares/bitboards/zobrist vertically, and convert other data structures from the opposite side point of view. The flip operation reverses the byte order inside bitboards and zobrist hashes, switches ranks within squares.
 - operators `+` and `-` are XOR operation with assertions ensuring disjoint sets;
 - operator `%` is used as a shortcut for "AND NOT" bitset operations;
 - unary operator `*` to convert value of Index<enum> and similar classes into enum type;
@@ -37,22 +36,20 @@ Overloaded operators:
 
 Abbreviations in the code:
 
-* `Bb bb`: BitBoard – a well-known 64-bit bitset representing squares on the chessboard.
-* Variables of type `Bb` and functions that return `Bb` often have `bb` prefix, example: `Bb bb = bbPawns()`
+* `Pi pi`: Piece Index – one of 16 piece slots in a byte vector; `{TheKing = 0}` is the slot dedicated to the king. Variables of type `Pi` and functions that return type `Pi` generally named `pi()` or have `pi` prefix, example: `Pi pi = this->pi(Square sq)`
+* `Square sq` Variables of type `Square` and functions that return type `Square` generally named `sq()` or have `sq` prefix.
+* `Bb bb`: BitBoard – a well-known 64-bit bitset representing squares on the chessboard. Variables of type `Bb` and functions that return `Bb` commonly named `bb()` or have `bb` prefix, example: `Bb bb = bbPawns()`
 * `Side side`: `{My, Op}` – side to move and opposite side.
-* `Color color`: `{White, Black}` – rarely internally used, required for correct output of internal moves in standard chess notation.
-* `PieceType ty`: `{Queen = 0, Rook = 1, Bishop = 2, Knight = 3, Pawn = 4, King = 5}` chess pieces types.
-* `MoveType mt`: `MoveSpecial` tag used for any pawn move, castling and null move.
-* `Pi pi`: Piece Index – one of 16 piece slots in a byte vector; `{TheKing = 0}` is the slot dedicated to the king.
-* Variables of type `Square` functions that return type `Square` generally named `sq()` or have `sq` prefix.
-* Variables of type `Pi` and functions that return type `Pi` generally named `pi()` or have `pi` prefix, example: `Pi pi = this->pi(Square sq)`
+* `Color color`: `{White, Black}` – rarely used, needed for correct output of internal colorless moves in standard chess notation.
+* `Piece ty`: `{Queen = 0, Rook = 1, Bishop = 2, Knight = 3, Pawn = 4, King = 5}` chess pieces types.
+* `MoveType mt`: `{MoveSpecial}` tag used for any pawn move, castling and null move.
 * `PiMask`: intermediate data – piece vector of byte masks (0 or 0xFF) for selected pieces.
 * Many variables have type PiMask and many functions return PiMask. No special name prefix for them.
 * Pieces are sorted so that more valuable pieces occupy lower indexes.
 * `PiSquare`: stores locations of active pieces or the `0xFF` NoSquare tag.
 * `PiType`: each piece type is represented as a separate bit, enabling quick grouping by criteria.
 * `PiTrait`: castling and en passant statuses, plus temporary information like currently checking pieces.
-* `PiBb`: vector of Bb x Pi, for incremental attacks and moves generated from attacks.
+* `PiBb`: internally represent array `Bb piBb[Pi::size()]`, for incremental attacks update and legal moves from attacks generation .
 
 Universal Chess Interface (UCI) Extensions
 ------------------------------------------
@@ -60,9 +57,9 @@ Engine accepts command option `--file` (`-f`) to pass UCI initial commands from 
 
 * `position`: parameters `fen` or `startpos` are optional; default is reusing previous position command.
    So, `position moves e2e4` is sufficient to make the first move.
-* `position` without any options displays the current position static evaluation and FEN.
-* `setoption` can be abbreviated to short forms like `set hash 1g`.
+* `position` without any options displays the root position static evaluation and FEN.
+* `setoption` can be abbreviated to short form like `set hash 1g`.
   `setoption Hash` accepts sizes in bytes `b`, kibibytes `k`, mebibytes `m`, UCI default), gibibytes `g`.
 * `perft N` performs PERFT to depth `N` using bulk counting and the transposition hash table.
-* `wait` can be used to block batch operations till running search finished
+* `wait` wait for search finish, can be used in batch scripts
 * `isready` will send `info nodes ... time ... nps` during running search

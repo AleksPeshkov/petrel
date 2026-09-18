@@ -62,8 +62,8 @@ bool Position::setEnPassant(File file) {
     return true;
 }
 
-bool Position::dropValid(Side si, PieceType ty, Square to) {
-    return positionSide(si).dropValid(ty, to);
+bool Position::dropValid(Side side, PieceType ty, Square to) {
+    return positionSide(side).dropValid(ty, to);
 }
 
 bool Position::afterDrop() {
