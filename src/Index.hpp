@@ -295,9 +295,9 @@ enum side_to_move_t {
     My, // side to move
     Op, // not side to move
 };
-constexpr side_to_move_t operator ~ (side_to_move_t si) { return static_cast<side_to_move_t>(si ^ 1); }
+constexpr side_to_move_t operator ~ (side_to_move_t side) { return static_cast<side_to_move_t>(side ^ 1); }
 struct Side : Index<Side, 2, side_to_move_t> { using Index::Index;
-    constexpr Side (_t si) : Index{si} {}
+    constexpr Side (_t v) : Index{v} {}
 };
 
 enum chess_variant_t { Orthodox, Chess960 };
