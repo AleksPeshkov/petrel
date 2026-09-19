@@ -7,7 +7,7 @@
 
 struct CACHE_ALIGN IncbinNnue {
     Nnue::W0 w0; // feature weights, feature biases embeded into both sides kings weights
-    Nnue::W1 w1; // output weights
+    array<Nnue::_t, Nnue::ConcatIndex, Side, Nnue::AccIndex> w1; // output weights
     i64_t b1; // output bias, padded to 64 bytes
 };
 
@@ -21,7 +21,14 @@ Nnue::Nnue() {
 
     const IncbinNnue& incbin = *incbin_nnue_data;
     w0 = incbin.w0; // copy as is
-    w1 = incbin.w1; // copy as is
+
+    for (auto side : range<Side>()) {
+        for (auto n : range<AccIndex>()) {
+            w1[side][n][Pos] = incbin.w1[Pos][side][n];
+            w1[side][n][Neg] = incbin.w1[Neg][side][n];
+        }
+    }
+
     b1 = incbin.b1; // copy as is
 
     #ifndef NDEBUG
@@ -40,10 +47,10 @@ Nnue::Nnue() {
         auto w_min = 32768;
         for (auto side : range<Side>()) {
             for (auto n : range<AccIndex>()) {
-                auto w = w1[side][n];
                 for (int lane = 0; lane < 16; ++lane) {
-                    if (w_min > std::abs(w[lane])) { w_min = std::abs(w[lane]); }
-                    if (w_max < std::abs(w[lane])) { w_max = std::abs(w[lane]); }
+                    auto x = std::max(std::abs(w1[side][n][Pos][lane]), std::abs(w1[side][n][Neg][lane]));
+                    if (w_min > x) { w_min = x; }
+                    if (w_max < x) { w_max = x; }
                 }
             }
         }

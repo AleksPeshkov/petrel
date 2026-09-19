@@ -8,6 +8,7 @@ use bullet_lib::{
     },
     value::{ValueTrainerBuilder, loader::DirectSequentialDataLoader},
 };
+use std::ops::Neg;
 
 fn main() {
     const CPU_THREADS: usize = 16;
@@ -55,8 +56,10 @@ fn main() {
             let op_acc = l0.forward(op_inputs);
             let dacc = my_acc.concat(op_acc);
 
-            let l1 = builder.new_affine("l1", 2*ACC_SIZE, 1);
-            l1.forward(dacc.screlu())
+            let concatenated = dacc.concat( dacc.neg() );
+
+            let l1 = builder.new_affine("l1", 4*ACC_SIZE, 1);
+            l1.forward(concatenated.screlu())
         });
 
     trainer.optimiser.set_params_for_weight("l0b", AdamWParams{ decay: 0.0, min_weight: -4.0, max_weight: 4.0, ..Default::default() });
@@ -88,7 +91,7 @@ fn main() {
     let batches_per_superbatch = 6_104;
 
     let schedule = TrainingSchedule {
-        net_id: "h1".to_string(),
+        net_id: "concat1".to_string(),
         eval_scale: data_set_eval_scale,
         steps: TrainingSteps { batch_size, batches_per_superbatch, start_superbatch: 1, end_superbatch: final_superbatch },
         wdl_scheduler: wdl::CosineDecayWDL { start: 0.20, end: 0.10, final_superbatch },
@@ -96,17 +99,5 @@ fn main() {
         save_rate: 10,
     };
 
-    //trainer.run(&schedule, &settings, &data_loader);
-
-    trainer.load_from_checkpoint(&format!("./{}/{}-{}", &settings.output_directory, &schedule.net_id, schedule.steps.end_superbatch));
-    let schedule2 = TrainingSchedule {
-        net_id: "h2".to_string(),
-        eval_scale: data_set_eval_scale,
-        steps: TrainingSteps { batch_size: batch_size/4, batches_per_superbatch: batches_per_superbatch*4, start_superbatch: 1, end_superbatch: final_superbatch },
-        wdl_scheduler: wdl::CosineDecayWDL { start: 0.20, end: 0.10, final_superbatch },
-        lr_scheduler: lr::CosineDecayLR { initial_lr: 1e-4, final_lr: 1e-7, final_superbatch },
-        save_rate: 10,
-    };
-
-    trainer.run(&schedule2, &settings, &data_loader);
+    trainer.run(&schedule, &settings, &data_loader);
 }

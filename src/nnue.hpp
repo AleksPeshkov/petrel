@@ -26,6 +26,15 @@ inline i16x16_t adds_i16(i16x16_t a, i16x16_t b) {
 }
 
 template <typename V>
+constexpr V abs(V v) {
+    #ifdef __clang__
+        return __builtin_elementwise_abs(v);
+    #else
+        return v < 0 ? -v : v;
+    #endif
+}
+
+template <typename V>
 constexpr V max(V a, V b) {
     #ifdef __clang__
         return __builtin_elementwise_max(a, b);
@@ -108,13 +117,17 @@ struct CACHE_ALIGN Nnue {
     using Acc = array<_t, AccIndex>;
     using DualAcc = array<Acc, Side>;
 
+    enum concatenated_enum { Pos, Neg };
+    struct ConcatIndex : Index<ConcatIndex, 2, concatenated_enum> { constexpr ConcatIndex (_t i) : Index{i} {} };
+
     using W0 = array<_t, Fi, AccIndex>;
-    using W1 = DualAcc;
+    using W1 = array<_t, Side, AccIndex, ConcatIndex>;
 
     Nnue ();
 
-    static i32x8_t forward(i16x16_t x, i16x16_t w) {
-        auto c13 = clamp(x, 0, 1024) << 3; // 2^13
+    static i32x8_t forward(i16x16_t x, i16x16_t pos, i16x16_t neg) {
+        auto w = x > 0 ? pos : neg;
+        auto c13 = min(abs(x), i16x16x(1024)) << 3; // 2^13
         auto cc11 = mulhrs_i16(c13, c13); // QF = 2^11
         return madd_i16(cc11, w); // sum of two products, QF*QB
     }
@@ -124,7 +137,7 @@ struct CACHE_ALIGN Nnue {
         for (auto side : range<Side>()) {
             for (auto n : range<AccIndex>()) {
                 // safe for 32 additions (64 products)
-                sum8 += forward(dacc[side][n], this->w1[side][n]);
+                sum8 += forward(dacc[side][n], this->w1[side][n][Pos], this->w1[side][n][Neg]);
             }
         }
         i64_t output = this->b1 + hadd_i64(unpack_add_i32(sum8)); // QF*QB*WDL

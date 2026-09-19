@@ -4,6 +4,7 @@ use bullet_lib::{
     trainer::save::SavedFormat,
     value::ValueTrainerBuilder,
 };
+use std::ops::Neg;
 
 fn main() {
     const CPU_THREADS: usize = 16;
@@ -14,7 +15,7 @@ fn main() {
     const QA: f32 = 1024.0; // seems safe and large enough for 16-bit accumulator
     const QF: f32 = 2048.0; // balanced precision of QA*QA in i16
     const QB: f32 = 32.0;   // QB*WDL*f_wdl <= 32767
-    const WDL:f32 = 300.0;  // implicit output conversion 1.0 = 400 centipawns
+    const WDL:f32 = 400.0;  // implicit output conversion 1.0 = 400 centipawns
 
     let mut trainer = ValueTrainerBuilder::default().use_threads(CPU_THREADS/2)
         .optimiser(AdamW).loss_fn(|output, target| output.sigmoid().power_error(target, LOSS_POW))
@@ -51,10 +52,12 @@ fn main() {
             let op_acc = l0.forward(op_inputs);
             let dacc = my_acc.concat(op_acc);
 
-            let l1 = builder.new_affine("l1", 2*ACC_SIZE, 1);
-            l1.forward(dacc.screlu())
+            let concatenated = dacc.concat( dacc.neg() );
+
+            let l1 = builder.new_affine("l1", 4*ACC_SIZE, 1);
+            l1.forward(concatenated.screlu())
         });
 
-    trainer.load_from_checkpoint("./checkpoints/h1-120/");
-    trainer.save_to_checkpoint("./checkpoints/h1-120q32/");
+    trainer.load_from_checkpoint("./checkpoints/1024-concatenated-360/");
+    trainer.save_to_checkpoint("./checkpoints/1024-concatenated-360q32/");
 }
