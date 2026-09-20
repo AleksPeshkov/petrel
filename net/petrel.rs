@@ -60,11 +60,6 @@ fn main() {
             l1.forward(dacc.screlu())
         });
 
-    trainer.optimiser.set_params_for_weight("l0b", AdamWParams{ decay: 0.0, min_weight: -4.0, max_weight: 4.0, ..Default::default() });
-    trainer.optimiser.set_params_for_weight("l0w", AdamWParams{ decay: 0.005, min_weight: -4.0, max_weight: 4.0, ..Default::default() });
-    trainer.optimiser.set_params_for_weight("l1b", AdamWParams{ decay: 0.03, min_weight: -1.0, max_weight: 1.0, ..Default::default() });
-    trainer.optimiser.set_params_for_weight("l1w", AdamWParams{ decay: 0.03, min_weight: -f_wdl, max_weight: f_wdl, ..Default::default() });
-
     // loading directly from a `BulletFormat` file
     let data_set_eval_scale: f32 = 800.0;
     let data_set: &[&str] = &[
@@ -85,17 +80,25 @@ fn main() {
     let settings = LocalSettings { threads: CPU_THREADS/2, test_set: None, output_directory: "checkpoints", batch_queue_size: CPU_THREADS*4 };
 
     let final_superbatch = 120;
-    let batch_size = 16_384;
-    let batches_per_superbatch = 6_104;
+    let mut batch_size = 16_384;
+    let mut batches_per_superbatch = 6_104;
+    let initial_lr = 1e-3;
+    let final_lr = 1e-6;
+
+    trainer.optimiser.set_params_for_weight("l0b", AdamWParams{ decay: 0.00, min_weight: -4.0, max_weight: 4.0, ..Default::default() });
+    trainer.optimiser.set_params_for_weight("l1b", AdamWParams{ decay: 0.00, min_weight: -1.0, max_weight: 1.0, ..Default::default() });
+    trainer.optimiser.set_params_for_weight("l0w", AdamWParams{ decay: 0.01, min_weight: -4.0, max_weight: 4.0, ..Default::default() });
+
+    trainer.optimiser.set_params_for_weight("l1w", AdamWParams{ decay: 0.03, min_weight: -f_wdl, max_weight: f_wdl, ..Default::default() });
+    batch_size /= 4; batches_per_superbatch *= 4;
 
     let schedule = TrainingSchedule {
-        net_id: "h1".to_string(),
+        net_id: "1x1".to_string(),
         eval_scale: data_set_eval_scale,
         steps: TrainingSteps { batch_size, batches_per_superbatch, start_superbatch: 1, end_superbatch: final_superbatch },
-        wdl_scheduler: wdl::CosineDecayWDL { start: 0.20, end: 0.10, final_superbatch },
-        lr_scheduler: lr::CosineDecayLR { initial_lr: 1e-3, final_lr: 1e-5, final_superbatch },
+        wdl_scheduler: wdl::CosineDecayWDL { start: 0.0, end: 0.10, final_superbatch },
+        lr_scheduler: lr::CosineDecayLR { initial_lr, final_lr, final_superbatch },
         save_rate: 10,
     };
-
     trainer.run(&schedule, &settings, &data_loader);
 }
