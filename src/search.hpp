@@ -67,9 +67,6 @@ protected:
     constexpr auto& parent() const { return ancestor(1_ply); } // previous (ply-1) opposite side to move node
     constexpr auto& child() const { return descendant(1_ply); } // child (ply+1) node to make moves into
 
-    constexpr Move counterMove() const;
-    constexpr Move followupMove() const;
-
     constexpr bool isRoot() const { return ply == 0_ply; } // ply == 0
     constexpr bool isPv() const { return ply == pvPly; } // ply == pvPly
     constexpr bool isCutNode() const { return (+ply - +pvPly) & 1; } // odd (ply - pvPly)
