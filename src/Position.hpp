@@ -108,7 +108,7 @@ class Position {
     // copy parent position but flip sides
     void flip(const Position& parent);
 
-    enum MakeMoveFlags {
+    enum make_move_flags_enum {
         Fast = 0,
         WithZobrist = 0b01, NoEval = WithZobrist,
         WithEval = 0b10,
@@ -116,7 +116,7 @@ class Position {
     };
 
     // return flag to reset child ZHash
-    template <Side::_t, MakeMoveFlags> bool makeMove(Square, Square, auto&& prefetch);
+    template <Side::_t, make_move_flags_enum> bool makeMove(Square, Square, auto&& prefetch);
 
     Zobrist generateZobrist() const; // calculate Zobrist key from scratch
 

@@ -131,7 +131,7 @@ constexpr void DualAcc::castle(const Position& pos, Square kingFrom, Square king
     side[My].castle(~mirror[My], Op, kingFrom, kingTo, rookFrom, rookTo);
 }
 
-template <Side::_t My, Position::MakeMoveFlags Flags>
+template <Side::_t My, Position::make_move_flags_enum Flags>
 bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
     constexpr Side::_t Op{~My};
 
