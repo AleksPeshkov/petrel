@@ -238,7 +238,7 @@ public:
 };
 
 class PiType {
-    enum pieces_t : u8_t {
+    enum piece_type_bit_enum : u8_t {
         None    = 0,
         Queens  = ::singleton<u8_t>(Queen),
         Rooks   = ::singleton<u8_t>(Rook),
@@ -256,11 +256,11 @@ class PiType {
         PNB      = Pawns | Knights | Bishops,
     };
 
-    using element_type = pieces_t;
+    using element_type = piece_type_bit_enum;
 
     // defined to make debugging clear
     union {
-        array<pieces_t, Pi> type;
+        array<piece_type_bit_enum, Pi> type;
         u8x16_t u8x16;
     };
 
@@ -331,7 +331,7 @@ public:
 };
 
 class PiTrait {
-    enum trait_t : u8_t {
+    enum piece_trait_enum : u8_t {
         None        = 0,
         Checkers    = ::singleton<u8_t>(0), // any piece actually attacking enemy king
         Pinners     = ::singleton<u8_t>(1), // potential pinner: sliding piece that can attack the enemy king square on empty board
@@ -341,7 +341,7 @@ class PiTrait {
         CheckersPinners = Checkers | Pinners, // Checkers + Pinners
     };
 
-    using element_type = trait_t;
+    using element_type = piece_trait_enum;
 
     // defined to make debugging clear
     union {
