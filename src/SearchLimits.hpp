@@ -22,10 +22,10 @@ class UciPosition;
 
 class SearchLimits {
     // thinking time pool scaled to OptimumTimeQuota = 100% of averageMoveTime()
-    enum time_quota_t { IterationQuota = 13, OptimumTimeQuota = 20, MaxQuota = 64 };
+    enum time_quota_enum { IterationQuota = 13, OptimumTimeQuota = 20, MaxQuota = 64 };
 
     // NormalMove time = 100% of averageMoveTime(), EasyMove = 3/5, HardMove = 8/5 (Fibonacci numbers)
-    enum time_strategy_t { ExactTime = 0, EasyMove = 3, NormalMove = 5, HardMove = 8 };
+    enum time_strategy_enum { ExactTime = 0, EasyMove = 3, NormalMove = 5, HardMove = 8 };
 
     static constexpr TimeInterval UnlimitedTime{TimeInterval::max()};
     static constexpr node_count_t NodeCountMax{std::numeric_limits<node_count_t>::max()};
@@ -58,13 +58,13 @@ class SearchLimits {
     // less pieces remain, the better BF, the less time to finish iteration needed in average
     int lowMaterialQuotaBonus_{0};
 
-    time_strategy_t timeStrategy_{ExactTime}; // ExactTime = 0, EasyMove = 3, NormalMove = 5, HardMove = 8
+    time_strategy_enum timeStrategy_{ExactTime}; // ExactTime = 0, EasyMove = 3, NormalMove = 5, HardMove = 8
     Move  lastMove_{}; // last best root move (for updating timeStrategy_)
     Score lastScore_{}; // last best root move score (for updating timeStrategy_)
     Ply hardMoveDepth_{0}; // iteration when HardMove triggered
 
 private:
-    template <time_quota_t TimeQuota>
+    template <time_quota_enum TimeQuota>
     [[nodiscard]] ReturnStatus reachedTime() const;
 
     void assertNodesOk() const;
