@@ -36,7 +36,7 @@ ReturnStatus SearchLimits::refreshQuota() {
     return lastDeadlineReached();
 }
 
-template <SearchLimits::time_quota_t TimeQuota>
+template <SearchLimits::time_quota_enum TimeQuota>
 ReturnStatus SearchLimits::reachedTime() const {
     if (stop_.load(std::memory_order_seq_cst)) { return ReturnStatus::Stop; } // unconditional stop
     if (timePool_ == UnlimitedTime || pondering_.load(std::memory_order_relaxed)) { return ReturnStatus::Continue; }
