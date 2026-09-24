@@ -93,7 +93,7 @@ void Node::clearNode() {
     pvIndex = PrincipalVariation::Index{+parent().pvIndex + 1};
     alpha = -parent().beta;
     beta = -parent().alpha;
-    killers[0] = hasGrandParent() ? grandParent().killers[0] : Move{};
+    killers[0] = hasAncestor(2_ply) ? ancestor(2_ply).killers[0] : Move{};
     killers[1] = {};
 }
 
@@ -300,9 +300,9 @@ ReturnStatus Node::search() {
     assert ((inCheck() && eval.none()) || (!inCheck() && eval.isEval()));
     assert (bestMove.none() || isPossibleMove(bestMove));
 
-    if (ply == MaxPly) {
+    if (!hasChild()) {
         // no room to search deeper
-        score = inCheck() ? Score::mateLoss(ply) : cEval;
+        score = inCheck() ? alpha : cEval;
         assert (currentMove.none());
         return ReturnStatus::Continue;
     }
@@ -699,7 +699,7 @@ constexpr Move Node::counterMove() const {
 }
 
 constexpr Move Node::followupMove() const {
-    return hasGrandParent() ? grandParent().currentMove : Move{};
+    return hasAncestor(2_ply) ? ancestor(2_ply).currentMove : Move{};
 }
 
 void Node::saveNode() {
@@ -736,8 +736,8 @@ void Node::saveHistory() {
         }
     }
 
-    if (!hasGrandParent()) { return; } // ply-2
-    insert_unique_pos<1>(grandParent().killers, bestMove);
+    if (!hasAncestor(2_ply)) { return; } // ply-2
+    insert_unique_pos<1>(ancestor(2_ply).killers, bestMove);
     if (followupMove().any()) {
         the_uci.contMoves.set(Followup, colorToMove(), followupMove(), bestMove);
         if (isDeep) {
@@ -789,9 +789,9 @@ bool Node::isRepetition() const {
 
     if (ply > 4_ply) {
         // search tree repetitions (2-fold is draw); ply and ply-2 cannot be chess position repetitions
-        auto* next = &grandParent();
+        auto* next = &ancestor(2_ply);
         while (!next->zHash().none(z)) {
-            next = &next->grandParent();
+            next = &next->ancestor(2_ply);
             assert (next);
             if (next->z() == z) { return true; }
         }

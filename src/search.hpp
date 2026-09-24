@@ -58,14 +58,13 @@ protected:
     constexpr Ply finalR(Ply) const;
 
     constexpr bool hasAncestor(Ply n) const { return ply >= n; }
-    constexpr bool hasDescendant(Ply n) const { return ply <= Ply{Ply::last()} - n; }
-    constexpr bool hasParent() const { return hasAncestor(1_ply); }
-    constexpr bool hasGrandParent() const { return hasAncestor(2_ply); }
+    constexpr bool hasDescendant(Ply n) const { return ply <= MaxPly - n; }
+    constexpr bool hasParent() const { return !isRoot(); }
+    constexpr bool hasChild() const { return ply < MaxPly; }
 
     constexpr auto& ancestor(Ply n) const { assert (hasAncestor(n)); return *(const_cast<Node*>(this) - +n); } // ply-n
     constexpr auto& descendant(Ply n) const { assert (hasDescendant(n)); return *(const_cast<Node*>(this) + +n); } // ply+n
     constexpr auto& parent() const { return ancestor(1_ply); } // previous (ply-1) opposite side to move node
-    constexpr auto& grandParent() const { return ancestor(2_ply); } // previous side to move node (ply-2)
     constexpr auto& child() const { return descendant(1_ply); } // child (ply+1) node to make moves into
 
     constexpr Move counterMove() const;
