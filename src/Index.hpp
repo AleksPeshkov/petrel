@@ -169,8 +169,8 @@ public:
     }
 };
 
-enum file_t { FileH, FileG, FileF, FileE, FileD, FileC, FileB, FileA, };
-struct File : Index<File, 8, file_t> {
+enum file_enum { FileH, FileG, FileF, FileE, FileD, FileC, FileB, FileA, };
+struct File : Index<File, 8, file_enum> {
     using Index::Index;
 
     constexpr io::char_type to_char() const { return static_cast<io::char_type>('h' - v_); }
@@ -194,8 +194,8 @@ struct File : Index<File, 8, file_t> {
     static constexpr auto a_to_h() { return ::range<File>() | std::views::reverse; }
 };
 
-enum rank_t { Rank8, Rank7, Rank6, Rank5, Rank4, Rank3, Rank2, Rank1, };
-struct Rank : Index<Rank, 8, rank_t> {
+enum rank_enum { Rank8, Rank7, Rank6, Rank5, Rank4, Rank3, Rank2, Rank1, };
+struct Rank : Index<Rank, 8, rank_enum> {
     using Index::Index;
 
     constexpr Rank forward() const { return Rank{static_cast<Rank::_t>(v_ + Rank2 - Rank1)}; }
@@ -219,10 +219,10 @@ struct Rank : Index<Rank, 8, rank_t> {
     }
 };
 
-enum direction_t { FileDir, RankDir, DiagonalDir, AntidiagDir };
-struct Direction : Index<Direction, 4, direction_t> { using Index::Index; };
+enum direction_enum { FileDir, RankDir, DiagonalDir, AntidiagDir };
+struct Direction : Index<Direction, 4, direction_enum> { using Index::Index; };
 
-enum square_t : u8_t {
+enum square_enum : u8_t {
     H8, G8, F8, E8, D8, C8, B8, A8,
     H7, G7, F7, E7, D7, C7, B7, A7,
     H6, G6, F6, E6, D6, C6, B6, A6,
@@ -234,7 +234,7 @@ enum square_t : u8_t {
 };
 
 class Bb;
-class Square : public Index<Square, 64, square_t> {
+class Square : public Index<Square, 64, square_enum> {
     enum { FileShift = 0, RankShift = FileShift + File::bit_width() };
 
 public:
@@ -281,36 +281,36 @@ public:
     friend ostream& operator << (ostream& os, Square sq) { return os << sq.file() << sq.rank(); }
 };
 
-enum color_t { White, Black };
-constexpr color_t operator ~ (color_t color) { return static_cast<color_t>(color ^ 1); }
+enum color_enum { White, Black };
+constexpr color_enum operator ~ (color_enum color) { return static_cast<color_enum>(color ^ 1); }
 
-template <> struct CharMap<color_t> { static constexpr io::czstring The_string = "wb"; };
-class Color : public IndexChar<Color, 2, color_t> {
+template <> struct CharMap<color_enum> { static constexpr io::czstring The_string = "wb"; };
+class Color : public IndexChar<Color, 2, color_enum> {
 public:
     using IndexChar::IndexChar;
     constexpr Color operator ~ () const { return Color{~v_}; }
 };
 
-enum side_to_move_t {
+enum side_to_move_enum {
     My, // side to move
     Op, // not side to move
 };
-constexpr side_to_move_t operator ~ (side_to_move_t side) { return static_cast<side_to_move_t>(side ^ 1); }
-struct Side : Index<Side, 2, side_to_move_t> { using Index::Index;
+constexpr side_to_move_enum operator ~ (side_to_move_enum side) { return static_cast<side_to_move_enum>(side ^ 1); }
+struct Side : Index<Side, 2, side_to_move_enum> { using Index::Index;
     constexpr Side (_t v) : Index{v} {}
 };
 
-enum chess_variant_t { Orthodox, Chess960 };
-struct ChessVariant : Index<ChessVariant, 2, chess_variant_t> { using Index::Index; };
+enum chess_variant_enum { Orthodox, Chess960 };
+struct ChessVariant : Index<ChessVariant, 2, chess_variant_enum> { using Index::Index; };
 
-enum castling_side_t { KingSide, QueenSide };
-template <> struct CharMap<castling_side_t> { static constexpr io::czstring The_string = "kq"; };
-struct CastlingSide : IndexChar<CastlingSide, 2, castling_side_t> { using IndexChar::IndexChar; };
+enum castling_side_enum { KingSide, QueenSide };
+template <> struct CharMap<castling_side_enum> { static constexpr io::czstring The_string = "kq"; };
+struct CastlingSide : IndexChar<CastlingSide, 2, castling_side_enum> { using IndexChar::IndexChar; };
 
-enum piece_index_t : u8_t { TheKing }; // king index is always 0
-struct Pi : Index<Pi, 16, piece_index_t> { using Index::Index; };
+enum piece_index_enum : u8_t { TheKing }; // king index is always 0
+struct Pi : Index<Pi, 16, piece_index_enum> { using Index::Index; };
 
-enum piece_type_t {
+enum piece_type_enum {
     Queen = 0,
     Rook = 1,
     Bishop = 2,
@@ -318,27 +318,27 @@ enum piece_type_t {
     Pawn = 4,
     King = 5,
 };
-template <> struct CharMap<piece_type_t> { static constexpr io::czstring The_string = "qrbnpk"; };
+template <> struct CharMap<piece_type_enum> { static constexpr io::czstring The_string = "qrbnpk"; };
 
 // Queen, Rook, Bishop
-struct SliderType : Index<SliderType, 3, piece_type_t> { using Index::Index; };
+struct SliderType : Index<SliderType, 3, piece_type_enum> { using Index::Index; };
 
 // Queen, Rook, Bishop, Knight
-struct PromoType : IndexChar<PromoType, 4, piece_type_t> { using IndexChar::IndexChar; };
+struct PromoType : IndexChar<PromoType, 4, piece_type_enum> { using IndexChar::IndexChar; };
 
  // Queen, Rook, Bishop, Knight, Pawn
-struct NonKingType : Index<NonKingType, 5, piece_type_t> { using Index::Index; };
+struct NonKingType : Index<NonKingType, 5, piece_type_enum> { using Index::Index; };
 
 // Queen, Rook, Bishop, Knight, Pawn, King
-struct PieceType : IndexChar<PieceType, 6, piece_type_t> {
+struct PieceType : IndexChar<PieceType, 6, piece_type_enum> {
     constexpr PieceType (PieceType::_t ty) : IndexChar{ty} {}
     constexpr PieceType (SliderType ty) : IndexChar{*ty} {}
     constexpr PieceType (PromoType ty) : IndexChar{*ty} {}
     constexpr PieceType (NonKingType ty) : IndexChar{*ty} {}
 };
 
-constexpr bool isSlider(piece_type_t ty) { return ty < Knight; } // Queen, Rook, Bishop
-constexpr bool isLeaper(piece_type_t ty) { return ty >= Knight; } // Knight, Pawn, King
+constexpr bool isSlider(piece_type_enum ty) { return ty < Knight; } // Queen, Rook, Bishop
+constexpr bool isLeaper(piece_type_enum ty) { return ty >= Knight; } // Knight, Pawn, King
 
 // encoding of the promoted piece type inside "to" square
 constexpr Rank rankOf(PromoType ty) { return Rank{static_cast<Rank::_t>(*ty)}; }
@@ -355,8 +355,8 @@ enum class ReturnStatus {
 #define RETURN_IF_STOP(visitor) { if (visitor == ReturnStatus::Stop) { return ReturnStatus::Stop; } } ((void)0)
 #define RETURN_CUTOFF(visitor) { ReturnStatus status = visitor; if (status != ReturnStatus::Continue) { return status; }} ((void)0)
 
-enum move_type_t { MoveSpecial, MoveRB, MoveQN, MoveKing };
-struct MoveType : Index<MoveType, 4, move_type_t> { using Index::Index; };
+enum move_type_enum { MoveSpecial, MoveRB, MoveQN, MoveKing };
+struct MoveType : Index<MoveType, 4, move_type_enum> { using Index::Index; };
 
 enum class CanBeKiller { No, Yes }; // No = 0, Yes = 1
 
@@ -429,7 +429,7 @@ class Move {
             Square::_t to_ : Square::bit_width();
             Square::_t from_ : Square::bit_width();
             CanBeKiller canBeKiller_ : 1;
-            move_type_t moveType_ : MoveType::bit_width();
+            move_type_enum moveType_ : MoveType::bit_width();
         } u;
     };
 #else
@@ -465,11 +465,11 @@ class Z {
 public:
     using _t = u64_t;
 
-    enum zobrist_index_t { Castling = 6, EnPassant = 7 };
+    enum zobrist_index_enum { Castling = 6, EnPassant = 7 };
     struct Index : ::Index<Index, 8> {
         using Base = ::Index<Index, 8>;
         constexpr Index (PieceType::_t ty) : Base{ty} {}
-        constexpr Index (zobrist_index_t ty) : Base{ty} {}
+        constexpr Index (zobrist_index_enum ty) : Base{ty} {}
         constexpr Index (PieceType ty) : Base{*ty} {}
         constexpr Index (NonKingType ty) : Base{*ty} {}
         constexpr Index (PromoType ty) : Base{*ty} {}
