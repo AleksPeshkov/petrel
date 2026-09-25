@@ -14,7 +14,7 @@ inline i64x4_t unpack_add_i32(i32x8_t a) {
 struct CACHE_ALIGN Nnue {
     struct FeatureIndex : ::Index<FeatureIndex, 2*6*64> { using Index::Index;
         constexpr FeatureIndex (Side side, Piece piece, Square sq)
-            : Index{ (+side * 6*64) + (+piece * 64) + (+sq) }
+            : Index{ (+piece*128) + (+side*64) + (+sq) }
         {}
     };
 
@@ -29,7 +29,7 @@ struct CACHE_ALIGN Nnue {
 
     W0 w0;    // feature weights, 768*(64*32) = 1572864 bytes, feature biases embeded into kings weights
     W1 w1;    // output weights, 2*(64*32) = 4096 bytes
-    i64_t b1; // output bias (64 byte aligned), total = 1577024 bytes
+    i32_t b1; // output bias (64 byte aligned), total = 1577024 bytes
 
     Nnue ();
 
