@@ -13,7 +13,7 @@ fn main() {
 
     const QA: f32 = 1024.0; // seems safe and large enough for 16-bit accumulator
     const QB: f32 = 32.0;   // QB*WDL*f_wdl <= 32767
-    const WDL:f32 = 400.0;  // implicit output conversion 1.0 = 400 centipawns
+    const WDL:f32 = 300.0;  // implicit output conversion 1.0 = 300 centipawns
 
     let mut trainer = ValueTrainerBuilder::default().use_threads(CPU_THREADS/2)
         .optimiser(AdamW).loss_fn(|output, target| output.sigmoid().power_error(target, LOSS_POW))
@@ -55,5 +55,5 @@ fn main() {
         });
 
     trainer.load_from_checkpoint("./checkpoints/1024-hm03-360/");
-    trainer.save_to_checkpoint("./checkpoints/1024-hm03-360q32/");
+    trainer.save_to_checkpoint("./quantised/");
 }
