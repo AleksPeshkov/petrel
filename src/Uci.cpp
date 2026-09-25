@@ -794,19 +794,22 @@ Uci::Uci(ostream& os) :
 
 void Uci::newGame() {
     the_tt.newGame();
+    the_ttMeta.newGame();
     contMoves = {};
     checkMoves = {};
     go_.isNewGame = true;
 }
 
 void Uci::newSearch() {
+    the_tt.newSearch(the_ttMeta.writes > 0);
+    the_ttMeta.newSearch();
+
     std::string bestmove; // empty
     swapBestMove(bestmove); // cleanup
     if (!bestmove.empty()) { error("newsearch(), bestmove was not empty: ", bestmove); }
 
     lastInfoTime_ = lastNpsTime_ = limits.newSearch();
     lastInfoNodes_ = lastNpsNodes_ = 0;
-    the_tt.newSearch();
     rootBestMoves = {};
 }
 
@@ -1400,7 +1403,7 @@ void Uci::perft() {
 
     Ply depth{1};
     inputLine >> depth;
-    depth = std::min<Ply>(depth, 18_ply); // current Tt implementation limit
+    depth = std::clamp(depth, 1_ply, 18_ply); // current Tt implementation limit
 
     mainSearchThread.start([this, depth] {
         NodePerft{position_, depth}.visitRoot();
@@ -1496,9 +1499,9 @@ void Uci::bench(std::string_view goLimits) {
 
             benchTime += ::elapsedSince(searchStart);
             benchNodes += limits.getNodes();
-            ttHits += the_tt.hits;
-            ttReads += the_tt.reads;
-            ttWrites += the_tt.writes;
+            ttReads += the_ttMeta.reads;
+            ttHits += the_ttMeta.hits;
+            ttWrites += the_ttMeta.writes;
         }
 
         info_bestmove();
@@ -1509,7 +1512,7 @@ void Uci::bench(std::string_view goLimits) {
 
         Output ob;
         ob << '\n'
-            << Mega{ttWrites} << " tt-writes, " << Mega{ttHits} << " tt-hits, " << Mega{ttReads} << " tt-reads\n"
+            << Mega{ttReads} << " tt-reads, "  << Mega{ttHits} << " tt-hits, " << Mega{ttWrites} << " tt-writes\n"
             << Mega{benchNodes} << " nodes " << Mega{(benchMicroseconds)} << " usec " << Mega{::nps(benchNodes, benchTime)} << " nps";
     }
 }
