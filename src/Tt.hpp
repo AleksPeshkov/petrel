@@ -6,52 +6,18 @@
 #include "Index.hpp"
 #include "Score.hpp"
 
-// Valid age is [1, 2, 3]
-class TtAge {
-public:
-    using _t = unsigned;
-
-    static constexpr int bit_width() { return 2; }
-    static constexpr _t mask() { return singleton(bit_width()) - 1u; }
-
-    constexpr TtAge () : v_{1} {}
-    constexpr void nextAge() { v_ = next().v_; }
-
-    constexpr bool isNone() const { return v_ == 0; }
-    constexpr bool isAny() const { return !isNone(); }
-
-    constexpr bool is(TtAge age) const { return v_ == age.v_; }
-    constexpr bool isFresh(TtAge age) const { return is(age) || is(age.next()); }
-
-    template <typename P, typename S>
-    constexpr P pack(S shift) { return ::pack<P>(v_, shift); }
-
-    template <typename T, typename S>
-    static constexpr TtAge unpack(T packed, S shift) { return TtAge{::unpack(packed, shift, mask())}; }
-
-private:
-    _t v_;
-
-    constexpr explicit TtAge (_t v) : v_{v} { assert (v <= mask()); }
-    constexpr TtAge next() const { return v_ == mask() ? TtAge{} : TtAge{v_ + 1}; }
-};
-
 class Tt {
 public:
     static constexpr size_t minSize() { return 64; }
     static size_t maxSize() { return ::bit_floor(System::getAvailableMemory()); }
-
-    mutable node_count_t hits = 0;
-    mutable node_count_t reads = 0;
-    mutable node_count_t writes = 0;
 
     Tt(size_t bytes) { setSize(bytes); }
     ~Tt() { free(); }
 
     constexpr size_t size() const { return size_; }
     void setSize(size_t bytes) { allocate(bytes); zeroFill(); }
-    void newGame() { zeroFill(); age = {}; }
-    void newSearch() { zeroed_ = false; reads = 0; writes = 0; hits = 0; }
+    void newGame() { zeroFill(); }
+    void newSearch(bool isDirty) { if (isDirty) { zeroed_ = false; } }
 
     template <typename T>
     constexpr T* addr(Z z) const {
@@ -70,18 +36,10 @@ public:
         return static_cast<T*>( prefetch<sizeof(T)>(z) );
     }
 
-    template <typename P, typename S>
-    constexpr P packAge(S shift) { return age.pack<P>(shift); }
-
-    constexpr void nextAge() { age.nextAge(); }
-    constexpr bool isSameAge(TtAge a) const { return age.is(a); }
-    constexpr bool isFresh(TtAge a) const { return age.isFresh(a); }
-
 private:
     void* allocated_{nullptr};
     size_t size_{0};
     bool zeroed_{false};
-    TtAge age;
 
     template <size_t Align>
     constexpr void* addr(Z z) const {
@@ -131,6 +89,56 @@ private:
     }
 };
 extern Tt the_tt;
+
+// Valid age is [1, 2, 3]
+class TtAge {
+public:
+    using _t = unsigned;
+
+    constexpr _t operator + () const { return v_; }
+
+    static constexpr int bit_width() { return 2; }
+    static constexpr _t mask() { return singleton(bit_width()) - 1u; }
+
+    constexpr TtAge () : v_{1} {}
+    constexpr void nextAge() { v_ = next().v_; }
+
+    constexpr bool isNone() const { return v_ == 0; }
+    constexpr bool isAny() const { return !isNone(); }
+
+    constexpr bool is(TtAge age) const { return v_ == age.v_; }
+    constexpr bool isFresh(TtAge age) const { return is(age) || is(age.next()); }
+
+    template <typename P, typename S>
+    constexpr P pack(S shift) { return ::pack<P>(v_, shift); }
+
+    template <typename T, typename S>
+    static constexpr TtAge unpack(T packed, S shift) { return TtAge{::unpack(packed, shift, mask())}; }
+
+private:
+    _t v_;
+
+    constexpr explicit TtAge (_t v) : v_{v} { assert (v <= mask()); }
+    constexpr TtAge next() const { return v_ == mask() ? TtAge{} : TtAge{v_ + 1}; }
+};
+
+class TtMeta {
+public:
+    std::atomic<node_count_t> reads = 0;
+    std::atomic<node_count_t> hits = 0;
+    std::atomic<node_count_t> writes = 0;
+
+private:
+    TtAge age_;
+
+public:
+    void newGame() { age_ = {}; }
+    void newSearch() { reads = 0; hits = 0; writes = 0; }
+
+    constexpr TtAge age() const { return age_; }
+    constexpr void nextAge() { age_.nextAge(); }
+};
+extern TtMeta the_ttMeta;
 
 struct TtRecord;
 
@@ -185,14 +193,14 @@ public:
         | _score.tt(ply).pack<_t>(ShiftScore)
         | _bound.pack<_t>(ShiftBound)
         | _draft.pack<_t>(ShiftDraft)
-        | the_tt.packAge<_t>(ShiftAge)
+        | the_ttMeta.age().pack<_t>(ShiftAge)
     } {
         static_assert (sizeof(TtEntry) == sizeof(u64_t));
 
         assert (score(0_ply) == _score.tt(ply));
         assert (bound().is(_bound));
         assert (draft() == _draft);
-        assert (the_tt.isSameAge(age()));
+        assert (the_ttMeta.age().is(age()));
         assert (ttMove(z) == _ttMove);
     }
 
@@ -208,24 +216,25 @@ public:
     constexpr TtMove ttMove(Z z) const { return TtMove::unpack(v_ ^ +z, ShiftMove); }
 
     //TRICK: zeroed entry is never fresh
-    bool isFresh() const { return the_tt.isFresh(age()); }
+    bool isFresh() const { return the_ttMeta.age().isFresh(age()); }
 
     void refresh(TtEntry* tt) {
-        if (!the_tt.isSameAge(age())) {
+        auto metaAge = the_ttMeta.age();
+        if (!metaAge.is(age())) {
             v_ ^= age().pack<_t>(ShiftAge); // clear previous
-            v_ |= the_tt.packAge<_t>(ShiftAge); // set new value
+            v_ |= metaAge.pack<_t>(ShiftAge); // set new value
             write(tt);
         }
     }
 
     static TtEntry read(TtEntry* tt) {
-        ++the_tt.reads;
+        ++the_ttMeta.reads;
         return std::bit_cast<TtEntry>(std::bit_cast<std::atomic<_t>*>(tt)->load(std::memory_order_relaxed));
     }
 
     void write(TtEntry* tt) const {
         std::bit_cast<std::atomic<_t>*>(tt)->store(this->v_, std::memory_order_relaxed);
-        ++the_tt.writes;
+        ++the_ttMeta.writes;
     }
 
     static constexpr TtRecord probe(TtEntry* tt, Z z);
@@ -242,7 +251,7 @@ constexpr TtRecord TtEntry::probe(TtEntry* tt, Z z) {
     auto ttEntry2 = read(tt2);
     if (ttEntry2 == z) { return {ttEntry2, tt2, true}; }
 
-    // preserve fresh
+    // overwrite the only non fresh entry
     //TRICK: zeroed entry is never fresh
     bool f1 = ttEntry.isFresh();
     bool f2 = ttEntry2.isFresh();
