@@ -91,7 +91,7 @@ inline i64_t hadd_i64(i64x4_t sum4) {
 struct CACHE_ALIGN Nnue {
     struct FeatureIndex : ::Index<FeatureIndex, 2*6*64> { using Index::Index;
         constexpr FeatureIndex (Side side, Piece piece, Square sq)
-            : Index{ (+side * 6*64) + (+piece * 64) + (+sq) }
+            : Index{ (+piece*128) + (+side*64) + (+sq) }
         {}
     };
 
