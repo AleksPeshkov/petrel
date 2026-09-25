@@ -6,41 +6,6 @@
 
 // unpractical overengineered transposition table replacement scheme only for experiments
 
-class HashAge {
-public:
-    using _t = int;
-    enum {AgeBits = 3, AgeMask = (1u << AgeBits)-1};
-
-private:
-    _t v_;
-
-public:
-    constexpr HashAge () : v_(1) {}
-    constexpr int operator + () { return v_; }
-
-    void nextAge() {
-        //there are "AgeMask" ages, not "1 << AgeBits", because of:
-        //1) we want to break 4*n ply transposition pattern
-        //2) make sure that initally clear entry is never hidden
-        auto a = (v_ + 1) & AgeMask;
-        v_ = a ? a : 1;
-    }
-
-};
-
-class TtPerft : public Tt {
-public:
-    HashAge hashAge;
-    HashAge getAge() const { return hashAge; }
-    void nextAge() { hashAge.nextAge(); }
-
-    void newGame() { Tt::newGame(); hashAge = {}; }
-    void newIteration() { hashAge.nextAge(); }
-
-    node_count_t get(Z, Ply);
-    void set(Z, Ply, node_count_t);
-};
-
 class CACHE_ALIGN HashBucket {
 public:
     using _t = u64x2_t;
@@ -104,13 +69,13 @@ class PerftRecord {
     Z key;
     node_count_t nodes;
 
-    enum { DepthBits = 6, DepthShift = 64 - DepthBits, AgeShift = DepthShift - HashAge::AgeBits };
+    enum { DepthBits = 6, DepthShift = 64 - DepthBits, AgeShift = DepthShift - TtAge::bit_width() };
 
     static const node_count_t DepthMask = static_cast<node_count_t>((1 << DepthBits)-1) << DepthShift;
-    static const node_count_t AgeMask = static_cast<node_count_t>((1 << HashAge::AgeBits)-1) << AgeShift;
+    static const node_count_t AgeMask = static_cast<node_count_t>(TtAge::mask()) << AgeShift;
     static const node_count_t NodesMask = DepthMask | AgeMask;
 
-    static constexpr node_count_t createNodes(node_count_t n, Ply d, HashAge age) {
+    static constexpr node_count_t createNodes(node_count_t n, Ply d, TtAge age) {
         //assert (n == (n & ~NodesMask));
         return (n & ~NodesMask) | (static_cast<decltype(nodes)>(+age) << AgeShift) | (static_cast<decltype(nodes)>(+d) << DepthShift);
     }
@@ -120,7 +85,7 @@ public:
         return (key == z) && (getDepth() == d);
     }
 
-    constexpr bool isAgeMatch(HashAge age) const {
+    constexpr bool isAgeMatch(TtAge age) const {
         return ((nodes & AgeMask) >> AgeShift) == static_cast<decltype(nodes)>(+age);
     }
 
@@ -136,12 +101,12 @@ public:
         return nodes & ~NodesMask;
     }
 
-    constexpr void set(Z z, Ply d, node_count_t n, HashAge age) {
+    constexpr void set(Z z, Ply d, node_count_t n, TtAge age) {
         key = z;
         nodes = createNodes(n, d, age);
     }
 
-    constexpr void setAge(HashAge age) {
+    constexpr void setAge(TtAge age) {
         nodes = (nodes & ~AgeMask) | (static_cast<decltype(nodes)>(+age) << AgeShift);
     }
 
@@ -155,37 +120,39 @@ union BucketUnion {
     HashBucket m;
 };
 
-node_count_t TtPerft::get(Z z, Ply d) {
-    ++reads;
+namespace {
 
-    auto* origin = addr<BucketUnion>(z);
+node_count_t getTt(Z z, Ply d) {
+    ++the_ttMeta.reads;
+
+    auto* origin = the_tt.addr<BucketUnion>(z);
     auto o = *origin;
 
     if (o.u.d[0].isKeyMatch(z, d)) {
-        ++hits;
+        ++the_ttMeta.hits;
         return o.u.d[0].getNodes();
     }
 
     if (o.u.d[1].isKeyMatch(z, d)) {
-        ++hits;
+        ++the_ttMeta.hits;
         return o.u.d[1].getNodes();
     }
 
     if (o.u.d[2].isKeyMatch(z, d)) {
-        ++hits;
+        ++the_ttMeta.hits;
         return o.u.d[2].getNodes();
     }
 
     if (o.u.d[3].isKeyMatch(z, d)) {
-        ++hits;
+        ++the_ttMeta.hits;
         return o.u.d[3].getNodes();
     }
 
     if (o.u.b[0].isKeyMatch(z, d)) {
-        ++hits;
+        ++the_ttMeta.hits;
         auto n = o.u.b[0].getNodes();
         if (d >= o.u.b[1].getDepth()) {
-            o.u.b[0].setAge(hashAge);
+            o.u.b[0].setAge(the_ttMeta.age());
             origin->m.set(3, o.m[2]);
             origin->m.set(2, o.m[3]);
         }
@@ -193,7 +160,7 @@ node_count_t TtPerft::get(Z z, Ply d) {
     }
 
     if (o.u.b[1].isKeyMatch(z, d)) {
-        ++hits;
+        ++the_ttMeta.hits;
         auto n = o.u.b[1].getNodes();
         return n;
     }
@@ -201,15 +168,15 @@ node_count_t TtPerft::get(Z z, Ply d) {
     return NodeCountNone;
 }
 
-void TtPerft::set(Z z, Ply d, node_count_t n) {
-    ++writes;
+void setTt(Z z, Ply d, node_count_t n) {
+    ++the_ttMeta.writes;
 
-    auto origin = addr<BucketUnion>(z);
+    auto origin = the_tt.addr<BucketUnion>(z);
     auto u = *origin;
 
     auto b0d = u.u.b[0].getDepth();
 
-    if (u.u.b[0].isAgeMatch(hashAge) && d < b0d && n <= std::numeric_limits<u32_t>::max() && +d <= 0xf) {
+    if (u.u.b[0].isAgeMatch(the_ttMeta.age()) && d < b0d && n <= std::numeric_limits<u32_t>::max() && +d <= 0xf) {
         //deep slots are occupied, update only short slot if possible
 
         if (d == 0_ply) {
@@ -253,9 +220,9 @@ void TtPerft::set(Z z, Ply d, node_count_t n) {
         origin->m.set(1, u.m[1]);
     }
 
-    u.u.b[0].set(z, d, n, hashAge);
+    u.u.b[0].set(z, d, n, the_ttMeta.age());
 
-    if (u.u.b[1].isAgeMatch(hashAge) && d < u.u.b[1].getDepth()) {
+    if (u.u.b[1].isAgeMatch(the_ttMeta.age()) && d < u.u.b[1].getDepth()) {
         //move current data in the middle slot
         origin->m.set(2, u.m[2]);
         return;
@@ -265,6 +232,8 @@ void TtPerft::set(Z z, Ply d, node_count_t n) {
     origin->m.set(2, u.m[3]);
     origin->m.set(3, u.m[2]);
 }
+
+} // end of anonymous namespace
 
 ReturnStatus NodePerft::visitRoot() {
     NodePerft child{*this};
@@ -321,12 +290,12 @@ ReturnStatus NodePerft::visitMove(Square from, Square to) {
             parent.clearMove(from, to);
             generateMoves();
 
-            perft = static_cast<TtPerft&>(the_tt).get(z(), depth - 2_ply);
+            perft = getTt(z(), depth - 2_ply);
 
             if (perft == NodeCountNone) {
                 perft = 0;
                 RETURN_IF_STOP(visit());
-                static_cast<TtPerft&>(the_tt).set(z(), depth - 2_ply, perft);
+                setTt(z(), depth - 2_ply, perft);
             }
         }
     }

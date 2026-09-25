@@ -19,6 +19,7 @@ constinit const PieceCountTable pieceCountTable; // 48 6*8
 
 // global TT instance
 Tt the_tt{64 * 1024 * 1024};
+TtMeta the_ttMeta;
 
 // global Uci instance
 Uci the_uci{std::cout};
