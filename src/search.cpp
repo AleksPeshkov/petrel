@@ -260,7 +260,7 @@ ReturnStatus Node::search() {
             bestMove = toMove(ttMove);
         }
 
-        Score ttScore = ttEntry.score().fromTt(ply);
+        Score ttScore = ttEntry.score(ply);
         if (ttScore.none()) [[unlikely]] {
             //io::error("prevented TT collision due invalid mate score");
             bestMove = {};
@@ -277,7 +277,7 @@ ReturnStatus Node::search() {
         )) {
             score = ttScore;
             bound = ttBound;
-            ttEntry.refreshAge(tt);
+            ttEntry.refresh(tt);
             return ReturnStatus::Cutoff;
         }
 
@@ -715,7 +715,7 @@ void Node::saveNode() {
     assert ((inCheck() && eval.none()) || (!inCheck() && eval.isEval() /*&& eval == evaluate()*/));
     assert (score.isOk(ply));
 
-    TtEntry{ z(), eval, score.tt(ply), bound, depth, bestMove.ttMove() }.write(tt);
+    TtEntry{ z(), eval, score, ply, bound, depth, bestMove.ttMove() }.write(tt);
 }
 
 void Node::saveHistory() {
