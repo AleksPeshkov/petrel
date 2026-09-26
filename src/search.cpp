@@ -319,17 +319,17 @@ ReturnStatus Node::search() {
 
     assert (currentMove.none());
 
-    if (!isPv() && !inCheck()) {
-        if (depth <= 3_ply) {
-            auto delta = (depth == 1_ply) ? 50_cp : (depth == 2_ply) ? 150_cp : 200_cp;
-            if (Score{MinEval} <= beta && beta <= cEval-delta) {
+    if (!isPv() && !inCheck() && Score{MinEval} <= beta) {
+        if (depth < 4_ply) {
+            constexpr std::array<Score, 4> rfpMargins{ 0_cp, 40_cp, 150_cp, 200_cp };
+            if (beta <= cEval - rfpMargins[+depth]) {
                 // Static Null Move Pruning (Reverse Futility Pruning)
                 score = cEval;
                 assert (currentMove.none());
                 return ReturnStatus::Cutoff;
-            } else {
-                delta = (depth == 1_ply) ? 50_cp : (depth == 2_ply) ? 250_cp : 350_cp;
-                if (cEval+delta < alpha && alpha <= Score{MaxEval}) {
+            } else if (alpha <= Score{MaxEval}) {
+                constexpr std::array<Score, 4> fpMargins{ 0_cp, 50_cp, 250_cp, 350_cp };
+                if (cEval + fpMargins[+depth] < alpha) {
                     // Razoring
                     return quiescence();
                 }
