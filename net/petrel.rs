@@ -80,8 +80,8 @@ fn main() {
     let settings = LocalSettings { threads: CPU_THREADS/2, test_set: None, output_directory: "checkpoints", batch_queue_size: CPU_THREADS*4 };
 
     let final_superbatch = 120;
-    let batch_size = 16_384;
-    let batches_per_superbatch = 6_104;
+    let batch_size = 16_384 /2;
+    let batches_per_superbatch = 6_104 *2;
     let initial_lr = 1e-3;
     let final_lr = 1e-6;
 
@@ -91,7 +91,7 @@ fn main() {
     trainer.optimiser.set_params_for_weight("l1w", AdamWParams{ decay: 0.01, min_weight: -f_wdl, max_weight: f_wdl, ..Default::default() });
 
     let schedule = TrainingSchedule {
-        net_id: "1a1".to_string(),
+        net_id: "1b1".to_string(),
         eval_scale: data_set_eval_scale,
         steps: TrainingSteps { batch_size, batches_per_superbatch, start_superbatch: 1, end_superbatch: final_superbatch },
         wdl_scheduler: wdl::CosineDecayWDL { start: 0.0, end: 0.15, final_superbatch },
