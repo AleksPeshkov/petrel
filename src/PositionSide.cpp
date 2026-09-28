@@ -78,7 +78,7 @@ void PositionSide::setLeaperAttacks() {
 
 void PositionSide::capture(Square from) {
     Pi pi{ this->pi(from) };
-    NonKingType ty{*typeOf(pi)};
+    NonKingPiece ty{*typeOf(pi)};
     assert (!ty.is(King));
 
     assertOk(pi, ty, from);
@@ -89,7 +89,7 @@ void PositionSide::capture(Square from) {
         bbPawnAttacks_ = bbPawns_.pForwardDiag();
     }
 
-    material_.clear(NonKingType{ty});
+    material_.clear(NonKingPiece{ty});
     attacks_.clear(pi);
     squares.clear(pi);
     types.clear(pi);
@@ -116,7 +116,7 @@ void PositionSide::move(Pi pi, PieceType ty, Square from, Square to) {
     }
     else {
         traits.clear(pi);
-        setPinner(pi, SliderType{*ty}, to);
+        setPinner(pi, Slider{*ty}, to);
     }
 
     assertOk(pi, ty, to);
@@ -136,8 +136,8 @@ void PositionSide::movePawn(Square from, Square to) {
     assertOk(pawn, Pawn, to);
 }
 
-Pi PositionSide::piPromoted(Square from, PromoType ty, Square to) {
-    Pi pawn{pi(from)};
+Pi PositionSide::piPromoted(Square from, Officer ty, Square to) {
+    Pi pawn{ pi(from) };
     assert (from.isOn(Rank7));
     assert (to.isOn(Rank8));
     assert (traits.isPromotable(pawn));
@@ -156,21 +156,21 @@ Pi PositionSide::piPromoted(Square from, PromoType ty, Square to) {
 
     // drop promoted piece to the most valuable if possible
     //TODO: resort all pieces
-    Pi promo = PieceSet(any()).piFirstVacant();
-    assert (promo <= pawn);
+    Pi promoted{ PieceSet(any()).piFirstVacant() };
+    assert (promoted <= pawn);
 
-    squares.drop(promo, to);
-    types.drop(promo, ty);
+    squares.drop(promoted, to);
+    types.drop(promoted, ty);
 
     if (ty.is(Knight)) {
-        setLeaperAttack(promo, Knight, to);
+        setLeaperAttack(promoted, Knight, to);
     }
     else {
-        setPinner(promo, SliderType{*ty}, to);
+        setPinner(promoted, Slider{*ty}, to);
     }
 
-    assertOk(promo, ty, to);
-    return promo;
+    assertOk(promoted, ty, to);
+    return promoted;
 }
 
 void PositionSide::updateMovedKing(Square to) {
@@ -195,7 +195,7 @@ void PositionSide::castle(Square kingFrom, Square kingTo, Pi rook, Square rookFr
     bbSide_ += Bb{rookTo};
 
     traits.clearPinner(rook);
-    setPinner(rook, SliderType{Rook}, rookTo);
+    setPinner(rook, Slider{Rook}, rookTo);
 
     updateMovedKing(kingTo);
     assertOk(rook, Rook, rookTo);
@@ -212,7 +212,7 @@ void PositionSide::setLeaperAttack(Pi pi, PieceType ty, Square sq) {
     }
 }
 
-void PositionSide::setPinner(Pi pi, SliderType ty, Square sq) {
+void PositionSide::setPinner(Pi pi, Slider ty, Square sq) {
     assert (!traits.isPinner(pi));
 
     if (::attacksFrom(ty, sq).has(opKing) && ::inBetween(opKing, sq).isAny()) {
@@ -226,7 +226,7 @@ void PositionSide::setOpKing(Square king) {
     assert (traits.checkers().isNone()); // king should not be in check
 
     traits.clearPinners();
-    for (Pi pi : types.sliders()) {
+    for (Pi pi : sliders()) {
         if (::attacksFrom(typeOf(pi), sq(pi)).has(opKing)) {
             traits.setPinner(pi);
         }
@@ -240,7 +240,7 @@ void PositionSide::updateSliders(PiMask affectedSliders, Bb occupiedBb) {
     Hyperbola blockers{ occupiedBb };
 
     for (Pi pi : affectedSliders) {
-        Bb attack = blockers.attack(SliderType{*typeOf(pi)}, sq(pi));
+        Bb attack = blockers.attack(Slider{*typeOf(pi)}, sq(pi));
         attacks_.set(pi, attack);
 
         assert (!attack.has(opKing)); // king cannot be left in check
@@ -248,14 +248,14 @@ void PositionSide::updateSliders(PiMask affectedSliders, Bb occupiedBb) {
 }
 
 void PositionSide::updateSlidersCheckers(PiMask affectedSliders, Bb occupiedBb) {
-    assert (types.sliders().isNone(traits.checkers()));
+    assert (sliders().isNone(traits.checkers()));
     assert (affectedSliders.isAny());
 
     //TRICK: attacks calculated without opponent's king for implicit out of check king moves generation
     Hyperbola blockers{ occupiedBb - Bb{opKing} };
 
     for (Pi pi : affectedSliders) {
-        Bb attack = blockers.attack(SliderType{*typeOf(pi)}, sq(pi));
+        Bb attack = blockers.attack(Slider{*typeOf(pi)}, sq(pi));
         attacks_.set(pi, attack);
 
         if (attack.has(opKing)) {

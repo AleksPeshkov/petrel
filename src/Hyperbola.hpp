@@ -79,7 +79,7 @@ public:
     // hyperbola({bb1, 0}) == {bb ^ bitreverse64(0), 0 ^ bitreverse64(bb)} == {bb, bitreverse64(bb)}
     explicit Hyperbola (Bb bb) : occupied{ hyperbola(u64x2(bb, Bb{})) } {}
 
-    constexpr Bb attack(SliderType ty, Square from) const {
+    constexpr Bb attack(Slider ty, Square from) const {
         auto sq = hyperbolaSq[from];
 
         // branchless computation
