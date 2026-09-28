@@ -5,7 +5,7 @@ void test_hyperbola_rook_attack() {
     Bb occupied = Bb{D1} + Bb{D4} + Bb{D7};  // includes slider
 
     Hyperbola h(occupied);
-    Bb attacks = h.attack(SliderType{Rook}, from);
+    Bb attacks = h.attack(Slider{Rook}, from);
 
     Bb expected =
         // File
@@ -27,7 +27,7 @@ void test_hyperbola_bishop_attack() {
     Bb occupied = Bb{E4} + Bb{C2} + Bb{H7};
     Hyperbola h(occupied);
 
-    Bb attacks = h.attack(SliderType{Bishop}, from);
+    Bb attacks = h.attack(Slider{Bishop}, from);
 
     Bb expected =
         // A1-H8 diagonal
@@ -50,7 +50,7 @@ void test_hyperbola_queen_attack() {
     Bb occupied = Bb{E4} + Bb{E1} + Bb{E7} + Bb{C2} + Bb{G6};
     Hyperbola h(occupied);
 
-    Bb attacks = h.attack(SliderType{Queen}, from);
+    Bb attacks = h.attack(Slider{Queen}, from);
 
     Bb expected =
         // Rook: E-file
