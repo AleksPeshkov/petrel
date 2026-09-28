@@ -50,7 +50,7 @@ public:
 
     // move is legal and not yet made
     constexpr bool isPossibleMove(Move move) const {
-        return move.any() && isPossibleMove(move.from(), move.to()) && move.moveType() == moveType(move.from(), move.to());
+        return move.isAny() && isPossibleMove(move.from(), move.to()) && move.moveType() == moveType(move.from(), move.to());
     }
 
     // nor capture nor promotion move

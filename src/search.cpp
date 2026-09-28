@@ -65,7 +65,7 @@ ReturnStatus SearchLimits::updateTimeStrategy(const PrincipalVariation& pv) {
     auto score = pv.score();
     auto depth = pv.depth();
 
-    if (lastMove_.none()) {
+    if (lastMove_.isNone()) {
         lastMove_ = bestMove;
     } else {
         if (lastMove_ != bestMove) {
@@ -99,7 +99,7 @@ void Node::clearNode() {
 
 void Node::assertOk() const {
     assert (alpha < beta);
-    if (score.any()) {
+    if (score.isAny()) {
         assert (score < beta || bound.is(FailHigh));
         assert (alpha <= score || bound.is(FailLow));
     }
@@ -117,7 +117,7 @@ ReturnStatus Node::negamax(Ply R) {
     auto childScore = -child().score;
 
     if (childScore <= alpha) {
-        if (score.none() || score < childScore) {
+        if (score.isNone() || score < childScore) {
             score = childScore;
         }
     } else {
@@ -125,7 +125,7 @@ ReturnStatus Node::negamax(Ply R) {
         auto childR = child().currentR();
 
         // full depth research (unless it was a null move search)
-        if (currentMove.any() && childR >= 2_ply) {
+        if (currentMove.isAny() && childR >= 2_ply) {
             if (child().isPv()) {
                 // rare case (the first move from PV with reduced depth)
                 child().alpha = -beta;
@@ -139,8 +139,8 @@ ReturnStatus Node::negamax(Ply R) {
         if (beta <= childScore) {
             score = childScore;
             bound = FailHigh;
-            // currentMove.none() after NMP
-            if (currentMove.any()) {
+            // currentMove.isNone() after NMP
+            if (currentMove.isAny()) {
                 bestMove = currentMove;
                 saveHistory();
             }
@@ -150,7 +150,7 @@ ReturnStatus Node::negamax(Ply R) {
         assert (childR <= 1_ply);
         assert (alpha < childScore && childScore < beta);
         assert (isPv()); // alpha < childScore < beta, so current window cannot be zero
-        assert (currentMove.any()); // null move in PV is not allowed
+        assert (currentMove.isAny()); // null move in PV is not allowed
 
         if (!child().isPv()) {
             child().pvPly = child().ply;
@@ -163,7 +163,7 @@ ReturnStatus Node::negamax(Ply R) {
 
         score = childScore;
         bound = ExactBound;
-        assert (currentMove.any()); // null move in PV is not allowed
+        assert (currentMove.isAny()); // null move in PV is not allowed
         bestMove = currentMove;
 
         if (!isRoot()) {
@@ -205,7 +205,7 @@ ReturnStatus Node::search() {
             if (movesTotal() == 0) {
                 // checkmate
                 score = Score::mateLoss(ply);
-                assert (currentMove.none());
+                assert (currentMove.isNone());
                 return ReturnStatus::Continue;
             } else if (depth <= 3_ply && movesTotal() == 1) {
                 // single reply extension
@@ -219,14 +219,14 @@ ReturnStatus Node::search() {
                 // stalemate
                 assert (!inCheck());
                 score = Score{DrawScore};
-                assert (currentMove.none());
+                assert (currentMove.isNone());
                 return ReturnStatus::Continue;
             }
         }
 
         if (isRepetition() || rule50().isDraw() || isDrawMaterial()) {
             score = Score{DrawScore};
-            assert (currentMove.none());
+            assert (currentMove.isNone());
             return ReturnStatus::Continue;
         }
 
@@ -234,24 +234,24 @@ ReturnStatus Node::search() {
         alpha = std::max(alpha, Score::mateLoss(ply));
         if (!(alpha < std::min(beta, Score::mateWin(ply + 1_ply)))) {
             score = alpha;
-            assert (currentMove.none());
+            assert (currentMove.isNone());
             return ReturnStatus::Cutoff;
         }
     }
 
     // lookup Transposition Table
     do {
-        assert (eval.none());
-        assert (cEval.none());
-        assert (score.none());
-        assert (bestMove.none());
+        assert (eval.isNone());
+        assert (cEval.isNone());
+        assert (score.isNone());
+        assert (bestMove.isNone());
 
         auto [ttEntry, ttPtr, ttHit] = TtEntry::probe(tt, z());
         this->tt = ttPtr; // pointer to write after completed search
 
-        if (!ttHit || ttEntry.none()) { break; }
+        if (!ttHit || ttEntry.isNone()) { break; }
 
-        if (ttEntry.ttMove(z()).any()) {
+        if (ttEntry.ttMove(z()).isAny()) {
             auto ttMove = ttEntry.ttMove(z());
             if (!isPossibleMove(ttMove.from(), ttMove.to())) [[unlikely]] {
                 // collision detection
@@ -261,14 +261,14 @@ ReturnStatus Node::search() {
         }
 
         Score ttScore = ttEntry.score().fromTt(ply);
-        if (ttScore.none()) [[unlikely]] {
+        if (ttScore.isNone()) [[unlikely]] {
             //io::error("prevented TT collision due invalid mate score");
             bestMove = {};
             break;
         }
 
         ++The_transpositionTable.hits;
-        Bound ttBound = ttEntry.bound(); assert (ttBound.any());
+        Bound ttBound = ttEntry.bound(); assert (ttBound.isAny());
 
         if (!isPv() && depth <= ttEntry.draft() &&
             (ttBound.is(ExactBound)
@@ -281,7 +281,7 @@ ReturnStatus Node::search() {
             return ReturnStatus::Cutoff;
         }
 
-        if (!inCheck() && ttEntry.eval().any()) [[likely]] {
+        if (!inCheck() && ttEntry.eval().isAny()) [[likely]] {
             eval = ttEntry.eval(); // reuse saved eval
             //assert (eval.isEval()); assert (eval == evaluate()); // undetected collision
 
@@ -297,14 +297,14 @@ ReturnStatus Node::search() {
         }
     } while(false);
 
-    if (eval.none() && !inCheck()) { cEval = eval = evaluate(); }
-    assert ((inCheck() && eval.none()) || (!inCheck() && eval.isEval()));
-    assert (bestMove.none() || isPossibleMove(bestMove));
+    if (eval.isNone() && !inCheck()) { cEval = eval = evaluate(); }
+    assert ((inCheck() && eval.isNone()) || (!inCheck() && eval.isEval()));
+    assert (bestMove.isNone() || isPossibleMove(bestMove));
 
     if (ply == MaxPly) {
         // no room to search deeper
         score = inCheck() ? Score::mateLoss(ply) : cEval;
-        assert (currentMove.none());
+        assert (currentMove.isNone());
         return ReturnStatus::Continue;
     }
 
@@ -318,7 +318,7 @@ ReturnStatus Node::search() {
         return quiescence();
     }
 
-    assert (currentMove.none());
+    assert (currentMove.isNone());
 
     if (!isPv() && !inCheck()) {
         if (depth <= 3_ply) {
@@ -326,7 +326,7 @@ ReturnStatus Node::search() {
             if (Score{MinEval} <= beta && beta <= cEval-delta) {
                 // Static Null Move Pruning (Reverse Futility Pruning)
                 score = cEval;
-                assert (currentMove.none());
+                assert (currentMove.isNone());
                 return ReturnStatus::Cutoff;
             } else {
                 delta = (depth == 1_ply) ? 50_cp : (depth == 2_ply) ? 250_cp : 350_cp;
@@ -348,13 +348,13 @@ ReturnStatus Node::search() {
     }
 
     // trying TT move first
-    if (bestMove.any()) {
+    if (bestMove.isAny()) {
         RETURN_CUTOFF (searchMove(bestMove));
     }
 
     if (isRoot()) {
         for (auto move : The_uci.rootBestMoves) {
-            if (move.none()) { break; }
+            if (move.isNone()) { break; }
             RETURN_CUTOFF (searchIfPossible(move));
         }
     }
@@ -371,19 +371,19 @@ ReturnStatus Node::search() {
         RETURN_CUTOFF (searchIfPossible(killers[0]));
 
         bool isDeep{ depth > ply };
-        if (counterMove().any()) {
+        if (counterMove().isAny()) {
             RETURN_CUTOFF (contMove(isDeep ? DeepCounter : Counter, counterMove())); // ply-1
         }
-        if (followupMove().any()) {
+        if (followupMove().isAny()) {
             RETURN_CUTOFF (contMove(isDeep ? DeepFollowup : Followup, followupMove())); // ply-2
         }
 
         RETURN_CUTOFF (searchIfPossible(killers[1]));
 
-        if (counterMove().any()) {
+        if (counterMove().isAny()) {
             RETURN_CUTOFF (contMove(isDeep ? DeepCounter : Counter, counterMove())); // ply-1
         }
-        if (followupMove().any()) {
+        if (followupMove().isAny()) {
             RETURN_CUTOFF (contMove(isDeep ? DeepFollowup : Followup, followupMove())); // ply-2
         }
     }
@@ -405,7 +405,7 @@ ReturnStatus Node::search() {
                 continue;
             }
 
-            assert (OP.attackersTo(~from).any());
+            assert (OP.attackersTo(~from).isAny());
 
             if (OP.attackersTo(~from).none(OP.lessOrEqualValue(MY.typeOf(pi)))) {
                 // attacked by more valuable attacker
@@ -426,7 +426,7 @@ ReturnStatus Node::search() {
             Pi pi = MY.pi(from);
             for (Square to : bbMovesOf(pi)) {
                 if (MY.bbPawnAttacks().has(to) || !safeForOp(to)) {
-                    RETURN_CUTOFF (searchMove(from, to, from.on(Rank6) ? 1_ply : 2_ply));
+                    RETURN_CUTOFF (searchMove(from, to, from.isOn(Rank6) ? 1_ply : 2_ply));
                 }
             }
         }
@@ -439,7 +439,7 @@ ReturnStatus Node::search() {
         if (depth >= 6_ply && movesMade() >= 5) { baseR = baseR + 1_ply; } // LMR
 
         // safe officers moves
-        while (safePieces.any()) {
+        while (safePieces.isAny()) {
             Pi pi = safePieces.piLast(); safePieces -= PiMask{pi};
             RETURN_CUTOFF (goodNonCaptures(pi, bbMovesOf(pi) % bbAvoid, 3_ply));
         }
@@ -463,7 +463,7 @@ ReturnStatus Node::search() {
         }
 
         // unsafe (losing) captures (N/B, R, Q order)
-        for (PiMask pieces = MY.officers(); pieces.any(); ) {
+        for (PiMask pieces = MY.officers(); pieces.isAny(); ) {
             Pi pi = pieces.piLast(); pieces -= PiMask{pi};
             Square from{MY.sq(pi)};
             for (Square to : bbMovesOf(pi) & ~OP.bbSide()) {
@@ -483,7 +483,7 @@ ReturnStatus Node::search() {
         if (depth <= 4_ply && !inCheck() && (!isPv() || movesMade() > 0)) { break; }
 
         // unsafe (losing) non-captures (N/B, R, Q order)
-        for (PiMask pieces = MY.officers(); pieces.any(); ) {
+        for (PiMask pieces = MY.officers(); pieces.isAny(); ) {
             Pi pi = pieces.piLast(); pieces -= PiMask{pi};
             Square from{MY.sq(pi)};
             for (Square to : bbMovesOf(pi)) {
@@ -495,10 +495,10 @@ ReturnStatus Node::search() {
     if (movesMade() == 0) {
         // not stalemate, all moves pruned
         assert (bound.is(FailLow));
-        assert (bestMove.none());
-        assert (currentMove.none());
+        assert (bestMove.isNone());
+        assert (currentMove.isNone());
         assert (!inCheck());
-        if (score.none()) { score = alpha; } // !score.none() if null move happened (null move not counted in movesMade())
+        if (score.isNone()) { score = alpha; } // !score.isNone() if null move happened (null move not counted in movesMade())
         return ReturnStatus::Continue;
     }
 
@@ -508,7 +508,7 @@ ReturnStatus Node::search() {
         if (isRoot()) { ::insert_unique_compact(The_uci.rootBestMoves, bestMove); }
     } else {
         assert (bound.is(FailLow));
-        assert (bestMove.none() || isPseudoLegal(bestMove));
+        assert (bestMove.isNone() || isPseudoLegal(bestMove));
         assert (depth > 0_ply);
         assert (score.isOk(ply));
         saveNode();
@@ -551,7 +551,7 @@ ReturnStatus Node::goodNonCaptures(Pi pi, Bb bbMoves, Ply R) {
         assert (isQuietMove(pi, to));
 
         if (bbAttacked().has(to)) {
-            if ((OP.attackersTo(~to) & opLessValue).any()) {
+            if ((OP.attackersTo(~to) & opLessValue).isAny()) {
                 // square defended by less valued opponent's piece
                 continue;
             }
@@ -575,7 +575,7 @@ ReturnStatus Node::quiescence() {
     // stand pat
     score = cEval;
     if (beta <= score) {
-        assert (currentMove.none());
+        assert (currentMove.isNone());
         return ReturnStatus::Cutoff;
     }
     if (alpha < score) {
@@ -586,7 +586,7 @@ ReturnStatus Node::quiescence() {
     assert (child().alpha == -beta);
     assert (child().beta == -alpha);
 
-    if (bestMove.any() && bestMove.canBeKiller() == CanBeKiller::No) {
+    if (bestMove.isAny() && bestMove.canBeKiller() == CanBeKiller::No) {
         RETURN_CUTOFF (searchMove(bestMove));
     }
 
@@ -613,7 +613,7 @@ ReturnStatus Node::goodCaptures(PiMask victims) {
 
         // exclude underpromotions, should be no queen promotions anymore
         PiMask attackers = canMoveTo(to) % MY.promotables();
-        if (attackers.none()) { continue; }
+        if (attackers.isNone()) { continue; }
 
         // simple SEE function, checks only two cases:
         // 1) victim defended by at least one pawn
@@ -628,7 +628,7 @@ ReturnStatus Node::goodCaptures(PiMask victims) {
             attackers &= MY.lessOrEqualValue(OP.typeOf(victim));
         }
 
-        while (attackers.any()) {
+        while (attackers.isAny()) {
             // LVA (least valuable attacker) order
             Pi pi = attackers.piLast(); attackers -= PiMask{pi};
             Square from{MY.sq(pi)};
@@ -659,7 +659,7 @@ void Node::childNullMove() {
 ReturnStatus Node::searchMove(Move move, Ply R) {
     RETURN_IF_STOP (The_uci.limits.countNode());
 
-    assert (move.any());
+    assert (move.isAny());
     assert (isPseudoLegal(move));
     assert (isPossibleMove(move));
 
@@ -693,7 +693,7 @@ constexpr Ply Node::finalR(Ply R) const {
 ReturnStatus Node::contMove(ContIndex::_t ContType, Move move) {
     for (auto i : range<decltype(The_uci.contMoves)::Index>()) {
         auto contMove = The_uci.contMoves.get(ContType, i, colorToMove(), move);
-        if (contMove.none()) { break; } // insert_unique_compact() garantees no holes
+        if (contMove.isNone()) { break; } // insert_unique_compact() garantees no holes
         if (isPossibleMove(contMove)) {
             return searchMove(contMove);
         }
@@ -710,8 +710,8 @@ constexpr Move Node::followupMove() const {
 }
 
 void Node::saveNode() {
-    assert (bestMove.none() || isPseudoLegal(bestMove));
-    assert ((inCheck() && eval.none()) || (!inCheck() && eval.isEval() /*&& eval == evaluate()*/));
+    assert (bestMove.isNone() || isPseudoLegal(bestMove));
+    assert ((inCheck() && eval.isNone()) || (!inCheck() && eval.isEval() /*&& eval == evaluate()*/));
     assert (score.isOk(ply));
 
     TtEntry{ z(), eval, score.tt(ply), bound, depth, bestMove.ttMove() }.write(tt);
@@ -720,11 +720,11 @@ void Node::saveNode() {
 void Node::saveHistory() {
     saveNode();
 
-    if (bestMove.none() || bestMove.canBeKiller() == CanBeKiller::No) { return; }
+    if (bestMove.isNone() || bestMove.canBeKiller() == CanBeKiller::No) { return; }
 
     if (inCheck()) {
         if (hasParent()) {
-            assert (parent().currentMove.any());
+            assert (parent().currentMove.isAny());
             The_uci.checkMoves.set(colorToMove(), MY.sqKing(), parent().currentMove, bestMove);
         }
         return;
@@ -736,7 +736,7 @@ void Node::saveHistory() {
 
     bool isDeep{ depth > ply };
 
-    if (counterMove().any()) {
+    if (counterMove().isAny()) {
         The_uci.contMoves.set(Counter, colorToMove(), counterMove(), bestMove);
         if (isDeep) {
             The_uci.contMoves.set(DeepCounter, colorToMove(), counterMove(), bestMove);
@@ -745,7 +745,7 @@ void Node::saveHistory() {
 
     if (!hasGrandParent()) { return; } // ply-2
     insert_unique_pos<1>(grandParent().killers, bestMove);
-    if (followupMove().any()) {
+    if (followupMove().isAny()) {
         The_uci.contMoves.set(Followup, colorToMove(), followupMove(), bestMove);
         if (isDeep) {
             The_uci.contMoves.set(DeepFollowup, colorToMove(), followupMove(), bestMove);

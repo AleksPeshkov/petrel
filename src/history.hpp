@@ -107,13 +107,13 @@ private:
 
 public:
     constexpr Move get(ContIndex::_t ci, Index i, Color color, Move move) const {
-        assert (move.any());
+        assert (move.isAny());
         return v_[color][move.moveType()][move.from()][move.to()][ContIndex{ci}][i];
     }
 
     template <size_t Pos = 0>
     constexpr void set(ContIndex::_t ci, Color color, Move move, Move bestMove) {
-        assert (move.any()); assert (bestMove.any());
+        assert (move.isAny()); assert (bestMove.isAny());
         ::insert_unique_compact<Pos>(v_[color][move.moveType()][move.from()][move.to()][ContIndex{ci}], bestMove);
     }
 };
@@ -124,12 +124,12 @@ class CACHE_ALIGN CheckMoves {
 
 public:
     constexpr Move get(Color color, Square sqKing, Move checkMove) const {
-        assert (checkMove.any());
+        assert (checkMove.isAny());
         return v_[color][sqKing][checkMove.to()];
     }
 
     constexpr void set(Color color, Square sqKing, Move checkMove, Move bestMove) {
-        assert (checkMove.any()); assert (bestMove.any());
+        assert (checkMove.isAny()); assert (bestMove.isAny());
         v_[color][sqKing][checkMove.to()] = bestMove;
     }
 };
@@ -166,11 +166,11 @@ public:
         pv_[to++] = childMove;
         if (from == to) {
             // no need to copy, but still needs to find move list end
-            while ((pv_[to++]).any()) {}
+            while ((pv_[to++]).isAny()) {}
         } else {
             assert (from > to);
             // copies null move terminated move list (including last null)
-            while ((pv_[to++] = pv_[from++]).any()) {}
+            while ((pv_[to++] = pv_[from++]).isAny()) {}
         }
 
         return to; // new childPv
