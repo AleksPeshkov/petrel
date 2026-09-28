@@ -173,16 +173,16 @@ Pi PositionSide::piPromoted(Square from, Officer officer, Square to) {
 
 void PositionSide::updateMovedKing(Square to) {
     // king move cannot check
-    assert (traits.isNone(Pi{TheKing}));
+    assert (traits.isNone(PiKing));
     assert (!::attacksFrom(King, to).has(opKing));
-    attacks_.set(Pi{TheKing}, ::attacksFrom(King, to));
+    attacks_.set(PiKing, ::attacksFrom(King, to));
     traits.clearCastlings();
 
-    assertOk(Pi{TheKing}, King, to);
+    assertOk(PiKing, King, to);
 }
 
 void PositionSide::castle(Square kingFrom, Square kingTo, Pi piRook, Square rookFrom, Square rookTo) {
-    assertOk(Pi{TheKing}, King, kingFrom);
+    assertOk(PiKing, King, kingFrom);
     assertOk(piRook, Rook, rookFrom);
 
     // possible overlap in Chess960
@@ -307,7 +307,7 @@ bool PositionSide::dropValid(Piece piece, Square to) {
     }
     bbSide_ += Bb{to};
 
-    Pi pi = piece.is(King) ? Pi{TheKing} : PieceSet{any() | PiMask{Pi{TheKing}}}.piFirstVacant();
+    Pi pi{ piece.is(King) ? PiKing : PieceSet{any() | PiMask{PiKing}}.piFirstVacant() };
 
     material_.drop(piece);
     types.drop(pi, piece);
