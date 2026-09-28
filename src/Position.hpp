@@ -85,7 +85,7 @@ public:
     }
 };
 
-class Position {
+class CACHE_ALIGN Position {
     DualAcc accumulator; // NNUE evaluation accumulators (a pair from each side perspective)
     array<PositionSide, Side> positionSide_; // copied from the parent, updated incrementally
     array<Bb, Side> occupied_; // both color pieces combined, updated from positionSide[] after each move
@@ -134,6 +134,8 @@ protected:
         int opAttackers = _(Op).countAttackersTo(~sq, bbBoth(Op));
         return opAttackers > myAttackers;
     }
+
+// defined in pert.cpp:
 
     // update the position without updating the zobrist hash (because it unneeded anymore)
     void makeMovePerft(const Position&, Square, Square);

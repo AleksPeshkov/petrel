@@ -269,6 +269,24 @@ ReturnStatus NodePerft::visit() {
     return ReturnStatus::Continue;
 }
 
+void Position::makeMovePerft(const Position& parent, Square from, Square to) {
+    flip(parent);
+
+    // current position flipped its sides relative to parent, so we make the move inplace for the Op
+    makeMove<Op, Fast>(from, to, []{});
+}
+
+void Position::makeMovePerft(const Position& parent, Square from, Square to, auto&& prefetch) {
+    flip(parent);
+    //zHash_ = {}; shouldResetZHash_ = false;// unused
+    zobrist_ = parent.zobrist_;
+
+    // current position flipped its sides relative to parent, so we make the move inplace for the Op
+    makeMove<Op, NoEval>(from, to, [&]{ zobrist_.flip(); prefetch(z()); });
+
+    //assert (z() == generateZobrist().v()); // true, but slow to compute
+}
+
 ReturnStatus NodePerft::visitMove(Square from, Square to) {
     switch (+depth) {
         case 0:
@@ -278,7 +296,6 @@ ReturnStatus NodePerft::visitMove(Square from, Square to) {
         case 1:
             RETURN_IF_STOP (the_uci.limits.countNode());
             makeMovePerft(parent, from, to);
-            parent.clearMove(from, to);
             generateMoves();
             perft = movesTotal();
             break;
@@ -287,14 +304,12 @@ ReturnStatus NodePerft::visitMove(Square from, Square to) {
             assert (depth >= 2_ply);
             RETURN_IF_STOP (the_uci.limits.countNode());
             makeMovePerft(parent, from, to, [&](Z z){ the_tt.prefetch<64>(z); });
-            parent.clearMove(from, to);
             generateMoves();
 
             perft = getTt(z(), depth - 2_ply);
-
             if (perft == NodeLimitNone) {
                 perft = 0;
-                RETURN_IF_STOP(visit());
+                RETURN_IF_STOP (visit());
                 setTt(z(), depth - 2_ply, perft);
             }
         }
