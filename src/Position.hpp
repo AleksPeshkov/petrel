@@ -134,6 +134,8 @@ protected:
         return opAttackers > myAttackers;
     }
 
+// defined in pert.cpp:
+
     // update the position without updating the zobrist hash (because it unneeded anymore)
     void makeMovePerft(const Position&, Square, Square);
     void makeMovePerft(const Position&, Square, Square, auto&& prefetch);

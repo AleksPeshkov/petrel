@@ -76,11 +76,8 @@ void PositionSide::setLeaperAttacks() {
     }
 }
 
-void PositionSide::capture(Square from) {
+void PositionSide::capture(NonKingPiece nonKing, Square from) {
     Pi pi{ this->pi(from) };
-    NonKingPiece nonKing{*piece(pi)};
-    assert (!nonKing.is(King));
-
     assertOk(pi, nonKing, from);
 
     bbSide_ -= Bb{from};
