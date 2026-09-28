@@ -250,17 +250,17 @@ public:
         constexpr array<u16_t, Piece> centipawns = { 960, 480, 320, 320, 80, 0 }; // material eval: 12/6/4/4/1 * 80cp
         constexpr array<u8_t, Piece> officers = { 12, 6, 4, 4, 0, 0 }; // non pawn pieces values
 
-        for (auto ty : range<Piece>()) {
-            v_[ty].s.centipawns = centipawns[ty];
-            v_[ty].s.officers = officers[ty];
+        for (auto piece : range<Piece>()) {
+            v_[piece].s.centipawns = centipawns[piece];
+            v_[piece].s.officers = officers[piece];
 
-            for (auto i : range<NonKingPiece>()) {
-                v_[ty].s.count[i] = (ty == Piece{*i});
+            for (auto nonKing : range<NonKingPiece>()) {
+                v_[piece].s.count[nonKing] = piece.is(nonKing);
             }
         }
     }
 
-    constexpr _t operator[] (Piece ty) const { return v_[ty]; }
+    constexpr _t operator[] (Piece piece) const { return v_[piece]; }
 };
 extern const PieceCountTable pieceCountTable;
 
@@ -271,16 +271,16 @@ class Material {
 public:
     constexpr Material () { v_.n = 0; }
 
-    void drop(Piece ty) { v_.n += ::pieceCountTable[ty].n; }
-    void clear(NonKingPiece ty) { v_.n -= ::pieceCountTable[ty].n; }
+    void drop(Piece piece) { v_.n += ::pieceCountTable[piece].n; }
+    void clear(NonKingPiece nonKing) { v_.n -= ::pieceCountTable[nonKing].n; }
 
-    void promote(Officer ty) {
-        clear(NonKingPiece{Pawn});
-        drop(ty);
+    void promote(Officer officer) {
+        clear(Pawn);
+        drop(officer);
     }
 
-    constexpr int count(NonKingPiece::_t ty) const {
-        return v_.s.count[NonKingPiece{ty}];
+    constexpr int count(NonKingPiece nonKing) const {
+        return v_.s.count[nonKing];
     }
 
     // any queen, rook or pawn
