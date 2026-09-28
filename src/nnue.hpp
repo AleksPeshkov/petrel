@@ -232,19 +232,19 @@ public:
     }
 
     constexpr void promote(Square from, PromoType promoted, Square to) {
-        assert (from.on(Rank7)); assert (to.on(Rank8));
+        assert (from.isOn(Rank7)); assert (to.isOn(Rank8));
         side[Op].promote(mirror[Op], My, from, promoted, to);
         side[My].promote(~mirror[My], Op, from, promoted, to);
     }
 
     constexpr void promote(Square from, PromoType promoted, Square to, NonKingType captured) {
-        assert (from.on(Rank7)); assert (to.on(Rank8));
+        assert (from.isOn(Rank7)); assert (to.isOn(Rank8));
         side[Op].promote(mirror[Op], My, from, promoted, to, captured);
         side[My].promote(~mirror[My], Op, from, promoted, to, captured);
     }
 
     constexpr void ep(Square from, Square to, Square ep) {
-        assert (from.on(Rank5)); assert (to.on(Rank6)); assert (ep.on(Rank5));
+        assert (from.isOn(Rank5)); assert (to.isOn(Rank6)); assert (ep.isOn(Rank5));
         side[Op].ep(mirror[Op], My, from, to, ep);
         side[My].ep(~mirror[My], Op, from, to, ep);
     }
