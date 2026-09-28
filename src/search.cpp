@@ -542,9 +542,9 @@ ReturnStatus Node::goodPawnsMovesTo(Bb target, Ply R) {
 }
 
 ReturnStatus Node::goodNonCaptures(Pi pi, Bb bbMoves, Ply R) {
-    Piece ty{ MY.piece(pi) };
-    assert (!ty.is(Pawn));
-    PiMask opLessValue{ OP.lessValue(ty) };
+    Piece piece{ MY.piece(pi) };
+    assert (!piece.is(Pawn));
+    PiMask opLessValue{ OP.lessValue(piece) };
 
     Square from{MY.sq(pi)};
     for (Square to : bbMoves) {

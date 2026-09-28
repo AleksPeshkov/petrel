@@ -90,8 +90,8 @@ inline i64_t hadd_i64(i64x4_t sum4) {
 
 struct CACHE_ALIGN Nnue {
     struct FeatureIndex : ::Index<FeatureIndex, 2*6*64> { using Index::Index;
-        constexpr FeatureIndex (Side side, Piece ty, Square sq)
-            : Index{ (+side * 6*64) + (+ty * 64) + (+sq) }
+        constexpr FeatureIndex (Side side, Piece piece, Square sq)
+            : Index{ (+side * 6*64) + (+piece * 64) + (+sq) }
         {}
     };
 
@@ -152,30 +152,30 @@ public:
     template <Side::_t>
     void setup(const Position& pos, Square mirror);
 
-    constexpr void move(Square mirror, Side si, Piece ty, Square from, Square to) {
-        move({si, ty, from^mirror}, {si, ty, to^mirror});
+    constexpr void move(Square mirror, Side side, Piece piece, Square from, Square to) {
+        move({side, piece, from^mirror}, {side, piece, to^mirror});
     }
 
-    constexpr void promote(Square mirror, Side si, Square from, Officer promoted, Square to) {
-        move({si, Pawn, from^mirror}, {si, promoted, to^mirror});
+    constexpr void promote(Square mirror, Side side, Square from, Officer promoted, Square to) {
+        move({side, Pawn, from^mirror}, {side, promoted, to^mirror});
     }
 
-    constexpr void move(Square mirror, Side si, Piece ty, Square from, Square to, NonKingPiece captured) {
-        capture({si, ty, from^mirror}, {si, ty, to^mirror}, {~si, captured, to^mirror});
+    constexpr void move(Square mirror, Side side, Piece piece, Square from, Square to, NonKingPiece captured) {
+        capture({side, piece, from^mirror}, {side, piece, to^mirror}, {~side, captured, to^mirror});
     }
 
-    constexpr void promote(Square mirror, Side si, Square from, Officer promoted, Square to, NonKingPiece captured) {
-        capture({si, Pawn, from^mirror}, {si, promoted, to^mirror}, {~si, captured, to^mirror});
+    constexpr void promote(Square mirror, Side side, Square from, Officer promoted, Square to, NonKingPiece captured) {
+        capture({side, Pawn, from^mirror}, {side, promoted, to^mirror}, {~side, captured, to^mirror});
     }
 
-    constexpr void ep(Square mirror, Side si, Square from, Square to, Square ep) {
-        capture({si, Pawn, from^mirror}, {si, Pawn, to^mirror}, {~si, Pawn, ep^mirror});
+    constexpr void ep(Square mirror, Side side, Square from, Square to, Square ep) {
+        capture({side, Pawn, from^mirror}, {side, Pawn, to^mirror}, {~side, Pawn, ep^mirror});
     }
 
-    constexpr void castle(Square mirror, Side si, Square kingFrom, Square kingTo, Square rookFrom, Square rookTo) {
+    constexpr void castle(Square mirror, Side side, Square kingFrom, Square kingTo, Square rookFrom, Square rookTo) {
         for (auto n : range<AccIndex>()) {
-            auto s1 = nnue.w0[{si, King, kingTo^mirror}][n] - nnue.w0[{si, King, kingFrom^mirror}][n];
-            auto s2 = nnue.w0[{si, Rook, rookTo^mirror}][n] - nnue.w0[{si, Rook, rookFrom^mirror}][n];
+            auto s1 = nnue.w0[{side, King, kingTo^mirror}][n] - nnue.w0[{side, King, kingFrom^mirror}][n];
+            auto s2 = nnue.w0[{side, Rook, rookTo^mirror}][n] - nnue.w0[{side, Rook, rookFrom^mirror}][n];
             acc[n] = adds_i16(acc[n], s1 + s2);
         }
     }
@@ -219,16 +219,16 @@ public:
         std::swap(mirror[My], mirror[Op]);
     }
 
-    constexpr void move(Piece ty, Square from, Square to) {
+    constexpr void move(Piece piece, Square from, Square to) {
         assert (from != to);
-        side[Op].move(mirror[Op], My, ty, from, to);
-        side[My].move(~mirror[My], Op, ty, from, to);
+        side[Op].move(mirror[Op], My, piece, from, to);
+        side[My].move(~mirror[My], Op, piece, from, to);
     }
 
-    constexpr void move(Piece ty, Square from, Square to, NonKingPiece captured) {
+    constexpr void move(Piece piece, Square from, Square to, NonKingPiece captured) {
         assert (from != to);
-        side[Op].move(mirror[Op], My, ty, from, to, captured);
-        side[My].move(~mirror[My], Op, ty, from, to, captured);
+        side[Op].move(mirror[Op], My, piece, from, to, captured);
+        side[My].move(~mirror[My], Op, piece, from, to, captured);
     }
 
     constexpr void promote(Square from, Officer promoted, Square to) {

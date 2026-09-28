@@ -148,7 +148,7 @@ bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
             if constexpr (Flags & WithZobrist) {
                 zobrist_.opEnPassant(OP.sqEnPassant());
                 zobrist_.move(Pawn, from, to);
-                zobrist_.opCapture(NonKingPiece{Pawn}, ~ep);
+                zobrist_.opCapture(Pawn, ~ep);
                 flipPrefetch();
                 rule50_ = {}; zHash_ = {}; // ep capture resets rule50
             }
@@ -244,8 +244,8 @@ bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
         // king move is special case as it affects castling rights
         bool shouldResetZHash = false;
         if constexpr (Flags & WithZobrist) {
-            for (Pi rook : MY.castlingRooks()) [[unlikely]] {
-                zobrist_.castling(MY.sq(rook));
+            for (Pi piRook : MY.castlingRooks()) [[unlikely]] {
+                zobrist_.castling(MY.sq(piRook));
                 zHash_ = {}; shouldResetZHash = true; // king move changed castling rights
             }
             zobrist_.move(King, from, to);
@@ -295,7 +295,7 @@ bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
             Square rookTo{CastlingRules::castlingRookTo(kingFrom, rookFrom)};
 
             if constexpr (Flags & WithZobrist) {
-                for (Pi rook : MY.castlingRooks()) [[likely]] { zobrist_.castling(MY.sq(rook)); }
+                for (Pi piRook : MY.castlingRooks()) [[likely]] { zobrist_.castling(MY.sq(piRook)); }
                 zobrist_.castle(kingFrom, kingTo, rookFrom, rookTo);
                 flipPrefetch();
                 rule50_.next(); zHash_ = {}; // castling holds rule50, but not ZHash

@@ -78,18 +78,18 @@ void PositionSide::setLeaperAttacks() {
 
 void PositionSide::capture(Square from) {
     Pi pi{ this->pi(from) };
-    NonKingPiece ty{*piece(pi)};
-    assert (!ty.is(King));
+    NonKingPiece nonKing{*piece(pi)};
+    assert (!nonKing.is(King));
 
-    assertOk(pi, ty, from);
+    assertOk(pi, nonKing, from);
 
     bbSide_ -= Bb{from};
-    if (ty.is(Pawn)) {
+    if (nonKing.is(Pawn)) {
         bbPawns_ -= Bb{from};
         bbPawnAttacks_ = bbPawns_.pForwardDiag();
     }
 
-    material_.clear(NonKingPiece{ty});
+    material_.clear(nonKing);
     attacks_.clear(pi);
     squares.clear(pi);
     types.clear(pi);
@@ -105,21 +105,19 @@ void PositionSide::move(Pi pi, Square from, Square to) {
 }
 
 // simple non king, non pawn move
-void PositionSide::move(Pi pi, Piece ty, Square from, Square to) {
-    assert (!ty.is(King)); assert (!ty.is(Pawn));
-
+void PositionSide::move(Pi pi, Officer officer, Square from, Square to) {
     move(pi, from, to);
 
-    if (ty.is(Knight)) {
+    if (officer.is(Knight)) {
         assert (traits.isNone(pi)); // nothing to clear or already cleared
         setLeaperAttack(pi, Knight, to);
     }
     else {
         traits.clear(pi);
-        setPinner(pi, Slider{*ty}, to);
+        setPinner(pi, Slider{*officer}, to);
     }
 
-    assertOk(pi, ty, to);
+    assertOk(pi, officer, to);
 }
 
 void PositionSide::movePawn(Square from, Square to) {
@@ -136,7 +134,7 @@ void PositionSide::movePawn(Square from, Square to) {
     assertOk(pawn, Pawn, to);
 }
 
-Pi PositionSide::piPromoted(Square from, Officer ty, Square to) {
+Pi PositionSide::piPromoted(Square from, Officer officer, Square to) {
     Pi pawn{ pi(from) };
     assert (from.isOn(Rank7));
     assert (to.isOn(Rank8));
@@ -144,7 +142,7 @@ Pi PositionSide::piPromoted(Square from, Officer ty, Square to) {
     assertOk(pawn, Pawn, from);
 
     bbSide_.move(from, to);
-    material_.promote(ty);
+    material_.promote(officer);
 
     // remove pawn
     bbPawns_ -= Bb{from};
@@ -160,16 +158,16 @@ Pi PositionSide::piPromoted(Square from, Officer ty, Square to) {
     assert (promoted <= pawn);
 
     squares.drop(promoted, to);
-    types.drop(promoted, ty);
+    types.drop(promoted, officer);
 
-    if (ty.is(Knight)) {
+    if (officer.is(Knight)) {
         setLeaperAttack(promoted, Knight, to);
     }
     else {
-        setPinner(promoted, Slider{*ty}, to);
+        setPinner(promoted, Slider{*officer}, to);
     }
 
-    assertOk(promoted, ty, to);
+    assertOk(promoted, officer, to);
     return promoted;
 }
 
@@ -183,39 +181,39 @@ void PositionSide::updateMovedKing(Square to) {
     assertOk(Pi{TheKing}, King, to);
 }
 
-void PositionSide::castle(Square kingFrom, Square kingTo, Pi rook, Square rookFrom, Square rookTo) {
+void PositionSide::castle(Square kingFrom, Square kingTo, Pi piRook, Square rookFrom, Square rookTo) {
     assertOk(Pi{TheKing}, King, kingFrom);
-    assertOk(rook, Rook, rookFrom);
+    assertOk(piRook, Rook, rookFrom);
 
     // possible overlap in Chess960
-    squares.castle(kingTo, rook, rookTo);
+    squares.castle(kingTo, piRook, rookTo);
     bbSide_ -= Bb{kingFrom};
     bbSide_ -= Bb{rookFrom};
     bbSide_ += Bb{kingTo};
     bbSide_ += Bb{rookTo};
 
-    traits.clearPinner(rook);
-    setPinner(rook, Slider{Rook}, rookTo);
+    traits.clearPinner(piRook);
+    setPinner(piRook, Rook, rookTo);
 
     updateMovedKing(kingTo);
-    assertOk(rook, Rook, rookTo);
+    assertOk(piRook, Rook, rookTo);
 }
 
-void PositionSide::setLeaperAttack(Pi pi, Piece ty, Square sq) {
-    assertOk(pi, ty, sq);
-    assert (::isLeaper(*ty));
+void PositionSide::setLeaperAttack(Pi pi, Piece piece, Square sq) {
+    assertOk(pi, piece, sq);
+    assert (::isLeaper(*piece));
     assert (traits.isNone(pi) || traits.isPromotable(pi));
 
-    attacks_.set(pi, ::attacksFrom(ty, sq));
-    if (::attacksFrom(ty, sq).has(opKing)) {
+    attacks_.set(pi, ::attacksFrom(piece, sq));
+    if (::attacksFrom(piece, sq).has(opKing)) {
         traits.setChecker(pi);
     }
 }
 
-void PositionSide::setPinner(Pi pi, Slider ty, Square sq) {
+void PositionSide::setPinner(Pi pi, Slider slider, Square sq) {
     assert (!traits.isPinner(pi));
 
-    if (::attacksFrom(ty, sq).has(opKing) && ::inBetween(opKing, sq).isAny()) {
+    if (::attacksFrom(slider, sq).has(opKing) && ::inBetween(opKing, sq).isAny()) {
         traits.setPinner(pi);
     }
 }
@@ -302,20 +300,20 @@ bool PositionSide::isPinned(Bb occupied) const {
     return false;
 }
 
-bool PositionSide::dropValid(Piece ty, Square to) {
+bool PositionSide::dropValid(Piece piece, Square to) {
     if (bbSide_.has(to)) {
         io::error("invalid fen: square already occupied");
         return false;
     }
     bbSide_ += Bb{to};
 
-    Pi pi = ty.is(King) ? Pi{TheKing} : PieceSet{any() | PiMask{Pi{TheKing}}}.piFirstVacant();
+    Pi pi = piece.is(King) ? Pi{TheKing} : PieceSet{any() | PiMask{Pi{TheKing}}}.piFirstVacant();
 
-    material_.drop(ty);
-    types.drop(pi, ty);
+    material_.drop(piece);
+    types.drop(pi, piece);
     squares.drop(pi, to);
 
-    if (ty.is(Pawn)) {
+    if (piece.is(Pawn)) {
         if (to.isOn(Rank1) || to.isOn(Rank8)) {
             io::error("invalid fen: pawn on impossible rank");
             return false;
@@ -325,7 +323,7 @@ bool PositionSide::dropValid(Piece ty, Square to) {
         bbPawnAttacks_ = bbPawns_.pForwardDiag();
     }
 
-    assertOk(pi, ty, to);
+    assertOk(pi, piece, to);
     return true;
 }
 
@@ -335,10 +333,10 @@ bool PositionSide::setValidCastling(CastlingSide castlingSide) {
         return false;
     }
 
-    Square sqOuter{sqKing()};
-    for (Pi rook : types.any(Rook) & any(Rank1)) {
-        if (CastlingRules::castlingSide(sqOuter, sq(rook)).is(*castlingSide)) {
-            sqOuter = sq(rook);
+    Square sqOuter{ sqKing() };
+    for (Pi piRook : types.any(Rook) & any(Rank1)) {
+        if (CastlingRules::castlingSide(sqOuter, sq(piRook)).is(*castlingSide)) {
+            sqOuter = sq(piRook);
         }
     }
     if (sqOuter == sqKing()) {
@@ -346,13 +344,13 @@ bool PositionSide::setValidCastling(CastlingSide castlingSide) {
         return false;
     }
 
-    Pi rook{pi(sqOuter)};
-    if (isCastling(rook)) {
+    Pi piRook{ pi(sqOuter) };
+    if (isCastling(piRook)) {
         io::error("invalid fen castling: rook is already set castling");
         return false;
     }
 
-    traits.setCastling(rook);
+    traits.setCastling(piRook);
     return true;
 }
 
@@ -368,16 +366,16 @@ bool PositionSide::setValidCastling(File file) {
         return false;
     }
 
-    Pi rook{pi(rookFrom)};
-    if (!types.isRook(rook)) {
+    Pi piRook{ pi(rookFrom) };
+    if (!types.isRook(piRook)) {
         io::error("invalid fen castling: castling piece is not rook");
         return false;
     }
-    if (isCastling(rook)) {
+    if (isCastling(piRook)) {
         io::error("invalid fen castling: rook is already set castling");
         return false;
     }
 
-    traits.setCastling(rook);
+    traits.setCastling(piRook);
     return true;
 }
