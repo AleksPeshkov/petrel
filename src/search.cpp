@@ -302,7 +302,7 @@ ReturnStatus Node::search() {
 
     if (ply == Ply::last()) {
         // no room to search deeper
-        score = inCheck() ? Score::mateLoss(ply) : cEval;
+        score = cEval.isAny() ? cEval : alpha;
         assert (currentMove.isNone());
         return ReturnStatus::Continue;
     }
