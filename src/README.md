@@ -36,12 +36,12 @@ Overloaded operators:
 
 Abbreviations in the code:
 
-* `Pi pi`: Piece Index – one of 16 piece slots in a byte vector; `{TheKing = 0}` is the slot dedicated to the king. Variables of type `Pi` and functions that return type `Pi` generally named `pi()` or have `pi` prefix, example: `Pi pi = this->pi(Square sq)`
+* `Pi pi`: Piece Index – one of 16 piece slots in a byte vector; `{PiKing = 0}` the 1st slot dedicated to the king. Variables of type `Pi` and functions that return type `Pi` generally named `pi()` or have `pi` prefix, example: `Pi pi = this->pi(Square sq)`
 * `Square sq` Variables of type `Square` and functions that return type `Square` generally named `sq()` or have `sq` prefix.
 * `Bb bb`: BitBoard – a well-known 64-bit bitset representing squares on the chessboard. Variables of type `Bb` and functions that return `Bb` commonly named `bb()` or have `bb` prefix, example: `Bb bb = bbPawns()`
 * `Side side`: `{My, Op}` – side to move and opposite side.
 * `Color color`: `{White, Black}` – rarely used, needed for correct output of internal colorless moves in standard chess notation.
-* `Piece ty`: `{Queen = 0, Rook = 1, Bishop = 2, Knight = 3, Pawn = 4, King = 5}` chess pieces types.
+* `Piece piece`: `{Queen = 0, Rook = 1, Bishop = 2, Knight = 3, Pawn = 4, King = 5}` chess piece colorless type.
 * `MoveType mt`: `{MoveSpecial}` tag used for any pawn move, castling and null move.
 * `PiMask`: intermediate data – piece vector of byte masks (0 or 0xFF) for selected pieces.
 * Many variables have type PiMask and many functions return PiMask. No special name prefix for them.
