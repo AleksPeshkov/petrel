@@ -71,8 +71,8 @@ public:
     constexpr bool has(Square sq) const { assert (bbSide_.has(sq) == squares.has(sq)); return bbSide_.has(sq); }
     constexpr Pi pi(Square sq) const { assert (has(sq)); Pi pi = squares.pi(sq); assertOk(pi); return pi; }
     constexpr Square sq(Pi pi) const { assertOk(pi); return squares.sq(pi); }
-    constexpr Square sqKing() const { return sq(Pi{TheKing}); } // sq(TheKing)
-    constexpr bool isKing(Square sq) const { return sqKing().is(sq); } // sq(TheKing)
+    constexpr Square sqKing() const { return sq(PiKing); } // sq(PiKing)
+    constexpr bool isKing(Square sq) const { return sqKing().is(sq); } // sq(PiKing)
     constexpr PiMask any(Rank rank) const { rank.assertOk(); return squares.any(rank); }
 
     constexpr Piece piece(Pi pi) const { assertOk(pi); return types.piece(pi); }
