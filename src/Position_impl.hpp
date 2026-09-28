@@ -262,7 +262,7 @@ bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
 
             OP.capture(~to);
             OP.setOpKing(~to);
-            MY.move(Pi{TheKing}, from, to);
+            MY.move(PiKing, from, to);
             MY.updateMovedKing(to);
             updateSliderAttacks<My>(MY.affectedBy(from)); // king cannot affect enemy attacks
             if constexpr (Flags & WithEval) { accumulator.moveKing(*this, from, to, captured); }
@@ -273,7 +273,7 @@ bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
                 rule50_.next(); // zHash_ kept unless king move affected castling rights
             }
 
-            MY.move(Pi{TheKing}, from, to);
+            MY.move(PiKing, from, to);
             MY.updateMovedKing(to);
             OP.setOpKing(~to);
             updateSliderAttacks<My>(MY.affectedBy(from, to)); // king cannot affect enemy attacks
