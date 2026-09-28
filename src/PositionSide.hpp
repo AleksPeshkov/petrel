@@ -29,16 +29,16 @@ class PositionSide {
             assert (has(sq));
 
             assert (types.isPawn(pi) == isPawn(sq));
-            assert (!isPawn(sq) || (!sq.on(Rank1) && !sq.on(Rank8)));
+            assert (!isPawn(sq) || (!sq.isOn(Rank1) && !sq.isOn(Rank8)));
 
             assert (traits.isEnPassant(pi) <= types.isPawn(pi));
-            assert (traits.isEnPassant(pi) <= (sq.on(Rank4) || sq.on(Rank5)));
+            assert (traits.isEnPassant(pi) <= (sq.isOn(Rank4) || sq.isOn(Rank5)));
 
             assert (traits.isPromotable(pi) <= types.isPawn(pi));
-            assert (traits.isPromotable(pi) <= squares.sq(pi).on(Rank7));
+            assert (traits.isPromotable(pi) <= squares.sq(pi).isOn(Rank7));
 
             assert (traits.isCastling(pi) <= types.isRook(pi));
-            assert (traits.isCastling(pi) <= sq.on(Rank1));
+            assert (traits.isCastling(pi) <= sq.isOn(Rank1));
         }
 
         constexpr void assertOk(Pi pi, PieceType ty, Square sq) const {
@@ -73,7 +73,7 @@ public:
     constexpr Square sq(Pi pi) const { assertOk(pi); return squares.sq(pi); }
     constexpr Square sqKing() const { return sq(Pi{TheKing}); } // sq(TheKing)
     constexpr bool isKing(Square sq) const { return sqKing().is(sq); } // sq(TheKing)
-    constexpr PiMask anyOn(Rank::_t rank) const { Rank{rank}.assertOk(); return squares.anyOn(rank); }
+    constexpr PiMask any(Rank::_t rank) const { Rank{rank}.assertOk(); return squares.any(rank); }
 
     constexpr PieceType typeOf(Pi pi) const { assertOk(pi); return types.typeOf(pi); }
     constexpr PieceType typeAt(Square sq) const { return typeOf(pi(sq)); }
@@ -83,7 +83,7 @@ public:
     constexpr PiMask sliders() const { return types.sliders(); } // Q, R, B
     constexpr PiMask officers() const { return types.officers(); } // Q, R, B, N
     constexpr PiMask nonKing() const { return types.nonKing(); } // Q, R, B, N, P
-    constexpr PiMask pawns() const { return types.anyOf(Pawn); }
+    constexpr PiMask pawns() const { return types.any(Pawn); }
 
     // pieces of less value than given piece type
     constexpr PiMask lessValue(PieceType ty) const { return types.lessValue(ty); }
@@ -101,8 +101,8 @@ public:
 
     constexpr PiMask enPassantPawns() const { return traits.enPassantPawns(); }
     constexpr bool isEnPassant(Pi pi) const { return traits.isEnPassant(pi); }
-    constexpr bool hasEnPassant() const { return enPassantPawns().any(); }
-    constexpr Square sqEnPassant() const { Square ep{sq(traits.piEnPassant())}; assert (ep.on(Rank4)); return ep; }
+    constexpr bool hasEnPassant() const { return enPassantPawns().isAny(); }
+    constexpr Square sqEnPassant() const { Square ep{sq(traits.piEnPassant())}; assert (ep.isOn(Rank4)); return ep; }
     constexpr File fileEnPassant() const { return sqEnPassant().file(); }
 
     constexpr const auto& attacks() const { return attacks_; }
@@ -127,7 +127,7 @@ public:
 
     constexpr bool isPseudoLegal(Move move) const {
         //TODO: create isLegal(move)
-        if (move.none()) { return false; }
+        if (move.isNone()) { return false; }
 
         Square from{move.from()};
         Square to{move.to()};

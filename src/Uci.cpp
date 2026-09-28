@@ -268,7 +268,7 @@ bool FenToBoard::drop(Color color, PieceType ty, Square sq) {
     }
 
     // illegal pawn location
-    if (ty.is(Pawn) && (sq.on(Rank1) || sq.on(Rank8))) {
+    if (ty.is(Pawn) && (sq.isOn(Rank1) || sq.isOn(Rank8))) {
         io::error("invalid fen: pawn on invalid rank");
         return false;
     }
@@ -419,7 +419,7 @@ ostream& move(ostream& os, Move move, Color colorToMove, ChessVariant chessVaria
     bool isWhite{ colorToMove.is(White) };
     os << ' ';
 
-    if (move.none()) {
+    if (move.isNone()) {
         os << "0000";
         return os;
     }
@@ -436,7 +436,7 @@ ostream& move(ostream& os, Move move, Color colorToMove, ChessVariant chessVaria
     }
 
     // pawn promotion
-    if (from.on(Rank7)) {
+    if (from.isOn(Rank7)) {
         // the type of a promoted pawn piece encoded in place of move to's rank
         uciTo = Square{to.file(), isWhite ? Rank8 : Rank1};
         os << uciFrom << uciTo << PromoType{::promoTypeFrom(to.rank())};
@@ -444,19 +444,19 @@ ostream& move(ostream& os, Move move, Color colorToMove, ChessVariant chessVaria
     }
 
     // en passant capture
-    if (from.on(Rank5) && to.on(Rank5)) {
+    if (from.isOn(Rank5) && to.isOn(Rank5)) {
         // en passant capture move internally encoded as pawn captures pawn
         os << uciFrom << Square{to.file(), isWhite ? Rank6 : Rank3};
         return os;
     }
 
     //TRICK: castling is "pawn" move as it needs special handling
-    if (from.on(Rank1)) {
+    if (from.isOn(Rank1)) {
         // castling move internally encoded as the rook captures own king
 
         if (chessVariant.is(Orthodox)) {
-            if (from.on(FileA)) { os << uciTo << Square{File{FileC}, uciFrom.rank()}; return os; }
-            if (from.on(FileH)) { os << uciTo << Square{File{FileG}, uciFrom.rank()}; return os; }
+            if (from.isOn(FileA)) { os << uciTo << Square{File{FileC}, uciFrom.rank()}; return os; }
+            if (from.isOn(FileH)) { os << uciTo << Square{File{FileG}, uciFrom.rank()}; return os; }
         }
 
         // Chess960:
@@ -500,7 +500,7 @@ istream& UciPosition::readMove(istream& is, Square& from, Square& to) const {
 
     // convert special moves (castling, promotion, ep) to the internal move format
     if (MY.isPawn(from)) {
-        if (from.on(Rank7)) {
+        if (from.isOn(Rank7)) {
             PromoType promo{Queen};
             is >> promo;
             is.clear(); // promotion piece is optional
@@ -508,7 +508,7 @@ istream& UciPosition::readMove(istream& is, Square& from, Square& to) const {
             return is;
         }
 
-        if (from.on(Rank5) && OP.hasEnPassant() && OP.fileEnPassant().is(to.file())) {
+        if (from.isOn(Rank5) && OP.hasEnPassant() && OP.fileEnPassant().is(to.file())) {
             to = Square{to.file(), Rank5};
             return is;
         }
@@ -620,7 +620,7 @@ istream& UciPosition::readEnPassant(istream& is) {
 
     Square ep;
     if (is >> ep) {
-        if (!ep.on(colorToMove_.is(White) ? Rank6 : Rank3) || !setEnPassant(ep.file())) {
+        if (!ep.isOn(colorToMove_.is(White) ? Rank6 : Rank3) || !setEnPassant(ep.file())) {
             return io::fail_pos(is, beforeSquare);
         }
     }
@@ -648,7 +648,7 @@ void UciPosition::readFen(istream& is) {
 // fast exit: return the first legal move found
 Move UciPosition::firstRootMove() const {
     for (Pi pi : MY.any()) {
-        if (bbMovesOf(pi).none()) { continue; }
+        if (bbMovesOf(pi).isNone()) { continue; }
         return toMove(MY.sq(pi), bbMovesOf(pi).first());
     }
     return {};
@@ -856,12 +856,12 @@ ostream& Uci::info_pv(ostream& os) const {
     os << pv.score();
 
     auto* pvMoves = pv.moves();
-    if (pvMoves->none()) { return os; } // empty PV (no legal moves at root)
+    if (pvMoves->isNone()) { return os; } // empty PV (no legal moves at root)
 
     os << " pv";
     {
         Color color{ colorToMove() };
-        for (Move move; (move = *pvMoves++).any(); ) {
+        for (Move move; (move = *pvMoves++).isAny(); ) {
             ::move(os, move, color, chessVariant());
             color = ~color;
         }
@@ -1148,10 +1148,10 @@ void Uci::setPositionMoves() {
     do {
         auto z = position_.z();
         auto ttEntry = TtEntry::read( The_transpositionTable.addr<TtEntry>(z) );
-        if (ttEntry != z || ttEntry.none()) { break; }
+        if (ttEntry != z || ttEntry.isNone()) { break; }
 
         auto ttMove = ttEntry.ttMove(z);
-        if (ttMove.none()) { break; }
+        if (ttMove.isNone()) { break; }
         if (!position_.isPossibleMove(ttMove.from(), ttMove.to())) { break; }
 
         Score score{};
@@ -1176,7 +1176,7 @@ void Uci::savePv() {
     Score score = pv.score();
     auto* pvMoves = pv.moves();
 
-    for (Move move; (move = *pvMoves++).any();) {
+    for (Move move; (move = *pvMoves++).isAny();) {
         assert (score.isOk(ply));
         assert (pos.isPseudoLegal(move));
 
@@ -1356,7 +1356,7 @@ void Uci::info_bestmove() {
     }
 
     ob << "bestmove"; move(ob, pv.getMove(0_ply));
-    if (go_.canPonder && pv.getMove(1_ply).any()) {
+    if (go_.canPonder && pv.getMove(1_ply).isAny()) {
         ob << " ponder"; move(ob, pv.getMove(1_ply), 1_ply);
     }
 
