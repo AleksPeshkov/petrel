@@ -62,8 +62,8 @@ bool Position::setEnPassant(File file) {
     return true;
 }
 
-bool Position::dropValid(Side side, Piece ty, Square to) {
-    return positionSide(side).dropValid(ty, to);
+bool Position::dropValid(Side side, Piece piece, Square to) {
+    return positionSide(side).dropValid(piece, to);
 }
 
 bool Position::afterDrop() {
@@ -89,7 +89,7 @@ Zobrist Position::generateZobrist() const {
     Zobrist z{};
 
     for (Pi pi : MY.any()) { z(MY.piece(pi), MY.sq(pi));}
-    for (Pi rook : MY.castlingRooks()) { z.castling(MY.sq(rook)); }
+    for (Pi piRook : MY.castlingRooks()) { z.castling(MY.sq(piRook)); }
 
     return z;
 }

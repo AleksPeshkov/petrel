@@ -49,8 +49,8 @@ public:
 class Zobrist {
     Z v_;
 
-    constexpr void my(Z::Index ty, Square sq) { v_ = v_ ^ Z{ty, sq}; }
-    constexpr void op(Z::Index ty, Square sq) { v_ = v_ ^ ~Z{ty, sq}; }
+    constexpr void my(Z::Index zi, Square sq) { v_ = v_ ^ Z{zi, sq}; }
+    constexpr void op(Z::Index zi, Square sq) { v_ = v_ ^ ~Z{zi, sq}; }
 
 public:
     constexpr Zobrist () : v_{} {}
@@ -61,25 +61,25 @@ public:
 
     constexpr Zobrist& flip() { v_ = ~v_; return *this; }
 
-    void operator () (Piece ty, Square sq) { my(ty, sq); }
+    void operator () (Piece piece, Square sq) { my(piece, sq); }
     void castling(Square sq)  { assert (sq.isOn(Rank1)); my(Z::Castling, sq); }
     void enPassant(Square sq) { assert (sq.isOn(Rank4)); my(Z::EnPassant, sq); }
 
-    void opCapture(NonKingPiece ty, Square sq) { op(ty, sq); }
+    void opCapture(NonKingPiece nonKing, Square sq) { op(nonKing, sq); }
     void opCastling(Square sq)  { assert (sq.isOn(Rank1)); op(Z::Castling, sq); }
     void opEnPassant(Square sq) { assert (sq.isOn(Rank4)); op(Z::EnPassant, sq); }
 
-    void move(Piece ty, Square from, Square to) {
+    void move(Piece piece, Square from, Square to) {
         assert (from != to);
-        my(ty, from);
-        my(ty, to);
+        my(piece, from);
+        my(piece, to);
     }
 
-    void promote(Square from, Officer ty, Square to) {
+    void promote(Square from, Officer officer, Square to) {
         assert (from.isOn(Rank7));
         assert (to.isOn(Rank8));
         my(Pawn, from);
-        my(ty, to);
+        my(officer, to);
     }
 
     void castle(Square kingFrom, Square kingTo, Square rookFrom, Square rookTo) {

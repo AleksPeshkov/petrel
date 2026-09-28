@@ -41,9 +41,9 @@ class PositionSide {
             assert (traits.isCastling(pi) <= sq.isOn(Rank1));
         }
 
-        constexpr void assertOk(Pi pi, Piece ty, Square sq) const {
+        constexpr void assertOk(Pi pi, Piece piece, Square sq) const {
             assert (squares.sq(pi) == sq);
-            assert (types.piece(pi) == ty);
+            assert (types.piece(pi) == piece);
             assertOk(pi);
         }
     #else
@@ -86,10 +86,10 @@ public:
     constexpr PiMask pawns() const { return types.any(Pawn); }
 
     // pieces of less value than given piece type
-    constexpr PiMask lessValue(Piece ty) const { return types.lessValue(ty); }
+    constexpr PiMask lessValue(Piece piece) const { return types.lessValue(piece); }
 
     // pieces of less or equal value than given piece type
-    constexpr PiMask lessOrEqualValue(Piece ty) const { return types.lessOrEqualValue(ty); }
+    constexpr PiMask lessOrEqualValue(Piece piece) const { return types.lessOrEqualValue(piece); }
 
     constexpr PiMask castlingRooks() const { return traits.castlingRooks(); }
     constexpr bool isCastling(Pi pi) const { assertOk(pi); return traits.isCastling(pi); }
@@ -150,9 +150,9 @@ public:
 
     void setOpKing(Square);
     void move(Pi, Square, Square);
-    void move(Pi, Piece, Square, Square);
+    void move(Pi, Officer, Square, Square);
     void movePawn(Square, Square);
-    void castle(Square kingFrom, Square kingTo, Pi rook, Square rookFrom, Square rookTo);
+    void castle(Square kingFrom, Square kingTo, Pi piRook, Square rookFrom, Square rookTo);
     Pi piPromoted(Square, Officer, Square);
     void capture(Square);
     void updateMovedKing(Square);

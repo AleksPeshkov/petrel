@@ -79,11 +79,11 @@ public:
     // hyperbola({bb1, 0}) == {bb ^ bitreverse64(0), 0 ^ bitreverse64(bb)} == {bb, bitreverse64(bb)}
     explicit Hyperbola (Bb bb) : occupied{ hyperbola(u64x2(bb, Bb{})) } {}
 
-    constexpr Bb attack(Slider ty, Square from) const {
+    constexpr Bb attack(Slider slider, Square from) const {
         auto sq = hyperbolaSq[from];
 
         // branchless computation
-        Direction dir{ ty.is(Bishop) ? DiagonalDir : FileDir };
+        Direction dir{ slider.is(Bishop) ? DiagonalDir : FileDir };
 
         auto d0 = hyperbolaDir[from][dir];
         auto d1 = hyperbolaDir[from][Direction{static_cast<Direction::_t>(+dir+1)}];
@@ -92,7 +92,7 @@ public:
         auto result = ((occupied & d0) - sq) & d0;
         result     |= ((occupied & d1) - sq) & d1;
 
-        if (ty.is(Queen)) {
+        if (slider.is(Queen)) {
             // plus bishop attacks for Queens
             auto d = hyperbolaDir[from][Direction{DiagonalDir}];
             auto a = hyperbolaDir[from][Direction{AntidiagDir}];
