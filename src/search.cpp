@@ -448,7 +448,7 @@ ReturnStatus Node::search() {
 
         // king quiet moves (always safe), castling is a rook move
         {
-            Pi pi{TheKing};
+            Pi pi{PiKing};
             Square from{MY.sqKing()};
             for (Square to : bbMovesOf(pi)) {
                 RETURN_CUTOFF (searchMove(from, to, 3_ply));

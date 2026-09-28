@@ -53,7 +53,7 @@ public:
             }
         }
         assert (false);
-        return Pi{TheKing};
+        return {};
     }
 };
 
@@ -98,7 +98,7 @@ public:
             }
         }
         assert (false);
-        return Pi{TheKing};
+        return {};
     }
 };
 
@@ -208,19 +208,19 @@ public:
     void clear(Pi pi) { assertOk(pi); set(pi, Square::null()); }
 
     void castle(Square kingTo, Pi piRook, Square rookTo) {
-        assert (!piRook.is(TheKing));
-        assert (sq(Pi{TheKing}).isOn(Rank1));
+        assert (!piRook.is(PiKing));
+        assert (sq(PiKing).isOn(Rank1));
         assert (sq(piRook).isOn(Rank1));
         assert (kingTo.is(G1) || kingTo.is(C1));
         assert (rookTo.is(F1) || rookTo.is(D1));
 
-        assertOk(Pi{TheKing});
+        assertOk(PiKing);
         assertOk(piRook);
 
-        set(Pi{TheKing}, *kingTo);
+        set(PiKing, *kingTo);
         set(piRook, *rookTo);
 
-        assertOk(Pi{TheKing});
+        assertOk(PiKing);
         assertOk(piRook);
     }
 
@@ -286,8 +286,8 @@ public:
         constexpr void assertOk(Pi) const {}
     #endif
 
-    void drop(Pi pi, Piece piece) { assert (isNone(pi)); assert (!pi.is(TheKing) || piece.is(King)); type[pi] = element(*piece); }
-    void clear(Pi pi) { assertOk(pi); assert (!pi.is(TheKing)); assert (!is(pi, King)); type[pi] = None; }
+    void drop(Pi pi, Piece piece) { assert (isNone(pi)); assert (!pi.is(PiKing) || piece.is(King)); type[pi] = element(*piece); }
+    void clear(Pi pi) { assertOk(pi); assert (!pi.is(PiKing)); assert (!is(pi, King)); type[pi] = None; }
 
     constexpr bool isNone(Pi pi) const { return type[pi] == None; }
     constexpr bool isPawn(Pi pi) const { return is(pi, Pawn); }
