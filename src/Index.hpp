@@ -356,7 +356,7 @@ enum class ReturnStatus {
 #define RETURN_CUTOFF(visitor) { ReturnStatus status = visitor; if (status != ReturnStatus::Continue) { return status; }} ((void)0)
 
 enum move_type_enum { MoveSpecial, MoveRB, MoveQN, MoveKing };
-struct MoveType : Index<MoveType, 4, move_type_enum> { using Index::Index; };
+struct MoveType : Index<MoveType, 4, move_type_enum> { explicit constexpr MoveType(_t v) : Index{v} {} };
 
 enum class CanBeKiller { No, Yes }; // No = 0, Yes = 1
 
@@ -382,11 +382,10 @@ private:
 #endif
 
 public:
-    static constexpr _t null() { return 0; } // null move
     static constexpr int bit_width() { return 13; }
     static constexpr _t mask() { return static_cast<_t>(::singleton<unsigned>(bit_width()) - 1u); }
 
-    constexpr TtMove () : v_{null()} {} // null move
+    constexpr TtMove () : v_{0} {} // no move (null move)
     constexpr explicit TtMove (int n) : v_{static_cast<_t>(n & mask())} { assertOk(); }
 
     constexpr TtMove (Square from, Square to, CanBeKiller canBeKiller)
@@ -398,8 +397,8 @@ public:
 
     constexpr int operator + () const { return +v_; }
 
-    constexpr void assertOk() const { assert (v_ == null() || +from() != 0 || +to() != 0); } // check for canonical null move
-    constexpr bool isNone() const { return v_ == null(); }
+    constexpr void assertOk() const { assert (v_ == 0 || +from() != 0 || +to() != 0); } // check for canonical null move
+    constexpr bool isNone() const { return v_ == 0; }
     constexpr bool isAny() const { return !isNone(); }
 
     constexpr Square from() const { assert (isAny()); return Square::unpack(v_, ShiftFrom); }
@@ -437,16 +436,16 @@ class Move {
 #endif
 
 public:
-    static constexpr _t null() { return 0; } // null move
-    constexpr Move() : v_{null()} {}
+    static constexpr int bit_width() { return 15; }
+    constexpr Move() : v_{0} {} // no move (null move)
     constexpr Move (TtMove ttMove, MoveType moveType)
         : v_{static_cast<_t>(+ttMove | moveType.pack(ShiftType))}
     { assertOk(); }
 
     constexpr TtMove ttMove() const { return TtMove{v_}; }
 
-    constexpr void assertOk() const { assert (v_ == null() || +from() != 0 || +to() != 0); } // check for canonical null move
-    constexpr bool isNone() const { return v_ == null(); }
+    constexpr void assertOk() const { assert (v_ == 0 || +from() != 0 || +to() != 0); } // check for canonical null move
+    constexpr bool isNone() const { return v_ == 0; }
     constexpr bool isAny() const { return !isNone(); }
 
     constexpr Square from() const { assert (isAny()); return Square::unpack(v_, ShiftFrom); }
