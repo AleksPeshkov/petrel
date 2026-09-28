@@ -152,9 +152,10 @@ public:
     void move(Pi, Square, Square);
     void move(Pi, Officer, Square, Square);
     void movePawn(Square, Square);
+    [[nodiscard]] Pi piPromoted(Square, Officer, Square);
+
     void castle(Square kingFrom, Square kingTo, Pi piRook, Square rookFrom, Square rookTo);
-    Pi piPromoted(Square, Officer, Square);
-    void capture(Square);
+    void capture(NonKingPiece, Square);
     void updateMovedKing(Square);
 
     void setEnPassantVictim(Square);
