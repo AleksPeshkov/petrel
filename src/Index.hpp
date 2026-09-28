@@ -321,27 +321,33 @@ enum piece_type_enum {
 template <> struct CharMap<piece_type_enum> { static constexpr io::czstring The_string = "qrbnpk"; };
 
 // Queen, Rook, Bishop
-struct Slider : Index<Slider, 3, piece_type_enum> { using Index::Index; };
+struct Slider : Index<Slider, 3, piece_type_enum> {
+    constexpr Slider (_t slider) : Index{slider} {}
+};
 
 // Queen, Rook, Bishop, Knight
-struct Officer : IndexChar<Officer, 4, piece_type_enum> { using IndexChar::IndexChar; };
+struct Officer : IndexChar<Officer, 4, piece_type_enum> {
+    constexpr Officer (_t officer) : IndexChar{officer} {}
+};
 
  // Queen, Rook, Bishop, Knight, Pawn
-struct NonKingPiece : Index<NonKingPiece, 5, piece_type_enum> { using Index::Index; };
+struct NonKingPiece : Index<NonKingPiece, 5, piece_type_enum> {
+    constexpr NonKingPiece (_t nonKing) : Index{nonKing} {}
+};
 
 // Queen, Rook, Bishop, Knight, Pawn, King
 struct Piece : IndexChar<Piece, 6, piece_type_enum> {
-    constexpr Piece (Piece::_t ty) : IndexChar{ty} {}
-    constexpr Piece (Slider ty) : IndexChar{*ty} {}
-    constexpr Piece (Officer ty) : IndexChar{*ty} {}
-    constexpr Piece (NonKingPiece ty) : IndexChar{*ty} {}
+    constexpr Piece (_t piece_type) : IndexChar{piece_type} {}
+    constexpr Piece (Slider slider) : IndexChar{*slider} {}
+    constexpr Piece (Officer officer) : IndexChar{*officer} {}
+    constexpr Piece (NonKingPiece nonKing) : IndexChar{*nonKing} {}
 };
 
-constexpr bool isSlider(piece_type_enum ty) { return ty < Knight; } // Queen, Rook, Bishop
-constexpr bool isLeaper(piece_type_enum ty) { return ty >= Knight; } // Knight, Pawn, King
+constexpr bool isSlider(piece_type_enum piece_type) { return piece_type < Knight; } // Queen, Rook, Bishop
+constexpr bool isLeaper(piece_type_enum piece_type) { return piece_type >= Knight; } // Knight, Pawn, King
 
 // encoding of the promoted piece type inside "to" square
-constexpr Rank rankOf(Officer ty) { return static_cast<Rank::_t>(*ty); }
+constexpr Rank rankOf(Officer officer) { return static_cast<Rank::_t>(*officer); }
 
 // decoding promoted piece type from move destination square rank
 constexpr Officer officerFrom(Rank rank) { return Officer{static_cast<Officer::_t>(*rank)}; }
@@ -468,11 +474,11 @@ public:
     enum zobrist_index_enum { Castling = 6, EnPassant = 7 };
     struct Index : ::Index<Index, 8> {
         using Base = ::Index<Index, 8>;
-        constexpr Index (Piece::_t ty) : Base{ty} {}
-        constexpr Index (zobrist_index_enum ty) : Base{ty} {}
-        constexpr Index (Piece ty) : Base{*ty} {}
-        constexpr Index (NonKingPiece ty) : Base{*ty} {}
-        constexpr Index (Officer ty) : Base{*ty} {}
+        constexpr Index (zobrist_index_enum zi) : Base{zi} {}
+        constexpr Index (Piece::_t piece_type) : Base{piece_type} {}
+        constexpr Index (Piece piece) : Index{*piece} {}
+        constexpr Index (NonKingPiece nonKing) : Index{*nonKing} {}
+        constexpr Index (Officer officer) : Index{*officer} {}
     };
 
 private:
@@ -490,7 +496,7 @@ private:
         ZEnPassant = ::rotateleft(ZPawn, H4), // H4 => H8, en passant pawn encoded as phantom pawn on rank8
     };
 
-    static constexpr _t zKey[] = {
+    static constexpr _t zIndex[] = {
         ZQueen, ZRook, ZBishop, ZKnight, ZPawn, ZKing, ZCastling, ZEnPassant
     };
 
@@ -500,7 +506,7 @@ protected:
 
 public:
     constexpr Z () : v_{0} {}
-    constexpr Z(Index ty, Square sq) : v_{::rotateleft(zKey[+ty], +sq)} {}
+    constexpr Z(Index zi, Square sq) : v_{::rotateleft(zIndex[+zi], +sq)} {}
 
     constexpr _t operator + () const { return v_; }
     constexpr Z operator ~ () const { return Z{::byteswap(v_)}; }

@@ -207,19 +207,21 @@ public:
     void drop(Pi pi, Square sq) { assert (isNone(pi)); assert (!has(sq)); set(pi, *sq); }
     void clear(Pi pi) { assertOk(pi); set(pi, Square::null()); }
 
-    void castle(Square kingTo, Pi theRook, Square rookTo) {
-        assert (!theRook.is(TheKing));
+    void castle(Square kingTo, Pi piRook, Square rookTo) {
+        assert (!piRook.is(TheKing));
         assert (sq(Pi{TheKing}).isOn(Rank1));
-        assert (sq(theRook).isOn(Rank1));
+        assert (sq(piRook).isOn(Rank1));
         assert (kingTo.is(G1) || kingTo.is(C1));
         assert (rookTo.is(F1) || rookTo.is(D1));
 
         assertOk(Pi{TheKing});
-        assertOk(theRook);
+        assertOk(piRook);
+
         set(Pi{TheKing}, *kingTo);
-        set(theRook, *rookTo);
+        set(piRook, *rookTo);
+
         assertOk(Pi{TheKing});
-        assertOk(theRook);
+        assertOk(piRook);
     }
 
     constexpr bool has(Square sq) const { return has(*sq); }
@@ -263,11 +265,10 @@ class PiType {
         u8x16_t u8x16;
     };
 
-    constexpr element_type element(Piece::_t ty) const { return static_cast<element_type>(::singleton<u8_t>(ty)); }
-    constexpr element_type element(Piece ty) const { return element(*ty); }
+    constexpr element_type element(Piece piece) const { return static_cast<element_type>(::singleton<u8_t>(+piece)); }
 
     constexpr bool has(Pi pi, element_type e) const { assertOk(pi); return (static_cast<u8_t>(type[pi]) & static_cast<u8_t>(e)) != 0; }
-    constexpr bool is(Pi pi, Piece::_t ty) const { assertOk(pi); return has(pi, element(ty)); }
+    constexpr bool is(Pi pi, Piece piece) const { assertOk(pi); return has(pi, element(piece)); }
     constexpr PiMask any(element_type e) const { return PiMask::any(u8x16 & ::u8x16x(e)); }
 
 public:
@@ -285,17 +286,17 @@ public:
         constexpr void assertOk(Pi) const {}
     #endif
 
-    void drop(Pi pi, Piece ty) { assert (isNone(pi)); assert (!pi.is(TheKing) || ty.is(King)); type[pi] = element(*ty); }
+    void drop(Pi pi, Piece piece) { assert (isNone(pi)); assert (!pi.is(TheKing) || piece.is(King)); type[pi] = element(*piece); }
     void clear(Pi pi) { assertOk(pi); assert (!pi.is(TheKing)); assert (!is(pi, King)); type[pi] = None; }
 
     constexpr bool isNone(Pi pi) const { return type[pi] == None; }
     constexpr bool isPawn(Pi pi) const { return is(pi, Pawn); }
     constexpr bool isRook(Pi pi) const { return is(pi, Rook); }
     constexpr bool isSlider(Pi pi) const { assertOk(pi); return has(pi, Sliders); }
-    constexpr Piece piece(Pi pi) const { assertOk(pi); return Piece{static_cast<Piece::_t>( ::lsb(static_cast<unsigned>(type[pi])) )}; }
+    constexpr Piece piece(Pi pi) const { assertOk(pi); return static_cast<Piece::_t>( ::lsb(static_cast<unsigned>(type[pi])) ); }
 
     constexpr PiMask any() const { return PiMask::any(u8x16); }
-    constexpr PiMask any(Piece ty) const { assert (!Piece{ty}.is(King)); return any(element(ty)); }
+    constexpr PiMask any(NonKingPiece nonKing) const { return any(element(nonKing)); }
 
     constexpr PiMask sliders() const { return any(Sliders); } // Q, R, B
     constexpr PiMask leapers() const { return any(Leapers); } // K, P, N
@@ -303,7 +304,7 @@ public:
     constexpr PiMask nonKing() const { return any(NonK); } // Q, R, B, K, P
 
     // less valuable pieces than given piece type
-    constexpr PiMask lessValue(Piece ty) const {
+    constexpr PiMask lessValue(Piece piece) const {
         constexpr array<element_type, Piece> LessValue = {
             NonQK, // Queen
             PNB,   // Rook
@@ -312,11 +313,11 @@ public:
             None,  // Pawn
             NonK,  // King
         };
-        return any(LessValue[ty]);
+        return any(LessValue[piece]);
     }
 
     // less or equal value pieces than given piece type
-    constexpr PiMask lessOrEqualValue(Piece ty) const {
+    constexpr PiMask lessOrEqualValue(Piece piece) const {
         constexpr array<element_type, Piece> LessOrEqualValue = {
             NonK,  // Queen
             NonQK, // Rook
@@ -325,7 +326,7 @@ public:
             Pawns, // Pawn
             All,   // King
         };
-        return any(LessOrEqualValue[ty]);
+        return any(LessOrEqualValue[piece]);
     }
 };
 

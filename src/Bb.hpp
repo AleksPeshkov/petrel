@@ -128,23 +128,23 @@ class CACHE_ALIGN AttacksFrom {
 public:
     consteval AttacksFrom () {
         for (auto sq: range<Square>()) {
-            attack[Piece{Rook}][sq]   = sq.bbFile() + sq.bbRank();
-            attack[Piece{Bishop}][sq] = sq.bbDiagonal() + sq.bbAntidiag();
-            attack[Piece{Queen}][sq]  = attack[Piece{Rook}][sq] + attack[Piece{Bishop}][sq];
+            attack[Rook][sq]   = sq.bbFile() + sq.bbRank();
+            attack[Bishop][sq] = sq.bbDiagonal() + sq.bbAntidiag();
+            attack[Queen][sq]  = attack[Rook][sq] + attack[Bishop][sq];
 
-            attack[Piece{Pawn}][sq] = sq.bb(-1, Rank3 - Rank2) + sq.bb(+1, Rank3 - Rank2);
+            attack[Pawn][sq] = sq.bb(-1, Rank3 - Rank2) + sq.bb(+1, Rank3 - Rank2);
 
-            attack[Piece{Knight}][sq] =
+            attack[Knight][sq] =
                 sq.bb(+2, +1) + sq.bb(+2, -1) + sq.bb(+1, +2) + sq.bb(+1, -2) +
                 sq.bb(-2, -1) + sq.bb(-2, +1) + sq.bb(-1, -2) + sq.bb(-1, +2);
 
-            attack[Piece{King}][sq] =
+            attack[King][sq] =
                 sq.bb(+1, +1) + sq.bb(+1, 0) + sq.bb(0, +1) + sq.bb(+1, -1) +
                 sq.bb(-1, -1) + sq.bb(-1, 0) + sq.bb(0, -1) + sq.bb(-1, +1);
         }
     }
 
-    constexpr Bb operator() (Piece ty, Square sq) const { return attack[ty][sq]; }
+    constexpr Bb operator() (Piece piece, Square sq) const { return attack[piece][sq]; }
 };
 extern const AttacksFrom attacksFrom;
 
