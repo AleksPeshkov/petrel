@@ -168,7 +168,7 @@ class FenToBoard {
     };
     using Squares = std::set<Square, SquareImportance>;
 
-    array<Squares, Color, Piece> pieces;
+    array<Squares, Color, Piece> coloredPieces;
     array<int, Color> pieceCount = {{0, 0}};
 
     bool drop(Color, Piece, Square);
@@ -207,14 +207,14 @@ istream& read(istream& is, FenToBoard& board) {
             Color color{std::isupper(c) ? White : Black};
             c = static_cast<io::char_type>(std::tolower(c));
 
-            Piece ty{Queen};
-            if (!ty.from_char(c)) {
+            Piece piece{Queen};
+            if (!piece.from_char(c)) {
                 io::fail_char(is);
                 io::error("invalid fen: invalid char");
                 break;
             }
 
-            if (!board.drop(color, ty, {file, rank})) {
+            if (!board.drop(color, piece, {file, rank})) {
                 io::fail_char(is);
                 break;
             }
@@ -254,7 +254,7 @@ istream& read(istream& is, FenToBoard& board) {
     return is;
 }
 
-bool FenToBoard::drop(Color color, Piece ty, Square sq) {
+bool FenToBoard::drop(Color color, Piece piece, Square sq) {
     // the position representaion cannot hold more then 16 total pieces per color
     if (pieceCount[color] == Pi::size()) {
         io::error("invalid fen: too many total pieces");
@@ -262,26 +262,26 @@ bool FenToBoard::drop(Color color, Piece ty, Square sq) {
     }
 
     // max one king per each color
-    if (ty.is(King) && !pieces[color][Piece{King}].empty()) {
+    if (piece.is(King) && !coloredPieces[color][King].empty()) {
         io::error("invalid fen: too many kings");
         return false;
     }
 
     // illegal pawn location
-    if (ty.is(Pawn) && (sq.isOn(Rank1) || sq.isOn(Rank8))) {
+    if (piece.is(Pawn) && (sq.isOn(Rank1) || sq.isOn(Rank8))) {
         io::error("invalid fen: pawn on invalid rank");
         return false;
     }
 
     ++pieceCount[color];
-    pieces[color][ty].insert(color.is(White) ? sq : ~sq);
+    coloredPieces[color][piece].insert(color.is(White) ? sq : ~sq);
     return true;
 }
 
 bool FenToBoard::dropPieces(Position& position, Color colorToMove_) {
     // each side should have one king
     for (auto color : range<Color>()) {
-        if (pieces[color][Piece{King}].empty()) {
+        if (coloredPieces[color][King].empty()) {
             io::error("invalid fen: king is missing");
             return false;
         }
@@ -292,13 +292,13 @@ bool FenToBoard::dropPieces(Position& position, Color colorToMove_) {
     for (auto color : range<Color>()) {
         Side side{colorToMove_.is(color) ? My : Op};
 
-        for (auto ty : range<Piece>()) {
-            while (!pieces[color][ty].empty()) {
-                auto piece = pieces[color][ty].begin();
+        for (auto piece : range<Piece>()) {
+            while (!coloredPieces[color][piece].empty()) {
+                auto coloredPiece = coloredPieces[color][piece].begin();
 
-                if (!pos.dropValid(side, ty, *piece)) { return false; }
+                if (!pos.dropValid(side, piece, *coloredPiece)) { return false; }
 
-                pieces[color][ty].erase(piece);
+                coloredPieces[color][piece].erase(coloredPiece);
             }
         }
     }
@@ -326,7 +326,7 @@ public:
 
                 if (board.whitePieces.has(sq)) {
                     if (emptySqCount != 0) { os << emptySqCount; emptySqCount = 0; }
-                    os << static_cast<io::char_type>(std::toupper( Piece{board.whitePieces.pieceAt(sq)}.to_char() ));
+                    os << static_cast<io::char_type>(std::toupper( board.whitePieces.pieceAt(sq).to_char() ));
                     continue;
                 }
 
