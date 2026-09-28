@@ -65,7 +65,7 @@ public:
     void castling(Square sq)  { assert (sq.isOn(Rank1)); my(Z::Castling, sq); }
     void enPassant(Square sq) { assert (sq.isOn(Rank4)); my(Z::EnPassant, sq); }
 
-    void opCapture(NonKingType ty, Square sq) { op(ty, sq); }
+    void opCapture(NonKingPiece ty, Square sq) { op(ty, sq); }
     void opCastling(Square sq)  { assert (sq.isOn(Rank1)); op(Z::Castling, sq); }
     void opEnPassant(Square sq) { assert (sq.isOn(Rank4)); op(Z::EnPassant, sq); }
 
@@ -75,7 +75,7 @@ public:
         my(ty, to);
     }
 
-    void promote(Square from, PromoType ty, Square to) {
+    void promote(Square from, Officer ty, Square to) {
         assert (from.isOn(Rank7));
         assert (to.isOn(Rank8));
         my(Pawn, from);

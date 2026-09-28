@@ -53,7 +53,7 @@ class PositionSide {
 
     void setLeaperAttacks();
     void setLeaperAttack(Pi, PieceType, Square);
-    void setPinner(Pi, SliderType, Square);
+    void setPinner(Pi, Slider, Square);
 
 public:
     // incremental piece count and material score for the given side to move
@@ -153,7 +153,7 @@ public:
     void move(Pi, PieceType, Square, Square);
     void movePawn(Square, Square);
     void castle(Square kingFrom, Square kingTo, Pi rook, Square rookFrom, Square rookTo);
-    Pi piPromoted(Square, PromoType, Square);
+    Pi piPromoted(Square, Officer, Square);
     void capture(Square);
     void updateMovedKing(Square);
 
