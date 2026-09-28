@@ -42,13 +42,6 @@ void Position::makeNullMove(const Position& parent) {
     //assert (z() == *generateZobrist()); // true, but slow to compute
 }
 
-void Position::makeMovePerft(const Position& parent, Square from, Square to) {
-    flip(parent);
-
-    // current position flipped its sides relative to parent, so we make the move inplace for the Op
-    makeMove<Op, Fast>(from, to, []{});
-}
-
 bool Position::setEnPassant(File file) {
     Square ep{file, Rank4}; // not FEN ep square, but victim pawn location
 
