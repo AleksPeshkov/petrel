@@ -96,7 +96,7 @@ public:
     }
 };
 
-class Position {
+class CACHE_ALIGN Position {
     DualAcc accumulator; // NNUE evaluation accumulators (a pair from each side perspective)
     array<PositionSide, Side> positionSide_; // copied from the parent, updated incrementally
     array<Bb, Side> occupied_; // both color pieces combined, updated from positionSide[] after each move

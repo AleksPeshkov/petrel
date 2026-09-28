@@ -140,21 +140,22 @@ bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
     OP.clearCheckers();
 
     if (OP.hasEnPassant()) [[unlikely]] {
+        if constexpr (Flags & WithZobrist) { zobrist_.opEnPassant(OP.sqEnPassant()); }
+        MY.clearEnPassantKillers(); // can be two
+
         if (MY.isPawn(from) && from.isOn(Rank5) && to.isOn(Rank5)) [[unlikely]] {
             // en passant capture encoded as the pawn captures the pawn
             Square ep{to};
             to = {to.file(), Rank6};
 
             if constexpr (Flags & WithZobrist) {
-                zobrist_.opEnPassant(OP.sqEnPassant());
                 zobrist_.move(Pawn, from, to);
                 zobrist_.opCapture(Pawn, ~ep);
                 flipPrefetch();
                 rule50_ = {}; zHash_ = {}; // ep capture resets rule50
             }
 
-            OP.capture(~ep); //TRICK: also clears en passant victim
-            MY.clearEnPassantKillers(); // can be two
+            OP.capture(Pawn, ~ep); //TRICK: also clears en passant victim
             MY.movePawn(from, to);
             updateSliderAttacks<My>(MY.affectedBy(from, to, ep), OP.affectedBy(~from, ~to, ~ep));
             if constexpr (Flags & WithEval) { accumulator.ep(from, to, ep); }
@@ -162,8 +163,6 @@ bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
         }
 
         // clear en passant status from the previous move
-        if constexpr (Flags & WithZobrist) { zobrist_.opEnPassant(OP.sqEnPassant()); }
-        MY.clearEnPassantKillers(); // can be two
         OP.clearEnPassantVictim();
     }
     assert (!OP.hasEnPassant());
@@ -185,7 +184,7 @@ bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
                     flipPrefetch();
                 }
 
-                OP.capture(~to);
+                OP.capture(captured, ~to);
                 MY.movePawn(from, to);
                 updateSliderAttacks<My>(MY.affectedBy(from), OP.affectedBy(~from));
                 if constexpr (Flags & WithEval) { accumulator.move(Pawn, from, to, captured); }
@@ -224,7 +223,7 @@ bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
                     flipPrefetch();
                 }
 
-                OP.capture(~to);
+                OP.capture(captured, ~to);
                 PiMask promoted{ MY.piPromoted(from, officer, to) }; // promoted piece index can differ from pawn piece index
                 updateSliderAttacks<My>(MY.affectedBy(from) | promoted, OP.affectedBy(~from));
                 if constexpr (Flags & WithEval) { accumulator.promote(from, officer, to, captured); }
@@ -260,7 +259,7 @@ bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
                 rule50_ = {}; zHash_ = {}; // capture resets rule50
             }
 
-            OP.capture(~to);
+            OP.capture(captured, ~to);
             OP.setOpKing(~to);
             MY.move(PiKing, from, to);
             MY.updateMovedKing(to);
@@ -331,7 +330,7 @@ bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
             rule50_ = {}; zHash_ = {}; // capture resets rule50
         }
 
-        OP.capture(~to);
+        OP.capture(captured, ~to);
         MY.move(pi, officer, from, to);
         updateSliderAttacks<My>(MY.affectedBy(from) | PiMask{pi}, OP.affectedBy(~from));
         if constexpr (Flags & WithEval) { accumulator.move(officer, from, to, captured); }
