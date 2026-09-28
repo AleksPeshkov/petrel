@@ -14,9 +14,11 @@ concept enum_or_integral = std::is_enum_v<T> || std::is_integral_v<T>;
 
 template <typename Index>
 concept IndexLike = requires {
-    { Index::size() } -> std::integral; requires Index::size() >= 1;
+    { Index::size() } -> std::integral;
+    requires Index::size() >= 1;
 
-    typename Index::_t; requires enum_or_integral<typename Index::_t>;
+    typename Index::_t;
+    requires enum_or_integral<typename Index::_t>;
     requires std::is_constructible_v<Index, typename Index::_t>;
 
     requires requires (Index i) { { +i } -> std::convertible_to<int>; };
