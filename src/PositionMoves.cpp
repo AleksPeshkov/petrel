@@ -90,9 +90,9 @@ void PositionMoves::excludePinnedMoves(PiMask opPinners) {
 
         Bb pinLine = ::inBetween(MY.sqKing(), pinFrom);
         Bb occupiedPinLine = pinLine & OCCUPIED;
-        assert (occupiedPinLine.any());
+        assert (occupiedPinLine.isAny());
 
-        if (occupiedPinLine.isSingleton() && occupiedPinLine.any(MY.bbSide())) {
+        if (occupiedPinLine.isSingleton() && occupiedPinLine.isAny(MY.bbSide())) {
             // we discovered a true pinned piece
             Pi pinned = MY.pi(occupiedPinLine.index());
 
@@ -141,7 +141,7 @@ void PositionMoves::generateMoves() {
     bbAttacked_ = ~OP.attacks().bb();
 
     inCheck_ = bbAttacked().has(MY.sqKing());
-    assert (OP.checkers().any() == bbAttacked().has(MY.sqKing()));
+    assert (OP.checkers().isAny() == bbAttacked().has(MY.sqKing()));
 
     if (inCheck_) {
         generateCheckEvasions<My>();

@@ -32,10 +32,10 @@ int PositionSide::countAttackersTo(Square sq0, Bb occupied) const {
     if (count == 0) { return count; }
 
     auto sliders1 = sliders() & attackers; // primary slider attackers
-    if (sliders1.none()) { return count; }
+    if (sliders1.isNone()) { return count; }
 
     auto sliders2 = sliders() % attackers; // secondary slider attackers
-    if (sliders2.none()) { return count; }
+    if (sliders2.isNone()) { return count; }
 
     for (auto pi2 : sliders2) {
         Square sq2{sq(pi2)};
@@ -43,7 +43,7 @@ int PositionSide::countAttackersTo(Square sq0, Bb occupied) const {
             sliders2 -= PiMask{pi2};
         }
     }
-    if (sliders2.none()) { return count; }
+    if (sliders2.isNone()) { return count; }
 
     for (auto pi1 : sliders1) {
         Square sq1{sq(pi1)};
@@ -59,7 +59,7 @@ int PositionSide::countAttackersTo(Square sq0, Bb occupied) const {
 
         // triple battery possible
         for (auto sq2 : candidates) {
-            if ((::inBetween(sq2, sq1) & (occupied - candidates)).none()) {
+            if ((::inBetween(sq2, sq1) & (occupied - candidates)).isNone()) {
                 ++count;
             }
         }
@@ -69,7 +69,7 @@ int PositionSide::countAttackersTo(Square sq0, Bb occupied) const {
 }
 
 void PositionSide::setLeaperAttacks() {
-    assert (traits.checkers().none());
+    assert (traits.checkers().isNone());
 
     for (Pi pi : types.leapers()) {
         setLeaperAttack(pi, typeOf(pi), sq(pi));
@@ -129,7 +129,7 @@ void PositionSide::movePawn(Square from, Square to) {
     bbPawnAttacks_ = bbPawns_.pForwardDiag();
 
     assert (traits.none(pawn));
-    if (to.on(Rank7)) { traits.setPromotable(pawn); }
+    if (to.isOn(Rank7)) { traits.setPromotable(pawn); }
 
     setLeaperAttack(pawn, Pawn, to);
 
@@ -138,8 +138,8 @@ void PositionSide::movePawn(Square from, Square to) {
 
 Pi PositionSide::piPromoted(Square from, PromoType ty, Square to) {
     Pi pawn{pi(from)};
-    assert (from.on(Rank7));
-    assert (to.on(Rank8));
+    assert (from.isOn(Rank7));
+    assert (to.isOn(Rank8));
     assert (traits.isPromotable(pawn));
     assertOk(pawn, Pawn, from);
 
@@ -215,7 +215,7 @@ void PositionSide::setLeaperAttack(Pi pi, PieceType ty, Square sq) {
 void PositionSide::setPinner(Pi pi, SliderType ty, Square sq) {
     assert (!traits.isPinner(pi));
 
-    if (::attacksFrom(ty, sq).has(opKing) && ::inBetween(opKing, sq).any()) {
+    if (::attacksFrom(ty, sq).has(opKing) && ::inBetween(opKing, sq).isAny()) {
         traits.setPinner(pi);
     }
 }
@@ -223,7 +223,7 @@ void PositionSide::setPinner(Pi pi, SliderType ty, Square sq) {
 void PositionSide::setOpKing(Square king) {
     opKing = king;
 
-    assert (traits.checkers().none()); // king should not be in check
+    assert (traits.checkers().isNone()); // king should not be in check
 
     traits.clearPinners();
     for (Pi pi : types.sliders()) {
@@ -234,8 +234,8 @@ void PositionSide::setOpKing(Square king) {
 }
 
 void PositionSide::updateSliders(PiMask affectedSliders, Bb occupiedBb) {
-    assert (traits.checkers().none());
-    assert (affectedSliders.any());
+    assert (traits.checkers().isNone());
+    assert (affectedSliders.isAny());
 
     Hyperbola blockers{ occupiedBb };
 
@@ -249,7 +249,7 @@ void PositionSide::updateSliders(PiMask affectedSliders, Bb occupiedBb) {
 
 void PositionSide::updateSlidersCheckers(PiMask affectedSliders, Bb occupiedBb) {
     assert (types.sliders().none(traits.checkers()));
-    assert (affectedSliders.any());
+    assert (affectedSliders.isAny());
 
     //TRICK: attacks calculated without opponent's king for implicit out of check king moves generation
     Hyperbola blockers{ occupiedBb - Bb{opKing} };
@@ -266,35 +266,35 @@ void PositionSide::updateSlidersCheckers(PiMask affectedSliders, Bb occupiedBb) 
 
 void PositionSide::setEnPassantVictim(Square ep) {
     assert (isPawn(ep));
-    assert (ep.on(Rank4));
+    assert (ep.isOn(Rank4));
     assert (!hasEnPassant() || traits.isEnPassant(pi(ep)));
     traits.setEnPassant(pi(ep));
 }
 
 void PositionSide::setEnPassantKiller(Square from) {
     assert (isPawn(from));
-    assert (from.on(Rank5));
+    assert (from.isOn(Rank5));
     traits.setEnPassant(pi(from));
 }
 
 void PositionSide::clearEnPassantVictim() {
     assert (hasEnPassant());
     assert (traits.enPassantPawns().isSingleton());
-    assert (traits.enPassantPawns() <= squares.anyOn(Rank4));
+    assert (traits.enPassantPawns() <= squares.any(Rank4));
     traits.clearEnPassants();
 }
 
 void PositionSide::clearEnPassantKillers() {
     assert (hasEnPassant());
-    assert (traits.enPassantPawns() <= squares.anyOn(Rank5));
+    assert (traits.enPassantPawns() <= squares.any(Rank5));
     traits.clearEnPassants();
 }
 
 bool PositionSide::isPinned(Bb occupied) const {
     for (Pi pinner : pinners()) {
         Bb pinLine = ::inBetween(opKing, sq(pinner));
-        assert (pinLine.any());
-        if (pinLine.none(occupied)) {
+        assert (pinLine.isAny());
+        if (pinLine.isNone(occupied)) {
             return true;
         }
     }
@@ -316,11 +316,11 @@ bool PositionSide::dropValid(PieceType ty, Square to) {
     squares.drop(pi, to);
 
     if (ty.is(Pawn)) {
-        if (to.on(Rank1) || to.on(Rank8)) {
+        if (to.isOn(Rank1) || to.isOn(Rank8)) {
             io::error("invalid fen: pawn on impossible rank");
             return false;
         }
-        if (to.on(Rank7)) { traits.setPromotable(pi);}
+        if (to.isOn(Rank7)) { traits.setPromotable(pi);}
         bbPawns_ += Bb{to};
         bbPawnAttacks_ = bbPawns_.pForwardDiag();
     }
@@ -330,13 +330,13 @@ bool PositionSide::dropValid(PieceType ty, Square to) {
 }
 
 bool PositionSide::setValidCastling(CastlingSide castlingSide) {
-    if (!sqKing().on(Rank1)) {
+    if (!sqKing().isOn(Rank1)) {
         io::error("invalid fen castling: king on bad rank");
         return false;
     }
 
     Square sqOuter{sqKing()};
-    for (Pi rook : types.anyOf(Rook) & anyOn(Rank1)) {
+    for (Pi rook : types.any(Rook) & any(Rank1)) {
         if (CastlingRules::castlingSide(sqOuter, sq(rook)).is(*castlingSide)) {
             sqOuter = sq(rook);
         }
@@ -357,7 +357,7 @@ bool PositionSide::setValidCastling(CastlingSide castlingSide) {
 }
 
 bool PositionSide::setValidCastling(File file) {
-    if (!sqKing().on(Rank1)) {
+    if (!sqKing().isOn(Rank1)) {
         io::error("invalid fen castling: king on bad rank");
         return false;
     }

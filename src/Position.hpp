@@ -62,12 +62,12 @@ public:
     constexpr Zobrist& flip() { v_ = ~v_; return *this; }
 
     void operator () (PieceType ty, Square sq) { my(ty, sq); }
-    void castling(Square sq)  { assert (sq.on(Rank1)); my(Z::Castling, sq); }
-    void enPassant(Square sq) { assert (sq.on(Rank4)); my(Z::EnPassant, sq); }
+    void castling(Square sq)  { assert (sq.isOn(Rank1)); my(Z::Castling, sq); }
+    void enPassant(Square sq) { assert (sq.isOn(Rank4)); my(Z::EnPassant, sq); }
 
     void opCapture(NonKingType ty, Square sq) { op(ty, sq); }
-    void opCastling(Square sq)  { assert (sq.on(Rank1)); op(Z::Castling, sq); }
-    void opEnPassant(Square sq) { assert (sq.on(Rank4)); op(Z::EnPassant, sq); }
+    void opCastling(Square sq)  { assert (sq.isOn(Rank1)); op(Z::Castling, sq); }
+    void opEnPassant(Square sq) { assert (sq.isOn(Rank4)); op(Z::EnPassant, sq); }
 
     void move(PieceType ty, Square from, Square to) {
         assert (from != to);
@@ -76,17 +76,17 @@ public:
     }
 
     void promote(Square from, PromoType ty, Square to) {
-        assert (from.on(Rank7));
-        assert (to.on(Rank8));
+        assert (from.isOn(Rank7));
+        assert (to.isOn(Rank8));
         my(Pawn, from);
         my(ty, to);
     }
 
     void castle(Square kingFrom, Square kingTo, Square rookFrom, Square rookTo) {
-        assert (kingFrom.on(Rank1));
-        assert (kingTo.on(Rank1));
-        assert (rookFrom.on(Rank1));
-        assert (rookTo.on(Rank1));
+        assert (kingFrom.isOn(Rank1));
+        assert (kingTo.isOn(Rank1));
+        assert (rookFrom.isOn(Rank1));
+        assert (rookTo.isOn(Rank1));
         assert (kingFrom != rookFrom);
         assert (kingTo != rookTo);
         my(King, kingFrom);

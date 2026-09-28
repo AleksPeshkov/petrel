@@ -52,13 +52,13 @@ public:
     template <typename T, typename S>
     static constexpr Bound unpack(T packed, S shift) { return static_cast<_t>(::unpack(packed, shift, mask())); }
 
-    constexpr bool none() const { return v_ == NoBound; }
-    constexpr bool any() const { return !none(); }
-    constexpr bool is(_t b) const { assert (any()); return v_ == b; }
+    constexpr bool isNone() const { return v_ == NoBound; }
+    constexpr bool isAny() const { return !isNone(); }
+    constexpr bool is(_t b) const { assert (isAny()); return v_ == b; }
     constexpr bool is(Bound b) const { return is(b.v_); }
 
     constexpr Bound operator ~ () const {
-        assert (any());
+        assert (isAny());
         return is(FailLow) ? FailHigh : is(FailHigh) ? FailLow : *this;
     }
 
@@ -123,10 +123,10 @@ public:
     static constexpr Score mateLoss(Ply ply) { return Score{static_cast<_t>(MateLoss + +ply)}; } // MateLoss + ply
     static constexpr Score mateWin(Ply ply)  { return Score{static_cast<_t>(MateWin - +ply)}; } // MateWin - ply
 
-    constexpr bool none() const { assert (v_ == NoScore || any()); return v_ == NoScore; }
-    constexpr bool any() const { return MateLoss <= v_ && v_ <= MateWin; } // MateLoss <= v_ <= MateWin
-    constexpr bool isEval() const { assert (any()); return MinEval <= v_ && v_ <= MaxEval; } // MinEval <= v_ <= MaxEval
-    constexpr bool isOk(Ply ply) const { assert (any()); return mateLoss(ply) <= *this && *this < mateWin(ply); }
+    constexpr bool isNone() const { assert (v_ == NoScore || isAny()); return v_ == NoScore; }
+    constexpr bool isAny() const { return MateLoss <= v_ && v_ <= MateWin; } // MateLoss <= v_ <= MateWin
+    constexpr bool isEval() const { assert (isAny()); return MinEval <= v_ && v_ <= MaxEval; } // MinEval <= v_ <= MaxEval
+    constexpr bool isOk(Ply ply) const { assert (isAny()); return mateLoss(ply) <= *this && *this < mateWin(ply); }
 
     // 1_ply || 1_cp
     constexpr Score minus1() const {
@@ -209,7 +209,7 @@ public:
     }
 
     friend ostream& operator << (ostream& os, Score score) {
-        if (score.none()) { return os; }
+        if (score.isNone()) { return os; }
 
         os << " score ";
         auto v = score.v_;

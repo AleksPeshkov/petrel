@@ -30,12 +30,13 @@ protected:
 
 public:
     constexpr _t v() const { return v_; } // _t v() const { return v_; }
+    static constexpr Self none() { return Self{}; }
 
     constexpr Self& operator &= (Arg b) { v_ &= b.v_; return self(); }
     constexpr Self& operator |= (Arg b) { v_ |= b.v_; return self(); }
     constexpr Self& operator ^= (Arg b) { v_ ^= b.v_; return self(); }
     constexpr Self& operator %= (Arg b) { v_ |= b.v_; v_ ^= b.v_; return self(); } // andnot_assign
-    constexpr Self& operator += (Arg b) { assert (none(b)); return self() ^= b; }
+    constexpr Self& operator += (Arg b) { assert (isNone(b)); return self() ^= b; }
     constexpr Self& operator -= (Arg b) { assert (cself() >= b); return self() ^= b; }
 
     friend constexpr Self operator & (Arg a, Arg b) { return Self{a} &= b; }
@@ -48,10 +49,10 @@ public:
     friend constexpr bool operator == (Arg a, Arg b) { return Ops::equals(a.v_, b.v_); }
     friend constexpr bool operator <  (Arg a, Arg b) { return !((a & b) == b); }
 
-    constexpr bool none() const { return cself() == Self{}; }
-    constexpr bool none(Arg b) const { return (cself() & b).none(); }
-    constexpr bool any() const { return !none(); }
-    constexpr bool any(Arg b) const { return !none(b); }
+    constexpr bool isNone() const { return cself() == none(); }
+    constexpr bool isNone(Arg b) const { return (cself() & b).isNone(); }
+    constexpr bool isAny() const { return !isNone(); }
+    constexpr bool isAny(Arg b) const { return !isNone(b); }
 };
 
 template <class self_type, class index_type, typename value_type = unsigned>
@@ -73,10 +74,10 @@ public:
     constexpr _t clearFirst() const { return ::clearFirst(v_); }
 
     // check if the index bit is set
-    constexpr bool has(Index i) const { return static_cast<const Self&>(*this).any(Self{Index{i}}); }
+    constexpr bool has(Index i) const { return static_cast<const Self&>(*this).isAny(Self{Index{i}}); }
 
     // one and only one bit set
-    constexpr bool isSingleton() const { assert (static_cast<const Self&>(*this).any()); return clearFirst() == 0; }
+    constexpr bool isSingleton() const { assert (static_cast<const Self&>(*this).isAny()); return clearFirst() == 0; }
 
     // get the first (lowest) bit set
     constexpr Index first() const { return Index{static_cast<Index::_t>(::lsb(v_))}; }

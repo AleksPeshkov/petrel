@@ -10,7 +10,7 @@ void Position::updateSliderAttacks(PiMask myAffected) {
     occupied_[Op] = OP.bbSide() + ~MY.bbSide();
 
     myAffected &= MY.sliders();
-    if (myAffected.any()) {
+    if (myAffected.isAny()) {
         MY.updateSlidersCheckers(myAffected, OCCUPIED);
     }
 }
@@ -22,7 +22,7 @@ void Position::updateSliderAttacks(PiMask myAffected, PiMask opAffected) {
     updateSliderAttacks<My>(myAffected);
 
     opAffected &= OP.sliders();
-    if (opAffected.any()) {
+    if (opAffected.isAny()) {
         OP.updateSliders(opAffected, OP_OCCUPIED);
     }
 }
@@ -31,7 +31,7 @@ template <Side::_t My>
 void Position::setLegalEnPassant(Square ep) {
     constexpr Side::_t Op{~My};
 
-    assert (ep.on(Rank4));
+    assert (ep.isOn(Rank4));
     assert (MY.isPawn(ep));
     assert (!MY.hasEnPassant());
     assert (!OP.hasEnPassant());
@@ -40,14 +40,14 @@ void Position::setLegalEnPassant(Square ep) {
 
     // check if there are any pawns to capture ep victim
     Bb killers{~OP.bbPawns() & ::attacksFrom(Pawn, to)};
-    if (killers.none()) { return; }
+    if (killers.isNone()) { return; }
 
     // discovered check
-    if (MY.isPinned(OCCUPIED)) { assert ((MY.checkers() % PiMask{MY.pi(ep)}).any()); return; }
-    assert ((MY.checkers() % PiMask{MY.pi(ep)}).none());
+    if (MY.isPinned(OCCUPIED)) { assert ((MY.checkers() % PiMask{MY.pi(ep)}).isAny()); return; }
+    assert ((MY.checkers() % PiMask{MY.pi(ep)}).isNone());
 
     for (Square from : killers) {
-        assert (from.on(Rank4));
+        assert (from.isOn(Rank4));
 
         if (!MY.isPinned(OCCUPIED - Bb{from} + Bb{to} - Bb{ep})) {
             MY.setEnPassantVictim(ep);
@@ -120,7 +120,7 @@ constexpr void DualAcc::moveKing(const Position& pos, Square from, Square to, No
 
 constexpr void DualAcc::castle(const Position& pos, Square kingFrom, Square kingTo, Square rookFrom, Square rookTo) {
     assert (kingFrom != rookFrom); assert (kingTo != rookTo);
-    assert (kingFrom.on(Rank1)); assert (rookTo.on(Rank1));
+    assert (kingFrom.isOn(Rank1)); assert (rookTo.isOn(Rank1));
     if (+(kingFrom ^ kingTo) & 4) {
         // king crossed the horizontal middle line
         mirror[Op] = mirror[Op].mirror();
@@ -136,11 +136,11 @@ bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
     constexpr Side::_t Op{~My};
 
     // assumes that the given move is valid and legal
-    assert (MY.checkers().none());
+    assert (MY.checkers().isNone());
     OP.clearCheckers();
 
     if (OP.hasEnPassant()) [[unlikely]] {
-        if (MY.isPawn(from) && from.on(Rank5) && to.on(Rank5)) [[unlikely]] {
+        if (MY.isPawn(from) && from.isOn(Rank5) && to.isOn(Rank5)) [[unlikely]] {
             // en passant capture encoded as the pawn captures the pawn
             Square ep{to};
             to = Square{to.file(), Rank6};
@@ -174,7 +174,7 @@ bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
             rule50_ = {}; zHash_ = {}; // any pawn move resets rule50
         }
 
-        if (!from.on(Rank7)) {
+        if (!from.isOn(Rank7)) {
             // simple pawn capture or noncapture, cannot be en passant capture
             if constexpr (Flags & WithZobrist) { zobrist_.move(Pawn, from, to); }
 
@@ -191,7 +191,7 @@ bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
                 if constexpr (Flags & WithEval) { accumulator.move(Pawn, from, to, captured); }
                 return true; // end of simple pawn capture move
             } else {
-                if (from.on(Rank2) && to.on(Rank4)) {
+                if (from.isOn(Rank2) && to.isOn(Rank4)) {
                     MY.movePawn(from, to);
                     updateSliderAttacks<My>(MY.affectedBy(from, to), OP.affectedBy(~from, ~to));
                     setLegalEnPassant<My>(to); //TRICK: updateSliderAttacks<My>() needed before
@@ -307,7 +307,7 @@ bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
             //TRICK: castling should not affect opponent's sliders, otherwise it is check or pin
             //TRICK: castling rook should attack 'kingFrom' square
             //TRICK: only first rank sliders can be affected
-            updateSliderAttacks<My>(MY.affectedBy(rookFrom, kingFrom) & MY.anyOn(Rank1));
+            updateSliderAttacks<My>(MY.affectedBy(rookFrom, kingFrom) & MY.any(Rank1));
             if constexpr (Flags & WithEval) { accumulator.castle(*this, kingFrom, kingTo, rookFrom, rookTo); }
             return true; // end of castling move
         }

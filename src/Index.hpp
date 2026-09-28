@@ -265,11 +265,11 @@ public:
     /// move pawn forward
     constexpr Square rankForward() const { return Square{static_cast<_t>(v_ + A8 - A7)}; }
 
-    constexpr bool on(Rank::_t r) const { return rank() == Rank{r}; }
-    constexpr bool on(File::_t f) const { return file() == File{f}; }
+    constexpr bool isOn(Rank::_t r) const { return rank() == Rank{r}; }
+    constexpr bool isOn(File::_t f) const { return file() == File{f}; }
 
-    constexpr bool none() const { return v_ == null(); }
-    constexpr bool any() const { return !none(); }
+    constexpr bool isNone() const { return v_ == null(); }
+    constexpr bool isAny() const { return !isNone(); }
 
 // defined in Bb.hpp
 
@@ -401,12 +401,12 @@ public:
     constexpr int operator + () const { return +v_; }
 
     constexpr void assertOk() const { assert (v_ == null() || +from() != 0 || +to() != 0); } // check for canonical null move
-    constexpr bool none() const { return v_ == null(); }
-    constexpr bool any() const { return !none(); }
+    constexpr bool isNone() const { return v_ == null(); }
+    constexpr bool isAny() const { return !isNone(); }
 
-    constexpr Square from() const { assert (any()); return Square::unpack(v_, ShiftFrom); }
-    constexpr Square to() const { assert (any()); return Square::unpack(v_, ShiftTo); }
-    constexpr CanBeKiller canBeKiller() const { assert (any()); return ::unpack(v_, ShiftKiller, CanBeKiller::Yes); }
+    constexpr Square from() const { assert (isAny()); return Square::unpack(v_, ShiftFrom); }
+    constexpr Square to() const { assert (isAny()); return Square::unpack(v_, ShiftTo); }
+    constexpr CanBeKiller canBeKiller() const { assert (isAny()); return ::unpack(v_, ShiftKiller, CanBeKiller::Yes); }
 
     friend constexpr bool operator == (TtMove a, TtMove b) { return a.v_ == b.v_; }
 };
@@ -448,16 +448,16 @@ public:
     constexpr TtMove ttMove() const { return TtMove{v_}; }
 
     constexpr void assertOk() const { assert (v_ == null() || +from() != 0 || +to() != 0); } // check for canonical null move
-    constexpr bool none() const { return v_ == null(); }
-    constexpr bool any() const { return !none(); }
+    constexpr bool isNone() const { return v_ == null(); }
+    constexpr bool isAny() const { return !isNone(); }
 
-    constexpr Square from() const { assert (any()); return Square::unpack(v_, ShiftFrom); }
-    constexpr Square to() const { assert (any()); return Square::unpack(v_, ShiftTo); }
-    constexpr CanBeKiller canBeKiller() const { assert (any()); return ::unpack(v_, ShiftKiller, CanBeKiller::Yes); }
-    constexpr MoveType moveType() const { assert (any()); return MoveType::unpack(v_, ShiftType); }
+    constexpr Square from() const { assert (isAny()); return Square::unpack(v_, ShiftFrom); }
+    constexpr Square to() const { assert (isAny()); return Square::unpack(v_, ShiftTo); }
+    constexpr CanBeKiller canBeKiller() const { assert (isAny()); return ::unpack(v_, ShiftKiller, CanBeKiller::Yes); }
+    constexpr MoveType moveType() const { assert (isAny()); return MoveType::unpack(v_, ShiftType); }
     constexpr bool isSpecial() const { return moveType().is(MoveSpecial); }
 
-    constexpr explicit operator bool() const { return any(); }
+    constexpr explicit operator bool() const { return isAny(); }
     friend constexpr bool operator == (Move a, Move b) { return a.v_ == b.v_; }
 };
 
