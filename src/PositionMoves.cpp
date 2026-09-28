@@ -31,7 +31,7 @@ template <Side::_t My>
 void PositionMoves::generateLegalKingMoves() {
     //TRICK: our attacks do not hide under attacked king shadow
     Bb kingMoves = ::attacksFrom(King, MY.sqKing()) % (MY.bbSide() | bbAttacked());
-    moves_.set(Pi{TheKing}, kingMoves);
+    moves_.set(PiKing, kingMoves);
 }
 
 template <Side::_t My>

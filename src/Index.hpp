@@ -307,8 +307,10 @@ enum castling_side_enum { KingSide, QueenSide };
 template <> struct CharMap<castling_side_enum> { static constexpr io::czstring The_string = "kq"; };
 struct CastlingSide : IndexChar<CastlingSide, 2, castling_side_enum> { using IndexChar::IndexChar; };
 
-enum piece_index_enum : u8_t { TheKing }; // king index is always 0
-struct Pi : Index<Pi, 16, piece_index_enum> { using Index::Index; };
+enum piece_index_enum : u8_t { PiKing = 0 }; // king index is always 0
+struct Pi : Index<Pi, 16, piece_index_enum> {
+    constexpr Pi (_t pi = PiKing) : Index{pi} {}
+};
 
 enum piece_type_enum {
     Queen = 0,
