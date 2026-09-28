@@ -17,8 +17,8 @@ public:
     constexpr TtAge () : v_{1} {}
     constexpr void nextAge() { v_ = next().v_; }
 
-    constexpr bool none() const { return v_ == 0; }
-    constexpr bool any() const { return !none(); }
+    constexpr bool isNone() const { return v_ == 0; }
+    constexpr bool isAny() const { return !isNone(); }
 
     constexpr bool is(TtAge age) const { return v_ == age.v_; }
     constexpr bool isFresh(TtAge age) const { return is(age) || is(age.next()); }
@@ -196,8 +196,8 @@ public:
         assert (ttMove(z) == _ttMove);
     }
 
-    constexpr bool none() const { return v_ == 0; }
-    constexpr bool any() const { return !none(); }
+    constexpr bool isNone() const { return v_ == 0; }
+    constexpr bool isAny() const { return !isNone(); }
     constexpr bool operator == (Z z) const { return (v_ & ZMask) == (z & ZMask); }
 
     constexpr Score eval() const { return Score::unpack(v_, ShiftEval); }

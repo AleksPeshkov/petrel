@@ -73,7 +73,7 @@ bool Position::afterDrop() {
     rule50_ = {};
 
     // opponent should not be in check
-    return MY.checkers().none();
+    return MY.checkers().isNone();
 }
 
 Bb Position::bbPassedPawns() const {

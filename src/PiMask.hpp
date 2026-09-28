@@ -134,15 +134,14 @@ public:
     constexpr explicit PiMask (_t a) : BitArray{a} { assertOk(); }
     constexpr explicit PiMask (Pi pi) : BitArray{piOneMask[pi]} {}
 
-    static constexpr _t zero() { return ::u8x16x(0); }
+    static constexpr _t none() { return ::u8x16x(0); }
 
-    using BitArray::any;
-    static constexpr PiMask any(_t a) { return PiMask{a != zero()}; }
+    static constexpr PiMask any(_t a) { return PiMask{a != none()}; }
 
     constexpr _t v() const { return v_; } // _t v() const { return v_; }
 
     // check if either 0 or 0xff bytes are set
-    constexpr bool isOk() const { return ::all(v_ == static_cast<_t>(v_ != zero())); }
+    constexpr bool isOk() const { return ::all(v_ == static_cast<_t>(v_ != none())); }
 
     // assert if either 0 or 0xff bytes are set
     constexpr void assertOk() const { assert (isOk()); }
@@ -150,8 +149,8 @@ public:
     constexpr explicit operator PieceSet() const { assertOk(); return PieceSet{v_}; }
 
     constexpr bool has(Pi pi) const { return PieceSet{v_}.has(pi); }
-    constexpr bool none() const { return PieceSet{v_}.none(); }
-    constexpr bool none(PiMask mask) const { return PieceSet{v_}.none(PieceSet{mask}); }
+    constexpr bool isNone() const { return PieceSet{v_}.isNone(); }
+    constexpr bool none(PiMask mask) const { return PieceSet{v_}.isNone(PieceSet{mask}); }
     constexpr bool isSingleton() const { return PieceSet{v_}.isSingleton(); }
 
     // get the singleton piece index
@@ -185,7 +184,7 @@ class PiSquare {
     constexpr void set(Pi pi, _t sq) { square[pi] = sq; }
 
     constexpr PiMask at(_t sq) const { return PiMask{u8x16 == ::u8x16x(sq)}; }
-    constexpr bool has(_t sq) const { return at(sq).any(); }
+    constexpr bool has(_t sq) const { return at(sq).isAny(); }
     constexpr Pi pi(_t sq) const { assert (has(sq)); return at(sq).pi(); }
 
 public:
@@ -209,8 +208,8 @@ public:
 
     void castle(Square kingTo, Pi theRook, Square rookTo) {
         assert (!theRook.is(TheKing));
-        assert (sq(Pi{TheKing}).on(Rank1));
-        assert (sq(theRook).on(Rank1));
+        assert (sq(Pi{TheKing}).isOn(Rank1));
+        assert (sq(theRook).isOn(Rank1));
         assert (kingTo.is(G1) || kingTo.is(C1));
         assert (rookTo.is(F1) || rookTo.is(D1));
 
@@ -229,7 +228,7 @@ public:
 
     constexpr PiMask any() const { return PiMask{u8x16 != ::u8x16x(Square::null())}; }
 
-    constexpr PiMask anyOn(Rank::_t rank) const {
+    constexpr PiMask any(Rank::_t rank) const {
         return PiMask{
             (u8x16 & ::u8x16x( static_cast<_t>(Square::null() ^ static_cast<_t>(File::mask())) ))
             == ::u8x16x( *Square{static_cast<File::_t>(0), rank} )
@@ -296,7 +295,7 @@ public:
     constexpr PieceType typeOf(Pi pi) const { assertOk(pi); return PieceType{static_cast<PieceType::_t>( ::lsb(static_cast<unsigned>(type[pi])) )}; }
 
     constexpr PiMask any() const { return PiMask::any(u8x16); }
-    constexpr PiMask anyOf(PieceType::_t ty) const { assert (!PieceType{ty}.is(King)); return any(element(ty)); }
+    constexpr PiMask any(PieceType::_t ty) const { assert (!PieceType{ty}.is(King)); return any(element(ty)); }
 
     constexpr PiMask sliders() const { return any(Sliders); } // Q, R, B
     constexpr PiMask leapers() const { return any(Leapers); } // K, P, N
