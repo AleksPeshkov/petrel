@@ -73,7 +73,7 @@ public:
     constexpr Square sq(Pi pi) const { assertOk(pi); return squares.sq(pi); }
     constexpr Square sqKing() const { return sq(Pi{TheKing}); } // sq(TheKing)
     constexpr bool isKing(Square sq) const { return sqKing().is(sq); } // sq(TheKing)
-    constexpr PiMask any(Rank::_t rank) const { Rank{rank}.assertOk(); return squares.any(rank); }
+    constexpr PiMask any(Rank rank) const { rank.assertOk(); return squares.any(rank); }
 
     constexpr PieceType typeOf(Pi pi) const { assertOk(pi); return types.typeOf(pi); }
     constexpr PieceType typeAt(Square sq) const { return typeOf(pi(sq)); }
