@@ -16,17 +16,17 @@ public:
 
 void test_repetition_mask() {
     ZHash z1;
-    assert (z1.none(Zt{1}) && "False positive");
+    assert (z1.isNone(Zt{1}) && "False positive");
 
     ZHash z2{z1, Zt{1}};
-    assert (!z2.none(Zt{1}) && "False negative");
-    assert (z2.none(Zt{2}) && "False positive");
-    assert (z2.none(Zt{3}) && "False positive");
+    assert (!z2.isNone(Zt{1}) && "False negative");
+    assert (z2.isNone(Zt{2}) && "False positive");
+    assert (z2.isNone(Zt{3}) && "False positive");
 
     ZHash z3{z2, Zt{2}};
-    assert (!z3.none(Zt{1}) && "False negative");
-    assert (!z3.none(Zt{2}) && "False negative");
-    assert (z3.none(Zt{3}) && "False positive");
+    assert (!z3.isNone(Zt{1}) && "False negative");
+    assert (!z3.isNone(Zt{2}) && "False negative");
+    assert (z3.isNone(Zt{3}) && "False positive");
 }
 
 void test_no_repetition() {
@@ -135,7 +135,7 @@ void test_zhash_early_exit() {
     reps.normalize();
 
     Zt z4{4};
-    assert(reps.zHash2().none(z4) && "zHash should not contain Zt{4}");
+    assert(reps.zHash2().isNone(z4) && "zHash should not contain Zt{4}");
     assert(!reps.has2(z4) && "Search should exit early and not find Zt{4}");
 }
 
@@ -148,7 +148,7 @@ void test_no_false_positive_in_zhash() {
     reps.normalize();
 
     Zt z_fake{1 + (1ULL << 30)}; // same hash, not in list
-    if (!reps.zHash2().none(z_fake)) {
+    if (!reps.zHash2().isNone(z_fake)) {
         assert(!reps.has2(z_fake) && "False positive in has()");
     }
 }
@@ -163,9 +163,9 @@ void test_push_wraparound_consistency() {
     reps.normalize();
 
     auto h = reps.zHash2();
-    assert(h.none(Zt{5}) && "Zt{5} should not be in hash");
-    assert(!h.none(Zt{0}) && "Zt{0} should be in hash");
-    assert(!h.none(Zt{4}) && "Zt{4} should be in hash");
+    assert(h.isNone(Zt{5}) && "Zt{5} should not be in hash");
+    assert(!h.isNone(Zt{0}) && "Zt{0} should be in hash");
+    assert(!h.isNone(Zt{4}) && "Zt{4} should be in hash");
 }
 
 void test_normalize_order() {
