@@ -8,9 +8,9 @@ void PositionMoves::generateEnPassantMoves() {
     assert (OP.hasEnPassant());
 
     File file = OP.fileEnPassant();
-    assert (MY.enPassantPawns() <= ( MY.pawns() & MY.attackersTo(Square{file, Rank6}) ));
+    assert (MY.enPassantPawns() <= ( MY.pawns() & MY.attackersTo({file, Rank6}) ));
     for (Pi pi : MY.enPassantPawns()) {
-        moves_.add(pi, Square{file, Rank5});
+        moves_.add(pi, {file, Rank5});
     }
 }
 
@@ -74,7 +74,7 @@ void PositionMoves::correctCheckEvasionsByPawns(Bb checkLine, Square checkFrom) 
     Bb pawnJumpEvasions = MY.bbPawns() & Bb{Rank2} & checkLine.pBackward().pBackward();
     pawnJumpEvasions %= OCCUPIED.pBackward(); // exlcude double push through occupied square
     for (Square from : pawnJumpEvasions) {
-        moves_.add(MY.pi(from), Square{from.file(), Rank4});
+        moves_.add(MY.pi(from), {from.file(), Rank4});
     }
 }
 
