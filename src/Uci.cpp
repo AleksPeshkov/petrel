@@ -147,7 +147,7 @@ istream& operator >> (istream& is, Square& sq) {
 
     if (!is) { return io::fail_pos(is, before); }
 
-    sq = Square{file, rank};
+    sq = {file, rank};
     return is;
 }
 
@@ -214,7 +214,7 @@ istream& read(istream& is, FenToBoard& board) {
                 break;
             }
 
-            if (!board.drop(color, ty, Square{file, rank})) {
+            if (!board.drop(color, ty, {file, rank})) {
                 io::fail_char(is);
                 break;
             }
@@ -438,7 +438,7 @@ ostream& move(ostream& os, Move move, Color colorToMove, ChessVariant chessVaria
     // pawn promotion
     if (from.isOn(Rank7)) {
         // the type of a promoted pawn piece encoded in place of move to's rank
-        uciTo = Square{to.file(), isWhite ? Rank8 : Rank1};
+        uciTo = {to.file(), isWhite ? Rank8 : Rank1};
         os << uciFrom << uciTo << PromoType{::promoTypeFrom(to.rank())};
         return os;
     }
@@ -455,8 +455,8 @@ ostream& move(ostream& os, Move move, Color colorToMove, ChessVariant chessVaria
         // castling move internally encoded as the rook captures own king
 
         if (chessVariant.is(Orthodox)) {
-            if (from.isOn(FileA)) { os << uciTo << Square{File{FileC}, uciFrom.rank()}; return os; }
-            if (from.isOn(FileH)) { os << uciTo << Square{File{FileG}, uciFrom.rank()}; return os; }
+            if (from.isOn(FileA)) { os << uciTo << Square{FileC, uciFrom.rank()}; return os; }
+            if (from.isOn(FileH)) { os << uciTo << Square{FileG, uciFrom.rank()}; return os; }
         }
 
         // Chess960:
@@ -504,12 +504,12 @@ istream& UciPosition::readMove(istream& is, Square& from, Square& to) const {
             PromoType promo{Queen};
             is >> promo;
             is.clear(); // promotion piece is optional
-            to = Square{to.file(), ::rankOf(promo)};
+            to = {to.file(), ::rankOf(promo)};
             return is;
         }
 
         if (from.isOn(Rank5) && OP.hasEnPassant() && OP.fileEnPassant().is(to.file())) {
-            to = Square{to.file(), Rank5};
+            to = {to.file(), Rank5};
             return is;
         }
 
@@ -525,15 +525,15 @@ istream& UciPosition::readMove(istream& is, Square& from, Square& to) const {
             return is;
         }
         if (from.is(E1) && to.is(G1)) {
-            if (!MY.has(Square{H1}) || !MY.isCastling(Square{H1})) { return io::fail_pos(is, before); }
+            if (!MY.has(H1) || !MY.isCastling(H1)) { return io::fail_pos(is, before); }
 
-            from = Square{H1}; to = Square{E1};
+            from = H1; to = E1;
             return is;
         }
         if (from.is(E1) && to.is(C1)) {
-            if (!MY.has(Square{A1}) || !MY.isCastling(Square{A1})) { return io::fail_pos(is, before); }
+            if (!MY.has(A1) || !MY.isCastling(A1)) { return io::fail_pos(is, before); }
 
-            from = Square{A1}; to = Square{E1};
+            from = A1; to = E1;
             return is;
         }
         // else is normal king move

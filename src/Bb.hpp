@@ -108,7 +108,7 @@ public:
 inline ostream& operator << (ostream& os, Bb bb) {
     os << "    a b c d e f g h\n";
     for (auto rank : range<Rank>()) {
-        os << Rank{rank} << " |";
+        os << rank << " |";
         for (auto file : File::a_to_h()) {
             Square sq{file, rank};
             os << " " << (bb.has(sq) ? 'x'  : '.');
@@ -173,13 +173,13 @@ public:
 
                 switch (*CastlingRules::castlingSide(king, rook)) {
                     case QueenSide:
-                        castlingRules[kingFile][rookFile].unimpeded  = (exBetween(king, Square{C1}) | exBetween(rook, Square{D1})) % (Bb{king} + Bb{rook});
-                        castlingRules[kingFile][rookFile].unattacked = exBetween(king, Square{C1}) | Bb{king};
+                        castlingRules[kingFile][rookFile].unimpeded  = (exBetween(king, C1) | exBetween(rook, D1)) % (Bb{king} + Bb{rook});
+                        castlingRules[kingFile][rookFile].unattacked = exBetween(king, C1) | Bb{king};
                         break;
 
                     case KingSide:
-                        castlingRules[kingFile][rookFile].unimpeded  = (exBetween(king, Square{G1}) | exBetween(rook, Square{F1})) % (Bb{king} + Bb{rook});
-                        castlingRules[kingFile][rookFile].unattacked = exBetween(king, Square{G1}) | Bb{king};
+                        castlingRules[kingFile][rookFile].unimpeded  = (exBetween(king, G1) | exBetween(rook, F1)) % (Bb{king} + Bb{rook});
+                        castlingRules[kingFile][rookFile].unattacked = exBetween(king, G1) | Bb{king};
                         break;
                 }
             }
@@ -199,11 +199,11 @@ public:
     }
 
     static constexpr Square castlingKingTo(Square king, Square rook) {
-        return castlingSide(king, rook).is(QueenSide) ? Square{C1} : Square{G1};
+        return castlingSide(king, rook).is(QueenSide) ? C1 : G1;
     }
 
     static constexpr Square castlingRookTo(Square king, Square rook) {
-        return castlingSide(king, rook).is(QueenSide) ? Square{D1} : Square{F1};
+        return castlingSide(king, rook).is(QueenSide) ? D1 : F1;
     }
 
 };

@@ -52,7 +52,7 @@ void Position::makeMovePerft(const Position& parent, Square from, Square to) {
 bool Position::setEnPassant(File file) {
     Square ep{file, Rank4}; // not FEN ep square, but victim pawn location
 
-    if (!OP.isPawn(ep) || OCCUPIED.has(Square{file, Rank6})) {
+    if (!OP.isPawn(ep) || OCCUPIED.has({file, Rank6})) {
         // pseudo legal test failed
         return false;
     }
