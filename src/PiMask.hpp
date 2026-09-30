@@ -150,7 +150,7 @@ public:
 
     constexpr bool has(Pi pi) const { return PieceSet{v_}.has(pi); }
     constexpr bool isNone() const { return PieceSet{v_}.isNone(); }
-    constexpr bool none(PiMask mask) const { return PieceSet{v_}.isNone(PieceSet{mask}); }
+    constexpr bool isNone(PiMask mask) const { return PieceSet{v_}.isNone(PieceSet{mask}); }
     constexpr bool isSingleton() const { return PieceSet{v_}.isSingleton(); }
 
     // get the singleton piece index
@@ -183,6 +183,7 @@ class PiSquare {
 
     constexpr void set(Pi pi, _t sq) { square[pi] = sq; }
 
+    constexpr bool isNone(Pi pi) const { return square[pi] == Square::null(); }
     constexpr PiMask at(_t sq) const { return PiMask{u8x16 == ::u8x16x(sq)}; }
     constexpr bool has(_t sq) const { return at(sq).isAny(); }
     constexpr Pi pi(_t sq) const { assert (has(sq)); return at(sq).pi(); }
@@ -194,7 +195,7 @@ public:
         }
     }
 
-    constexpr bool isOk(Pi _pi) const { return !none(_pi) && pi(square[_pi]) == _pi; }
+    constexpr bool isOk(Pi _pi) const { return !isNone(_pi) && pi(square[_pi]) == _pi; }
 
     #ifndef NDEBUG
         constexpr void assertOk(Pi pi) const { assert (isOk(pi)); }
@@ -203,7 +204,7 @@ public:
     #endif
 
     void set(Pi pi, Square sq) { assertOk(pi); assert (!has(sq)); set(pi, *sq); }
-    void drop(Pi pi, Square sq) { assert (none(pi)); assert (!has(sq)); set(pi, *sq); }
+    void drop(Pi pi, Square sq) { assert (isNone(pi)); assert (!has(sq)); set(pi, *sq); }
     void clear(Pi pi) { assertOk(pi); set(pi, Square::null()); }
 
     void castle(Square kingTo, Pi theRook, Square rookTo) {
@@ -221,7 +222,6 @@ public:
         assertOk(theRook);
     }
 
-    constexpr bool none(Pi pi) const { return square[pi] == Square::null(); }
     constexpr bool has(Square sq) const { return has(*sq); }
     constexpr Square sq(Pi pi) const { assertOk(pi); return Square{square[pi]}; }
     constexpr Pi pi(Square sq) const { return pi(*sq); }
@@ -277,7 +277,7 @@ public:
         }
     }
 
-    constexpr bool isOk(Pi pi) const { return !none(pi) && ::isSingleton(static_cast<u8_t>(type[pi])); }
+    constexpr bool isOk(Pi pi) const { return !isNone(pi) && ::isSingleton(static_cast<u8_t>(type[pi])); }
 
     #ifndef NDEBUG
         constexpr void assertOk(Pi pi) const { assert (isOk(pi)); }
@@ -285,10 +285,10 @@ public:
         constexpr void assertOk(Pi) const {}
     #endif
 
-    void drop(Pi pi, PieceType ty) { assert (none(pi)); assert (!pi.is(TheKing) || ty.is(King)); type[pi] = element(*ty); }
+    void drop(Pi pi, PieceType ty) { assert (isNone(pi)); assert (!pi.is(TheKing) || ty.is(King)); type[pi] = element(*ty); }
     void clear(Pi pi) { assertOk(pi); assert (!pi.is(TheKing)); assert (!is(pi, King)); type[pi] = None; }
 
-    constexpr bool none(Pi pi) const { return type[pi] == None; }
+    constexpr bool isNone(Pi pi) const { return type[pi] == None; }
     constexpr bool isPawn(Pi pi) const { return is(pi, Pawn); }
     constexpr bool isRook(Pi pi) const { return is(pi, Rook); }
     constexpr bool isSlider(Pi pi) const { assertOk(pi); return has(pi, Sliders); }
@@ -371,7 +371,7 @@ public:
     }
 
     constexpr void clear(Pi pi) { trait[pi] = None; }
-    constexpr bool none(Pi pi) const { return trait[pi] == None; }
+    constexpr bool isNone(Pi pi) const { return trait[pi] == None; }
 
     constexpr PiMask castlingRooks() const { return any(Castlings); }
     constexpr bool isCastling(Pi pi) const { return has(pi, Castlings); }

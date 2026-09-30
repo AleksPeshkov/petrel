@@ -534,7 +534,7 @@ class ZHash {
 public:
     constexpr ZHash () : v_{0} {}
     constexpr ZHash (ZHash zHash, Z z) : v_{zHash.v_ | hash(z)} {}
-    constexpr bool none(Z z) const { return (v_ & hash(z)) == 0; }
+    constexpr bool isNone(Z z) const { return (v_ & hash(z)) == 0; }
 };
 
 #endif
