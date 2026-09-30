@@ -318,20 +318,14 @@ ReturnStatus Node::search() {
 
     assert (currentMove.isNone());
 
-    if (!isPv() && !inCheck()) {
-        if (depth <= 3_ply) {
-            auto delta = (depth == 1_ply) ? 50_cp : (depth == 2_ply) ? 150_cp : 200_cp;
-            if (Score{MinEval} <= beta && beta <= cEval-delta) {
-                // Static Null Move Pruning (Reverse Futility Pruning)
+    if (!isPv() && cEval.isAny() && Score{MinEval} <= beta && beta <= cEval) {
+        // Static Null Move Pruning (Reverse Futility Pruning)
+        if (depth < 4_ply) {
+            constexpr std::array<Score, 4> rfpMargins{ 0_cp, 45_cp, 115_cp, 160_cp };
+            if (beta <= cEval - rfpMargins[+depth]) {
                 score = cEval;
                 assert (currentMove.isNone());
                 return ReturnStatus::Cutoff;
-            } else {
-                delta = (depth == 1_ply) ? 50_cp : (depth == 2_ply) ? 250_cp : 350_cp;
-                if (cEval+delta < alpha && alpha <= Score{MaxEval}) {
-                    // Razoring
-                    return quiescence();
-                }
             }
         }
 
@@ -339,9 +333,16 @@ ReturnStatus Node::search() {
         if (
             depth >= 2_ply // overhead higher then gain at very low depth
             && MY.material().canNullMove() // avoid null move in late endgame
-            && Score{MinEval} <= beta && beta <= cEval
         ) {
             RETURN_CUTOFF (searchNullMove());
+        }
+    }
+
+    if (!isPv() && cEval.isAny() && alpha <= Score{MaxEval} && depth < 4_ply) {
+        constexpr std::array<Score, 4> fpMargins{ 0_cp, 50_cp, 250_cp, 350_cp };
+        if (cEval + fpMargins[+depth] < alpha) {
+            // Razoring
+            return quiescence();
         }
     }
 
