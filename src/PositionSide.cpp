@@ -111,7 +111,7 @@ void PositionSide::move(Pi pi, PieceType ty, Square from, Square to) {
     move(pi, from, to);
 
     if (ty.is(Knight)) {
-        assert (traits.none(pi)); // nothing to clear or already cleared
+        assert (traits.isNone(pi)); // nothing to clear or already cleared
         setLeaperAttack(pi, Knight, to);
     }
     else {
@@ -128,7 +128,7 @@ void PositionSide::movePawn(Square from, Square to) {
     bbPawns_.move(from, to);
     bbPawnAttacks_ = bbPawns_.pForwardDiag();
 
-    assert (traits.none(pawn));
+    assert (traits.isNone(pawn));
     if (to.isOn(Rank7)) { traits.setPromotable(pawn); }
 
     setLeaperAttack(pawn, Pawn, to);
@@ -175,7 +175,7 @@ Pi PositionSide::piPromoted(Square from, PromoType ty, Square to) {
 
 void PositionSide::updateMovedKing(Square to) {
     // king move cannot check
-    assert (traits.none(Pi{TheKing}));
+    assert (traits.isNone(Pi{TheKing}));
     assert (!::attacksFrom(King, to).has(opKing));
     attacks_.set(Pi{TheKing}, ::attacksFrom(King, to));
     traits.clearCastlings();
@@ -204,7 +204,7 @@ void PositionSide::castle(Square kingFrom, Square kingTo, Pi rook, Square rookFr
 void PositionSide::setLeaperAttack(Pi pi, PieceType ty, Square sq) {
     assertOk(pi, ty, sq);
     assert (::isLeaper(*ty));
-    assert (traits.none(pi) || traits.isPromotable(pi));
+    assert (traits.isNone(pi) || traits.isPromotable(pi));
 
     attacks_.set(pi, ::attacksFrom(ty, sq));
     if (::attacksFrom(ty, sq).has(opKing)) {
@@ -248,7 +248,7 @@ void PositionSide::updateSliders(PiMask affectedSliders, Bb occupiedBb) {
 }
 
 void PositionSide::updateSlidersCheckers(PiMask affectedSliders, Bb occupiedBb) {
-    assert (types.sliders().none(traits.checkers()));
+    assert (types.sliders().isNone(traits.checkers()));
     assert (affectedSliders.isAny());
 
     //TRICK: attacks calculated without opponent's king for implicit out of check king moves generation

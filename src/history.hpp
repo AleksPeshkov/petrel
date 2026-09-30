@@ -290,11 +290,11 @@ public:
                 Z z = ring[last_ - i].z;
 
                 // test if already present in duplicant array
-                if (!dupZHash.none(z)) {
+                if (!dupZHash.isNone(z)) {
                     bool already = false;
                     for (int d = dupFound-1; true; --d) {
                         if (dup[DupIndex{d}].z == z) { already = true; break; }
-                        if (dup[DupIndex{d}].zHash.none(z)) { break; }
+                        if (dup[DupIndex{d}].zHash.isNone(z)) { break; }
                         assert (d > 0);
                     }
                     if (already) { continue; }
@@ -310,14 +310,14 @@ public:
                         ++dupFound;
                         break;
                     }
-                    if (ring[last_ - j].zHash.none(z)) { break; }
+                    if (ring[last_ - j].zHash.isNone(z)) { break; }
                 }
 
-                if (!hisZHash.none(z)) {
+                if (!hisZHash.isNone(z)) {
                     bool already = false;
                     for (int h = hisFound-1; true; --h) {
                         if (his[HisIndex{h}].z == z) { already = true; break; }
-                        if (his[HisIndex{h}].zHash.none(z)) { break; }
+                        if (his[HisIndex{h}].zHash.isNone(z)) { break; }
                         assert (h > 0);
                     }
                     if (already) { continue; }
@@ -353,24 +353,24 @@ public:
 
     // 2-fold repetition check
     bool has2(Z z) const {
-        if (hisZHash_.none(z)) { return false; }
+        if (hisZHash_.isNone(z)) { return false; }
 
         // search for repetition in non-duplicate positions
         for (int h{0}; true; ++h) {
             if (his[HisIndex{h}].z == z) { return true; }
-            if (his[HisIndex{h}].zHash.none(z)) { return false; }
+            if (his[HisIndex{h}].zHash.isNone(z)) { return false; }
             assert (h < hisCount_);
         }
     }
 
     // 3-fold repetition check
     bool has3(Z z) const {
-        if (dupZHash_.none(z)) { return false; }
+        if (dupZHash_.isNone(z)) { return false; }
 
         // search for repetition in duplicate positions
         for (int d{0}; true; ++d) {
             if (dup[DupIndex{d}].z == z) { return true; }
-            if (dup[DupIndex{d}].zHash.none(z)) { return false; }
+            if (dup[DupIndex{d}].zHash.isNone(z)) { return false; }
             assert (d < dupCount_);
         }
     }
