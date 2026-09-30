@@ -173,7 +173,7 @@ public:
 
 enum file_enum { FileH, FileG, FileF, FileE, FileD, FileC, FileB, FileA, };
 struct File : Index<File, 8, file_enum> {
-    using Index::Index;
+    constexpr File (File::_t file = FileA) : Index{file} {}
 
     constexpr io::char_type to_char() const { return static_cast<io::char_type>('h' - v_); }
     friend ostream& operator << (ostream& os, File file) { return os << file.to_char(); }
@@ -198,9 +198,9 @@ struct File : Index<File, 8, file_enum> {
 
 enum rank_enum { Rank8, Rank7, Rank6, Rank5, Rank4, Rank3, Rank2, Rank1, };
 struct Rank : Index<Rank, 8, rank_enum> {
-    using Index::Index;
+    constexpr Rank (Rank::_t rank = Rank1) : Index{rank} {}
 
-    constexpr Rank forward() const { return Rank{static_cast<Rank::_t>(v_ + Rank2 - Rank1)}; }
+    constexpr Rank forward() const { return static_cast<Rank::_t>(v_ + Rank2 - Rank1); }
 
     constexpr io::char_type to_char() const { return static_cast<io::char_type>('8' - v_); }
     friend ostream& operator << (ostream& os, Rank rank) { return os << rank.to_char(); }
@@ -243,30 +243,28 @@ public:
     static constexpr _t null() { return static_cast<_t>(0xff); } // no square
 
     constexpr Square () : Index{null()} {}
-    constexpr explicit Square (_t sq) : Index{sq} {}
+    constexpr Square (_t sq) : Index{sq} {}
     constexpr Square (File file, Rank rank) : Square{static_cast<_t>(file.pack(FileShift) | rank.pack(RankShift))} {}
-    constexpr Square (File file, Rank::_t rank) : Square{file, Rank{rank}} {}
-    constexpr Square (File::_t file, Rank::_t rank): Square{File{file}, Rank{rank}} {}
 
     constexpr File file() const { return File::unpack(v_, FileShift); }
     constexpr Rank rank() const { return Rank::unpack(v_, RankShift); }
 
-    constexpr Square operator^ (Square mask) const { return Square{static_cast<_t>(v_ ^ +mask)}; }
+    constexpr Square operator^ (Square mask) const { return static_cast<_t>(v_ ^ +mask); }
 
     // flip side of the board (vertical mirror)
-    constexpr Square operator ~ () const { return *this ^ Square{static_cast<_t>(070)}; }
+    constexpr Square operator ~ () const { return *this ^ static_cast<_t>(070); }
 
     // horizontal mirror
-    constexpr Square mirror() const { return *this ^ Square{static_cast<_t>(7)}; }
+    constexpr Square mirror() const { return *this ^ static_cast<_t>(7); }
 
     // king dependant horizontal mirror mask
-    constexpr Square mirrorMask() const { return file() < File{FileD} ? Square{static_cast<_t>(0)} : Square{static_cast<_t>(7)}; }
+    constexpr Square mirrorMask() const { return static_cast<_t>(file() < FileD ? 0 : 7); }
 
     /// move pawn forward
-    constexpr Square rankForward() const { return Square{static_cast<_t>(v_ + A8 - A7)}; }
+    constexpr Square rankForward() const { return static_cast<_t>(v_ + A8 - A7); }
 
-    constexpr bool isOn(Rank::_t r) const { return rank() == Rank{r}; }
-    constexpr bool isOn(File::_t f) const { return file() == File{f}; }
+    constexpr bool isOn(Rank r) const { return rank() == r; }
+    constexpr bool isOn(File f) const { return file() == f; }
 
     constexpr bool isNone() const { return v_ == null(); }
     constexpr bool isAny() const { return !isNone(); }
@@ -343,7 +341,7 @@ constexpr bool isSlider(piece_type_enum ty) { return ty < Knight; } // Queen, Ro
 constexpr bool isLeaper(piece_type_enum ty) { return ty >= Knight; } // Knight, Pawn, King
 
 // encoding of the promoted piece type inside "to" square
-constexpr Rank rankOf(PromoType ty) { return Rank{static_cast<Rank::_t>(*ty)}; }
+constexpr Rank rankOf(PromoType ty) { return static_cast<Rank::_t>(*ty); }
 
 // decoding promoted piece type from move destination square rank
 constexpr PromoType promoTypeFrom(Rank rank) { return PromoType{static_cast<PromoType::_t>(*rank)}; }
@@ -522,8 +520,8 @@ public:
     }
 };
 
-static_assert (Z{Z::EnPassant, Square{A4}} == Z{Pawn, Square{A8}});
-static_assert (Z{Z::EnPassant, Square{B4}} == Z{Pawn, Square{B8}});
+static_assert (Z{Z::EnPassant, A4} == Z{Pawn, A8});
+static_assert (Z{Z::EnPassant, B4} == Z{Pawn, B8});
 
 // https://www.talkchess.com/forum/viewtopic.php?p=554664#p554664
 class ZHash {
