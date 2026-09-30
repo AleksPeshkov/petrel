@@ -407,7 +407,7 @@ ReturnStatus Node::search() {
 
             assert (OP.attackersTo(~from).isAny());
 
-            if (OP.attackersTo(~from).none(OP.lessOrEqualValue(MY.typeOf(pi)))) {
+            if (OP.attackersTo(~from).isNone(OP.lessOrEqualValue(MY.typeOf(pi)))) {
                 // attacked by more valuable attacker
 
                 if (MY.bbPawnAttacks().has(from) || safeForMe(from)) {
@@ -797,7 +797,7 @@ bool Node::isRepetition() const {
     if (ply > 4_ply) {
         // search tree repetitions (2-fold is draw); ply and ply-2 cannot be chess position repetitions
         auto* next = &grandParent();
-        while (!next->zHash().none(z)) {
+        while (!next->zHash().isNone(z)) {
             next = &next->grandParent();
             assert (next);
             if (next->z() == z) { return true; }
