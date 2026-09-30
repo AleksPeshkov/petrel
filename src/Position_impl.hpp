@@ -143,7 +143,7 @@ bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
         if (MY.isPawn(from) && from.isOn(Rank5) && to.isOn(Rank5)) [[unlikely]] {
             // en passant capture encoded as the pawn captures the pawn
             Square ep{to};
-            to = Square{to.file(), Rank6};
+            to = {to.file(), Rank6};
 
             if constexpr (Flags & WithZobrist) {
                 zobrist_.opEnPassant(OP.sqEnPassant());

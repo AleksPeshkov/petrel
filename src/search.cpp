@@ -531,8 +531,8 @@ ReturnStatus Node::goodPawnsMovesTo(Bb target, Ply R) {
     // double push attacks
     canAttackFrom = (canAttackFrom % OCCUPIED).pBackward() & Bb{Rank2};
     for (Square from : MY.bbPawns() & canAttackFrom) {
-        assert (!OCCUPIED.has(Square{ from.file(), Rank{Rank3} }));
-        Square to{ from.file(), Rank{Rank4} }; assert (!OCCUPIED.has(to));
+        assert (!OCCUPIED.has({from.file(), Rank3}));
+        Square to{ from.file(), Rank4 }; assert (!OCCUPIED.has(to));
         if ( bbMovesOf(MY.pi(from)).has(to) && (totallySafe.has(to) || !safeForOp(to)) ) {
             RETURN_CUTOFF (searchMove(from, to, R));
         }

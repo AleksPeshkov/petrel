@@ -223,12 +223,12 @@ public:
     }
 
     constexpr bool has(Square sq) const { return has(*sq); }
-    constexpr Square sq(Pi pi) const { assertOk(pi); return Square{square[pi]}; }
+    constexpr Square sq(Pi pi) const { assertOk(pi); return square[pi]; }
     constexpr Pi pi(Square sq) const { return pi(*sq); }
 
     constexpr PiMask any() const { return PiMask{u8x16 != ::u8x16x(Square::null())}; }
 
-    constexpr PiMask any(Rank::_t rank) const {
+    constexpr PiMask any(Rank rank) const {
         return PiMask{
             (u8x16 & ::u8x16x( static_cast<_t>(Square::null() ^ static_cast<_t>(File::mask())) ))
             == ::u8x16x( *Square{static_cast<File::_t>(0), rank} )
