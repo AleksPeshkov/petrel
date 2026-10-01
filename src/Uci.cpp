@@ -925,7 +925,7 @@ void Uci::processInput(istream& is) {
         else if (consume("position"))  { position(); }
         else if (consume("stop"))      { stop(); }
         else if (consume("ponderhit")) { ponderhit(); }
-        else if (consume("isready"))   { info_readyok(); }
+        else if (consume("isready"))   { isready(); }
         else if (consume("setoption")) { setoption(); }
         else if (consume("set"))       { setoption(); }
         else if (consume("ucinewgame")){ ucinewgame(); }
@@ -1368,7 +1368,7 @@ void Uci::info_bestmove() {
     }
 }
 
-void Uci::info_readyok() const {
+void Uci::isready() const {
     Output ob;
     ob << "readyok";
     if (hasNewNodes()) {
