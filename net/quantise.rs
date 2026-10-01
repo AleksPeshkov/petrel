@@ -13,7 +13,7 @@ fn main() {
 
     const QW0: f32 = 1024.0; // seems safe and large enough for 16-bit accumulator
     const QS0: f32 = 2048.0; // balanced precision of QW0*QW0 in i16
-    const WDL: f32 = 400.0;  // implicit output conversion 1.0 = 400 centipawns
+    const WDL: f32 = 275.0;  // implicit output conversion 1.0 = 400 centipawns
     const QW1: f32 = 16.0 * WDL; // QW1*WDL*MW1 <= 32767
     const QB1: f32 = QS0 * QW1; // 2^15 * WDL
 
@@ -56,6 +56,6 @@ fn main() {
             l1.forward(dacc.screlu())
         });
 
-    trainer.load_from_checkpoint("./checkpoints/1x1-120/");
+    trainer.load_from_checkpoint("./checkpoints/1x4-120/");
     trainer.save_to_checkpoint("./quantised/");
 }
