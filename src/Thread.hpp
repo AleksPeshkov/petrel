@@ -19,7 +19,7 @@ class Thread {
     std::thread stdThread;
 
     Status getStatus() const { return status.load(std::memory_order_acquire); }
-    void waitStatus(Status old) { status.wait(old, std::memory_order_acquire); }
+    void waitChange(Status current) { status.wait(current, std::memory_order_acquire); }
     void setStatus(Status desired) { status.store(desired, std::memory_order_release); status.notify_all(); }
 
     Thread (const Thread&) = delete;
@@ -29,7 +29,7 @@ public:
         while (getStatus() != Status::Abort) {
             threadTask = nullptr;
             setStatus(Status::Ready);
-            waitStatus(Status::Ready);
+            waitChange(Status::Ready);
 
             if (getStatus() == Status::Busy && threadTask) {
                 threadTask();
@@ -46,7 +46,7 @@ public:
         while (true) {
             auto current = getStatus();
             if (current != Status::Busy) { break; }
-            waitStatus(current);
+            waitChange(current);
         }
     }
 
