@@ -80,9 +80,9 @@ fn main() {
     let settings = LocalSettings { threads: CPU_THREADS/2, test_set: None, output_directory: "checkpoints", batch_queue_size: CPU_THREADS*4 };
 
     let final_superbatch = 120;
-    let batch_size = 16_384 /4;
-    let batches_per_superbatch = 6_104 *4;
-    let initial_lr = 1e-3;
+    let mut batch_size = 16_384 /4;
+    let mut batches_per_superbatch = 6_104 *4;
+    let mut initial_lr = 1e-3;
     let final_lr = 1e-6;
 
     const MW1: f32 = 32767.0 / QW1; // 5.11984375
@@ -99,5 +99,19 @@ fn main() {
         lr_scheduler: lr::CosineDecayLR { initial_lr, final_lr, final_superbatch },
         save_rate: 10,
     };
-    trainer.run(&schedule, &settings, &data_loader);
+    //trainer.run(&schedule, &settings, &data_loader);
+
+    batch_size *= 4;
+    batches_per_superbatch /= 4;
+    initial_lr /= 10.0;
+    let schedule2 = TrainingSchedule {
+        net_id: "1x4".to_string(),
+        eval_scale: data_set_eval_scale,
+        steps: TrainingSteps { batch_size, batches_per_superbatch, start_superbatch: 1, end_superbatch: final_superbatch },
+        wdl_scheduler: wdl::CosineDecayWDL { start: 0.10, end: 0.20, final_superbatch },
+        lr_scheduler: lr::CosineDecayLR { initial_lr, final_lr, final_superbatch },
+        save_rate: 10,
+    };
+    trainer.load_from_checkpoint(&format!("./{}/{}-{}", &settings.output_directory, "1x1", final_superbatch));
+    trainer.run(&schedule2, &settings, &data_loader);
 }
