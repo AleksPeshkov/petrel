@@ -113,6 +113,7 @@ private:
 // UCI commands handlers:
 
     void uciok() const;
+    void isready() const;
     void setoption();
     void ucinewgame();
     void position();
@@ -133,7 +134,6 @@ private:
     void swapBestMove(std::string&);
     void outputBestMove();
 
-    void info_readyok() const;
     void info_bestmove();
     void info_perft_bestmove() const;
 
