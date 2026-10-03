@@ -317,6 +317,11 @@ ReturnStatus Node::search() {
         return quiescence();
     }
 
+    // Razoring
+    if (!isPv() && depth == 1_ply && cEval.isAny() && cEval + 60_cp < alpha && alpha <= Score{MaxEval}) {
+        return quiescence();
+    }
+
     assert (currentMove.isNone());
 
     if (!isPv() && cEval.isAny() && Score{MinEval} <= beta && beta <= cEval) {
@@ -336,14 +341,6 @@ ReturnStatus Node::search() {
             && MY.material().canNullMove() // avoid null move in late endgame
         ) {
             RETURN_CUTOFF (searchNullMove());
-        }
-    }
-
-    if (!isPv() && cEval.isAny() && alpha <= Score{MaxEval} && depth < 4_ply) {
-        constexpr std::array<Score, 4> fpMargins{ 0_cp, 50_cp, 250_cp, 350_cp };
-        if (cEval + fpMargins[+depth] < alpha) {
-            // Razoring
-            return quiescence();
         }
     }
 
