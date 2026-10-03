@@ -391,6 +391,16 @@ ReturnStatus Node::search() {
     }
 
     do {
+        // futility pruning
+        if (!isPv() && depth < 4_ply && cEval.isAny() && alpha <= Score{MaxEval}) {
+            constexpr std::array<Score, 4> fpMargins{ 0_cp, 45_cp, 115_cp, 160_cp };
+            auto value = score.isNone() ? cEval : std::max(score, cEval);
+            if (value + fpMargins[+depth] < alpha) {
+                score = value;
+                break;
+            }
+        }
+
         // going to search only non-captures, mask out remaining unsafe captures to avoid redundant safety checks
         //TRICK: ~ is not a negate bitwise operation but byteswap -- flip opponent's bitboard
         //TODO: mask out pinned enemy pawns
