@@ -82,7 +82,6 @@ fn main() {
     let final_superbatch = 120;
     let mut batch_size = 16_384 /4;
     let mut batches_per_superbatch = 6_104 *4;
-    let mut initial_lr = 1e-3;
     let final_lr = 1e-6;
 
     trainer.optimiser.set_params_for_weight("l0b", AdamWParams{ decay: 0.00, min_weight: -4.0, max_weight: 4.0, ..Default::default() });
@@ -90,27 +89,40 @@ fn main() {
     trainer.optimiser.set_params_for_weight("l0w", AdamWParams{ decay: 0.01, min_weight: -4.0, max_weight: 4.0, ..Default::default() });
     trainer.optimiser.set_params_for_weight("l1w", AdamWParams{ decay: 0.03, min_weight: -f_wdl, max_weight: f_wdl, ..Default::default() });
 
+    trainer.load_from_checkpoint(&format!("./{}/{}-{}", &settings.output_directory, "1z1", 10));
     let schedule = TrainingSchedule {
-        net_id: "1x1".to_string(),
+        net_id: "1z1".to_string(),
         eval_scale: data_set_eval_scale,
-        steps: TrainingSteps { batch_size, batches_per_superbatch, start_superbatch: 1, end_superbatch: final_superbatch },
-        wdl_scheduler: wdl::CosineDecayWDL { start: 0.0, end: 0.10, final_superbatch },
-        lr_scheduler: lr::CosineDecayLR { initial_lr, final_lr, final_superbatch },
+        steps: TrainingSteps { batch_size, batches_per_superbatch, start_superbatch: 11, end_superbatch: final_superbatch },
+        wdl_scheduler: wdl::CosineDecayWDL { start: 0.0, end: 0.0, final_superbatch },
+        lr_scheduler: lr::CosineDecayLR { initial_lr: 1e-3, final_lr, final_superbatch },
         save_rate: 10,
     };
-    //trainer.run(&schedule, &settings, &data_loader);
+    trainer.run(&schedule, &settings, &data_loader);
 
     batch_size *= 4;
     batches_per_superbatch /= 4;
-    initial_lr /= 10.0;
-    trainer.load_from_checkpoint(&format!("./{}/{}-{}", &settings.output_directory, "1x1", 120));
+    trainer.load_from_checkpoint(&format!("./{}/{}-{}", &settings.output_directory, "1z1", 120));
     let schedule2 = TrainingSchedule {
-        net_id: "1x4".to_string(),
+        net_id: "1z2".to_string(),
         eval_scale: data_set_eval_scale,
         steps: TrainingSteps { batch_size, batches_per_superbatch, start_superbatch: 1, end_superbatch: final_superbatch },
-        wdl_scheduler: wdl::CosineDecayWDL { start: 0.10, end: 0.20, final_superbatch },
-        lr_scheduler: lr::CosineDecayLR { initial_lr, final_lr, final_superbatch },
+        wdl_scheduler: wdl::CosineDecayWDL { start: 0.0, end: 0.10, final_superbatch },
+        lr_scheduler: lr::CosineDecayLR { initial_lr: 3e-4, final_lr, final_superbatch },
         save_rate: 10,
     };
     trainer.run(&schedule2, &settings, &data_loader);
+
+    batch_size *= 4;
+    batches_per_superbatch /= 4;
+    trainer.load_from_checkpoint(&format!("./{}/{}-{}", &settings.output_directory, "1z2", 120));
+    let schedule3 = TrainingSchedule {
+        net_id: "1z3".to_string(),
+        eval_scale: data_set_eval_scale,
+        steps: TrainingSteps { batch_size, batches_per_superbatch, start_superbatch: 1, end_superbatch: final_superbatch },
+        wdl_scheduler: wdl::CosineDecayWDL { start: 0.10, end: 0.20, final_superbatch },
+        lr_scheduler: lr::CosineDecayLR { initial_lr: 1e-4, final_lr, final_superbatch },
+        save_rate: 10,
+    };
+    trainer.run(&schedule3, &settings, &data_loader);
 }
