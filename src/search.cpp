@@ -124,7 +124,7 @@ ReturnStatus Node::negamax(Ply R) {
         // do not use R param as actual reduction can differ
         auto childR = child().currentR();
 
-        // full depth research (unless it was a null move search)
+        // full depth research (unless it was a null move search or final position)
         if (currentMove.any() && childR >= 2_ply) {
             if (child().isPv()) {
                 // rare case (the first move from PV with reduced depth)
@@ -303,7 +303,7 @@ ReturnStatus Node::search() {
 
     if (ply == MaxPly) {
         // no room to search deeper
-        score = inCheck() ? Score::mateLoss(ply) : cEval;
+        score = inCheck() ? alpha : cEval;
         assert (currentMove.none());
         return ReturnStatus::Continue;
     }
