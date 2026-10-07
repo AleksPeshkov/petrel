@@ -10,7 +10,7 @@ fn main() {
     const LOSS_POW: f32 = 2.6;
 
     const ACC_SIZE: usize = 1024;
-    const CHANNELS: usize = 256;
+    const CHANNELS: usize = 128;
     const DUAL_CHANNELS: usize = 2*CHANNELS;
     const STRIDE_SIZE: usize = ACC_SIZE / CHANNELS;
 
@@ -143,6 +143,6 @@ fn main() {
             l2.forward(dchannels)
         });
 
-    trainer.load_from_checkpoint("./checkpoints/1d1-1/");
+    trainer.load_from_checkpoint("./checkpoints/1h1-120/");
     trainer.save_to_checkpoint("./quantised/");
 }

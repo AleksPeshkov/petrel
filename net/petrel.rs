@@ -14,7 +14,7 @@ fn main() {
     const LOSS_POW: f32 = 2.6;
 
     const ACC_SIZE: usize = 1024;
-    const CHANNELS: usize = 256;
+    const CHANNELS: usize = 128;
     const DUAL_CHANNELS: usize = 2*CHANNELS;
     const STRIDE_SIZE: usize = ACC_SIZE / CHANNELS;
 
@@ -178,7 +178,7 @@ fn main() {
     trainer.optimiser.set_params_for_weight("l2w", AdamWParams{ decay: 0.01, min_weight: -MW2, max_weight: MW2, ..Default::default() });
 
     let schedule = TrainingSchedule {
-        net_id: "1c1".to_string(),
+        net_id: "1h1".to_string(),
         eval_scale: data_set_eval_scale,
         steps: TrainingSteps { batch_size, batches_per_superbatch, start_superbatch: 1, end_superbatch: final_superbatch },
         wdl_scheduler: wdl::CosineDecayWDL { start: 0.0, end: 0.0, final_superbatch },
@@ -191,7 +191,7 @@ fn main() {
     batch_size *= 4;
     batches_per_superbatch /= 4;
     let schedule2 = TrainingSchedule {
-        net_id: "1c2".to_string(),
+        net_id: "1h2".to_string(),
         eval_scale: data_set_eval_scale,
         steps: TrainingSteps { batch_size, batches_per_superbatch, start_superbatch: 1, end_superbatch: final_superbatch },
         wdl_scheduler: wdl::CosineDecayWDL { start: 0.0, end: 0.20, final_superbatch },
