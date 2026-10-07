@@ -124,7 +124,7 @@ ReturnStatus Node::negamax(Ply R) {
         // do not use R param as actual reduction can differ
         auto childR = child().currentR();
 
-        // full depth research (unless it was a null move search)
+        // full depth research (unless it was a null move search or final position)
         if (currentMove.isAny() && childR >= 2_ply) {
             if (child().isPv()) {
                 // rare case (the first move from PV with reduced depth)
@@ -139,7 +139,6 @@ ReturnStatus Node::negamax(Ply R) {
         if (beta <= childScore) {
             score = childScore;
             bound = FailHigh;
-            // currentMove.isNone() after NMP
             if (currentMove.isAny()) {
                 bestMove = currentMove;
                 saveHistory();
@@ -302,7 +301,7 @@ ReturnStatus Node::search() {
 
     if (ply == Ply::last()) {
         // no room to search deeper
-        score = inCheck() ? Score::mateLoss(ply) : cEval;
+        score = cEval.isAny() ? cEval : alpha;
         assert (currentMove.isNone());
         return ReturnStatus::Continue;
     }
