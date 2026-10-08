@@ -54,7 +54,9 @@ void Nnue::validate_embedded() const {
         w_max = 0;
         w_min = 32768;
         for (auto ch : range<ChannelIndex>()) {
-            auto w = max(abs(w2[My][ch]), abs(w2[Op][ch]));
+            auto wp = max(abs(w2[My][ch][Pos]), abs(w2[Op][ch][Pos]));
+            auto wn = max(abs(w2[My][ch][Neg]), abs(w2[Op][ch][Neg]));
+            auto w = max(wp, wn);
             for (int lane = 0; lane < 16; ++lane) {
                 if (w_min > w[lane]) { w_min = w[lane]; }
                 if (w_max < w[lane]) { w_max = w[lane]; }

@@ -10,7 +10,7 @@ fn main() {
     const LOSS_POW: f32 = 2.6;
 
     const ACC_SIZE: usize = 1024;
-    const CHANNELS: usize = 128;
+    const CHANNELS: usize = 32;
     const DUAL_CHANNELS: usize = 2*CHANNELS;
     const STRIDE_SIZE: usize = ACC_SIZE / CHANNELS;
 
@@ -65,81 +65,109 @@ fn main() {
                 outputs
             }).quantise::<i16>(QW0),
 
-            SavedFormat::id("l1w")
-                .rescale::<i16>(QW1)
-                .transform(|_, inputs| {
-                    let mut outputs = vec![0.0; inputs.len()];
+            SavedFormat::id("l1w").rescale::<i16>(QW1).transform(|_, inputs| {
+                let mut outputs = vec![0.0; inputs.len()];
 
-                    // parity count of odd weights per lane
-                    let mut odd = [false; VECTOR_LANES];
+                // parity count of odd weights per lane
+                let mut odd = [false; VECTOR_LANES];
 
-                    for side in 0..2 {
-                        for ch_idx in 0..CHANNELS_INDEX {
-                            for lane in 0..VECTOR_LANES {
-                                let dch = side*CHANNELS + ch_idx*VECTOR_LANES + lane;
-                                for n in 0..STRIDE_SIZE {
-                                    let in_idx = dch*STRIDE_SIZE + n; // [dch][n]
-                                    let mut w = inputs[in_idx] as i16;
+                for side in 0..2 {
+                    for ch_idx in 0..CHANNELS_INDEX {
+                        for lane in 0..VECTOR_LANES {
+                            let dch = side*CHANNELS + ch_idx*VECTOR_LANES + lane;
+                            for n in 0..STRIDE_SIZE {
+                                let in_idx = dch*STRIDE_SIZE + n; // [dch][n]
+                                let mut w = inputs[in_idx] as i16;
 
-                                    // 1) _mm256_mulhrs_epi16 rounds positive product up, negative also up (towards zero)
-                                    // 2) rounding up happens only when _w_ lowest bit is one
-                                    // 3) compensate systematic odd _w_ upward error by rounding down each other odd _w_
-                                    if (w & 1) != 0 {
-                                        if odd[lane] { w -= 1; }
-                                        odd[lane] = !odd[lane];
-                                    }
-
-                                    // [side][ch_idx][n][lane]
-                                    let out_idx =
-                                        side * ACC_SIZE
-                                        + ch_idx * STRIDE_SIZE*VECTOR_LANES
-                                        + n * VECTOR_LANES
-                                        + lane;
-                                    outputs[out_idx] = w as f32;
+                                // 1) _mm256_mulhrs_epi16 rounds positive product up, negative also up (towards zero)
+                                // 2) rounding up happens only when _w_ lowest bit is one
+                                // 3) compensate systematic odd _w_ upward error by rounding down each other odd _w_
+                                if (w & 1) != 0 {
+                                    if odd[lane] { w -= 1; }
+                                    odd[lane] = !odd[lane];
                                 }
+
+                                // [side][ch_idx][n][lane]
+                                let out_idx =
+                                    side * ACC_SIZE
+                                    + ch_idx * STRIDE_SIZE*VECTOR_LANES
+                                    + n * VECTOR_LANES
+                                    + lane;
+                                outputs[out_idx] = w as f32;
                             }
                         }
                     }
-                    outputs
-                })
-                .quantise_to_type::<i16>(),
+                }
+                outputs
+            }).quantise_to_type::<i16>(),
 
             SavedFormat::id("l1b").quantise::<i16>(QB1),
-            SavedFormat::id("l2w").quantise::<i16>(QW2),
+
+            SavedFormat::id("l2w").transform(|_, inputs| {
+                let mut outputs = vec![0.0; inputs.len()];
+
+                for side in 0..2 {
+                    for ch_idx in 0..CHANNELS_INDEX {
+                        for concat in 0..2 {
+                            for lane in 0..VECTOR_LANES {
+                                let dch = side*CHANNELS + ch_idx*VECTOR_LANES + lane;
+
+                                // [dch][concat]
+                                let in_idx = dch * 2 + concat;
+
+                                // [side][ch_idx][concat][lane]
+                                let out_idx =
+                                    side * CHANNELS_INDEX * 2*VECTOR_LANES
+                                    + ch_idx * 2*VECTOR_LANES
+                                    + concat * VECTOR_LANES
+                                    + lane;
+
+                                outputs[out_idx] = inputs[in_idx];
+                            }
+                        }
+                    }
+                }
+                outputs
+            }).quantise::<i16>(QW2),
         ])
         .inputs(Chess768hm).dual_perspective()
         .build(|builder, my_inputs, op_inputs| {
             let l0 = builder.new_affine("l0", 768, ACC_SIZE);
-            let my_acc = l0.forward(my_inputs);
-            let op_acc = l0.forward(op_inputs);
-            let dacc = my_acc.concat(op_acc).screlu();
-
-            let l1w = builder.new_weights("l1w", Shape::new(DUAL_CHANNELS*STRIDE_SIZE, 1),
-                InitSettings::Normal{ mean: 0.0, stdev: (2.0 / STRIDE_SIZE as f32).sqrt() }
-            );
             let l1b = builder.new_weights("l1b", Shape::new(DUAL_CHANNELS, 1), InitSettings::Zeroed);
 
-            let mut vchannels = Vec::with_capacity(DUAL_CHANNELS);
-            for dch in 0..DUAL_CHANNELS {
-                let start = dch * STRIDE_SIZE;
-                let end = start + STRIDE_SIZE;
+            let l1w_init = InitSettings::Normal{ mean: 0.0, stdev: (2.0 / STRIDE_SIZE as f32).sqrt() };
+            let l1w = builder.new_weights("l1w", Shape::new(DUAL_CHANNELS*STRIDE_SIZE, 1), l1w_init);
+
+            let l2w_init = InitSettings::Normal{ mean: 0.0, stdev: (1.0 / DUAL_CHANNELS as f32).sqrt() };
+            let l2w = builder.new_weights("l2w", Shape::new(2*DUAL_CHANNELS, 1), l2w_init);
+
+            let my_acc = l0.forward(my_inputs);
+            let op_acc = l0.forward(op_inputs);
+
+            let forward_channel = |dch: usize| {
+                let acc_stride = if dch < CHANNELS {
+                    my_acc.slice_rows(dch * STRIDE_SIZE, (dch+1) * STRIDE_SIZE)
+                } else {
+                    let och = dch - CHANNELS;
+                    op_acc.slice_rows(och * STRIDE_SIZE, (och+1) * STRIDE_SIZE)
+                };
 
                 let b1 = l1b.slice_rows(dch, dch+1);
-                let w1 = l1w.slice_rows(start, end);
-                let inputs = dacc.slice_rows(start, end);
-                let channel = (b1 + w1.gemm(true, inputs, false)).screlu();
+                let w1 = l1w.slice_rows(dch * STRIDE_SIZE, (dch+1) * STRIDE_SIZE);
+                let square = (b1 + w1.gemm(true, acc_stride.screlu(), false)).signed_square();
 
-                vchannels.push(channel);
-            }
-            let mut dchannels = vchannels[0].clone();
+                let w_concatenated = l2w.slice_rows(dch * 2, (dch+1) * 2);
+                let concatenated = square.concat(-square).relu();
+                w_concatenated.gemm(true, concatenated, false)
+            };
+
+            let mut output = forward_channel(0);
             for dch in 1..DUAL_CHANNELS {
-                dchannels = dchannels.concat(vchannels[dch]);
+                output = output + forward_channel(dch);
             }
-
-            let l2w = builder.new_affine("l2w", DUAL_CHANNELS, 1);
-            l2w.forward(dchannels)
+            output
         });
 
-    trainer.load_from_checkpoint("./checkpoints/1h1-120/");
+    trainer.load_from_checkpoint("./checkpoints/1n1-120/");
     trainer.save_to_checkpoint("./quantised/");
 }
