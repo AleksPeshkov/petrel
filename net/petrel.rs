@@ -14,7 +14,7 @@ fn main() {
     const LOSS_POW: f32 = 2.6;
 
     const ACC_SIZE: usize = 1024;
-    const CHANNELS: usize = 128;
+    const CHANNELS: usize = 32;
     const DUAL_CHANNELS: usize = 2*CHANNELS;
     const STRIDE_SIZE: usize = ACC_SIZE / CHANNELS;
 
@@ -28,8 +28,6 @@ fn main() {
     const QB1: f32 = 1024.0; // 2^10, l1b scale, adjusted to make QB1 = QW0
     const WDL: f32 = 400.0; // embedded net output conversion 1.0 = 400 centipawns
     const QW2: f32 = 16.0 * WDL; // 2^4 * WDL
-    const QS2: f32 = 2048.0; // 2^11, sqrelu(QB1) factor
-    const QB2: f32 = QS2 * QW2; // 2^15 * WDL
 
     let mut trainer = ValueTrainerBuilder::default().use_threads(CPU_THREADS/2)
         .optimiser(AdamW).loss_fn(|output, target| output.sigmoid().power_error(target, LOSS_POW))
@@ -109,7 +107,6 @@ fn main() {
 
             SavedFormat::id("l1b").quantise::<i16>(QB1),
             SavedFormat::id("l2w").quantise::<i16>(QW2),
-            SavedFormat::id("l2b").quantise::<i32>(QB2),
         ])
         .inputs(Chess768hm).dual_perspective()
         .build(|builder, my_inputs, op_inputs| {
@@ -140,8 +137,10 @@ fn main() {
                 dchannels = dchannels.concat(vchannels[dch]);
             }
 
-            let l2 = builder.new_affine("l2", DUAL_CHANNELS, 1);
-            l2.forward(dchannels)
+            let l2w = builder.new_weights("l2w", Shape::new(1, DUAL_CHANNELS),
+                InitSettings::Normal{ mean: 0.0, stdev: (2.0 / DUAL_CHANNELS as f32).sqrt() }
+            );
+            l2w.matmul(dchannels)
         });
 
     // loading directly from a `BulletFormat` file
@@ -172,7 +171,6 @@ fn main() {
     const MW2:f32 = 32767.0 / QW2; // 5.11984375
     trainer.optimiser.set_params_for_weight("l0b", AdamWParams{ decay: 0.0,  min_weight: -4.0, max_weight: 4.0, ..Default::default() });
     trainer.optimiser.set_params_for_weight("l1b", AdamWParams{ decay: 0.0,  min_weight: -4.0, max_weight: 4.0, ..Default::default() });
-    trainer.optimiser.set_params_for_weight("l2b", AdamWParams{ decay: 0.0,  min_weight: -4.0, max_weight: 4.0, ..Default::default() });
     trainer.optimiser.set_params_for_weight("l0w", AdamWParams{ decay: 0.01, min_weight: -4.0, max_weight: 4.0, ..Default::default() });
     trainer.optimiser.set_params_for_weight("l1w", AdamWParams{ decay: 0.01, min_weight: -MW1, max_weight: MW1, ..Default::default() });
     trainer.optimiser.set_params_for_weight("l2w", AdamWParams{ decay: 0.01, min_weight: -MW2, max_weight: MW2, ..Default::default() });

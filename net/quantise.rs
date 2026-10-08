@@ -24,8 +24,6 @@ fn main() {
     const QB1: f32 = 1024.0; // 2^10, l1b scale, adjusted to make QB1 = QW0
     const WDL: f32 = 400.0; // embedded net output conversion 1.0 = 400 centipawns
     const QW2: f32 = 16.0 * WDL; // 2^4 * WDL
-    const QS2: f32 = 2048.0; // 2^11, sqrelu(QB1) factor
-    const QB2: f32 = QS2 * QW2; // 2^15 * WDL
 
     let mut trainer = ValueTrainerBuilder::default().use_threads(CPU_THREADS/2)
         .optimiser(AdamW).loss_fn(|output, target| output.sigmoid().power_error(target, LOSS_POW))
@@ -108,7 +106,6 @@ fn main() {
 
             SavedFormat::id("l1b").quantise::<i16>(QB1),
             SavedFormat::id("l2w").quantise::<i16>(QW2),
-            SavedFormat::id("l2b").quantise::<i32>(QB2),
         ])
         .inputs(Chess768hm).dual_perspective()
         .build(|builder, my_inputs, op_inputs| {
@@ -139,8 +136,8 @@ fn main() {
                 dchannels = dchannels.concat(vchannels[dch]);
             }
 
-            let l2 = builder.new_affine("l2", DUAL_CHANNELS, 1);
-            l2.forward(dchannels)
+            let l2w = builder.new_affine("l2w", DUAL_CHANNELS, 1);
+            l2w.forward(dchannels)
         });
 
     trainer.load_from_checkpoint("./checkpoints/1h1-120/");
