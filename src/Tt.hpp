@@ -95,19 +95,49 @@ class TtAge {
 public:
     using _t = unsigned;
 
-    constexpr _t operator + () const { return v_; }
-
     static constexpr int bit_width() { return 2; }
     static constexpr _t mask() { return singleton(bit_width()) - 1u; }
 
-    constexpr TtAge () : v_{1} {}
-    constexpr void nextAge() { v_ = next().v_; }
+    static constexpr _t nextLut() {
+        _t lut{};
+        for (_t a = 0; a <= mask(); ++a) {
+            _t next = a == mask() ? 1 : a + 1;
+            lut |= next << a * bit_width();
+        }
+        return lut;
+    }
 
+    static constexpr auto freshLut() {
+        using lut_t = std::conditional_t<bit_width() == 3, u64_t, _t>;
+        lut_t lut{};
+
+        for (_t entry = 1; entry <= mask(); ++entry) {
+            _t next_entry = +TtAge{entry}.next();
+            for (_t base = 1; base <= mask(); ++base) {
+                // isFresh() is true if entry == base or previous (i.e. entry.next() == base) and both != 0
+                if (entry == base || next_entry == base) {
+                    _t index = (entry << bit_width()) | base;
+                    lut |= (static_cast<decltype(lut)>(1) << index);
+                }
+            }
+        }
+        return lut;
+    }
+
+public:
+    constexpr TtAge () : v_{1} {}
+    constexpr TtAge next() const { return TtAge{ (nextLut() >> v_ * bit_width()) & mask() }; }
+
+    constexpr _t operator + () const { return v_; }
     constexpr bool isNone() const { return v_ == 0; }
     constexpr bool isAny() const { return !isNone(); }
+    constexpr bool isSame(TtAge age) const { return v_ == age.v_; }
 
-    constexpr bool is(TtAge age) const { return v_ == age.v_; }
-    constexpr bool isFresh(TtAge age) const { return is(age) || is(age.next()); }
+    // isFresh() is true if entry == this or previous (i.e. entry.next() == this) and both != 0
+    constexpr bool isFresh(TtAge entry) const {
+        _t index{ (entry.v_ << bit_width()) | v_ };
+        return (freshLut() >> index) & 1;
+    }
 
     template <typename P, typename S>
     constexpr P pack(S shift) { return ::pack<P>(v_, shift); }
@@ -117,9 +147,7 @@ public:
 
 private:
     _t v_;
-
     constexpr explicit TtAge (_t v) : v_{v} { assert (v <= mask()); }
-    constexpr TtAge next() const { return v_ == mask() ? TtAge{} : TtAge{v_ + 1}; }
 };
 
 class TtMeta {
@@ -136,7 +164,7 @@ public:
     void newSearch() { reads = 0; hits = 0; writes = 0; }
 
     constexpr TtAge age() const { return age_; }
-    constexpr void nextAge() { age_.nextAge(); }
+    constexpr void nextAge() { age_ = age_.next(); }
 };
 extern TtMeta the_ttMeta;
 
@@ -145,12 +173,12 @@ struct TtRecord;
 // 8 byte
 class TtEntry {
     enum {
-        ShiftEval  = 0,
+        ShiftDraft = 0,
+        ShiftAge   = ShiftDraft + Ply::bit_width(),
+        ShiftEval  = ShiftAge   + TtAge::bit_width(),
         ShiftScore = ShiftEval  + Score::bit_width(),
         ShiftBound = ShiftScore + Score::bit_width(),
-        ShiftAge   = ShiftBound + Bound::bit_width(),
-        ShiftDraft = ShiftAge   + TtAge::bit_width(),
-        ShiftMove  = ShiftDraft + Ply::bit_width(),
+        ShiftMove  = ShiftBound + Bound::bit_width(),
         ShiftZ     = ShiftMove  + TtMove::bit_width(), // total size of all data fields
     };
 
@@ -160,11 +188,11 @@ class TtEntry {
     union {
         _t v_;
         struct PACKED {
+            Ply::_t   draft_ :Ply::bit_width();
+            TtAge::_t age_   :TtAge::bit_width();
             Score::_t eval_  :Score::bit_width();
             Score::_t score_ :Score::bit_width();
             Bound::_t bound_ :Bound::bit_width();
-            TtAge::_t age_   :TtAge::bit_width();
-            Ply::_t   draft_ :Ply::bit_width();
             unsigned  zmove_ :TtMove::bit_width();
             Z::_t z_ : (64 - ShiftZ); // remaining bits
         } u;
@@ -200,7 +228,7 @@ public:
         assert (score(0_ply) == _score.tt(ply));
         assert (bound().is(_bound));
         assert (draft() == _draft);
-        assert (the_ttMeta.age().is(age()));
+        assert (the_ttMeta.age().isSame(age()));
         assert (ttMove(z) == _ttMove);
     }
 
@@ -215,59 +243,48 @@ public:
     constexpr Ply draft() const { return Ply::unpack(v_, ShiftDraft); }
     constexpr TtMove ttMove(Z z) const { return TtMove::unpack(v_ ^ +z, ShiftMove); }
 
-    //TRICK: zeroed entry is never fresh
-    bool isFresh() const { return the_ttMeta.age().isFresh(age()); }
+    // replacement weight, the higher the more valuable entry
+    constexpr int weight() const { return (the_ttMeta.age().isFresh(age()) << Ply::bit_width()) | +draft(); }
 
-    void refresh(TtEntry* tt) {
+    void refresh(TtEntry* p_ttEntry) {
         auto metaAge = the_ttMeta.age();
-        if (!metaAge.is(age())) {
+        if (!metaAge.isSame(age())) {
             v_ ^= age().pack<_t>(ShiftAge); // clear previous
             v_ |= metaAge.pack<_t>(ShiftAge); // set new value
-            write(tt);
+            write(p_ttEntry);
         }
     }
 
-    static TtEntry read(TtEntry* tt) {
+    static TtEntry read(TtEntry* p_ttEntry) {
         ++the_ttMeta.reads;
-        return std::bit_cast<TtEntry>(std::bit_cast<std::atomic<_t>*>(tt)->load(std::memory_order_relaxed));
+        return std::bit_cast<TtEntry>(std::bit_cast<std::atomic<_t>*>(p_ttEntry)->load(std::memory_order_relaxed));
     }
 
-    void write(TtEntry* tt) const {
-        std::bit_cast<std::atomic<_t>*>(tt)->store(this->v_, std::memory_order_relaxed);
+    void write(TtEntry* p_ttEntry) const {
+        std::bit_cast<std::atomic<_t>*>(p_ttEntry)->store(this->v_, std::memory_order_relaxed);
         ++the_ttMeta.writes;
     }
 
-    static constexpr TtRecord probe(TtEntry* tt, Z z);
+    static constexpr TtRecord probe(TtEntry* p_ttEntry, Z z);
 };
 
-struct TtRecord { TtEntry ttEntry; TtEntry* tt; bool ttHit; };
-constexpr TtRecord TtEntry::probe(TtEntry* tt, Z z) {
+struct TtRecord { TtEntry ttEntry; TtEntry* p_ttEntry; bool ttHit; };
+constexpr TtRecord TtEntry::probe(TtEntry* p_ttEntry, Z z) {
     // direct entry
-    auto ttEntry = read(tt);
-    if (ttEntry == z) { return {ttEntry, tt, true}; }
+    auto ttEntry = read(p_ttEntry);
+    if (ttEntry == z) { return {ttEntry, p_ttEntry, true}; }
 
     // other entry
-    auto tt2 = std::bit_cast<TtEntry*>(std::bit_cast<std::uintptr_t>(tt) ^ sizeof(TtEntry));
-    auto ttEntry2 = read(tt2);
-    if (ttEntry2 == z) { return {ttEntry2, tt2, true}; }
+    auto p_ttEntry2 = std::bit_cast<TtEntry*>(std::bit_cast<std::uintptr_t>(p_ttEntry) ^ sizeof(TtEntry));
+    auto ttEntry2 = read(p_ttEntry2);
+    if (ttEntry2 == z) { return {ttEntry2, p_ttEntry2, true}; }
 
-    // overwrite the only non fresh entry
+    // overwrite the only non fresh entry or shallower or direct
     //TRICK: zeroed entry is never fresh
-    bool f1 = ttEntry.isFresh();
-    bool f2 = ttEntry2.isFresh();
-    if (f1 != f2) {
-        if (f2) {
-            return {ttEntry, tt, false};
-        } else {
-            return {ttEntry2, tt2, false};
-        }
-    }
-
-    // preserve deeper or other
-    if (ttEntry.draft() <= ttEntry2.draft()) {
-        return {ttEntry, tt, false};
+    if (ttEntry.weight() <= ttEntry2.weight()) {
+        return {ttEntry, p_ttEntry, false};
     } else {
-        return {ttEntry2, tt2, false};
+        return {ttEntry2, p_ttEntry2, false};
     }
 }
 
