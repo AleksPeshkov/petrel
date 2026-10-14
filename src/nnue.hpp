@@ -113,45 +113,46 @@ struct CACHE_ALIGN Nnue {
     struct StrideIndex : Index<StrideIndex, Stride_neurons> { using Index::Index; }; // 64
     struct ChannelIndex : Index<ChannelIndex, Channels / Vector_lanes> { using Index::Index; }; // 1
 
+    enum concatenated_enum { Pos, Neg };
+    struct ConcatIndex : Index<ConcatIndex, 2, concatenated_enum> { constexpr ConcatIndex (_t i) : Index{i} {} };
     using Acc = array<_t, ChannelIndex, StrideIndex>; // 64
     using DualAcc = array<Acc, Side>; // 128
 
     using W0 = array<_t, Fi, ChannelIndex, StrideIndex>; // QW0 = 2^10
     using W1 = DualAcc; // QW1 = 2^12
     using B1 = array<_t, Side, ChannelIndex>; // QB1 = 2^10
-    using W2 = array<_t, Side, ChannelIndex>; // QW2 = 2^4 * WDL (WDL=400)
+    using W2 = array<_t, Side, ChannelIndex, ConcatIndex>; // QW2 = 2^3 * WDL (WDL=400)
 
     i32_t evaluate(const DualAcc& dacc) const {
-        i32x8_t sum15{};
+        i32x8_t sum14{};
         for (auto side : range<Side>()) {
             for (auto ch : range<ChannelIndex>()) {
-                // 1 raw neuron value = 0.5 centipawns (when WDL=400)
                 auto sum10{ this->b1[side][ch] }; // QB1 = 2^10
                 for (auto n : range<StrideIndex>()) {
-                    // accumulator SCReLU activation
+                    // accumulator Squared Clipped ReLU activation
                     auto x10 = dacc[side][ch][n]; // QW0 = 2^10
                     auto c14 = clamp(x10, 0, 1024) << 4; // 2^14
                     auto s13 = mulhrs_i16(c14, c14); // 2^13
 
-                    // channel weighted sum
+                    // per channel activated accumulator stride weighted sum
                     auto w12 = this->w1[side][ch][n]; // QW1 = 2^12
-                    auto f10 = mulhrs_i16(s13, w12); // QB1 = 2^10
+                    auto f10 = mulhrs_i16(s13, w12); // 2^10
                     sum10 = adds_i16(sum10, f10); // 65 addends per stride
                 }
 
-                // channel signed screlu (c*|с|) activation
+                // channel Squared Clipped ReLU activation
                 auto c13 = clamp(sum10, -1024, 1024) << 3; // 2^13
-                auto s11 = mulhrs_i16(c13, abs(c13)); // C*|C| = 2^11
+                auto s11 = mulhrs_i16(c13, c13); // 2^11
 
-                // output weighted sum
-                auto w4  = this->w2[side][ch]; // QW2 = 2^4 * WDL
-                auto f15 = madd_i16(s11, w4); // QB2 = 2^15 * WDL
-                sum15 += f15;
+                // weighted sum of channels (original channel sign embedded in weight)
+                auto w3 = sum10 < 0 ? this->w2[side][ch][Neg] : this->w2[side][ch][Pos]; // QW2 = 2^3 * WDL
+                auto f14 = madd_i16(s11, w3); // 2^14 * WDL
+                sum14 += f14;
             }
         }
-        auto result15 = hadd_i32(sum15); // 2^15 * WDL
-        auto result = result15 >> 15; // WDL
-        return result;
+        auto output14 = hadd_i32(sum14); // 2^14 * WDL, output bias = 0
+        auto output = output14 >> 14; // WDL
+        return output;
     }
 
     constexpr void quiet(Acc& current, const Acc& parent, Fi m, Fi sub1, Fi add1) const {
@@ -195,11 +196,11 @@ struct CACHE_ALIGN Nnue {
     COLD void validate_embedded() const;
 
 private:
-    // total 1577152 bytes
+    // total 1577216 bytes
     W0 w0; // feature weights, 768*(2*1024) = 1572864 bytes, feature biases embeded into kings weights
     W1 w1; // accumulator activation weights, 2*2048 = 4096 bytes
     B1 b1; // channels biases, 2*32 = 64 bytes
-    W2 w2; // channels output weights, 2*32 = 64 bytes
+    W2 w2; // channels output weights, 2*2*32 = 128 bytes
 };
 extern constinit const Nnue& nnue;
 

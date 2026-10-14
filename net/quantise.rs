@@ -14,16 +14,12 @@ fn main() {
     const CHANNELS: usize = ACC_SIZE / STRIDE_SIZE;
     const DUAL_CHANNELS: usize = 2*CHANNELS;
 
-    // SIMD inferenece optimization
-    const VECTOR_LANES: usize = 16;
-    const CHANNELS_INDEX: usize = CHANNELS / VECTOR_LANES;
-
     // SIMD inference quantisation
     const QW0: f32 = 1024.0; // 2^10, l0w scale, seems safe enough for the 16-bit chess accumulator
     const QW1: f32 = 4096.0; // 2^12, l1w scale, adjusted to make QB1 = QW0
     const QB1: f32 = 1024.0; // 2^10, l1b scale, adjusted to make QB1 = QW0
     const WDL: f32 = 400.0; // embedded net output conversion 1.0 = 400 centipawns
-    const QW2: f32 = 16.0 * WDL; // 2^4 * WDL
+    const QW2: f32 = 8.0 * WDL; // 2^3 * WDL
 
     let mut trainer = ValueTrainerBuilder::default().use_threads(CPU_THREADS/2)
         .optimiser(AdamW).loss_fn(|output, target| output.sigmoid().power_error(target, LOSS_POW))
@@ -98,7 +94,29 @@ fn main() {
             }).quantise_to_type::<i16>(),
 
             SavedFormat::id("l1b").quantise::<i16>(QB1),
-            SavedFormat::id("l2w").quantise::<i16>(QW2),
+
+            SavedFormat::id("l2w").transform(|_, inputs| {
+                let mut outputs = vec![0.0; inputs.len()];
+
+                for side in 0..2 {
+                    for ch_idx in 0..CHANNELS_INDEX {
+                        for concat in 0..2 {
+                            for lane in 0..VECTOR_LANES {
+                                let dchi = side*CHANNELS + ch_idx*VECTOR_LANES;
+
+                                // [side][ch_idx][lane][concat]
+                                let in_idx = (dchi + lane)*2 + concat;
+
+                                // [side][ch_idx][concat][lane]
+                                let out_idx = dchi*2 + concat*VECTOR_LANES + lane;
+
+                                outputs[out_idx] = inputs[in_idx];
+                            }
+                        }
+                    }
+                }
+                outputs
+            }).quantise::<i16>(QW2),
         ])
         .inputs(Chess768hm).dual_perspective()
         .build(|builder, my_inputs, op_inputs| {
@@ -107,12 +125,12 @@ fn main() {
 
             // +n -n +n -n stride pattern
             let l1w = builder.new_weights("l1w", Shape::new(2*ACC_SIZE, 1),
-                InitSettings::Vector{ vector: vec![[0.5, -0.5]; ACC_SIZE].concat() }
+                InitSettings::Vector{ vector: vec![[0.25, -0.25]; ACC_SIZE].concat() }
             );
 
             // my_acc - op_acc
-            let l2w = builder.new_weights("l2w", Shape::new(DUAL_CHANNELS, 1),
-                InitSettings::Vector{ vector: [vec![0.5; CHANNELS], vec![-0.5; CHANNELS]].concat() }
+            let l2w = builder.new_weights("l2w", Shape::new(2*DUAL_CHANNELS, 1),
+                InitSettings::Vector{ vector: [vec![1.0; DUAL_CHANNELS], vec![-1.0; DUAL_CHANNELS]].concat() }
             );
 
             let my_acc = l0.forward(my_inputs);
@@ -133,8 +151,9 @@ fn main() {
                 let w1 = l1w.slice_rows(dch * STRIDE_SIZE, dch1 * STRIDE_SIZE);
                 let channel_output = (b1 + w1.gemm(true, channel_stride, false)).signed_screlu();
 
-                let w_channel = l2w.slice_rows(dch, dch1);
-                w_channel.gemm(true, channel_output, false)
+                let w_concatenated = l2w.slice_rows(dch * 2, dch1 * 2);
+                let concatenated = channel_output.concat(-channel_output).relu();
+                w_concatenated.gemm(true, concatenated, false)
             };
 
             let mut output = forward_channel(0); // output bias = 0
@@ -144,6 +163,6 @@ fn main() {
             output
         });
 
-    trainer.load_from_checkpoint("./checkpoints/1o1-120/");
+    trainer.load_from_checkpoint("./checkpoints/1c1-1/");
     trainer.save_to_checkpoint("./quantised/");
 }
