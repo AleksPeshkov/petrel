@@ -107,11 +107,11 @@ struct CACHE_ALIGN Nnue {
     using _t = i16x16_t;
     static constexpr int Vector_lanes = sizeof(_t) / sizeof(i16_t);
     static constexpr int Acc_neurons = 1024;
-    static constexpr int Stride_neurons = 64; static_assert(Acc_neurons % Stride_neurons == 0);
+    static constexpr int Stride_neurons = 32; static_assert(Acc_neurons % Stride_neurons == 0);
     static constexpr int Channels = Acc_neurons / Stride_neurons; static_assert(Channels % Vector_lanes == 0);
 
-    struct StrideIndex : Index<StrideIndex, Stride_neurons> { using Index::Index; }; // 64
-    struct ChannelIndex : Index<ChannelIndex, Channels / Vector_lanes> { using Index::Index; }; // 1
+    struct StrideIndex : Index<StrideIndex, Stride_neurons> { using Index::Index; }; // 32
+    struct ChannelIndex : Index<ChannelIndex, Channels / Vector_lanes> { using Index::Index; }; // 2
 
     enum concatenated_enum { Pos, Neg };
     struct ConcatIndex : Index<ConcatIndex, 2, concatenated_enum> { constexpr ConcatIndex (_t i) : Index{i} {} };
@@ -137,7 +137,7 @@ struct CACHE_ALIGN Nnue {
                     // per channel activated accumulator stride weighted sum
                     auto w12 = this->w1[side][ch][n]; // QW1 = 2^12
                     auto f10 = mulhrs_i16(s13, w12); // 2^10
-                    sum10 = adds_i16(sum10, f10); // 65 addends per stride
+                    sum10 = adds_i16(sum10, f10); // 33 addends per stride
                 }
 
                 // channel Squared Clipped ReLU activation
@@ -196,11 +196,11 @@ struct CACHE_ALIGN Nnue {
     COLD void validate_embedded() const;
 
 private:
-    // total 1577216 bytes
+    // total 1577408 bytes
     W0 w0; // feature weights, 768*(2*1024) = 1572864 bytes, feature biases embeded into kings weights
     W1 w1; // accumulator activation weights, 2*2048 = 4096 bytes
-    B1 b1; // channels biases, 2*32 = 64 bytes
-    W2 w2; // channels output weights, 2*2*32 = 128 bytes
+    B1 b1; // channels biases, 2*64 = 128 bytes
+    W2 w2; // channels output weights, 2*2*64 = 256 bytes
 };
 extern constinit const Nnue& nnue;
 

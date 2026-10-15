@@ -14,7 +14,7 @@ fn main() {
     const LOSS_POW: f32 = 2.6;
 
     const ACC_SIZE: usize = 1024;
-    const STRIDE_SIZE: usize = 64;
+    const STRIDE_SIZE: usize = 32;
     const CHANNELS: usize = ACC_SIZE / STRIDE_SIZE;
     const DUAL_CHANNELS: usize = 2*CHANNELS;
 
@@ -129,18 +129,20 @@ fn main() {
         .inputs(Chess768hm).dual_perspective()
         .build(|builder, my_inputs, op_inputs| {
             let l0 = builder.new_affine("l0", 768, ACC_SIZE);
+            l0.init_with_effective_input_size(2048);
+
             let l1b = builder.new_weights("l1b", Shape::new(DUAL_CHANNELS, 1), InitSettings::Zeroed);
 
             // +w, -w, +w, -w, ... inside stride pattern
             let l1w = builder.new_weights("l1w", Shape::new(2*ACC_SIZE, 1),
-                InitSettings::Vector{ vector: vec![[0.5, -0.5]; ACC_SIZE].concat() }
+                InitSettings::Vector{ vector: vec![[1.0, -1.0]; ACC_SIZE].concat() }
             );
 
             // +w * my_acc[Pos] -w * my_acc[Neg] -w * op_acc[Pos] +w * op_acc[Neg]
             let l2w = builder.new_weights("l2w", Shape::new(2*DUAL_CHANNELS, 1),
                 InitSettings::Vector{ vector: [
-                    vec![[0.5, -0.5]; CHANNELS].concat(),
-                    vec![[-0.5, 0.5]; CHANNELS].concat(),
+                    vec![[1.0, -1.0]; CHANNELS].concat(),
+                    vec![[-1.0, 1.0]; CHANNELS].concat(),
                 ].concat() }
             );
 
@@ -205,12 +207,12 @@ fn main() {
     const MW2:f32 = 32767.0 / QW2; // 10.2396875
     trainer.optimiser.set_params_for_weight("l0b", AdamWParams{ decay: 0.0,  min_weight: -4.0, max_weight: 4.0, ..Default::default() });
     trainer.optimiser.set_params_for_weight("l1b", AdamWParams{ decay: 0.0,  min_weight: -4.0, max_weight: 4.0, ..Default::default() });
-    trainer.optimiser.set_params_for_weight("l0w", AdamWParams{ decay: 0.001,min_weight: -4.0, max_weight: 4.0, ..Default::default() });
-    trainer.optimiser.set_params_for_weight("l1w", AdamWParams{ decay: 0.01, min_weight: -MW1, max_weight: MW1, ..Default::default() });
-    trainer.optimiser.set_params_for_weight("l2w", AdamWParams{ decay: 0.0,  min_weight: -MW2, max_weight: MW2, ..Default::default() });
+    trainer.optimiser.set_params_for_weight("l0w", AdamWParams{ decay: 0.01, min_weight: -4.0, max_weight: 4.0, ..Default::default() });
+    trainer.optimiser.set_params_for_weight("l1w", AdamWParams{ decay: 0.02, min_weight: -MW1, max_weight: MW1, ..Default::default() });
+    trainer.optimiser.set_params_for_weight("l2w", AdamWParams{ decay: 0.01, min_weight: -MW2, max_weight: MW2, ..Default::default() });
 
     let schedule = TrainingSchedule {
-        net_id: "1s1".to_string(),
+        net_id: "1t1".to_string(),
         eval_scale: data_set_eval_scale,
         steps: TrainingSteps { batch_size, batches_per_superbatch, start_superbatch: 1, end_superbatch: final_superbatch },
         wdl_scheduler: wdl::CosineDecayWDL { start: 0.0, end: 0.0, final_superbatch },
@@ -222,7 +224,7 @@ fn main() {
     batch_size *= 4;
     batches_per_superbatch /= 4;
     let schedule2 = TrainingSchedule {
-        net_id: "1s2".to_string(),
+        net_id: "1t2".to_string(),
         eval_scale: data_set_eval_scale,
         steps: TrainingSteps { batch_size, batches_per_superbatch, start_superbatch: 1, end_superbatch: final_superbatch },
         wdl_scheduler: wdl::CosineDecayWDL { start: 0.0, end: 0.10, final_superbatch },
