@@ -436,8 +436,6 @@ ReturnStatus Node::search() {
         // safe pawns pushes attacking non-pawns
         RETURN_CUTOFF (goodPawnsMovesTo(~(OP.bbSide() - OP.bbPawns()), 2_ply));
 
-        if (depth <= 1_ply && !inCheck() && movesMade() >= 3) { break; }
-
         if (depth >= 6_ply && movesMade() >= 5) { baseR += 1_ply; } // LMR
 
         // safe officers moves
