@@ -376,7 +376,11 @@ ReturnStatus Node::search() {
             RETURN_CUTOFF (contMove(isDeep ? DeepCounter : Counter, counterMove)); // ply-1
         }
 
-        auto followupMove = hasAncestor(2_ply) ? ancestor(2_ply).currentMove : Move{}; //TODO: use game history move
+        //TODO: use game history move
+        auto followupMove = !hasAncestor(2_ply) ? Move{} :
+            ancestor(2_ply).currentMove.isAny() ? ancestor(2_ply).currentMove :
+            hasAncestor(4_ply) ? ancestor(4_ply).currentMove :  Move{}
+        ;
         if (followupMove.isAny()) {
             RETURN_CUTOFF (contMove(isDeep ? DeepFollowup : Followup, followupMove)); // ply-2
         }
