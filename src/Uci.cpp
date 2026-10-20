@@ -796,7 +796,7 @@ void Uci::newGame() {
     the_tt.newGame();
     the_ttMeta.newGame();
     contMoves = {};
-    checkMoves = {};
+    killersInCheck = {};
     go_.isNewGame = true;
 }
 
