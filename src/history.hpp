@@ -118,22 +118,6 @@ public:
     }
 };
 
-class CACHE_ALIGN CheckMoves {
-    using _t = array<Move, Color, Square, Square>;
-    _t v_;
-
-public:
-    constexpr Move get(Color color, Square sqKing, Move checkMove) const {
-        assert (checkMove.isAny());
-        return v_[color][sqKing][checkMove.to()];
-    }
-
-    constexpr void set(Color color, Square sqKing, Move checkMove, Move bestMove) {
-        assert (checkMove.isAny()); assert (bestMove.isAny());
-        v_[color][sqKing][checkMove.to()] = bestMove;
-    }
-};
-
 class CACHE_ALIGN PrincipalVariation {
     // final PV size + triangular arrays of subPVs (including final null moves)
     static constexpr auto triangularArraySize = Ply::size() + Ply::size()*(Ply::size()+1) / 2;

@@ -359,7 +359,7 @@ ReturnStatus Node::search() {
     if (inCheck()) {
         if (hasParent()) { //TODO: use game history move when root in check
             RETURN_CUTOFF (searchIfPossible(
-                the_uci.checkMoves.get(colorToMove(), _(My).sqKing(), parent().currentMove)
+                the_uci.killersInCheck[colorToMove()][_(My).sqKing()][parent().currentMove.to()]
             ));
         }
     } else {
@@ -704,7 +704,7 @@ void Node::saveHistory() {
     if (inCheck()) {
         if (hasParent()) {
             assert (parent().currentMove.isAny());
-            the_uci.checkMoves.set(colorToMove(), _(My).sqKing(), parent().currentMove, bestMove);
+            the_uci.killersInCheck[colorToMove()][_(My).sqKing()][parent().currentMove.to()] = bestMove;
         }
         return;
     }
