@@ -97,7 +97,7 @@ public: // used by search:
 //TODO: per search thread
     array<Node, Ply> searchStack;
     ContMoves<4> contMoves;
-    CheckMoves checkMoves;
+    array<Move, Color, Square, Square> killersInCheck{}; // check evasion killers
     PrincipalVariation pv;
     std::array<Move, 6> rootBestMoves;
 
