@@ -91,8 +91,17 @@ constexpr void insert_unique_compact(std::array<value_type, Size>& arr, value_ty
     *pos = value;
 }
 
-enum continuation_move_enum { Counter, DeepCounter, Followup, DeepFollowup };
-struct ContIndex : Index<ContIndex, 4, continuation_move_enum> { using Index::Index; };
+
+enum deep_node_enum { ShallowNode, DeepNode };
+struct DeepNodeIndex : Index<DeepNodeIndex, 2, deep_node_enum> {
+    constexpr DeepNodeIndex (_t i) : Index{i} {}
+    explicit operator bool () const { return v_ == DeepNode; }
+};
+
+enum continuation_move_enum { Counter, Followup };
+struct ContIndex : Index<ContIndex, 2, continuation_move_enum> {
+    constexpr ContIndex (_t i) : Index{i} {}
+};
 
 // Continuation Move table, counter and followup moves together (for cache locality)
 template<int _Size>
@@ -102,19 +111,22 @@ public:
     struct Index : ::Index<Index, Size> { using ::Index<Index, Size>::Index; };
 
 private:
-    using _t = array<Move, Color, MoveType, Square, Square, ContIndex, Index>;
+    using _t = array<Move, Color, MoveType, Square, Square, ContIndex, DeepNodeIndex, Index>;
     _t v_;
 
 public:
-    constexpr Move get(ContIndex::_t ci, Index i, Color color, Move move) const {
+    constexpr Move get(DeepNodeIndex deepNode, ContIndex ci, Index n, Color color, Move move) const {
         assert (move.isAny());
-        return v_[color][move.moveType()][move.from()][move.to()][ContIndex{ci}][i];
+        return v_[color][move.moveType()][move.from()][move.to()][ci][deepNode][n];
     }
 
     template <size_t Pos = 0>
-    constexpr void set(ContIndex::_t ci, Color color, Move move, Move bestMove) {
+    constexpr void set(DeepNodeIndex deepNode, ContIndex ci, Color color, Move move, Move bestMove) {
         assert (move.isAny()); assert (bestMove.isAny());
-        ::insert_unique_compact<Pos>(v_[color][move.moveType()][move.from()][move.to()][ContIndex{ci}], bestMove);
+        ::insert_unique_compact<Pos>(v_[color][move.moveType()][move.from()][move.to()][ci][ShallowNode], bestMove);
+        if (deepNode) {
+            ::insert_unique_compact<Pos>(v_[color][move.moveType()][move.from()][move.to()][ci][DeepNode], bestMove);
+        }
     }
 };
 
