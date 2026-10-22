@@ -1249,7 +1249,7 @@ void UciLimits::readGo(istream& is) {
     time = {0ms, 0ms}; // `wtime`/`btime`
     inc = {0ms, 0ms}; // `winc`/`binc`
     movetime = {0ms};
-    nodes = NodeCountMax;
+    nodes = NodeLimitNone;
     movestogo = 0;
     depth = Ply::last();
     ponder = false;

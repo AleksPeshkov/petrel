@@ -27,10 +27,7 @@ using i64_t = std::int64_t;
 using u64_t = std::uint64_t;
 
 using node_count_t = u64_t;
-enum : node_count_t {
-    NodeCountNone = std::numeric_limits<node_count_t>::max(),
-    NodeCountMax  = NodeCountNone - 1
-};
+enum : node_count_t { NodeLimitNone = std::numeric_limits<node_count_t>::max() };
 
 template <typename T> [[nodiscard]] constexpr bool operator != (T a, T b) { return !(a == b); }
 template <typename T> [[nodiscard]] constexpr bool operator >  (T a, T b) { return b < a; }

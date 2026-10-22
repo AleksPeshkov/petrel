@@ -39,7 +39,7 @@ struct UciLimits {
     TimeInterval movetime{0ms}; // go movetime
     TimeInterval moveOverhead{MoveOverheadDefault}; // option Move Overhead
 
-    node_count_t nodes{NodeCountMax}; // go nodes
+    node_count_t nodes{NodeLimitNone}; // go nodes
     int movestogo{0}; // go movestogo
     Ply depth{Ply::last()}; // go depth
 
