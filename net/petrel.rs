@@ -1,5 +1,5 @@
 use bullet_lib::{
-    game::inputs::Chess768hm,
+    game::inputs::Chess768hmop,
     nn::{InitSettings, Shape, optimiser::{AdamW, AdamWParams}},
     trainer::{
         save::SavedFormat,
@@ -103,46 +103,25 @@ fn main() {
 
             SavedFormat::id("l1b").quantise::<i16>(QB1),
 
-            SavedFormat::id("l2w").transform(|_, inputs| {
-                let mut outputs = vec![0.0; inputs.len()];
-
-                for side in 0..2 {
-                    for ch_idx in 0..CHANNELS_INDEX {
-                        for concat in 0..2 {
-                            for lane in 0..VECTOR_LANES {
-                                let dchi = side*CHANNELS + ch_idx*VECTOR_LANES;
-
-                                // [side][ch_idx][lane][concat]
-                                let in_idx = (dchi + lane)*2 + concat;
-
-                                // [side][ch_idx][concat][lane]
-                                let out_idx = dchi*2 + concat*VECTOR_LANES + lane;
-
-                                outputs[out_idx] = inputs[in_idx];
-                            }
-                        }
-                    }
-                }
-                outputs
-            }).quantise::<i16>(QW2),
+            SavedFormat::id("l2w").quantise::<i16>(QW2),
         ])
-        .inputs(Chess768hm).dual_perspective()
+        .inputs(Chess768hmop).dual_perspective()
         .build(|builder, my_inputs, op_inputs| {
             let l0 = builder.new_affine("l0", 768, ACC_SIZE);
             l0.init_with_effective_input_size(2048);
 
             let l1b = builder.new_weights("l1b", Shape::new(DUAL_CHANNELS, 1), InitSettings::Zeroed);
 
-            // +w, -w, +w, -w, ... inside stride pattern
+            // +2w/-w inside stride pattern
             let l1w = builder.new_weights("l1w", Shape::new(2*ACC_SIZE, 1),
-                InitSettings::Vector{ vector: vec![[1.0, -1.0]; ACC_SIZE].concat() }
+                InitSettings::Vector{ vector: vec![[0.50, -0.25]; ACC_SIZE].concat() }
             );
 
-            // +w * my_acc[Pos] -w * my_acc[Neg] -w * op_acc[Pos] +w * op_acc[Neg]
-            let l2w = builder.new_weights("l2w", Shape::new(2*DUAL_CHANNELS, 1),
+            // +w_my/-w_my, -w_op/+w_op channels' weights
+            let l2w = builder.new_weights("l2w", Shape::new(DUAL_CHANNELS, 1),
                 InitSettings::Vector{ vector: [
-                    vec![[1.0, -1.0, -1.0, 1.0]; CHANNELS/2].concat(),
-                    vec![[-1.0, 1.0, 1.0, -1.0]; CHANNELS/2].concat(),
+                    vec![[1.0, -1.0]; CHANNELS/2].concat(),
+                    vec![[-1.0, 1.0]; CHANNELS/2].concat(),
                 ].concat() }
             );
 
@@ -158,19 +137,20 @@ fn main() {
                         let och = dch - CHANNELS;
                         op_acc.slice_rows(och * STRIDE_SIZE, (och+1) * STRIDE_SIZE)
                     };
-                // weighted sum of Squared Clipped ReLU (c*c, c = x.clamp(0,1)) activated per channel accumulator stride
+                // Squared Clipped ReLU (x.clamp(0,1)^2) activated per channel accumulator stride
                 let acc_activated = acc_stride.screlu();
+
+                // weighted sum of the channel stride
                 let b1 = l1b.slice_rows(dch, dch1);
                 let w1 = l1w.slice_rows(dch * STRIDE_SIZE, dch1 * STRIDE_SIZE);
                 let dch_input = b1 + w1.gemm(true, acc_activated, false);
 
-                // Signed Squared Clipped ReLU (c*|c|, c = x.clamp(-1,1)) channel scalar activation
-                let dch_activated = dch_input.signed_screlu();
+                // Squared Clipped ReLU (x.clamp(0,1)^2) channel scalar activation
+                let dch_activated = dch_input.screlu();
 
-                // weighted sum of double activated (concatenated) output { c.clamp(+1,0), c.clamp(0,-1) }
-                let dch_concatenated = dch_activated.concat(-dch_activated).relu();
-                let w2 = l2w.slice_rows(dch * 2, dch1 * 2);
-                w2.gemm(true, dch_concatenated, false)
+                // weighted sum of channels
+                let w2 = l2w.slice_rows(dch, dch1);
+                w2.gemm(true, dch_activated, false)
             };
 
             let mut output = forward_channel(0); // output bias = 0
@@ -199,8 +179,8 @@ fn main() {
     let settings = LocalSettings { threads: CPU_THREADS/2, test_set: None, output_directory: "checkpoints", batch_queue_size: CPU_THREADS*4 };
 
     let final_superbatch = 120;
-    let mut batch_size = 16_384 /4;
-    let mut batches_per_superbatch = 6_104 *4;
+    let batch_size = 16_384 /4;
+    let batches_per_superbatch = 6_104 *4;
     let final_lr = 1e-6;
 
     const MW1:f32 = 32767.0 / QW1; // 7.999755859
@@ -212,25 +192,12 @@ fn main() {
     trainer.optimiser.set_params_for_weight("l2w", AdamWParams{ decay: 0.01, min_weight: -MW2, max_weight: MW2, ..Default::default() });
 
     let schedule = TrainingSchedule {
-        net_id: "1r1".to_string(),
-        eval_scale: data_set_eval_scale,
-        steps: TrainingSteps { batch_size, batches_per_superbatch, start_superbatch: 1, end_superbatch: final_superbatch },
-        wdl_scheduler: wdl::CosineDecayWDL { start: 0.0, end: 0.0, final_superbatch },
-        lr_scheduler: lr::CosineDecayLR { initial_lr: 8e-4, final_lr: 8e-4, final_superbatch },
-        save_rate: 10,
-    };
-    trainer.run(&schedule, &settings, &data_loader);
-
-    batch_size *= 4;
-    batches_per_superbatch /= 4;
-    let schedule2 = TrainingSchedule {
-        net_id: "1r2".to_string(),
+        net_id: "1p1".to_string(),
         eval_scale: data_set_eval_scale,
         steps: TrainingSteps { batch_size, batches_per_superbatch, start_superbatch: 1, end_superbatch: final_superbatch },
         wdl_scheduler: wdl::CosineDecayWDL { start: 0.0, end: 0.0, final_superbatch },
         lr_scheduler: lr::CosineDecayLR { initial_lr: 8e-4, final_lr, final_superbatch },
         save_rate: 10,
     };
-    trainer.load_from_checkpoint(&format!("./{}/{}-{}", &settings.output_directory, &schedule.net_id, final_superbatch));
-    trainer.run(&schedule2, &settings, &data_loader);
+    trainer.run(&schedule, &settings, &data_loader);
 }

@@ -63,8 +63,8 @@ void Position::nnUpdate() {
     array<Fi, PieceList> fi;
     int count{0};
 
-    // king's location dependant horizontal mirror mask
-    hm_[My] = Square{static_cast<Square::_t>(MY.sqKing().file() < FileD ? 0 : 7)};
+    // opp king's location dependant horizontal mirror mask
+    hm_[My] = Square{static_cast<Square::_t>(OP.sqKing().file() < FileD ? 0 : 7)};
     for (auto pi : MY.any()) {
         fi[PieceList{count++}] = {side_to_move_enum::My, MY.piece(pi), MY.sq(pi)^hm_[My]};
     }
@@ -101,38 +101,38 @@ constexpr void Position::nnUpdate(const Position& parent, Fi sub1, Fi add1, Fi s
 
 constexpr void Position::nnUpdate(const Position& parent, bool hm, Fi sub1, Fi add1) {
     if (hm) {
-        nnUpdate<Op>(); // recalculate all pieces
+        nnUpdate<My>(); // recalculate all pieces
     } else {
-        hm_[Op] = parent.hm_[My];
-        nnue.quiet(dacc_[Op], parent.dacc_[My], ~Fi{hm_[Op]}, sub1, add1); // ~Fi{} change piece's side
+        hm_[My] = parent.hm_[Op];
+        nnue.quiet(dacc_[My], parent.dacc_[Op], Fi{~hm_[My]}, sub1, add1); // Fi{~sq} square mask vertical flip
     }
 
-    hm_[My] = parent.hm_[Op];
-    nnue.quiet(dacc_[My], parent.dacc_[Op], Fi{~hm_[My]}, sub1, add1); // Fi{~sq} square mask vertical flip
+    hm_[Op] = parent.hm_[My];
+    nnue.quiet(dacc_[Op], parent.dacc_[My], ~Fi{hm_[Op]}, sub1, add1); // ~Fi{} change piece's side
 }
 
 constexpr void Position::nnUpdate(const Position& parent, bool hm, Fi sub1, Fi add1, Fi sub2) {
     if (hm) {
-        nnUpdate<Op>(); // recalculate all pieces
+        nnUpdate<My>(); // recalculate all pieces
     } else {
-        hm_[Op] = parent.hm_[My];
-        nnue.capture(dacc_[Op], parent.dacc_[My], ~Fi{hm_[Op]}, sub1, add1, sub2); // ~Fi{} change piece's side
+        hm_[My] = parent.hm_[Op];
+        nnue.capture(dacc_[My], parent.dacc_[Op], Fi{~hm_[My]}, sub1, add1, sub2); // Fi{~sq} square mask vertical flip
     }
 
-    hm_[My] = parent.hm_[Op];
-    nnue.capture(dacc_[My], parent.dacc_[Op], Fi{~hm_[My]}, sub1, add1, sub2); // Fi{~sq} square mask vertical flip
+    hm_[Op] = parent.hm_[My];
+    nnue.capture(dacc_[Op], parent.dacc_[My], ~Fi{hm_[Op]}, sub1, add1, sub2); // ~Fi{} change piece's side
 }
 
 constexpr void Position::nnUpdate(const Position& parent, bool hm, Fi sub1, Fi add1, Fi sub2, Fi add2) {
     if (hm) {
-        nnUpdate<Op>(); // recalculate all pieces
+        nnUpdate<My>(); // recalculate all pieces
     } else {
-        hm_[Op] = parent.hm_[My];
-        nnue.castling(dacc_[Op], parent.dacc_[My], ~Fi{hm_[Op]}, sub1, add1, sub2, add2); // ~Fi{} change piece's side
+        hm_[My] = parent.hm_[Op];
+        nnue.castling(dacc_[My], parent.dacc_[Op], Fi{~hm_[My]}, sub1, add1, sub2, add2); // Fi{~sq} square mask vertical flip
     }
 
-    hm_[My] = parent.hm_[Op];
-    nnue.castling(dacc_[My], parent.dacc_[Op], Fi{~hm_[My]}, sub1, add1, sub2, add2); // Fi{~sq} square mask vertical flip
+    hm_[Op] = parent.hm_[My];
+    nnue.castling(dacc_[Op], parent.dacc_[My], ~Fi{hm_[Op]}, sub1, add1, sub2, add2); // ~Fi{} change piece's side
 }
 
 template <Side::_t My, Position::make_move_flags_enum Flags>

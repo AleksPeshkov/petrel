@@ -113,15 +113,13 @@ struct CACHE_ALIGN Nnue {
     struct StrideIndex : Index<StrideIndex, Stride_neurons> { using Index::Index; }; // 32
     struct ChannelIndex : Index<ChannelIndex, Channels / Vector_lanes> { using Index::Index; }; // 2
 
-    enum concatenated_enum { Pos, Neg };
-    struct ConcatIndex : Index<ConcatIndex, 2, concatenated_enum> { constexpr ConcatIndex (_t i) : Index{i} {} };
     using Acc = array<_t, ChannelIndex, StrideIndex>; // 64
     using DualAcc = array<Acc, Side>; // 128
 
     using W0 = array<_t, Fi, ChannelIndex, StrideIndex>; // QW0 = 2^10
     using W1 = DualAcc; // QW1 = 2^12
     using B1 = array<_t, Side, ChannelIndex>; // QB1 = 2^10
-    using W2 = array<_t, Side, ChannelIndex, ConcatIndex>; // QW2 = 2^3 * WDL (WDL=400)
+    using W2 = array<_t, Side, ChannelIndex>; // QW2 = 2^3 * WDL (WDL=400)
 
     i32_t evaluate(const DualAcc& dacc) const {
         i32x8_t sum14{};
@@ -140,12 +138,12 @@ struct CACHE_ALIGN Nnue {
                     auto f10 = mulhrs_i16(s13, w12); // 2^10
                     sum10 = adds_i16(sum10, f10); // 33 addends per stride
                 }
-                // channel signed screlu (c*|с|) activation
-                auto c13 = clamp(sum10, -1024, 1024) << 3; // 2^13
+                // channel SCReLU activation
+                auto c13 = clamp(sum10, 0, 1024) << 3; // 2^13
                 auto s11 = mulhrs_i16(c13, c13); // 2^11
 
-                // weighted sum of channels (original channel sign embedded in weight)
-                auto w3 = sum10 < 0 ? this->w2[side][ch][Neg] : this->w2[side][ch][Pos]; // QW2 = 2^3 * WDL
+                // output weighted sum
+                auto w3 = this->w2[side][ch]; // QW2 = 2^3 * WDL
                 auto f14 = madd_i16(s11, w3); // 2^14 * WDL
                 sum14 += f14;
             }
@@ -196,11 +194,11 @@ struct CACHE_ALIGN Nnue {
     COLD void validate_embedded() const;
 
 private:
-    // total 1577408 bytes
+    // total 1577216 bytes
     W0 w0; // feature weights, 768*(2*1024) = 1572864 bytes, feature biases embeded into kings weights
     W1 w1; // accumulator activation weights, 2*2048 = 4096 bytes
     B1 b1; // channels biases, 2*64 = 128 bytes
-    W2 w2; // channels output weights, 2*2*64 = 256 bytes
+    W2 w2; // channels output weights, 2*64 = 128 bytes
 };
 extern constinit const Nnue& nnue;
 
