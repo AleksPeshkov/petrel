@@ -198,7 +198,7 @@ node_count_t TtPerft::get(Z z, Ply d) {
         return n;
     }
 
-    return NodeCountNone;
+    return NodeLimitNone;
 }
 
 void TtPerft::set(Z z, Ply d, node_count_t n) {
@@ -323,7 +323,7 @@ ReturnStatus NodePerft::visitMove(Square from, Square to) {
 
             perft = static_cast<TtPerft&>(The_transpositionTable).get(z(), depth - 2_ply);
 
-            if (perft == NodeCountNone) {
+            if (perft == NodeLimitNone) {
                 perft = 0;
                 RETURN_IF_STOP(visit());
                 static_cast<TtPerft&>(The_transpositionTable).set(z(), depth - 2_ply, perft);
