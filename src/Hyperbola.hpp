@@ -42,12 +42,13 @@ constexpr u64x2_t u64x2(Bb a, Bb b) {
 }
 
 //TRICK: Square operator~ is different
-constexpr Square reverse(Square sq) { return { ~sq.file(), ~sq.rank() }; }
+constexpr Square reverse(Square sq) { return static_cast<Square::_t>(+sq ^ 077); }
 
 struct CACHE_ALIGN HyperbolaSq : array<u64x2_t, Square> {
     consteval HyperbolaSq () {
         for (auto sq : range<Square>()) {
-            (*this)[sq] = u64x2(Bb{sq}, Bb{::reverse(sq)});
+            Square rsq{ ::reverse(sq) };
+            (*this)[sq] = u64x2(Bb{sq}, Bb{rsq});
         }
     }
 };
@@ -56,9 +57,9 @@ extern const HyperbolaSq hyperbolaSq;
 struct CACHE_ALIGN HyperbolaDir : array<u64x2_t, Square, Direction> {
     consteval HyperbolaDir () {
         for (auto sq : range<Square>()) {
-            Square rsq{::reverse(sq)};
+            Square rsq{ ::reverse(sq) };
             for (auto dir : range<Direction>()) {
-                (*this)[sq][dir] = u64x2(sq.bbDirection(dir), rsq.bbDirection(dir));
+                (*this)[sq][dir] = u64x2(sq.bb(dir), rsq.bb(dir));
             }
         }
     }
@@ -76,8 +77,8 @@ class alignas(32) Hyperbola {
     static constexpr u64x2_t hyperbola(u64x2_t v) { return v ^ bitReverse(v); }
 
 public:
-    // hyperbola({bb1, 0}) == {bb ^ bitreverse64(0), 0 ^ bitreverse64(bb)} == {bb, bitreverse64(bb)}
-    explicit Hyperbola (Bb bb) : occupied{ hyperbola(u64x2(bb, Bb{})) } {}
+    // hyperbola({bb, 0}) == {bb ^ bitReverse(0), 0 ^ bitReverse(bb)} == {bb, bitReverse(bb)}
+    explicit Hyperbola (Bb bb) : occupied{ hyperbola(u64x2(bb, {})) } {}
 
     constexpr Bb attack(Slider slider, Square from) const {
         auto sq = hyperbolaSq[from];
@@ -86,7 +87,7 @@ public:
         Direction dir{ slider.is(Bishop) ? DiagonalDir : FileDir };
 
         auto d0 = hyperbolaDir[from][dir];
-        auto d1 = hyperbolaDir[from][Direction{static_cast<Direction::_t>(+dir+1)}];
+        auto d1 = hyperbolaDir[from][static_cast<Direction::_t>(+dir+1)];
 
         // bishop attacks for Bishops, rooks attacks for Rooks and Queens
         auto result = ((occupied & d0) - sq) & d0;
@@ -94,13 +95,13 @@ public:
 
         if (slider.is(Queen)) {
             // plus bishop attacks for Queens
-            auto d = hyperbolaDir[from][Direction{DiagonalDir}];
-            auto a = hyperbolaDir[from][Direction{AntidiagDir}];
+            auto d = hyperbolaDir[from][DiagonalDir];
+            auto a = hyperbolaDir[from][AntidiagDir];
             result |= ((occupied & d) - sq) & d;
             result |= ((occupied & a) - sq) & a;
         }
 
-        // hyperbola({bb1, bb2}) == { bb1 ^ bitreverse64(bb2), bb2 ^ bitreverse64(bb1) }
+        // hyperbola({bb1, bb2}) == { bb1 ^ bitReverse(bb2), bb2 ^ bitReverse(bb1) }
         result = hyperbola(result);
 
         return Bb{::u64(result)};

@@ -47,7 +47,7 @@ constexpr Bb Square::bbAntidiag() const {
     return Bb{U64(0x8040'2010'0804'0201)}.shiftRank(+rank() - +file()) - Bb{*this};
 }
 
-constexpr Bb Square::bbDirection(Direction dir) const {
+constexpr Bb Square::bb(Direction dir) const {
     switch (*dir) {
         case FileDir:     return bbFile();
         case RankDir:     return bbRank();
