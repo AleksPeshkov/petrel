@@ -219,7 +219,9 @@ struct Rank : Index<Rank, 8, rank_enum> {
 };
 
 enum direction_enum { FileDir, RankDir, DiagonalDir, AntidiagDir };
-struct Direction : Index<Direction, 4, direction_enum> { using Index::Index; };
+struct Direction : Index<Direction, 4, direction_enum> {
+    constexpr Direction (_t dir) : Index{dir} {}
+};
 
 enum square_enum : u8_t {
     H8, G8, F8, E8, D8, C8, B8, A8,
@@ -273,7 +275,7 @@ public:
     constexpr Bb bbFile() const; // BitBoard of the file of the square (excluding the square itself)
     constexpr Bb bbDiagonal() const; // BitBoard of the diagonal of the square (excluding the square itself)
     constexpr Bb bbAntidiag() const; // BitBoard of the antidiagonal of the square (excluding the square itself)
-    constexpr Bb bbDirection(Direction) const; // BitBoard of the direction of the square (excluding the square itself)
+    constexpr Bb bb(Direction) const; // BitBoard of the direction of the square (excluding the square itself)
 
     friend ostream& operator << (ostream& os, Square sq) { return os << sq.file() << sq.rank(); }
 };
