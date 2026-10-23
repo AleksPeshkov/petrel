@@ -472,7 +472,7 @@ ReturnStatus Node::search() {
         // all underpromotions, losing passed pawns moves, the rest pawns moves
         for (Square from : MY.bbPawns()) {
             for (Square to : bbMovesOf( MY.pi(from) )) {
-                RETURN_CUTOFF (searchMove(from, to, 3_ply));
+                RETURN_CUTOFF (searchMove(from, to, 4_ply));
             }
         }
 
