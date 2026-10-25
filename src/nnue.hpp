@@ -109,78 +109,93 @@ struct Fi : ::Index<Fi, 6*2*64, i16_t> {
 
 struct CACHE_ALIGN Nnue {
     using _t = i16x16_t;
-    static constexpr int Vector_size = sizeof(_t) / sizeof(i16_t);
+    static constexpr int Vector_lanes = sizeof(_t) / sizeof(i16_t);
     static constexpr int Acc_neurons = 1024;
+    static constexpr int Stride_neurons = 16; static_assert(Acc_neurons % Stride_neurons == 0);
+    static constexpr int Channels = Acc_neurons / Stride_neurons; static_assert(Channels % Vector_lanes == 0);
 
-    enum pair_enum { Pos, Neg };
-    struct PairIndex : Index<PairIndex, 2, pair_enum> { constexpr PairIndex (_t i) : Index{i} {} };
+    struct StrideIndex : Index<StrideIndex, Stride_neurons> { explicit constexpr StrideIndex(_t v) : Index{v} {} }; // 16
+    struct ChannelIndex : Index<ChannelIndex, Channels / Vector_lanes> { explicit constexpr ChannelIndex(_t v) : Index{v} {} }; // 4
 
-    struct AccIndex : Index<AccIndex, (Acc_neurons / Vector_size) / PairIndex::size()> { using Index::Index; }; // 32
-    using Acc = array<_t, AccIndex, PairIndex>;
-    using DualAcc = array<Acc, Side>;
+    using Acc = array<_t, ChannelIndex, StrideIndex>; // 64
+    using DualAcc = array<Acc, Side>; // 128
 
-    using W0 = array<_t, Fi, AccIndex, PairIndex>; // QW0 = 2^10
-    using W1 = array<_t, Side, AccIndex>; // QW1 = 2^6 * WDL
-    using B1 = i32_t; // QB1 = WDL (WDL = ~400)
+    using W0 = array<_t, Fi, ChannelIndex, StrideIndex>; // QW0 = 2^10
+    using W1 = DualAcc; // QW1 = 2^12
+    using B1 = array<_t, Side, ChannelIndex>; // QB1 = 2^10
+    using W2 = array<_t, Side, ChannelIndex>; // QW2 = 2^3 * WDL (WDL=400)
+    using B2 = i32_t; // QB2 = 2^14
 
     i32_t evaluate(const DualAcc& dacc) const {
-        i16x16_t sum{};
+        i32x8_t sum14{};
         for (auto side : range<Side>()) {
-            for (auto n : range<AccIndex>()) {
-                // accumulator ReLU(ReLU(x_p) - ReLU(x_n)) activation
-                auto p10 = relu(dacc[side][n][Pos]); // QW0 = 2^10
-                auto n10 = relu(dacc[side][n][Neg]); // QW0 = 2^10
-                auto d10 = relu(p10 - n10);
+            for (auto ch : range<ChannelIndex>()) {
+                auto sum10{ this->b1[side][ch] }; // QB1 = 2^10
+                for (auto n : range<StrideIndex>()) {
+                    // accumulator ReLU activation
+                    auto x10 = dacc[side][ch][n]; // QW0 = 2^10
+                    auto m10 = max(x10, i16x16x(0));
+                    auto m11 = adds_i16(m10, m10);
+                    auto m12 = adds_i16(m11, m11);
+                    auto m13 = adds_i16(m12, m12);
 
-                // saturated Squared ReLU
-                auto d11 = adds_i16(d10, d10);
-                auto d12 = adds_i16(d11, d11);
-                auto m9  = mulhrs_i16(d12, d12); // 2^9
+                    // weighted sum of channel stride
+                    auto w12 = this->w1[side][ch][n]; // QW1 = 2^12
+                    auto f10 = mulhrs_i16(m13, w12); // 2^10
+                    sum10 = adds_i16(sum10, f10); // 17 addends per stride
+                }
+                // channel SquaredReLU activation
+                auto m10 = max(sum10, i16x16x(0));
+                auto m11 = adds_i16(m10, m10);
+                auto m12 = adds_i16(m11, m11);
+                auto m13 = adds_i16(m12, m12);
+                auto s11 = mulhrs_i16(m13, m13); // QM2 = 2^11
 
                 // output weighted sum
-                auto w6 = this->w1[side][n]; // QW1 = 2^6 * WDL
-                auto f = mulhrs_i16(m9, w6); // WDL
-                sum = adds_i16(sum, f); // 32 addends per side
+                auto w3 = this->w2[side][ch]; // QW2 = 2^3 * WDL
+                auto f14 = madd_i16(s11, w3); // 2^14 * WDL
+                sum14 += f14;
             }
         }
-        auto output = this->b1 + hadd_i16(sum); // WDL
+        auto output14 = this->b2 + hadd_i32(sum14); // 2^14 * WDL
+        auto output = output14 >> 14; // WDL
         return output;
     }
 
     constexpr void quiet(Acc& current, const Acc& parent, Fi m, Fi sub1, Fi add1) const {
-        for (auto n : range<AccIndex>()) {
-            for (auto p : range<PairIndex>()) {
-                current[n][p] = adds_i16(parent[n][p], this->w0[add1^m][n][p] - this->w0[sub1^m][n][p]);
+        for (auto ch : range<ChannelIndex>()) {
+            for (auto n : range<StrideIndex>()) {
+                current[ch][n] = adds_i16(parent[ch][n], this->w0[add1^m][ch][n] - this->w0[sub1^m][ch][n]);
             }
         }
     }
 
     constexpr void capture(Acc& current, const Acc& parent, Fi m, Fi sub1, Fi add1, Fi sub2) const {
-        for (auto n : range<AccIndex>()) {
-            for (auto p : range<PairIndex>()) {
-                current[n][p] = adds_i16(parent[n][p], this->w0[add1^m][n][p] - this->w0[sub1^m][n][p] - this->w0[sub2^m][n][p]);
+        for (auto ch : range<ChannelIndex>()) {
+            for (auto n : range<StrideIndex>()) {
+                current[ch][n] = adds_i16(parent[ch][n], this->w0[add1^m][ch][n] - this->w0[sub1^m][ch][n] - this->w0[sub2^m][ch][n]);
             }
         }
     }
 
     constexpr void castling(Acc& current, const Acc& parent, Fi m, Fi sub1, Fi add1, Fi sub2, Fi add2) const {
-        for (auto n : range<AccIndex>()) {
-            for (auto p : range<PairIndex>()) {
-                auto s1 = this->w0[add1^m][n][p] - this->w0[sub1^m][n][p];
-                auto s2 = this->w0[add2^m][n][p] - this->w0[sub2^m][n][p];
-                current[n][p] = adds_i16(parent[n][p], s1 + s2);
+        for (auto ch : range<ChannelIndex>()) {
+            for (auto n : range<StrideIndex>()) {
+                auto s1 = this->w0[add1^m][ch][n] - this->w0[sub1^m][ch][n];
+                auto s2 = this->w0[add2^m][ch][n] - this->w0[sub2^m][ch][n];
+                current[ch][n] = adds_i16(parent[ch][n], s1 + s2);
             }
         }
     }
 
     constexpr void update(Acc& current, const array<Fi, PieceList>& fi, int count) const {
-        for (auto n : range<AccIndex>()) {
-            for (auto p : range<PairIndex>()) {
+        for (auto ch : range<ChannelIndex>()) {
+            for (auto n : range<StrideIndex>()) {
                 _t a{}; // bias = 0, feature biases embeded into kings weights
                 for (int i = 0; i < count; ++i) {
-                    a = adds_i16(a, this->w0[ fi[{i}]][n][p] );
+                    a = adds_i16(a, this->w0[ fi[{i}]][ch][n] );
                 }
-                current[n][p] = a;
+                current[ch][n] = a;
             }
         }
     }
@@ -188,10 +203,12 @@ struct CACHE_ALIGN Nnue {
     COLD void validate_embedded() const;
 
 private:
-    // total 1574976 bytes
-    W0 w0; // feature weights, 768*(64*32) = 1572864 bytes, feature biases embeded into kings weights
-    W1 w1; // output weights, 2*(32*32) = 2048 bytes
-    B1 b1; // output bias (64 byte aligned)
+    // total 1577088 bytes
+    W0 w0; // feature weights, 768*(2*1024) = 1572864 bytes, feature biases embeded into kings weights
+    W1 w1; // accumulator activation weights, 2*2048 = 4096 bytes
+    B1 b1; // channels biases, 2*32 = 64 bytes
+    W2 w2; // channels output weights, 2*32 = 64 bytes
+    B2 b2; // output bias, aligned to 64 bytes
 };
 extern constinit const Nnue& nnue;
 
