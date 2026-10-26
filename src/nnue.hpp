@@ -43,6 +43,10 @@ constexpr V min(V a, V b) {
     #endif
 }
 
+constexpr i16x16_t relu(i16x16_t a) {
+    return max(a, i16x16x(0));
+}
+
 constexpr i16x16_t clamp(i16x16_t a, int low, int high) {
     return min(max(a, i16x16x(low)), i16x16x(high));
 }
@@ -99,27 +103,35 @@ struct CACHE_ALIGN Nnue {
     static constexpr int Vector_size = sizeof(_t) / sizeof(i16_t);
     static constexpr int Acc_neurons = 1024;
 
-    struct AccIndex : Index<AccIndex, Acc_neurons / Vector_size> { using Index::Index; }; // 64
-    using Acc = array<_t, AccIndex>;
+    enum pair_enum { Pos, Neg };
+    struct PairIndex : Index<PairIndex, 2, pair_enum> { constexpr PairIndex (_t i) : Index{i} {} };
+
+    struct AccIndex : Index<AccIndex, (Acc_neurons / Vector_size) / PairIndex::size()> { using Index::Index; }; // 32
+    using Acc = array<_t, AccIndex, PairIndex>;
     using DualAcc = array<Acc, Side>;
 
-    using W0 = array<_t, Fi, AccIndex>; // QW0 = 2^10
-    using W1 = DualAcc; // QW1 = 2^4 * WDL
+    using W0 = array<_t, Fi, AccIndex, PairIndex>; // QW0 = 2^11
+    using W1 = array<_t, Side, AccIndex>; // QW1 = 2^4 * WDL
     using B1 = i32_t; // QB1 = 2^15 * WDL (WDL = ~400)
 
     i32_t evaluate(const DualAcc& dacc) const {
         i32x8_t sum15{};
         for (auto side : range<Side>()) {
             for (auto n : range<AccIndex>()) {
-                // accumulator SCReLU activation
-                auto x10 = dacc[side][n]; // QW0 = 2^10
-                auto c13 = clamp(x10, 0, 1024) << 3; // 2^13
-                auto s11 = mulhrs_i16(c13, c13); // QS0 = 2^11
+                // accumulator ReLU(ReLU(x_p) - ReLU(x_n)) activation
+                auto p11 = relu(dacc[side][n][Pos]); // QW0 = 2^11
+                auto n11 = relu(dacc[side][n][Neg]); // QW0 = 2^11
+                auto d11 = relu(p11 - n11);
+
+                // saturated Squared ReLU
+                auto d12 = adds_i16(d11, d11);
+                auto d13 = adds_i16(d12, d12);
+                auto m11 = mulhrs_i16(d13, d13); // QM1 = 2^11
 
                 // output weighted sum
                 auto w4  = this->w1[side][n]; // QW1 = 2^4 * WDL
-                auto f15 = madd_i16(s11, w4); // QB1 = QS0 * QW1 = 2^15 * WDL
-                sum15 += f15; // 32 addends
+                auto f15 = madd_i16(m11, w4); // QB1 = 2^15 * WDL
+                sum15 += f15; // 32 addends per side
             }
         }
         auto output15 = this->b1 + hadd_i32(sum15); // QB1
@@ -129,40 +141,48 @@ struct CACHE_ALIGN Nnue {
 
     constexpr void quiet(Acc& current, const Acc& parent, Fi m, Fi sub1, Fi add1) const {
         for (auto n : range<AccIndex>()) {
-            current[n] = adds_i16(parent[n], this->w0[add1^m][n] - this->w0[sub1^m][n]);
+            for (auto p : range<PairIndex>()) {
+                current[n][p] = adds_i16(parent[n][p], this->w0[add1^m][n][p] - this->w0[sub1^m][n][p]);
+            }
         }
     }
 
     constexpr void capture(Acc& current, const Acc& parent, Fi m, Fi sub1, Fi add1, Fi sub2) const {
         for (auto n : range<AccIndex>()) {
-            current[n] = adds_i16(parent[n], this->w0[add1^m][n] - this->w0[sub1^m][n] - this->w0[sub2^m][n]);
+            for (auto p : range<PairIndex>()) {
+                current[n][p] = adds_i16(parent[n][p], this->w0[add1^m][n][p] - this->w0[sub1^m][n][p] - this->w0[sub2^m][n][p]);
+            }
         }
     }
 
     constexpr void castling(Acc& current, const Acc& parent, Fi m, Fi sub1, Fi add1, Fi sub2, Fi add2) const {
         for (auto n : range<AccIndex>()) {
-            auto s1 = this->w0[add1^m][n] - this->w0[sub1^m][n];
-            auto s2 = this->w0[add2^m][n] - this->w0[sub2^m][n];
-            current[n] = adds_i16(parent[n], s1 + s2);
+            for (auto p : range<PairIndex>()) {
+                auto s1 = this->w0[add1^m][n][p] - this->w0[sub1^m][n][p];
+                auto s2 = this->w0[add2^m][n][p] - this->w0[sub2^m][n][p];
+                current[n][p] = adds_i16(parent[n][p], s1 + s2);
+            }
         }
     }
 
     constexpr void update(Acc& current, const array<Fi, PieceList>& fi, int count) const {
         for (auto n : range<AccIndex>()) {
-            _t a{}; // bias = 0, feature biases embeded into kings weights
-            for (int i = 0; i < count; ++i) {
-                a = adds_i16(a, this->w0[ fi[{i}]][n] );
+            for (auto p : range<PairIndex>()) {
+                _t a{}; // bias = 0, feature biases embeded into kings weights
+                for (int i = 0; i < count; ++i) {
+                    a = adds_i16(a, this->w0[ fi[{i}]][n][p] );
+                }
+                current[n][p] = a;
             }
-            current[n] = a;
         }
     }
 
     COLD void validate_embedded() const;
 
 private:
-    // total 1577024 bytes
+    // total 1574976 bytes
     W0 w0; // feature weights, 768*(64*32) = 1572864 bytes, feature biases embeded into kings weights
-    W1 w1; // output weights, 2*(64*32) = 4096 bytes
+    W1 w1; // output weights, 2*(32*32) = 2048 bytes
     B1 b1; // output bias (64 byte aligned)
 };
 extern constinit const Nnue& nnue;

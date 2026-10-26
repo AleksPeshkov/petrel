@@ -1,6 +1,6 @@
 use bullet_lib::{
     game::inputs::Chess768hm,
-    nn::optimiser::{AdamW, AdamWParams},
+    nn::{InitSettings, Shape, optimiser::{AdamW, AdamWParams}},
     trainer::{
         save::SavedFormat,
         schedule::{TrainingSchedule, TrainingSteps, lr, wdl},
@@ -14,12 +14,14 @@ fn main() {
     const LOSS_POW: f32 = 2.6;
 
     const ACC_SIZE: usize = 1024;
+    const HALF_SIZE: usize = ACC_SIZE / 2; // size of each pair
+    const VECTOR_LANES: usize = 16;
 
-    const QW0: f32 = 1024.0; // seems safe and large enough for 16-bit accumulator
-    const QS0: f32 = 2048.0; // balanced precision of QW0*QW0 in i16
-    const WDL: f32 = 400.0;  // implicit output conversion 1.0 = 400 centipawns
-    const QW1: f32 = 16.0 * WDL; // QW1*WDL*MW1 <= 32767
-    const QB1: f32 = QS0 * QW1; // 2^15 * WDL
+    const QW0: f32 = 2048.0; // 2^11, seems safe enough for the 16-bit chess accumulator
+    const QM1: f32 = 2048.0; // 2^11, balanced precision of QW0*QW0 in i16
+    const WDL: f32 = 400.0; // embedded net output conversion 1.0 = 400 centipawns
+    const QW1: f32 = 16.0 * WDL; // 2^4 * WDL
+    const QB1: f32 = QM1 * QW1; // 2^15 * WDL
 
     let mut trainer = ValueTrainerBuilder::default().use_threads(CPU_THREADS/2)
         .optimiser(AdamW).loss_fn(|output, target| output.sigmoid().power_error(target, LOSS_POW))
@@ -36,10 +38,20 @@ fn main() {
                             // pnbrqk -> qrbnpk; A1 = 0 -> H8 = 0
                             let to = (engine[piece]*128 + side*64 + (square^63)) * ACC_SIZE;
 
-                            for i in 0..ACC_SIZE {
-                                // embed bias into kings weights
-                                let bias = if piece == 5 { store.get("l0b").values[i] / 2.0 } else { 0.0 };
-                                outputs[to + i] = inputs[from + i] + bias;
+                            for p in 0..2 {
+                                for h in 0..HALF_SIZE {
+                                    // [p][h]
+                                    let i = p * HALF_SIZE + h;
+
+                                    // [n][p][lane]
+                                    let n = h / VECTOR_LANES;
+                                    let lane = h % VECTOR_LANES;
+                                    let to_i = (2*n + p) * VECTOR_LANES + lane;
+
+                                    // embed bias into kings weights
+                                    let bias = if piece == 5 { store.get("l0b").values[i] / 2.0 } else { 0.0 };
+                                    outputs[to + to_i] = inputs[from + i] + bias;
+                                }
                             }
                         }
                     }
@@ -52,12 +64,22 @@ fn main() {
         .inputs(Chess768hm).dual_perspective()
         .build(|builder, my_inputs, op_inputs| {
             let l0 = builder.new_affine("l0", 768, ACC_SIZE);
-            let my_acc = l0.forward(my_inputs);
-            let op_acc = l0.forward(op_inputs);
-            let dacc = my_acc.concat(op_acc);
+            l0.init_with_effective_input_size(2048);
+            let my_acc = l0.forward(my_inputs).relu();
+            let op_acc = l0.forward(op_inputs).relu();
 
-            let l1 = builder.new_affine("l1", 2*ACC_SIZE, 1);
-            l1.forward(dacc.screlu())
+            let my_diff = my_acc.slice_rows(0, HALF_SIZE) - my_acc.slice_rows(HALF_SIZE, ACC_SIZE);
+            let op_diff = op_acc.slice_rows(0, HALF_SIZE) - op_acc.slice_rows(HALF_SIZE, ACC_SIZE);
+            let diff_squared = my_diff.concat(op_diff).sqrrelu();
+
+            let l1b = builder.new_weights("l1b", Shape::new(1, 1), InitSettings::Zeroed);
+            let l1w = builder.new_weights("l1w", Shape::new(1, ACC_SIZE),
+                InitSettings::Vector{ vector: [
+                    vec![[0.25, -0.25]; HALF_SIZE/2].concat(),
+                    vec![[-0.25, 0.25]; HALF_SIZE/2].concat(),
+                ].concat() }
+            );
+            l1b + l1w.matmul(diff_squared)
         });
 
     let data_set_eval_scale: f32 = 800.0;
@@ -79,38 +101,23 @@ fn main() {
     let settings = LocalSettings { threads: CPU_THREADS/2, test_set: None, output_directory: "checkpoints", batch_queue_size: CPU_THREADS*4 };
 
     let final_superbatch = 120;
-    let mut batch_size = 16_384 /4;
-    let mut batches_per_superbatch = 6_104 *4;
-    let mut initial_lr = 1e-3;
+    let batch_size = 16_384 /4;
+    let batches_per_superbatch = 6_104 *4;
     let final_lr = 1e-6;
 
-    const MW1: f32 = 32767.0 / QW1; // 5.11984375
+    const MW1:f32 = 32767.0 / QW1; // 10.2396875
     trainer.optimiser.set_params_for_weight("l0b", AdamWParams{ decay: 0.0,  min_weight: -4.0, max_weight: 4.0, ..Default::default() });
     trainer.optimiser.set_params_for_weight("l1b", AdamWParams{ decay: 0.0,  min_weight: -4.0, max_weight: 4.0, ..Default::default() });
     trainer.optimiser.set_params_for_weight("l0w", AdamWParams{ decay: 0.01, min_weight: -4.0, max_weight: 4.0, ..Default::default() });
     trainer.optimiser.set_params_for_weight("l1w", AdamWParams{ decay: 0.03, min_weight: -MW1, max_weight: MW1, ..Default::default() });
 
     let schedule = TrainingSchedule {
-        net_id: "1x1".to_string(),
+        net_id: "1y1".to_string(),
         eval_scale: data_set_eval_scale,
         steps: TrainingSteps { batch_size, batches_per_superbatch, start_superbatch: 1, end_superbatch: final_superbatch },
-        wdl_scheduler: wdl::CosineDecayWDL { start: 0.0, end: 0.10, final_superbatch },
-        lr_scheduler: lr::CosineDecayLR { initial_lr, final_lr, final_superbatch },
+        wdl_scheduler: wdl::CosineDecayWDL { start: 0.0, end: 0.0, final_superbatch },
+        lr_scheduler: lr::CosineDecayLR { initial_lr: 8e-4, final_lr, final_superbatch },
         save_rate: 10,
     };
     trainer.run(&schedule, &settings, &data_loader);
-
-    batch_size *= 4;
-    batches_per_superbatch /= 4;
-    initial_lr /= 10.0;
-    let schedule2 = TrainingSchedule {
-        net_id: "1x4".to_string(),
-        eval_scale: data_set_eval_scale,
-        steps: TrainingSteps { batch_size, batches_per_superbatch, start_superbatch: 1, end_superbatch: final_superbatch },
-        wdl_scheduler: wdl::CosineDecayWDL { start: 0.10, end: 0.20, final_superbatch },
-        lr_scheduler: lr::CosineDecayLR { initial_lr, final_lr, final_superbatch },
-        save_rate: 10,
-    };
-    trainer.load_from_checkpoint(&format!("./{}/{}-{}", &settings.output_directory, "1x1", final_superbatch));
-    trainer.run(&schedule2, &settings, &data_loader);
 }
