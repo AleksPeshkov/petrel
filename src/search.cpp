@@ -191,6 +191,7 @@ ReturnStatus Node::negamax(Ply R) {
 }
 
 ReturnStatus Node::search() {
+    deepNode = {depth > ply ? DeepNode : ShallowNode};
     baseR = Ply{+depth / 8};
     eval  = {};
     cEval = {};
@@ -365,25 +366,23 @@ ReturnStatus Node::search() {
     } else {
         RETURN_CUTOFF (searchIfPossible(killers[0]));
 
-        bool isDeep{ depth > ply };
-
         auto counterMove = hasParent() ? parent().currentMove : Move{}; //TODO: use game history move
         if (counterMove.isAny()) {
-            RETURN_CUTOFF (contMove(isDeep ? DeepCounter : Counter, counterMove)); // ply-1
+            RETURN_CUTOFF (contMove(Counter, counterMove)); // ply-1
         }
 
         auto followupMove = hasAncestor(2_ply) ? ancestor(2_ply).currentMove : Move{}; //TODO: use game history move
         if (followupMove.isAny()) {
-            RETURN_CUTOFF (contMove(isDeep ? DeepFollowup : Followup, followupMove)); // ply-2
+            RETURN_CUTOFF (contMove(Followup, followupMove)); // ply-2
         }
 
         RETURN_CUTOFF (searchIfPossible(killers[1]));
 
         if (counterMove.isAny()) {
-            RETURN_CUTOFF (contMove(isDeep ? DeepCounter : Counter, counterMove)); // ply-1
+            RETURN_CUTOFF (contMove(Counter, counterMove)); // ply-1
         }
         if (followupMove.isAny()) {
-            RETURN_CUTOFF (contMove(isDeep ? DeepFollowup : Followup, followupMove)); // ply-2
+            RETURN_CUTOFF (contMove(Followup, followupMove)); // ply-2
         }
     }
 
@@ -678,8 +677,8 @@ constexpr Ply Node::finalR(Ply R) const {
 // counter and followup move heuristic
 //TRICK: history can be updated, so restart from the begining each time
 ReturnStatus Node::contMove(ContIndex::_t ContType, Move move) {
-    for (auto i : range<decltype(the_uci.contMoves)::Index>()) {
-        auto contMove{ the_uci.contMoves.get(ContType, i, colorToMove(), move) };
+    for (auto i : range<decltype(the_uci.contMoves)::BucketIndex>()) {
+        auto contMove{ the_uci.contMoves.get(deepNode, ContType, i, colorToMove(), move) };
         if (contMove.isNone()) { break; } //TRICK: insert_unique_compact() garantees no holes
         if (isPossibleMove(contMove)) {
             return searchMove(contMove);
@@ -713,14 +712,9 @@ void Node::saveHistory() {
 
     if (!hasParent()) { return; } // ply-1
 
-    bool isDeep{ depth > ply };
-
     auto counterMove = parent().currentMove;
     if (counterMove.isAny()) {
-        the_uci.contMoves.set(Counter, colorToMove(), counterMove, bestMove);
-        if (isDeep) {
-            the_uci.contMoves.set(DeepCounter, colorToMove(), counterMove, bestMove);
-        }
+        the_uci.contMoves.set(deepNode, Counter, colorToMove(), counterMove, bestMove);
     }
 
     if (!hasAncestor(2_ply)) { return; } // ply-2
@@ -728,10 +722,7 @@ void Node::saveHistory() {
 
     auto followupMove = ancestor(2_ply).currentMove;
     if (followupMove.isAny()) {
-        the_uci.contMoves.set(Followup, colorToMove(), followupMove, bestMove);
-        if (isDeep) {
-            the_uci.contMoves.set(DeepFollowup, colorToMove(), followupMove, bestMove);
-        }
+        the_uci.contMoves.set(deepNode, Followup, colorToMove(), followupMove, bestMove);
     }
 }
 
