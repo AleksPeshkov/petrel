@@ -1,6 +1,6 @@
 use bullet_lib::{
     game::inputs::Chess768hm,
-    nn::optimiser::AdamW,
+    nn::{InitSettings, Shape, optimiser::AdamW},
     trainer::save::SavedFormat,
     value::ValueTrainerBuilder,
 };
@@ -10,12 +10,13 @@ fn main() {
     const LOSS_POW: f32 = 2.6;
 
     const ACC_SIZE: usize = 1024;
+    const HALF_SIZE: usize = ACC_SIZE / 2; // size of each pair
+    const VECTOR_LANES: usize = 16;
 
-    const QW0: f32 = 1024.0; // seems safe and large enough for 16-bit accumulator
-    const QS0: f32 = 2048.0; // balanced precision of QW0*QW0 in i16
-    const WDL: f32 = 275.0;  // implicit output conversion 1.0 = 400 centipawns
-    const QW1: f32 = 16.0 * WDL; // QW1*WDL*MW1 <= 32767
-    const QB1: f32 = QS0 * QW1; // 2^15 * WDL
+    const QW0: f32 = 1024.0; // 2^10, seems safe enough for the 16-bit chess accumulator
+    const WDL: f32 = 400.0; // embedded net output conversion 1.0 = 400 centipawns
+    const QW1: f32 = 32.0 * WDL; // 2^5 * WDL
+    const QB1: f32 = 1024.0 * WDL; // 2^10 * WDL
 
     let mut trainer = ValueTrainerBuilder::default().use_threads(CPU_THREADS/2)
         .optimiser(AdamW).loss_fn(|output, target| output.sigmoid().power_error(target, LOSS_POW))
@@ -32,30 +33,70 @@ fn main() {
                             // pnbrqk -> qrbnpk; A1 = 0 -> H8 = 0
                             let to = (engine[piece]*128 + side*64 + (square^63)) * ACC_SIZE;
 
-                            for i in 0..ACC_SIZE {
-                                // embed bias into kings weights
-                                let bias = if piece == 5 { store.get("l0b").values[i] / 2.0 } else { 0.0 };
-                                outputs[to + i] = inputs[from + i] + bias;
+                            const BUCKET_SIZE: usize = 2;
+                            const BUCKETS: usize = ACC_SIZE / BUCKET_SIZE;
+                            for b in 0..BUCKET_SIZE {
+                                for q in 0..BUCKETS {
+                                    // [b][q]
+                                    let i = b * BUCKETS + q;
+
+                                    // [n][b][lane]
+                                    let n = q / VECTOR_LANES;
+                                    let lane = q % VECTOR_LANES;
+                                    let to_i = (n * BUCKET_SIZE + b) * VECTOR_LANES + lane;
+
+                                    // embed bias into kings weights
+                                    let bias = if piece == 5 { store.get("l0b").values[i] / 2.0 } else { 0.0 };
+                                    outputs[to + to_i] = inputs[from + i] + bias;
+                                }
                             }
                         }
                     }
                 }
                 outputs
             }).quantise::<i16>(QW0),
-            SavedFormat::id("l1w").quantise::<i16>(QW1),
+
+            SavedFormat::id("l1w").rescale::<i16>(QW1).transform(|_, inputs| {
+                let mut outputs = vec![0.0; inputs.len()];
+
+                let mut odd = false; // parity count of odd weights
+                for i in 0..inputs.len() {
+                    // 1) _mm256_mulhrs_epi16 rounds positive product up, negative also up (towards zero)
+                    // 2) rounding up happens only when _w_ lowest bit is one
+                    // 3) compensate systematic odd _w_ upward error by rounding down each other odd _w_
+                    let mut w = inputs[i] as i16;
+                    if (w & 1) != 0 {
+                        if odd { w -= 1; }
+                        odd = !odd;
+                    }
+                    outputs[i] = w as f32;
+                }
+                outputs
+            }).quantise_to_type::<i16>(),
+
             SavedFormat::id("l1b").quantise::<i32>(QB1),
         ])
         .inputs(Chess768hm).dual_perspective()
         .build(|builder, my_inputs, op_inputs| {
             let l0 = builder.new_affine("l0", 768, ACC_SIZE);
-            let my_acc = l0.forward(my_inputs);
-            let op_acc = l0.forward(op_inputs);
-            let dacc = my_acc.concat(op_acc);
+            l0.init_with_effective_input_size(2048);
+            let my_acc = l0.forward(my_inputs).relu();
+            let op_acc = l0.forward(op_inputs).relu();
 
-            let l1 = builder.new_affine("l1", 2*ACC_SIZE, 1);
-            l1.forward(dacc.screlu())
+            let my_diff = my_acc.slice_rows(0, HALF_SIZE) - my_acc.slice_rows(HALF_SIZE, ACC_SIZE);
+            let op_diff = op_acc.slice_rows(0, HALF_SIZE) - op_acc.slice_rows(HALF_SIZE, ACC_SIZE);
+            let diff_squared = my_diff.concat(op_diff).sqrrelu();
+
+            let l1b = builder.new_weights("l1b", Shape::new(1, 1), InitSettings::Zeroed);
+            let l1w = builder.new_weights("l1w", Shape::new(1, ACC_SIZE),
+                InitSettings::Vector{ vector: [
+                    vec![[0.25, -0.25]; HALF_SIZE/2].concat(),
+                    vec![[-0.25, 0.25]; HALF_SIZE/2].concat(),
+                ].concat() }
+            );
+            l1b + l1w.matmul(diff_squared)
         });
 
-    trainer.load_from_checkpoint("./checkpoints/1x4-120/");
+    trainer.load_from_checkpoint("./checkpoints/1y1-120/");
     trainer.save_to_checkpoint("./quantised/");
 }
