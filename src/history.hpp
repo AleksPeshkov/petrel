@@ -91,30 +91,42 @@ constexpr void insert_unique_compact(std::array<value_type, Size>& arr, value_ty
     *pos = value;
 }
 
-enum continuation_move_enum { Counter, DeepCounter, Followup, DeepFollowup };
-struct ContIndex : Index<ContIndex, 4, continuation_move_enum> { using Index::Index; };
+
+enum deep_node_enum { ShallowNode, DeepNode };
+struct DeepNodeIndex : Index<DeepNodeIndex, 2, deep_node_enum> {
+    constexpr DeepNodeIndex (_t i) : Index{i} {}
+    explicit operator bool () const { return v_ == DeepNode; }
+};
+
+enum continuation_move_enum { Counter, Followup };
+struct ContIndex : Index<ContIndex, 2, continuation_move_enum> {
+    constexpr ContIndex (_t i) : Index{i} {}
+};
 
 // Continuation Move table, counter and followup moves together (for cache locality)
 template<int _Size>
 class CACHE_ALIGN ContMoves {
 public:
     static constexpr int Size = _Size;
-    struct Index : ::Index<Index, Size> { using ::Index<Index, Size>::Index; };
+    struct BucketIndex : Index<BucketIndex, Size> { explicit constexpr BucketIndex (int v) : Index<BucketIndex, Size>{v} {} };
 
 private:
-    using _t = array<Move, Color, MoveType, Square, Square, ContIndex, Index>;
+    using _t = array<Move, Color, MoveType, Square, Square, ContIndex, DeepNodeIndex, BucketIndex>;
     _t v_;
 
 public:
-    constexpr Move get(ContIndex::_t ci, Index i, Color color, Move move) const {
+    constexpr Move get(DeepNodeIndex deepNode, ContIndex ci, BucketIndex n, Color color, Move move) const {
         assert (move.isAny());
-        return v_[color][move.moveType()][move.from()][move.to()][ContIndex{ci}][i];
+        return v_[color][move.moveType()][move.from()][move.to()][ci][deepNode][n];
     }
 
     template <size_t Pos = 0>
-    constexpr void set(ContIndex::_t ci, Color color, Move move, Move bestMove) {
+    constexpr void set(DeepNodeIndex deepNode, ContIndex ci, Color color, Move move, Move bestMove) {
         assert (move.isAny()); assert (bestMove.isAny());
-        ::insert_unique_compact<Pos>(v_[color][move.moveType()][move.from()][move.to()][ContIndex{ci}], bestMove);
+        ::insert_unique_compact<Pos>(v_[color][move.moveType()][move.from()][move.to()][ci][ShallowNode], bestMove);
+        if (deepNode) {
+            ::insert_unique_compact<Pos>(v_[color][move.moveType()][move.from()][move.to()][ci][DeepNode], bestMove);
+        }
     }
 };
 
@@ -222,12 +234,12 @@ class CACHE_ALIGN RepSide {
         ZHash zHash;
     };
 
-    struct HisIndex : Index<HisIndex, 50> { using Index::Index; };
+    struct HisIndex : Index<HisIndex, 50> { constexpr HisIndex(_t v) : Index{v} {} };
     array<_t, HisIndex> his; // game history with duplicates removed to avoid redundant checks for 2-fold repetition
     ZHash hisZHash_{};
     int hisCount_ = 0; // number of history without duplicates ((only for unit tests)
 
-    struct DupIndex : Index<DupIndex, 25> { using Index::Index; };
+    struct DupIndex : Index<DupIndex, 25> { constexpr DupIndex(_t v) : Index{v} {} };
     array<_t, DupIndex> dup; // only duplicate positions for true 3-fold repetition detection
     ZHash dupZHash_{};
     int dupCount_ = 0; // number of duplicants (only for unit tests)
@@ -277,8 +289,8 @@ public:
                 if (!dupZHash.isNone(z)) {
                     bool already = false;
                     for (int d = dupFound-1; true; --d) {
-                        if (dup[DupIndex{d}].z == z) { already = true; break; }
-                        if (dup[DupIndex{d}].zHash.isNone(z)) { break; }
+                        if (dup[{d}].z == z) { already = true; break; }
+                        if (dup[{d}].zHash.isNone(z)) { break; }
                         assert (d > 0);
                     }
                     if (already) { continue; }
@@ -288,8 +300,8 @@ public:
                 for (int j = i + 2; j < ringCount_; ++j) {
                     if (ring[last_ - j].z == z) {
                         // append to duplicant array
-                        dup[DupIndex{dupFound}].z = z;
-                        dup[DupIndex{dupFound}].zHash = dupZHash;
+                        dup[{dupFound}].z = z;
+                        dup[{dupFound}].zHash = dupZHash;
                         dupZHash = ZHash{dupZHash, z};
                         ++dupFound;
                         break;
@@ -300,16 +312,16 @@ public:
                 if (!hisZHash.isNone(z)) {
                     bool already = false;
                     for (int h = hisFound-1; true; --h) {
-                        if (his[HisIndex{h}].z == z) { already = true; break; }
-                        if (his[HisIndex{h}].zHash.isNone(z)) { break; }
+                        if (his[{h}].z == z) { already = true; break; }
+                        if (his[{h}].zHash.isNone(z)) { break; }
                         assert (h > 0);
                     }
                     if (already) { continue; }
                 }
 
                 // append to history array
-                his[HisIndex{hisFound}].z = z;
-                his[HisIndex{hisFound}].zHash = hisZHash;
+                his[{hisFound}].z = z;
+                his[{hisFound}].zHash = hisZHash;
                 hisZHash = ZHash{hisZHash, z};
                 ++hisFound;
             }
@@ -318,8 +330,8 @@ public:
         // rehash in opposite direction
         ZHash hisZHash{};
         for (int h = hisFound-1; h >= 0; --h) {
-            his[HisIndex{h}].zHash = hisZHash;
-            hisZHash = ZHash{hisZHash, his[HisIndex{h}].z};
+            his[{h}].zHash = hisZHash;
+            hisZHash = ZHash{hisZHash, his[{h}].z};
         }
         hisZHash_ = hisZHash;
         hisCount_ = hisFound;
@@ -327,8 +339,8 @@ public:
         // rehash in opposite direction
         ZHash dupZHash{};
         for (int d = dupFound-1; d >= 0; --d) {
-            dup[DupIndex{d}].zHash = dupZHash;
-            dupZHash = ZHash{dupZHash, dup[DupIndex{d}].z};
+            dup[{d}].zHash = dupZHash;
+            dupZHash = ZHash{dupZHash, dup[{d}].z};
         }
 
         dupZHash_ = dupZHash;
@@ -340,9 +352,9 @@ public:
         if (hisZHash_.isNone(z)) { return false; }
 
         // search for repetition in non-duplicate positions
-        for (int h{0}; true; ++h) {
-            if (his[HisIndex{h}].z == z) { return true; }
-            if (his[HisIndex{h}].zHash.isNone(z)) { return false; }
+        for (int h = 0; true; ++h) {
+            if (his[{h}].z == z) { return true; }
+            if (his[{h}].zHash.isNone(z)) { return false; }
             assert (h < hisCount_);
         }
     }
@@ -352,9 +364,9 @@ public:
         if (dupZHash_.isNone(z)) { return false; }
 
         // search for repetition in duplicate positions
-        for (int d{0}; true; ++d) {
-            if (dup[DupIndex{d}].z == z) { return true; }
-            if (dup[DupIndex{d}].zHash.isNone(z)) { return false; }
+        for (int d = 0; true; ++d) {
+            if (dup[{d}].z == z) { return true; }
+            if (dup[{d}].zHash.isNone(z)) { return false; }
             assert (d < dupCount_);
         }
     }
