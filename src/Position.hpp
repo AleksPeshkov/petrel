@@ -5,17 +5,6 @@
 #include "PositionSide.hpp"
 #include "Score.hpp"
 
-// side to move
-#define MY positionSide(My)
-
-// opponent side
-#define OP positionSide(Op)
-
-// all occupied squares by both sides from the current side point of view
-#define OCCUPIED occupied(My)
-
-#define OP_OCCUPIED occupied(Op)
-
 // number of halfmoves without capture or pawn move
 class Rule50 {
     using _t = int;
@@ -127,20 +116,26 @@ class Position {
 protected:
     constexpr PositionSide& positionSide(Side side) { return positionSide_[side]; }
 
+// side to move position half
+#define MY positionSide(My)
+
+// opponent side position half
+#define OP positionSide(Op)
+
     // all occupied squares by both sides from the given side point of view
     constexpr Bb occupied(Side side) const { return occupied_[side]; }
 
     // myAttackers > opAttackers
     bool safeForMe(Square sq) const {
-        int myAttackers = MY.countAttackersTo(sq, OCCUPIED);
-        int opAttackers = OP.countAttackersTo(~sq, OP_OCCUPIED);
+        int myAttackers = MY.countAttackersTo(sq, occupied(My));
+        int opAttackers = OP.countAttackersTo(~sq, occupied(Op));
         return myAttackers > opAttackers;
     }
 
     // opAttackers > myAttackers
     bool safeForOp(Square sq) const {
-        int myAttackers = MY.countAttackersTo(sq, OCCUPIED);
-        int opAttackers = OP.countAttackersTo(~sq, OP_OCCUPIED);
+        int myAttackers = MY.countAttackersTo(sq, occupied(My));
+        int opAttackers = OP.countAttackersTo(~sq, occupied(Op));
         return opAttackers > myAttackers;
     }
 
