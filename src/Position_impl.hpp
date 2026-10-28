@@ -74,14 +74,14 @@ inline void Acc::setup(const Position& pos, Square mirror) {
     array<Fi, PiecesIndex> fi;
 
     auto& my{ pos.positionSide(AccMy) };
-    for (auto pi : my.any()) {
+    for (Pi pi : my.any()) {
         fi[PiecesIndex{count++}] = {My, my.piece(pi), my.sq(pi)^mirror};
     }
 
     //TRICK: flip pieces squares perspective for opposite side
     auto op_mirror = ~mirror;
     auto& op{ pos.positionSide(~AccMy) };
-    for (auto pi : op.any()) {
+    for (Pi pi : op.any()) {
         fi[PiecesIndex{count++}] = {Op, op.piece(pi), op.sq(pi)^op_mirror};
     }
 

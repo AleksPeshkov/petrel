@@ -37,7 +37,7 @@ int PositionSide::countAttackersTo(Square sq0, Bb occupied) const {
     auto sliders2 = sliders() % attackers; // secondary slider attackers
     if (sliders2.isNone()) { return count; }
 
-    for (auto pi2 : sliders2) {
+    for (Pi pi2 : sliders2) {
         Square sq2{sq(pi2)};
         if (!::attacksFrom(piece(pi2), sq0).has(sq2)) {
             sliders2 -= PiMask{pi2};
@@ -45,11 +45,11 @@ int PositionSide::countAttackersTo(Square sq0, Bb occupied) const {
     }
     if (sliders2.isNone()) { return count; }
 
-    for (auto pi1 : sliders1) {
+    for (Pi pi1 : sliders1) {
         Square sq1{sq(pi1)};
 
         Bb candidates{};
-        for (auto pi2 : sliders2) {
+        for (Pi pi2 : sliders2) {
             Square sq2{sq(pi2)};
             if (::inBetween(sq0, sq2).has(sq1)) {
                 candidates += Bb{sq2};
