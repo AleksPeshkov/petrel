@@ -396,8 +396,8 @@ ReturnStatus Node::search() {
         PiMask safePieces = {}; // pieces on safe squares
 
         // officers (Q, R, B/N order) moves from unsafe to safe squares
-        for (Pi pi : MY.officers()) {
-            Square from = MY.sq(pi);
+        for (Pi pi : MY.officers().mostValuableFirst()) {
+            Square from{ MY.sq(pi) };
 
             if (!bbAttacked().has(from)) {
                 // piece is not attacked at all
@@ -439,8 +439,7 @@ ReturnStatus Node::search() {
         if (depth >= 6_ply && movesMade() >= 5) { baseR = baseR + 1_ply; } // LMR
 
         // safe officers moves
-        while (safePieces.isAny()) {
-            Pi pi = safePieces.piLast(); safePieces -= PiMask{pi};
+        for (Pi pi : safePieces.leastValuableFirst()) {
             RETURN_CUTOFF (goodNonCaptures(pi, bbMovesOf(pi) % bbAvoid, 3_ply));
         }
 
@@ -463,9 +462,8 @@ ReturnStatus Node::search() {
         }
 
         // unsafe (losing) captures (N/B, R, Q order)
-        for (PiMask pieces = MY.officers(); pieces.isAny(); ) {
-            Pi pi = pieces.piLast(); pieces -= PiMask{pi};
-            Square from{MY.sq(pi)};
+        for (Pi pi : MY.officers().leastValuableFirst()) {
+            Square from{ MY.sq(pi) };
             for (Square to : bbMovesOf(pi) & ~OP.bbSide()) {
                 RETURN_CUTOFF (searchMove(from, to, 3_ply));
             }
@@ -483,9 +481,8 @@ ReturnStatus Node::search() {
         if (depth <= 4_ply && !inCheck() && (!isPv() || movesMade() > 0)) { break; }
 
         // unsafe (losing) non-captures (N/B, R, Q order)
-        for (PiMask pieces = MY.officers(); pieces.isAny(); ) {
-            Pi pi = pieces.piLast(); pieces -= PiMask{pi};
-            Square from{MY.sq(pi)};
+        for (Pi pi : MY.officers().leastValuableFirst()) {
+            Square from{ MY.sq(pi) };
             for (Square to : bbMovesOf(pi)) {
                 RETURN_CUTOFF (searchMove(from, to, 4_ply));
             }
@@ -609,8 +606,8 @@ ReturnStatus Node::goodCaptures(PiMask victims) {
     }
 
     // MVV (most valuable victim) order
-    for (Pi victim : victims) {
-        Square to = ~OP.sq(victim);
+    for (Pi victim : victims.mostValuableFirst()) {
+        Square to{ ~OP.sq(victim) };
 
         // exclude underpromotions, should be no queen promotions anymore
         PiMask attackers = canMoveTo(to) % MY.promotables();
@@ -629,11 +626,9 @@ ReturnStatus Node::goodCaptures(PiMask victims) {
             attackers &= MY.lessOrEqualValue(OP.piece(victim));
         }
 
-        while (attackers.isAny()) {
-            // LVA (least valuable attacker) order
-            Pi pi = attackers.piLast(); attackers -= PiMask{pi};
-            Square from{MY.sq(pi)};
-            RETURN_CUTOFF (searchMove(from, to, 1_ply, CanBeKiller::No));
+        // LVA (least valuable attacker) order
+        for (Pi attacker : attackers.leastValuableFirst()) {
+            RETURN_CUTOFF (searchMove(MY.sq(attacker), to, 1_ply, CanBeKiller::No));
         }
     }
 
