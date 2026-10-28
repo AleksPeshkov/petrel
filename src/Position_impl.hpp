@@ -43,13 +43,13 @@ void Position::setLegalEnPassant(Square ep) {
     if (bbKillers.isNone()) { return; }
 
     // discovered check
-    if (_(My).isPinned(bbBoth(My))) { assert ((_(My).checkers() % PiMask{_(My).pi(ep)}).isAny()); return; }
+    if (_(My).isKingDiscovered(bbBoth(My))) { assert ((_(My).checkers() % PiMask{_(My).pi(ep)}).isAny()); return; }
     assert ((_(My).checkers() % PiMask{_(My).pi(ep)}).isNone());
 
     for (Square from : bbKillers) {
         assert (from.isOn(Rank4));
 
-        if (!_(My).isPinned(bbBoth(My) - Bb{from} + Bb{to} - Bb{ep})) {
+        if (!_(My).isKingDiscovered(bbBoth(My).move(from, to) - Bb{ep})) {
             _(My).setEnPassantVictim(ep);
             _(Op).setEnPassantKiller(~from);
         }
