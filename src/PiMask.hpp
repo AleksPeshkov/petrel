@@ -92,7 +92,7 @@ public:
     }
 
     constexpr Pi piFirstVacant() const {
-        for (auto pi : range<Pi>()) {
+        for (Pi pi : range<Pi>()) {
             if (!has(pi)) {
                 return pi;
             }
@@ -104,13 +104,24 @@ public:
 
 #endif // NEON_VECTOR
 
+class PieceSetBackward : public BitSet<PieceSetBackward, Pi> {
+public:
+    constexpr PieceSetBackward () : BitSet{} {}
+    constexpr explicit PieceSetBackward (Pi pi) : BitSet{::singleton<_t>(+pi)} {}
+    constexpr explicit PieceSetBackward (u8x16_t v) : BitSet{static_cast<_t>(::mask(v))} {}
+
+    //support for range-based for-loop
+    constexpr auto operator*() const { return last(); }
+    constexpr auto& operator++() { *this -= PieceSetBackward{ last() }; return *this; }
+};
+
 class CACHE_ALIGN PiOneMask {
     using _t = u8x16_t;
     array<_t, Pi> v_;
 
 public:
     consteval PiOneMask() {
-        for (auto pi : range<Pi>()) {
+        for (Pi pi : range<Pi>()) {
             std::array<uint8_t, 16> vec = {}; // zero
             vec[+pi] = 0xff;
             v_[pi] = std::bit_cast<u8x16_t>(vec);
@@ -131,12 +142,12 @@ struct BitArrayOps<u8x16_t> {
 class PiMask : public BitArray<PiMask, u8x16_t> {
 public:
     constexpr PiMask () : BitArray{} {}
-    constexpr explicit PiMask (_t a) : BitArray{a} { assertOk(); }
+    constexpr explicit PiMask (_t v) : BitArray{v} { assertOk(); }
     constexpr explicit PiMask (Pi pi) : BitArray{piOneMask[pi]} {}
 
     static constexpr _t none() { return ::u8x16x(0); }
 
-    static constexpr PiMask any(_t a) { return PiMask{a != none()}; }
+    static constexpr PiMask any(_t v) { return PiMask{v != none()}; }
 
     constexpr _t v() const { return v_; } // _t v() const { return v_; }
 
@@ -156,16 +167,13 @@ public:
     // get the singleton piece index
     constexpr Pi pi() const { return PieceSet{v_}.index(); }
 
-    // most valuable piece in the first (lowest) set bit
-    constexpr Pi piFirst() const { return PieceSet{v_}.first(); }
-
-    // least valuable pieces in the last (highest) set bit
-    constexpr Pi piLast() const { return PieceSet{v_}.last(); }
-
     constexpr int popcount() const { return PieceSet{v_}.popcount(); }
 
-    constexpr PieceSet begin() const { return PieceSet{v_}.begin(); }
-    static constexpr PieceSet end() { return PieceSet::end(); }
+    constexpr auto begin() const { return PieceSet{v_}.begin(); }
+    static constexpr auto end() { return PieceSet::end(); }
+
+    constexpr auto mostValuableFirst() const { return PieceSet{v_}; }
+    constexpr auto leastValuableFirst() const { return PieceSetBackward{v_}; }
 
     friend ostream& operator << (ostream& os, PiMask mask) {
         return os << std::hex << PieceSet{mask}.v();
