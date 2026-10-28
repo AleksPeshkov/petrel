@@ -288,11 +288,11 @@ void PositionSide::clearEnPassantKillers() {
     traits.clearEnPassants();
 }
 
-bool PositionSide::isPinned(Bb occupied) const {
+bool PositionSide::isKingDiscovered(Bb occupied) const {
     for (Pi pinner : pinners()) {
         Bb pinLine = ::inBetween(opKing, sq(pinner));
         assert (pinLine.isAny());
-        if (pinLine.isNone(occupied)) {
+        if (occupied.isNone(pinLine)) {
             return true;
         }
     }
