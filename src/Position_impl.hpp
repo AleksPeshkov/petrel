@@ -11,7 +11,7 @@ void Position::updateSliderAttacks(PiMask myAffected) {
 
     myAffected &= MY.sliders();
     if (myAffected.isAny()) {
-        MY.updateSlidersCheckers(myAffected, OCCUPIED);
+        MY.updateSlidersCheckers(myAffected, bbBoth(My));
     }
 }
 
@@ -23,7 +23,7 @@ void Position::updateSliderAttacks(PiMask myAffected, PiMask opAffected) {
 
     opAffected &= OP.sliders();
     if (opAffected.isAny()) {
-        OP.updateSliders(opAffected, OP_OCCUPIED);
+        OP.updateSliders(opAffected, bbBoth(Op));
     }
 }
 
@@ -39,17 +39,17 @@ void Position::setLegalEnPassant(Square ep) {
     Square to{ep.file(), Rank3}; // attacking pawn destination square
 
     // check if there are any pawns to capture ep victim
-    Bb killers{~OP.bbPawns() & ::attacksFrom(Pawn, to)};
-    if (killers.isNone()) { return; }
+    Bb bbKillers{~OP.bbPawns() & ::attacksFrom(Pawn, to)};
+    if (bbKillers.isNone()) { return; }
 
     // discovered check
-    if (MY.isPinned(OCCUPIED)) { assert ((MY.checkers() % PiMask{MY.pi(ep)}).isAny()); return; }
+    if (MY.isPinned(bbBoth(My))) { assert ((MY.checkers() % PiMask{MY.pi(ep)}).isAny()); return; }
     assert ((MY.checkers() % PiMask{MY.pi(ep)}).isNone());
 
-    for (Square from : killers) {
+    for (Square from : bbKillers) {
         assert (from.isOn(Rank4));
 
-        if (!MY.isPinned(OCCUPIED - Bb{from} + Bb{to} - Bb{ep})) {
+        if (!MY.isPinned(bbBoth(My) - Bb{from} + Bb{to} - Bb{ep})) {
             MY.setEnPassantVictim(ep);
             OP.setEnPassantKiller(~from);
         }

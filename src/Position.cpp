@@ -52,7 +52,7 @@ void Position::makeMovePerft(const Position& parent, Square from, Square to) {
 bool Position::setEnPassant(File file) {
     Square ep{file, Rank4}; // not FEN ep square, but victim pawn location
 
-    if (!OP.isPawn(ep) || OCCUPIED.has({file, Rank6})) {
+    if (!OP.isPawn(ep) || bbBoth(My).has({file, Rank6})) {
         // pseudo legal test failed
         return false;
     }
@@ -77,11 +77,11 @@ bool Position::afterDrop() {
 }
 
 Bb Position::bbPassedPawns() const {
-    Bb blockers = ~(OP.bbPawns() | OP.bbPawnAttacks().forward());
+    Bb bbBlockers = ~(OP.bbPawns() | OP.bbPawnAttacks().forward());
     for (int i = 0; i < 5; ++i) {
-        blockers |= blockers.backward();
+        bbBlockers |= bbBlockers.backward();
     }
-    return MY.bbPawns() % blockers;
+    return MY.bbPawns() % bbBlockers;
 }
 
 template <Side::_t My>
