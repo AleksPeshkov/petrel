@@ -114,7 +114,7 @@ public:
 
     PiMask checkers() const { assert (traits.checkers() == attackersTo(opKing)); return traits.checkers(); }
     constexpr PiMask pinners() const { return traits.pinners(); }
-    bool isPinned(Bb) const;
+    bool isKingDiscovered(Bb) const;
 
     constexpr MoveType moveType(Square from, Square to) const {
         //TRICK: from == to can be either null move or rook underpromotion
