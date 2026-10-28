@@ -11,7 +11,7 @@ void Position::updateSliderAttacks(PiMask myAffected) {
 
     myAffected &= MY.sliders();
     if (myAffected.isAny()) {
-        MY.updateSlidersCheckers(myAffected, OCCUPIED);
+        MY.updateSlidersCheckers(myAffected, occupied(My));
     }
 }
 
@@ -23,7 +23,7 @@ void Position::updateSliderAttacks(PiMask myAffected, PiMask opAffected) {
 
     opAffected &= OP.sliders();
     if (opAffected.isAny()) {
-        OP.updateSliders(opAffected, OP_OCCUPIED);
+        OP.updateSliders(opAffected, occupied(Op));
     }
 }
 
@@ -43,13 +43,13 @@ void Position::setLegalEnPassant(Square ep) {
     if (killers.isNone()) { return; }
 
     // discovered check
-    if (MY.isPinned(OCCUPIED)) { assert ((MY.checkers() % PiMask{MY.pi(ep)}).isAny()); return; }
+    if (MY.isPinned(occupied(My))) { assert ((MY.checkers() % PiMask{MY.pi(ep)}).isAny()); return; }
     assert ((MY.checkers() % PiMask{MY.pi(ep)}).isNone());
 
     for (Square from : killers) {
         assert (from.isOn(Rank4));
 
-        if (!MY.isPinned(OCCUPIED - Bb{from} + Bb{to} - Bb{ep})) {
+        if (!MY.isPinned(occupied(My) - Bb{from} + Bb{to} - Bb{ep})) {
             MY.setEnPassantVictim(ep);
             OP.setEnPassantKiller(~from);
         }

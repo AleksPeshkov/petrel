@@ -37,7 +37,7 @@ void PositionMoves::generateLegalKingMoves() {
 template <Side::_t My>
 void PositionMoves::generateCastlingMoves() {
     for (Pi pi : MY.castlingRooks()) {
-        if ( ::castlingRules.isLegal(MY.sqKing(), MY.sq(pi), OCCUPIED, bbAttacked()) ) {
+        if ( ::castlingRules.isLegal(MY.sqKing(), MY.sq(pi), occupied(My), bbAttacked()) ) {
             // castling encoded as the rook moves over the own king square
             moves_.add(pi, MY.sqKing());
         }
@@ -49,8 +49,8 @@ void PositionMoves::generatePawnMoves() {
     for (Pi pi : MY.pawns()) {
         Square from{ MY.sq(pi) };
 
-        Bb bb{ Bb{from.forward()} % OCCUPIED }; // push
-        bb += (bb & Bb{Rank3}).forward() % OCCUPIED; // double push
+        Bb bb{ Bb{from.forward()} % occupied(My) }; // push
+        bb += (bb & Bb{Rank3}).forward() % occupied(My); // double push
         bb += ::attacksFrom(Pawn, from) & ~OP.bbSide(); // captures
         moves_.set(pi, bb);
     }
@@ -71,7 +71,7 @@ void PositionMoves::correctCheckEvasionsByPawns(Bb checkLine, Square checkFrom) 
 
     // pawns double push over check line
     Bb pawnJumpEvasions = MY.bbPawns() & Bb{Rank2} & potentialBlockers.backward();
-    pawnJumpEvasions %= OCCUPIED.backward(); // exlcude double push through occupied square
+    pawnJumpEvasions %= occupied(My).backward(); // exlcude double push through occupied square
     for (Square from : pawnJumpEvasions) {
         moves_.add(MY.pi(from), {from.file(), Rank4});
     }
@@ -88,7 +88,7 @@ void PositionMoves::excludePinnedMoves(PiMask opPinners) {
         assert (::attacksFrom(OP.piece(pinner), pinFrom).has(MY.sqKing()));
 
         Bb pinLine = ::inBetween(MY.sqKing(), pinFrom);
-        Bb occupiedPinLine = pinLine & OCCUPIED;
+        Bb occupiedPinLine = pinLine & occupied(My);
         assert (occupiedPinLine.isAny());
 
         if (occupiedPinLine.isSingleton() && occupiedPinLine.isAny(MY.bbSide())) {
