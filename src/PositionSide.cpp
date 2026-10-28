@@ -25,7 +25,7 @@ void PositionSide::finalSetup(PositionSide& MY, PositionSide& OP) {
     OP.setLeaperAttacks();
 }
 
-int PositionSide::countAttackersTo(Square sq0, Bb occupied) const {
+int PositionSide::countAttackersTo(Square sq0, Bb bbBoth) const {
     auto attackers = attackersTo(sq0);
 
     int count = attackers.popcount();
@@ -48,18 +48,18 @@ int PositionSide::countAttackersTo(Square sq0, Bb occupied) const {
     for (Pi pi1 : sliders1) {
         Square sq1{sq(pi1)};
 
-        Bb candidates{};
+        Bb bbCandidates{};
         for (Pi pi2 : sliders2) {
             Square sq2{sq(pi2)};
             if (::inBetween(sq0, sq2).has(sq1)) {
-                candidates += Bb{sq2};
+                bbCandidates += Bb{sq2};
                 sliders2 -= PiMask{pi2};
             }
         }
 
         // triple battery possible
-        for (auto sq2 : candidates) {
-            if ((::inBetween(sq2, sq1) & (occupied - candidates)).isNone()) {
+        for (Square sq2 : bbCandidates) {
+            if ((::inBetween(sq2, sq1) & (bbBoth - bbCandidates)).isNone()) {
                 ++count;
             }
         }
@@ -238,7 +238,7 @@ void PositionSide::updateSliders(PiMask affectedSliders, Bb occupiedBb) {
     Hyperbola blockers{ occupiedBb };
 
     for (Pi pi : affectedSliders) {
-        Bb attack = blockers.attack(Slider{*piece(pi)}, sq(pi));
+        Bb attack = blockers.bbAttack(Slider{*piece(pi)}, sq(pi));
         attacks_.set(pi, attack);
 
         assert (!attack.has(opKing)); // king cannot be left in check
@@ -253,7 +253,7 @@ void PositionSide::updateSlidersCheckers(PiMask affectedSliders, Bb occupiedBb) 
     Hyperbola blockers{ occupiedBb - Bb{opKing} };
 
     for (Pi pi : affectedSliders) {
-        Bb attack = blockers.attack(Slider{*piece(pi)}, sq(pi));
+        Bb attack = blockers.bbAttack(Slider{*piece(pi)}, sq(pi));
         attacks_.set(pi, attack);
 
         if (attack.has(opKing)) {
@@ -288,11 +288,11 @@ void PositionSide::clearEnPassantKillers() {
     traits.clearEnPassants();
 }
 
-bool PositionSide::isPinned(Bb occupied) const {
+bool PositionSide::isPinned(Bb bbBoth) const {
     for (Pi pinner : pinners()) {
         Bb pinLine = ::inBetween(opKing, sq(pinner));
         assert (pinLine.isAny());
-        if (pinLine.isNone(occupied)) {
+        if (pinLine.isNone(bbBoth)) {
             return true;
         }
     }

@@ -172,12 +172,12 @@ public:
         }
     }
 
-    bool isLegal(Square king, Square rook, Bb occupied, Bb attacked) const {
+    bool isLegal(Square king, Square rook, Bb bbBoth, Bb bbAttacked) const {
         assert (king.isOn(Rank1));
         assert (rook.isOn(Rank1));
         assert (king != rook);
-        return castlingRules[king.file()][rook.file()].unimpeded.isNone(occupied)
-            && castlingRules[king.file()][rook.file()].unattacked.isNone(attacked);
+        return castlingRules[king.file()][rook.file()].unimpeded.isNone(bbBoth)
+            && castlingRules[king.file()][rook.file()].unattacked.isNone(bbAttacked);
     }
 
     static constexpr CastlingSide castlingSide(Square king, Square rook) {

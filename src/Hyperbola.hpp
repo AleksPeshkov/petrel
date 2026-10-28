@@ -72,15 +72,15 @@ extern const HyperbolaDir hyperbolaDir;
  * https://www.chessprogramming.org/Hyperbola_Quintessence
  */
 class alignas(32) Hyperbola {
-    u64x2_t occupied;
+    u64x2_t bbBoth;
 
     static constexpr u64x2_t hyperbola(u64x2_t v) { return v ^ bitReverse(v); }
 
 public:
     // hyperbola({bb, 0}) == {bb ^ bitReverse(0), 0 ^ bitReverse(bb)} == {bb, bitReverse(bb)}
-    explicit Hyperbola (Bb bb) : occupied{ hyperbola(u64x2(bb, {})) } {}
+    explicit Hyperbola (Bb bb) : bbBoth{ hyperbola(u64x2(bb, {})) } {}
 
-    constexpr Bb attack(Slider slider, Square from) const {
+    constexpr Bb bbAttack(Slider slider, Square from) const {
         auto sq = hyperbolaSq[from];
 
         // branchless computation
@@ -90,15 +90,15 @@ public:
         auto d1 = hyperbolaDir[from][static_cast<Direction::_t>(+dir+1)];
 
         // bishop attacks for Bishops, rooks attacks for Rooks and Queens
-        auto result = ((occupied & d0) - sq) & d0;
-        result     |= ((occupied & d1) - sq) & d1;
+        auto result = ((bbBoth & d0) - sq) & d0;
+        result     |= ((bbBoth & d1) - sq) & d1;
 
         if (slider.is(Queen)) {
             // plus bishop attacks for Queens
             auto d = hyperbolaDir[from][DiagonalDir];
             auto a = hyperbolaDir[from][AntidiagDir];
-            result |= ((occupied & d) - sq) & d;
-            result |= ((occupied & a) - sq) & a;
+            result |= ((bbBoth & d) - sq) & d;
+            result |= ((bbBoth & a) - sq) & a;
         }
 
         // hyperbola({bb1, bb2}) == { bb1 ^ bitReverse(bb2), bb2 ^ bitReverse(bb1) }
