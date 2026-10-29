@@ -134,65 +134,90 @@ class CACHE_ALIGN PrincipalVariation {
     // final PV size + triangular arrays of subPVs (including final null moves)
     static constexpr auto triangularArraySize = Ply::size() + Ply::size()*(Ply::size()+1) / 2;
 public:
-    struct PvIndex : ::Index<PvIndex, triangularArraySize> { constexpr PvIndex (_t v) : Index{v} {} };
+    struct PvIndex : ::Index<PvIndex, triangularArraySize> { constexpr PvIndex (_t v = 0) : Index{v} {} };
 
 private:
+    // pv-chunks with null move as delimiter (used as placeholder to avoid copiing in half of use cases)
+    // at the very beginning placed the latest stable PV-line
     array<Move, PvIndex> pv_;
+    array<PvIndex, Ply> pvIndex_; // per ply pv-chunks beginnings
 
     Ply depth_{0}; // latest PV iteration depth
-    Score score_{}; // latest PV score
+    Score score_; // latest PV score
 
 public:
-    constexpr PrincipalVariation () {
-        pv_[{0}] = {};
-        pv_[{1}] = {};
+    PrincipalVariation () { set({}); }
+
+    // init search with legal PV
+    void set(Move rootMove, Score score = {}) {
         depth_ = 0_ply;
-        score_ = {};
+        score_ = score;
+        PvIndex to{0};
+        pvIndex_[0_ply] = to;
+        pv_[to++] = rootMove;
+        pvIndex_[1_ply] = to;
     }
 
-    // clear child PV space: pv_[i] = {}
-    void clear(PvIndex i) { pv_[i] = {}; }
+    // trim abandoned PV and reserve a space for a new subPV
+    void clear(Ply ply) {
+        auto to = pvIndex_[ply];
+        pv_[to++] = {}; // clear and reserve space for one move
 
-    /// set parent PV move and copy child PV
-    /// @return Index of space past PV
-    PvIndex set(PvIndex parent, Move childMove, PvIndex childPv) {
-        auto from = childPv;
-        auto to   = parent;
-
-        pv_[to++] = childMove;
-        if (from == to) {
-            // no need to copy, but still needs to find move list end
-            while ((pv_[to++]).isAny()) {}
-        } else {
-            assert (from > to);
-            // copies null move terminated move list (including last null)
-            while ((pv_[to++] = pv_[from++]).isAny()) {}
+        if (ply < Ply::last()) {
+            auto childPly = ply + 1_ply;
+            pvIndex_[childPly] = to;
         }
-
-        return to; // new childPv
     }
 
-    /// set root PV depth, score and PV moves
-    /// @return Index of space past PV
-    PvIndex set(Ply depth, Score score, Move bestRootMove, PvIndex childPv) {
+    void set(Ply ply, Move plyBestMove) {
+        auto to = pvIndex_[ply];
+        pv_[to++] = plyBestMove;
+
+        auto childPly = ply + 1_ply;
+        auto from = pvIndex_[childPly];
+        auto end_from = pvIndex_[childPly + 1_ply];
+
+        if (from == to) {
+            // no need to copy anything
+            pvIndex_[childPly] = end_from;
+        } else {
+            assert (to < from);
+            auto count = +end_from - +from;
+
+            auto p_from = &pv_[from];
+            auto p_to = &pv_[to];
+            __builtin_assume(p_to < p_from);
+
+            std::memmove(p_to, p_from, count * sizeof(Move));
+
+            pvIndex_[childPly] = {+to + count};
+        }
+    }
+
+    // set root PV depth, score and PV moves
+    void set(Ply depth, Score score, Move bestRootMove) {
         depth_ = depth;
         score_ = score;
-        return set({0}, bestRootMove, childPv);
-    }
+        set(0_ply, bestRootMove);
 
-    void set(Move bestRootMove, Score score = {}) {
-        pv_[{0}] = bestRootMove;
-        pv_[{1}] = {};
-        depth_ = 0_ply;
-        score_ = score;
+        PvIndex lastPvPly{ +pvIndex_[1_ply]-1 };
+        if (pv_[lastPvPly].isNone()) {
+            pvIndex_[1_ply] = lastPvPly;
+        }
     }
 
     void set(Ply depth) { depth_ = depth; }
 
-    const auto* moves() const { return &pv_[{0}]; }
-    auto getMove(Ply ply) const { return pv_[{+ply}]; }
     auto depth() const { return depth_; }
     auto score() const { return score_; }
+    auto size() const { return Ply{ +pvIndex_[1_ply] }; }
+
+    auto getMove(Ply ply) const {
+        assert (ply < size());
+        auto move = pv_[{+ply}];
+        assert (move.isAny());
+        return move;
+    }
 };
 
 template <int Size>

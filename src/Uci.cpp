@@ -860,14 +860,14 @@ void Uci::fen(ostream& os, const Position& pos, Ply ply) const {
 ostream& Uci::info_pv(ostream& os) const {
     os << pv.score();
 
-    auto* pvMoves = pv.moves();
-    if (pvMoves->isNone()) { return os; } // empty PV (no legal moves at root)
+    auto pvSize{ pv.size() };
+    if (pvSize == 0_ply) { return os; } // empty PV (no legal moves at root)
 
     os << " pv";
     {
         Color color{ colorToMove() };
-        for (Move move; (move = *pvMoves++).isAny(); ) {
-            ::move(os, move, color, chessVariant());
+        for (Ply ply{0}; ply < pvSize; ++ply) {
+            ::move(os, pv.getMove(ply), color, chessVariant());
             color = ~color;
         }
     }
@@ -1176,12 +1176,12 @@ void Uci::savePv() {
     // clone position
     PositionMoves pos{position_};
 
-    Ply   ply   = 0_ply;
     Ply   depth = pv.depth();
     Score score = pv.score();
-    auto* pvMoves = pv.moves();
+    auto pvSize = pv.size();
 
-    for (Move move; (move = *pvMoves++).isAny();) {
+    for (Ply ply{0}; ply < pvSize; ++ply) {
+        auto move = pv.getMove(ply);
         assert (score.isOk(ply));
         assert (pos.isPseudoLegal(move));
 
@@ -1195,7 +1195,6 @@ void Uci::savePv() {
         pos.makeMove(move.from(), move.to());
         score = -score;
         depth -= 1_ply;
-        ply += 1_ply;
     }
 }
 
@@ -1361,7 +1360,7 @@ void Uci::info_bestmove() {
     }
 
     ob << "bestmove"; move(ob, pv.getMove(0_ply));
-    if (go_.canPonder && pv.getMove(1_ply).isAny()) {
+    if (go_.canPonder && pv.size() > 1_ply) {
         ob << " ponder"; move(ob, pv.getMove(1_ply), 1_ply);
     }
 

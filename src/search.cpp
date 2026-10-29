@@ -90,7 +90,6 @@ ReturnStatus SearchLimits::updateTimeStrategy(const PrincipalVariation& pv) {
 void Node::clearNode() {
     assert (hasParent());
     pvPly = parent().isPv() ? ply : parent().pvPly;
-    pvIndex = {+parent().pvIndex + 1};
     alpha = -parent().beta;
     beta = -parent().alpha;
     killers[0] = hasAncestor(2_ply) ? ancestor(2_ply).killers[0] : Move{};
@@ -166,11 +165,10 @@ ReturnStatus Node::negamax(Ply R) {
         bestMove = currentMove;
 
         if (!isRoot()) {
-            child().pvIndex = the_uci.pv.set(pvIndex, bestMove, child().pvIndex);
+            the_uci.pv.set(ply, bestMove);
         } else {
             // unfinished iteration, so report depth-1
-            pvIndex = the_uci.pv.set(depth - 1_ply, score, bestMove, child().pvIndex);
-            child().pvIndex = {+pvIndex+1};
+            the_uci.pv.set(depth - 1_ply, score, bestMove);
 
             RETURN_IF_STOP (the_uci.limits.updateTimeStrategy(the_uci.pv));
 
@@ -663,7 +661,7 @@ void Node::childMove(Square from, Square to) {
     });
 
     childZHash = ply <= 1_ply || shouldResetZHash ? ZHash{} : ZHash{ parent().zHash(), parent().z() };
-    the_uci.pv.clear(pvIndex);
+    the_uci.pv.clear(ply);
 }
 
 constexpr Ply Node::finalR(Ply R) const {

@@ -11,8 +11,8 @@ struct Ply : Index<Ply, 64, u8_t> {
     constexpr explicit Ply(int n) : Index{static_cast<_t>(n)} {  assertOk(); }
     friend constexpr Ply operator""_ply(unsigned long long);
 
-    constexpr Ply& operator += (Ply b) { v_ = std::clamp(v_ + b.v_, 0, +last()); return *this; }
-    constexpr Ply& operator -= (Ply b) { v_ = std::clamp(v_ - b.v_, 0, +last()); return *this; }
+    constexpr Ply& operator += (Ply b) { v_ = std::min(v_ + b.v_, +last()); return *this; }
+    constexpr Ply& operator -= (Ply b) { v_ = std::max(v_ - b.v_, 0); return *this; }
 
     friend constexpr Ply operator + (Ply a, Ply b) { return Ply{a} += b; }
     friend constexpr Ply operator - (Ply a, Ply b) { return Ply{a} -= b; }
