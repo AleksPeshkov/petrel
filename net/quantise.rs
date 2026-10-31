@@ -13,11 +13,10 @@ fn main() {
     const HALF_SIZE: usize = ACC_SIZE / 2; // size of each pair
     const VECTOR_LANES: usize = 16;
 
-    const QW0: f32 = 2048.0; // 2^11, seems safe enough for the 16-bit chess accumulator
-    const QM1: f32 = 2048.0; // 2^11, balanced precision of QW0*QW0 in i16
+    const QW0: f32 = 1024.0; // 2^10, seems safe enough for the 16-bit chess accumulator
     const WDL: f32 = 400.0; // embedded net output conversion 1.0 = 400 centipawns
-    const QW1: f32 = 16.0 * WDL; // 2^4 * WDL
-    const QB1: f32 = QM1 * QW1; // 2^15 * WDL
+    const QW1: f32 = 64.0 * WDL; // 2^6 * WDL
+    const QB1: f32 = WDL; // WDL
 
     let mut trainer = ValueTrainerBuilder::default().use_threads(CPU_THREADS/2)
         .optimiser(AdamW).loss_fn(|output, target| output.sigmoid().power_error(target, LOSS_POW))
@@ -78,6 +77,6 @@ fn main() {
             l1b + l1w.matmul(diff_squared)
         });
 
-    trainer.load_from_checkpoint("./checkpoints/1y1-120/");
+    trainer.load_from_checkpoint("./checkpoints/1y1-20/");
     trainer.save_to_checkpoint("./quantised/");
 }

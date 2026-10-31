@@ -87,6 +87,15 @@ inline i32_t hadd_i32(i32x8_t sum8) {
     #endif
 }
 
+inline i32_t hadd_i16(i16x16_t sum16) {
+    #ifdef __clang__
+        return __builtin_reduce_add(sum16);
+    #else
+        return sum8[0] + sum8[1] + sum8[2] + sum8[3] + sum8[4] + sum8[5] + sum8[6] + sum8[7]
+            + sum8[8] + sum8[9] + sum8[10] + sum8[11] + sum8[12] + sum8[13] + sum8[14] + sum8[15];
+    #endif
+}
+
 // NNUE feature layer index
 struct Fi : ::Index<Fi, 6*2*64, i16_t> {
     constexpr Fi () : Index{} {}
@@ -110,32 +119,31 @@ struct CACHE_ALIGN Nnue {
     using Acc = array<_t, AccIndex, PairIndex>;
     using DualAcc = array<Acc, Side>;
 
-    using W0 = array<_t, Fi, AccIndex, PairIndex>; // QW0 = 2^11
-    using W1 = array<_t, Side, AccIndex>; // QW1 = 2^4 * WDL
-    using B1 = i32_t; // QB1 = 2^15 * WDL (WDL = ~400)
+    using W0 = array<_t, Fi, AccIndex, PairIndex>; // QW0 = 2^10
+    using W1 = array<_t, Side, AccIndex>; // QW1 = 2^6 * WDL
+    using B1 = i32_t; // QB1 = WDL (WDL = ~400)
 
     i32_t evaluate(const DualAcc& dacc) const {
-        i32x8_t sum15{};
+        i16x16_t sum{};
         for (auto side : range<Side>()) {
             for (auto n : range<AccIndex>()) {
                 // accumulator ReLU(ReLU(x_p) - ReLU(x_n)) activation
-                auto p11 = relu(dacc[side][n][Pos]); // QW0 = 2^11
-                auto n11 = relu(dacc[side][n][Neg]); // QW0 = 2^11
-                auto d11 = relu(p11 - n11);
+                auto p10 = relu(dacc[side][n][Pos]); // QW0 = 2^10
+                auto n10 = relu(dacc[side][n][Neg]); // QW0 = 2^10
+                auto d10 = relu(p10 - n10);
 
                 // saturated Squared ReLU
+                auto d11 = adds_i16(d10, d10);
                 auto d12 = adds_i16(d11, d11);
-                auto d13 = adds_i16(d12, d12);
-                auto m11 = mulhrs_i16(d13, d13); // QM1 = 2^11
+                auto m9  = mulhrs_i16(d12, d12); // 2^9
 
                 // output weighted sum
-                auto w4  = this->w1[side][n]; // QW1 = 2^4 * WDL
-                auto f15 = madd_i16(m11, w4); // QB1 = 2^15 * WDL
-                sum15 += f15; // 32 addends per side
+                auto w6 = this->w1[side][n]; // QW1 = 2^6 * WDL
+                auto f = mulhrs_i16(m9, w6); // WDL
+                sum = adds_i16(sum, f); // 32 addends per side
             }
         }
-        auto output15 = this->b1 + hadd_i32(sum15); // QB1
-        auto output = output15 >> 15; // WDL
+        auto output = this->b1 + hadd_i16(sum); // WDL
         return output;
     }
 
