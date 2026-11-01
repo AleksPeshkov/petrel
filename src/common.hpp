@@ -25,4 +25,16 @@ COLD void assert_fail(const char* assertion, const char* file, unsigned int line
 
 #endif // NDEBUG
 
+#if defined(__clang__)
+    #define ASSUME(cond) __builtin_assume(cond)
+#elif defined(__GNUC__)
+    #if __GNUC__ >= 13
+        #define ASSUME(cond) [[gnu::assume(cond)]]
+    #else
+        #define ASSUME(cond) do { if (!(cond)) __builtin_unreachable(); } while (0)
+    #endif
+#else
+    #define ASSUME(cond) do { (void)sizeof(cond); } while (0)
+#endif
+
 #endif
