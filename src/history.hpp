@@ -131,72 +131,121 @@ public:
 };
 
 class CACHE_ALIGN PrincipalVariation {
-    // final PV size + triangular arrays of subPVs (including final null moves)
-    static constexpr auto triangularArraySize = Ply::size() + Ply::size()*(Ply::size()+1) / 2;
+    // triangular arrays of PV-chunks per ply
+    static constexpr auto triangularArraySize = Ply::size()*(Ply::size()-1) / 2;
 public:
-    struct Index : ::Index<Index, triangularArraySize> { using ::Index<Index, triangularArraySize>::Index; };
+    struct PvIndex : ::Index<PvIndex, triangularArraySize> { constexpr PvIndex (_t v = 0) : Index{v} {} };
 
 private:
-    array<Move, Index> pv_;
+    array<Move, PvIndex> pv_; // allocated in [0 .. pvIndex_[freePly_])
+    array<PvIndex, Ply> pvIndex_; // PV-chunks beginnings, invariant: pvIndex[ply] < pvIndex[ply+1]
+    Ply freePly_{0}; // end of allocated space, pvIndex[ply] for ply > freePly_ is undefined
 
+// used only for UCI info strings:
     Ply depth_{0}; // latest PV iteration depth
-    Score score_{}; // latest PV score
+    Score score_; // latest PV score
 
 public:
-    constexpr PrincipalVariation () {
-        pv_[Index{0}] = {};
-        pv_[Index{1}] = {};
+    PrincipalVariation () { init({}, {}); }
+
+    // init with one-move PV
+    void init(Move rootMove, Score score) {
         depth_ = 0_ply;
-        score_ = {};
+        score_ = score;
+
+        pvIndex_[0_ply] = {0};
+        pv_[{0}] = rootMove;
+
+        freePly_ = 1_ply;
+        pvIndex_[freePly_] = {1};
     }
 
-    // clear child PV space: pv_[i] = {}
-    void clear(Index i) { pv_[i] = {}; }
+    void clear(Ply childPly) {
+        assert (childPly > 0_ply);
+        // PV horizon shrinking forward
+        if (freePly_ > childPly) { freePly_ = childPly; }
+    }
 
-    /// set parent PV move and copy child PV
-    /// @return Index of space past PV
-    Index set(Index parent, Move childMove, Index childPv) {
-        auto from = childPv;
-        auto to   = parent;
+    void set(Ply ply, Move plyBestMove) {
+        assert (plyBestMove.isAny());
 
-        pv_[to++] = childMove;
-        if (from == to) {
-            // no need to copy, but still needs to find move list end
-            while ((pv_[to++]).isAny()) {}
-        } else {
-            assert (from > to);
-            // copies null move terminated move list (including last null)
-            while ((pv_[to++] = pv_[from++]).isAny()) {}
+        if (freePly_ <= ply) {
+            // lazy PV horizon widening backward
+            auto to = pvIndex_[freePly_];
+
+            while (freePly_ < ply) {
+                // allocate space for clever optimization
+                pv_[to] = {};
+                // build frontier pvIndex invariant
+                pvIndex_[++freePly_] = ++to;
+            }
+
+            // frontier childPV is always empty
+            assert (freePly_ == ply);
+            pv_[to] = plyBestMove;
+            pvIndex_[++freePly_] = ++to;
+            return;
         }
 
-        return to; // new childPv
-    }
+        // clever optimization, we always reserve space for this move
+        auto to = pvIndex_[ply];
+        pv_[to++] = plyBestMove;
 
-    /// set root PV depth, score and PV moves
-    /// @return Index of space past PV
-    Index set(Ply depth, Score score, Move bestRootMove, Index childPv) {
-        depth_ = depth;
-        score_ = score;
-        return set(Index{0}, bestRootMove, childPv);
-    }
+        assert (freePly_ > ply);
+        auto childPly = ply + 1_ply;
+        if (freePly_ == childPly) {
+            // childPly is free, so childPv is empty
+            pvIndex_[freePly_] = to;
+            return;
+        }
 
-    void set(Move bestRootMove) {
-        *this = {};
-        pv_[Index{0}] = bestRootMove;
-        pv_[Index{1}] = {};
-    }
+        auto begin = pvIndex_[childPly]; // childPv begin
+        auto end = pvIndex_[childPly + 1_ply]; // childPv end
+        auto count = +end - +begin; // childPv size
+        assert (count > 0);
 
-    void set(Move bestRootMove, Score score) {
-        set(bestRootMove);
-        score_ = score;
+        // PV horizon shrinking backward
+        assert (freePly_ > childPly);
+        freePly_ = childPly;
+
+        if (pv_[begin].isNone()) {
+            assert (count == 1);
+            // childPv is null move, rare case of empty childPV
+            pvIndex_[freePly_] = to;
+            return;
+        }
+
+        if (to == begin) {
+            // clever optimization, childPv already in place, no need to move
+            // childPV end becomes the first move free space
+            pvIndex_[freePly_] = end;
+            return;
+        }
+
+        assert (to < begin);
+        auto p_from = &pv_[begin];
+        auto p_to = &pv_[to];
+        __builtin_assume(p_to < p_from);
+
+        std::memmove(p_to, p_from, count * sizeof(Move));
+
+        // moved childPV end becomes the total allocated end
+        pvIndex_[freePly_] = {+to + count};
     }
 
     void set(Ply depth) { depth_ = depth; }
+    void set(Score score) { score_ = score; }
 
-    const auto* moves() const { return &pv_[Index{0}]; }
-    auto getMove(Ply ply) const { return pv_[Index{+ply}]; }
     auto depth() const { return depth_; }
     auto score() const { return score_; }
+    auto size() const { return Ply{ +pvIndex_[1_ply] }; }
+
+    auto getMove(Ply ply) const {
+        assert (ply < size());
+        auto move = pv_[{+ply}];
+        assert (move.isAny());
+        return move;
+    }
 };
 
 template <int Size>
