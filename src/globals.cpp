@@ -28,6 +28,9 @@ Uci The_uci{std::cout};
 
 void io::error(std::string_view message) {
     The_uci.error(message);
+#ifndef NDEBUG
+    std::exit(EXIT_FAILURE);
+#endif
 }
 
 #ifndef NDEBUG
