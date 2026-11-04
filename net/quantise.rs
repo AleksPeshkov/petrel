@@ -78,25 +78,30 @@ fn main() {
         ])
         .inputs(Chess768hm).dual_perspective()
         .build(|builder, my_inputs, op_inputs| {
-            let l0 = builder.new_affine("l0", 768, ACC_SIZE);
-            l0.init_with_effective_input_size(2048);
-            let my_acc = l0.forward(my_inputs).relu();
-            let op_acc = l0.forward(op_inputs).relu();
+            let l0w = builder.new_weights("l0w", Shape::new(ACC_SIZE, 768),
+                InitSettings::Normal { mean: 0.0, stdev: 0.02 }
+            );
+            let l0b = builder.new_weights("l0b", Shape::new(ACC_SIZE, 1),
+                InitSettings::Vector{ vector: [vec![0.25; HALF_SIZE], vec![0.125; HALF_SIZE]].concat() }
+            );
+            let my_acc = (l0b + l0w.matmul(my_inputs)).relu();
+            let op_acc = (l0b + l0w.matmul(op_inputs)).relu();
 
+            //TRICK: sqrrelu(relu(x)-relu(y)) runs faster than sqrrelu(x - relu(y))
             let my_diff = my_acc.slice_rows(0, HALF_SIZE) - my_acc.slice_rows(HALF_SIZE, ACC_SIZE);
             let op_diff = op_acc.slice_rows(0, HALF_SIZE) - op_acc.slice_rows(HALF_SIZE, ACC_SIZE);
             let diff_squared = my_diff.concat(op_diff).sqrrelu();
 
-            let l1b = builder.new_weights("l1b", Shape::new(1, 1), InitSettings::Zeroed);
             let l1w = builder.new_weights("l1w", Shape::new(1, ACC_SIZE),
                 InitSettings::Vector{ vector: [
-                    vec![[0.25, -0.25]; HALF_SIZE/2].concat(),
-                    vec![[-0.25, 0.25]; HALF_SIZE/2].concat(),
+                    vec![[0.25, -0.125]; HALF_SIZE/2].concat(),
+                    vec![[-0.25, 0.125]; HALF_SIZE/2].concat(),
                 ].concat() }
             );
+            let l1b = builder.new_weights("l1b", Shape::new(1, 1), InitSettings::Zeroed);
             l1b + l1w.matmul(diff_squared)
         });
 
-    trainer.load_from_checkpoint("./checkpoints/1y1-120/");
+    trainer.load_from_checkpoint("./checkpoints/1z1-80/");
     trainer.save_to_checkpoint("./quantised/");
 }
