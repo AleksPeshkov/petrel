@@ -91,10 +91,15 @@ fn main() {
             let my_acc = (l0b + l0w.matmul(my_inputs)).relu();
             let op_acc = (l0b + l0w.matmul(op_inputs)).relu();
 
-            //TRICK: sqrrelu(relu(x)-relu(y)) runs faster than sqrrelu(x - relu(y))
-            let my_diff = my_acc.slice_rows(0, HALF_SIZE) - my_acc.slice_rows(HALF_SIZE, ACC_SIZE);
-            let op_diff = op_acc.slice_rows(0, HALF_SIZE) - op_acc.slice_rows(HALF_SIZE, ACC_SIZE);
-            let diff_squared = my_diff.concat(op_diff).sqrrelu();
+            let my_x = my_acc.slice_rows(0, HALF_SIZE);
+            let my_y = my_acc.slice_rows(HALF_SIZE, ACC_SIZE);
+            let op_x = op_acc.slice_rows(0, HALF_SIZE);
+            let op_y = op_acc.slice_rows(HALF_SIZE, ACC_SIZE);
+
+            // x * relu(x - relu(y)) == relu(x) * relu(relu(x) - relu(y))
+            let my_glu = (my_x - my_y).relu() * my_x;
+            let op_glu = (op_x - op_y).relu() * op_x;
+            let glu = my_glu.concat(op_glu);
 
             let l1w = builder.new_weights("l1w", Shape::new(1, ACC_SIZE),
                 InitSettings::Vector{ vector: [
@@ -103,7 +108,7 @@ fn main() {
                 ].concat() }
             );
             let l1b = builder.new_weights("l1b", Shape::new(1, 1), InitSettings::Zeroed);
-            l1b + l1w.matmul(diff_squared)
+            l1b + l1w.matmul(glu)
         });
 
     let data_set_eval_scale: f32 = 800.0;
@@ -135,11 +140,11 @@ fn main() {
     trainer.optimiser.set_params_for_weight("l1w", AdamWParams{ decay: 0.03, min_weight: -MW1, max_weight: MW1, ..Default::default() });
 
     let schedule = TrainingSchedule {
-        net_id: "1z1".to_string(),
+        net_id: "1g1".to_string(),
         eval_scale: data_set_eval_scale,
         steps: TrainingSteps { batch_size, batches_per_superbatch, start_superbatch: 1, end_superbatch: final_superbatch },
         wdl_scheduler: wdl::CosineDecayWDL { start: 0.0, end: 0.0, final_superbatch },
-        lr_scheduler: lr::CosineDecayLR { initial_lr: 8e-4, final_lr: 8e-4, final_superbatch },
+        lr_scheduler: lr::CosineDecayLR { initial_lr: 8e-4, final_lr: 1e-6, final_superbatch },
         save_rate: 10,
     };
     trainer.run(&schedule, &settings, &data_loader);
@@ -148,7 +153,7 @@ fn main() {
     batches_per_superbatch /= 4;
 
     let schedule = TrainingSchedule {
-        net_id: "1z2".to_string(),
+        net_id: "1g2".to_string(),
         eval_scale: data_set_eval_scale,
         steps: TrainingSteps { batch_size, batches_per_superbatch, start_superbatch: 1, end_superbatch: final_superbatch },
         wdl_scheduler: wdl::CosineDecayWDL { start: 0.0, end: 0.10, final_superbatch },

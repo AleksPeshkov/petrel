@@ -48,21 +48,8 @@ constexpr V max(V a, V b) {
     #endif
 }
 
-template <typename V>
-constexpr V min(V a, V b) {
-    #ifdef __clang__
-        return __builtin_elementwise_min(a, b);
-    #else
-        return a < b ? a : b;
-    #endif
-}
-
 constexpr i16x16_t relu(i16x16_t a) {
     return max(a, i16x16x(0));
-}
-
-constexpr i16x16_t clamp(i16x16_t a, int low, int high) {
-    return min(max(a, i16x16x(low)), i16x16x(high));
 }
 
 // _mm256_mulhrs_epi16
@@ -132,18 +119,19 @@ struct CACHE_ALIGN Nnue {
         i32x8_t sum10{};
         for (auto side : range<Side>()) {
             for (auto n : range<AccIndex>()) {
-                // accumulator ReLU(x_pos - ReLU(x_neg)) activation
-                auto p10 = dacc[side][n][Pos]; // QW0 = 2^10
-                auto n10 = dacc[side][n][Neg]; // QW0 = 2^10
-                auto d10 = subs_i16(p10, relu(n10));
-                auto r10 = relu(d10);
-
-                // W * ReLU
+                // W * x
+                auto x10 = dacc[side][n][Pos]; // QW0 = 2^10
                 auto w5 = this->w1[side][n]; // QW1 = 2^5 * WDL
-                auto m0 = mulhrs_i16(r10, w5); // WDL
+                auto m0 = mulhrs_i16(x10, w5); // WDL, x > 0
 
-                // W * ReLU * ReLU
-                auto f10 = madd_i16(m0, r10); // QB1 = 2^10 * WDL
+                // relu(x - relu(y))
+                auto y10 = dacc[side][n][Neg]; // QW0 = 2^10
+                auto r10 = relu(y10);
+                auto d10 = subs_i16(x10, r10);
+                auto g10 = relu(d10);
+
+                // W * x * relu(x - relu(y)) == W * relu(x) * relu(relu(x) - relu(y))
+                auto f10 = madd_i16(m0, g10); // QB1 = 2^10 * WDL
                 sum10 += f10; // 32 addends per side
             }
         }

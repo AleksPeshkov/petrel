@@ -87,10 +87,15 @@ fn main() {
             let my_acc = (l0b + l0w.matmul(my_inputs)).relu();
             let op_acc = (l0b + l0w.matmul(op_inputs)).relu();
 
-            //TRICK: sqrrelu(relu(x)-relu(y)) runs faster than sqrrelu(x - relu(y))
-            let my_diff = my_acc.slice_rows(0, HALF_SIZE) - my_acc.slice_rows(HALF_SIZE, ACC_SIZE);
-            let op_diff = op_acc.slice_rows(0, HALF_SIZE) - op_acc.slice_rows(HALF_SIZE, ACC_SIZE);
-            let diff_squared = my_diff.concat(op_diff).sqrrelu();
+            let my_x = my_acc.slice_rows(0, HALF_SIZE);
+            let my_y = my_acc.slice_rows(HALF_SIZE, ACC_SIZE);
+            let op_x = op_acc.slice_rows(0, HALF_SIZE);
+            let op_y = op_acc.slice_rows(HALF_SIZE, ACC_SIZE);
+
+            // x * relu(x - relu(y)) == relu(x) * relu(relu(x) - relu(y))
+            let my_glu = (my_x - my_y).relu() * my_x;
+            let op_glu = (op_x - op_y).relu() * op_x;
+            let glu = my_glu.concat(op_glu);
 
             let l1w = builder.new_weights("l1w", Shape::new(1, ACC_SIZE),
                 InitSettings::Vector{ vector: [
@@ -99,7 +104,7 @@ fn main() {
                 ].concat() }
             );
             let l1b = builder.new_weights("l1b", Shape::new(1, 1), InitSettings::Zeroed);
-            l1b + l1w.matmul(diff_squared)
+            l1b + l1w.matmul(glu)
         });
 
     trainer.load_from_checkpoint("./checkpoints/1z1-80/");
