@@ -8,13 +8,15 @@ use bullet_lib::{
     },
     value::{ValueTrainerBuilder, loader::DirectSequentialDataLoader},
 };
+use acyclib::device::tensor::rng;
 
 fn main() {
     const CPU_THREADS: usize = 16;
     const LOSS_POW: f32 = 2.6;
 
     const ACC_SIZE: usize = 1024;
-    const HALF_SIZE: usize = ACC_SIZE / 2; // size of each pair
+    const BUCKET_SIZE: usize = 2;
+    const BUCKETS: usize = ACC_SIZE / BUCKET_SIZE; // number of double neuron activation units
     const VECTOR_LANES: usize = 16;
 
     const QW0: f32 = 1024.0; // 2^10, seems safe enough for the 16-bit chess accumulator
@@ -37,8 +39,6 @@ fn main() {
                             // pnbrqk -> qrbnpk; A1 = 0 -> H8 = 0
                             let to = (engine[piece]*128 + side*64 + (square^63)) * ACC_SIZE;
 
-                            const BUCKET_SIZE: usize = 2;
-                            const BUCKETS: usize = ACC_SIZE / BUCKET_SIZE;
                             for b in 0..BUCKET_SIZE {
                                 for q in 0..BUCKETS {
                                     // [b][q]
@@ -82,29 +82,90 @@ fn main() {
         ])
         .inputs(Chess768hm).dual_perspective()
         .build(|builder, my_inputs, op_inputs| {
-            let l0w = builder.new_weights("l0w", Shape::new(ACC_SIZE, 768),
-                InitSettings::Normal { mean: 0.0, stdev: 0.02 }
-            );
-            let l0b = builder.new_weights("l0b", Shape::new(ACC_SIZE, 1),
-                InitSettings::Vector{ vector: [vec![0.25; HALF_SIZE], vec![0.125; HALF_SIZE]].concat() }
-            );
+            // incorporate material knowledge into initial weights
+            let material = [1.0, 3.0, 3.0, 4.5, 9.0, 0.0]; // pnbrqk
+            let p = 1.0 / 32.0; // pawn unit value
+            let m = p; // l1w of activation with material knowledge, occasionally m = p
+            // input m*((10p+dp-4p) * (10p+dp)) - m*((10p-dp-4p) * (10p-dp)) == output d/4 (because output 1.0 = 4 pawns)
+
+            let x_rand = rng::vec_f32(768*BUCKETS, 0.0, 2.0*p, true);
+            let y_rand = rng::vec_f32(768*BUCKETS, 0.0, p, true);
+            let mut l0w_init = vec![0.0; 768*ACC_SIZE];
+
+            for side in 0..2 {
+                let side_sign = if side == 0 { 1.0 } else { -1.0 };
+
+                for piece in 0..6 {
+                    let signed_piece = side_sign * material[piece];
+
+                    for square in 0..64 {
+                        let fi = side*6*64 + piece*64 + square;
+
+                        for q in 0..BUCKETS/2 {
+                            // even buckets with material knowledge
+                            {
+                                let b = 2 * q;
+                                let i = fi * ACC_SIZE + b;
+                                let i_rand = fi * BUCKETS + b;
+
+                                // x with material knowledge
+                                if piece == 5 {
+                                    // initial X bias = 10*p to open all relu with small material disbalance
+                                    // (each king have got half bias value)
+                                    l0w_init[i] = 5.0*p + x_rand[i_rand];
+                                } else {
+                                    l0w_init[i] = signed_piece*p + x_rand[i_rand];
+                                }
+
+                                // y random
+                                if piece == 5 {
+                                    // initial Y bias 4*p to open all relu with small material disbalance
+                                    // (each king have got half bias value)
+                                    l0w_init[i + BUCKETS] = 2.0*p + y_rand[i_rand];
+                                } else {
+                                    l0w_init[i + BUCKETS] = y_rand[i_rand];
+                                }
+                            }
+                            // odd buckets random, but with positive bias
+                            {
+                                let b = 2 * q + 1;
+                                let i = fi * ACC_SIZE + b;
+                                let i_rand = fi * BUCKETS + b;
+
+                                if piece == 5 {
+                                    // initial X bias 4*p, Y bias 2*p
+                                    // (each king have got half bias value)
+                                    l0w_init[i] = 2.0*p + x_rand[i_rand];
+                                    l0w_init[i + BUCKETS] = 1.0*p + y_rand[i_rand];
+                                } else {
+                                    l0w_init[i] = x_rand[i_rand];
+                                    l0w_init[i + BUCKETS] = y_rand[i_rand];
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            let l0w = builder.new_weights("l0w", Shape::new(ACC_SIZE, 768), InitSettings::Vector{ vector: l0w_init } );
+            let l0b = builder.new_weights("l0b", Shape::new(ACC_SIZE, 1),InitSettings::Zeroed);
             let my_acc = (l0b + l0w.matmul(my_inputs)).relu();
             let op_acc = (l0b + l0w.matmul(op_inputs)).relu();
 
-            let my_x = my_acc.slice_rows(0, HALF_SIZE);
-            let my_y = my_acc.slice_rows(HALF_SIZE, ACC_SIZE);
-            let op_x = op_acc.slice_rows(0, HALF_SIZE);
-            let op_y = op_acc.slice_rows(HALF_SIZE, ACC_SIZE);
+            let my_x = my_acc.slice_rows(0, BUCKETS);
+            let my_y = my_acc.slice_rows(BUCKETS, ACC_SIZE);
+            let op_x = op_acc.slice_rows(0, BUCKETS);
+            let op_y = op_acc.slice_rows(BUCKETS, ACC_SIZE);
 
             // x * relu(x - relu(y)) == relu(x) * relu(relu(x) - relu(y))
             let my_glu = (my_x - my_y).relu() * my_x;
             let op_glu = (op_x - op_y).relu() * op_x;
             let glu = my_glu.concat(op_glu);
 
-            let l1w = builder.new_weights("l1w", Shape::new(1, ACC_SIZE),
+            const L1W_SIZE: usize = 2 * BUCKETS; // L1W_SIZE = ACC_SIZE
+            let l1w = builder.new_weights("l1w", Shape::new(1, L1W_SIZE),
                 InitSettings::Vector{ vector: [
-                    vec![[0.25, -0.125]; HALF_SIZE/2].concat(),
-                    vec![[-0.25, 0.125]; HALF_SIZE/2].concat(),
+                    vec![[ m, -m]; L1W_SIZE/4].concat(),
+                    vec![[-m,  m]; L1W_SIZE/4].concat(),
                 ].concat() }
             );
             let l1b = builder.new_weights("l1b", Shape::new(1, 1), InitSettings::Zeroed);
@@ -140,7 +201,7 @@ fn main() {
     trainer.optimiser.set_params_for_weight("l1w", AdamWParams{ decay: 0.03, min_weight: -MW1, max_weight: MW1, ..Default::default() });
 
     let schedule = TrainingSchedule {
-        net_id: "1g1".to_string(),
+        net_id: "1g2".to_string(),
         eval_scale: data_set_eval_scale,
         steps: TrainingSteps { batch_size, batches_per_superbatch, start_superbatch: 1, end_superbatch: final_superbatch },
         wdl_scheduler: wdl::CosineDecayWDL { start: 0.0, end: 0.0, final_superbatch },
@@ -153,7 +214,7 @@ fn main() {
     batches_per_superbatch /= 4;
 
     let schedule = TrainingSchedule {
-        net_id: "1g2".to_string(),
+        net_id: "1g3".to_string(),
         eval_scale: data_set_eval_scale,
         steps: TrainingSteps { batch_size, batches_per_superbatch, start_superbatch: 1, end_superbatch: final_superbatch },
         wdl_scheduler: wdl::CosineDecayWDL { start: 0.0, end: 0.10, final_superbatch },
