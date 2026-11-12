@@ -105,20 +105,6 @@ public:
 
 };
 
-inline ostream& operator << (ostream& os, Bb bb) {
-    os << "    a b c d e f g h\n";
-    for (auto rank : range<Rank>()) {
-        os << rank << " |";
-        for (auto file : File::a_to_h()) {
-            Square sq{file, rank};
-            os << " " << (bb.has(sq) ? 'x'  : '.');
-        }
-        os << '\n';
-    }
-    os << "    a b c d e f g h\n";
-    return os;
-}
-
 // line (file, rank, diagonal) in between two squares (excluding both ends) or 0
 extern const InBetween inBetween;
 

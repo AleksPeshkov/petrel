@@ -73,6 +73,23 @@ bool consume(istream& is, czstring token) {
 
 namespace { // anonymous namespace
 
+/*
+// currently unused
+ostream& operator << (ostream& os, Bb bb) {
+    os << "    a b c d e f g h\n";
+    for (auto rank : range<Rank>()) {
+        os << rank << " |";
+        for (auto file : File::a_to_h()) {
+            Square sq{file, rank};
+            os << " " << (bb.has(sq) ? 'x'  : '.');
+        }
+        os << '\n';
+    }
+    os << "    a b c d e f g h\n";
+    return os;
+}
+*/
+
 istream& operator >> (istream& is, TimeInterval& timeInterval) {
     int msecs{};
     if (is >> msecs) {
