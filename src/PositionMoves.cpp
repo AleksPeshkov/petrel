@@ -4,19 +4,19 @@ template <Side::_t My>
 void PositionMoves::generateEnPassantMoves() {
     constexpr Side::_t Op{~My};
 
-    assert (MY.hasEnPassant());
-    assert (OP.hasEnPassant());
+    assert (_(My).hasEnPassant());
+    assert (_(Op).hasEnPassant());
 
-    File file = OP.fileEnPassant();
-    assert (MY.enPassantPawns() <= ( MY.pawns() & MY.attackersTo({file, Rank6}) ));
-    for (Pi pi : MY.enPassantPawns()) {
+    File file = _(Op).fileEnPassant();
+    assert (_(My).enPassantPawns() <= ( _(My).pawns() & _(My).attackersTo({file, Rank6}) ));
+    for (Pi pi : _(My).enPassantPawns()) {
         moves_.add(pi, {file, Rank5});
     }
 }
 
 template <Side::_t My>
 void PositionMoves::populateUnderpromotions() {
-    for (Pi pi : MY.promotables()) {
+    for (Pi pi : _(My).promotables()) {
         // add underpromotions for each already generated legal queen promotion
         //TRICK: promoted piece type encoded inside pawn destination square rank
         Bb bb{moves_.bb(pi)};
@@ -30,28 +30,28 @@ void PositionMoves::populateUnderpromotions() {
 template <Side::_t My>
 void PositionMoves::generateLegalKingMoves() {
     //TRICK: our attacks do not hide under attacked king shadow
-    Bb kingMoves = ::attacksFrom(King, MY.sqKing()) % (MY.bbSide() | bbAttacked());
+    Bb kingMoves = ::attacksFrom(King, _(My).sqKing()) % (_(My).bbSide() | bbAttacked());
     moves_.set(PiKing, kingMoves);
 }
 
 template <Side::_t My>
 void PositionMoves::generateCastlingMoves() {
-    for (Pi pi : MY.castlingRooks()) {
-        if ( ::castlingRules.isLegal(MY.sqKing(), MY.sq(pi), bbBoth(My), bbAttacked()) ) {
+    for (Pi pi : _(My).castlingRooks()) {
+        if ( ::castlingRules.isLegal(_(My).sqKing(), _(My).sq(pi), bbBoth(My), bbAttacked()) ) {
             // castling encoded as the rook moves over the own king square
-            moves_.add(pi, MY.sqKing());
+            moves_.add(pi, _(My).sqKing());
         }
     }
 }
 
 template <Side::_t My>
 void PositionMoves::generatePawnMoves() {
-    for (Pi pi : MY.pawns()) {
-        Square from{ MY.sq(pi) };
+    for (Pi pi : _(My).pawns()) {
+        Square from{ _(My).sq(pi) };
 
         Bb bb{ Bb{from.forward()} % bbBoth(My) }; // push
         bb += (bb & Bb{Rank3}).forward() % bbBoth(My); // double push
-        bb += ::attacksFrom(Pawn, from) & ~OP.bbSide(); // captures
+        bb += ::attacksFrom(Pawn, from) & ~_(Op).bbSide(); // captures
         moves_.set(pi, bb);
     }
 }
@@ -64,16 +64,16 @@ void PositionMoves::correctCheckEvasionsByPawns(Bb checkLine, Square checkFrom) 
     // illegal phantom diagonal captures to fix
     Bb potentialInvalidCaptures = checkLine.backwardDiag();
 
-    for (Square from : MY.bbPawns() & (potentialBlockers | potentialInvalidCaptures)) {
+    for (Square from : _(My).bbPawns() & (potentialBlockers | potentialInvalidCaptures)) {
         Bb bb = (Bb{from.forward()} & checkLine) + (::attacksFrom(Pawn, from) & Bb{checkFrom});
-        moves_.set(MY.pi(from), bb);
+        moves_.set(_(My).pi(from), bb);
     }
 
     // pawns double push over check line
-    Bb pawnJumpEvasions = MY.bbPawns() & Bb{Rank2} & potentialBlockers.backward();
+    Bb pawnJumpEvasions = _(My).bbPawns() & Bb{Rank2} & potentialBlockers.backward();
     pawnJumpEvasions %= bbBoth(My).backward(); // exlcude double push through occupied square
     for (Square from : pawnJumpEvasions) {
-        moves_.add(MY.pi(from), {from.file(), Rank4});
+        moves_.add(_(My).pi(from), {from.file(), Rank4});
     }
 }
 
@@ -83,17 +83,17 @@ void PositionMoves::excludePinnedMoves(PiMask opPinners) {
     constexpr Side::_t Op{~My};
 
     for (Pi pinner : opPinners) {
-        Square pinFrom{~OP.sq(pinner)};
+        Square pinFrom{~_(Op).sq(pinner)};
 
-        assert (::attacksFrom(OP.piece(pinner), pinFrom).has(MY.sqKing()));
+        assert (::attacksFrom(_(Op).piece(pinner), pinFrom).has(_(My).sqKing()));
 
-        Bb pinLine = ::inBetween(MY.sqKing(), pinFrom);
+        Bb pinLine = ::inBetween(_(My).sqKing(), pinFrom);
         Bb occupiedPinLine = pinLine & bbBoth(My);
         assert (occupiedPinLine.isAny());
 
-        if (occupiedPinLine.isSingleton() && occupiedPinLine.isAny(MY.bbSide())) {
+        if (occupiedPinLine.isSingleton() && occupiedPinLine.isAny(_(My).bbSide())) {
             // we discovered a true pinned piece
-            Pi pinned = MY.pi(occupiedPinLine.index());
+            Pi pinned = _(My).pi(occupiedPinLine.index());
 
             // exclude all pinned piece moves except those over the pin line
             moves_.filter(pinned, pinLine + Bb{pinFrom});
@@ -105,29 +105,29 @@ template <Side::_t My>
 void PositionMoves::generateCheckEvasions() {
     constexpr Side::_t Op{~My};
 
-    PiMask checkers = OP.checkers();
+    PiMask checkers = _(Op).checkers();
 
     if (!checkers.isSingleton()) {
         moves_ = {}; // double check case: no moves except king's ones are possible
     } else { // common single checker case
         Pi checker = checkers.pi();
-        Square checkFrom{~OP.sq(checker)};
-        Bb checkLine = ::inBetween(MY.sqKing(), checkFrom);
+        Square checkFrom{~_(Op).sq(checker)};
+        Bb checkLine = ::inBetween(_(My).sqKing(), checkFrom);
 
         // check evasion moves of all pieces
         // (including invalid phantom pawn captures and missing pawn non-captures)
-        moves_.setAttacks(MY.attacks());
+        moves_.setAttacks(_(My).attacks());
         moves_ &= checkLine + Bb{checkFrom};
 
         // pawns moves are special case
         correctCheckEvasionsByPawns<My>(checkLine, checkFrom);
 
-        excludePinnedMoves<My>(OP.pinners() % checkers);
+        excludePinnedMoves<My>(_(Op).pinners() % checkers);
 
         populateUnderpromotions<My>();
 
         // trust out legal enpassant flag
-        if (MY.hasEnPassant()) { assert (OP.enPassantPawns() == checkers); generateEnPassantMoves<My>(); }
+        if (_(My).hasEnPassant()) { assert (_(Op).enPassantPawns() == checkers); generateEnPassantMoves<My>(); }
     }
 
     generateLegalKingMoves<My>();
@@ -137,10 +137,10 @@ void PositionMoves::generateCheckEvasions() {
 template <Side::_t My>
 void PositionMoves::generateMoves() {
     constexpr Side::_t Op{~My};
-    bbAttacked_ = ~OP.attacks().bb();
+    bbAttacked_ = ~_(Op).attacks().bb();
 
-    inCheck_ = bbAttacked().has(MY.sqKing());
-    assert (OP.checkers().isAny() == bbAttacked().has(MY.sqKing()));
+    inCheck_ = bbAttacked().has(_(My).sqKing());
+    assert (_(Op).checkers().isAny() == bbAttacked().has(_(My).sqKing()));
 
     if (inCheck_) {
         generateCheckEvasions<My>();
@@ -149,8 +149,8 @@ void PositionMoves::generateMoves() {
 
     // create pseudolegal moves from piece attacks
     // (including invalid phantom pawn captures and missing pawn non-captures)
-    moves_.setAttacks(MY.attacks());
-    moves_ %= MY.bbSide();
+    moves_.setAttacks(_(My).attacks());
+    moves_ %= _(My).bbSide();
 
     // pawns moves treated separately
     generatePawnMoves<My>();
@@ -158,13 +158,13 @@ void PositionMoves::generateMoves() {
     //TRICK: castling encoded as a rook move, so we implicitly cover the case of pinned castling in Chess960
     generateCastlingMoves<My>();
 
-    excludePinnedMoves<My>(OP.pinners());
+    excludePinnedMoves<My>(_(Op).pinners());
 
     // encoding underpromotions: generate pseudomoves mirroring already generated queen promotions
     populateUnderpromotions<My>();
 
     // trust out legal enpassant flag
-    if (MY.hasEnPassant()) { generateEnPassantMoves<My>(); }
+    if (_(My).hasEnPassant()) { generateEnPassantMoves<My>(); }
 
     generateLegalKingMoves<My>();
 }

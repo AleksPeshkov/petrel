@@ -8,7 +8,7 @@ void assertPassed(const char* fen, Square::_t sq, bool shouldBePassed, const cha
     const Position& pos = uciPosition;
 
     Square square{sq};
-    if (!pos.MY.has(square)) {
+    if (!pos._(My).has(square)) {
         std::cerr << "ERROR: No pawn at " << square << " in FEN: " << fen << "\n";
         assert (false);
     }

@@ -4,25 +4,25 @@
 #ifndef NDEBUG
 #endif
 
-void PositionSide::swap(PositionSide& MY, PositionSide& OP) {
+void PositionSide::swap(PositionSide& _My, PositionSide& _Op) {
     using std::swap;
-    swap(MY.attacks_, OP.attacks_);
-    swap(MY.types, OP.types);
-    swap(MY.traits, OP.traits);
-    swap(MY.squares, OP.squares);
-    swap(MY.bbSide_, OP.bbSide_);
-    swap(MY.bbPawns_, OP.bbPawns_);
-    swap(MY.bbPawnAttacks_, OP.bbPawnAttacks_);
-    swap(MY.material_, OP.material_);
-    swap(MY.opKing, OP.opKing);
+    swap(_My.attacks_, _Op.attacks_);
+    swap(_My.types, _Op.types);
+    swap(_My.traits, _Op.traits);
+    swap(_My.squares, _Op.squares);
+    swap(_My.bbSide_, _Op.bbSide_);
+    swap(_My.bbPawns_, _Op.bbPawns_);
+    swap(_My.bbPawnAttacks_, _Op.bbPawnAttacks_);
+    swap(_My.material_, _Op.material_);
+    swap(_My.opKing, _Op.opKing);
 }
 
-void PositionSide::finalSetup(PositionSide& MY, PositionSide& OP) {
-    MY.setOpKing(~OP.sqKing());
-    OP.setOpKing(~MY.sqKing());
+void PositionSide::finalSetup(PositionSide& _My, PositionSide& _Op) {
+    _My.setOpKing(~_Op.sqKing());
+    _Op.setOpKing(~_My.sqKing());
 
-    MY.setLeaperAttacks();
-    OP.setLeaperAttacks();
+    _My.setLeaperAttacks();
+    _Op.setLeaperAttacks();
 }
 
 int PositionSide::countAttackersTo(Square sq0, Bb bbBoth) const {

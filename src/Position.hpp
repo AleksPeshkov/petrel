@@ -113,29 +113,25 @@ class Position {
     template <Side::_t> void updateSliderAttacks(PiMask);
     template <Side::_t> void updateSliderAttacks(PiMask, PiMask);
 
+public: // public only for unit tests:
+    constexpr const PositionSide& _(Side side) const { return positionSide_[side]; }
 protected:
-    constexpr PositionSide& positionSide(Side side) { return positionSide_[side]; }
-
-// side to move position half
-#define MY positionSide(My)
-
-// opponent side position half
-#define OP positionSide(Op)
+    constexpr PositionSide& _(Side side) { return positionSide_[side]; }
 
     // both sides from occupied squares the given side point of view
     constexpr Bb bbBoth(Side side) const { return occupied_[side]; }
 
     // myAttackers > opAttackers
     bool safeForMe(Square sq) const {
-        int myAttackers = MY.countAttackersTo(sq, bbBoth(My));
-        int opAttackers = OP.countAttackersTo(~sq, bbBoth(Op));
+        int myAttackers = _(My).countAttackersTo(sq, bbBoth(My));
+        int opAttackers = _(Op).countAttackersTo(~sq, bbBoth(Op));
         return myAttackers > opAttackers;
     }
 
     // opAttackers > myAttackers
     bool safeForOp(Square sq) const {
-        int myAttackers = MY.countAttackersTo(sq, bbBoth(My));
-        int opAttackers = OP.countAttackersTo(~sq, bbBoth(Op));
+        int myAttackers = _(My).countAttackersTo(sq, bbBoth(My));
+        int opAttackers = _(Op).countAttackersTo(~sq, bbBoth(Op));
         return opAttackers > myAttackers;
     }
 
@@ -166,7 +162,7 @@ public:
     void makeMove(Square, Square);
 
     // [0..6] startpos = 6, queens exchanged = 4, R vs R endgame = 1
-    constexpr auto gamePhase() const { return Material::gamePhase(MY.material(), OP.material()); }
+    constexpr auto gamePhase() const { return Material::gamePhase(_(My).material(), _(Op).material()); }
 
 // initial position setup in class UciPosition:
 
@@ -178,9 +174,6 @@ public:
 
     // number of halfmoves since last capture or pawn move
     constexpr Rule50 rule50() const { return rule50_; }
-
-// public only for unit tests:
-    constexpr const PositionSide& positionSide(Side side) const { return positionSide_[side]; }
 
     // my passed pawns
     Bb bbPassedPawns() const;

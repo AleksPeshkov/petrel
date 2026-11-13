@@ -6,12 +6,12 @@ template <Side::_t My>
 void Position::updateSliderAttacks(PiMask myAffected) {
     constexpr Side::_t Op{~My};
 
-    occupied_[My] = MY.bbSide() + ~OP.bbSide();
-    occupied_[Op] = OP.bbSide() + ~MY.bbSide();
+    occupied_[My] = _(My).bbSide() + ~_(Op).bbSide();
+    occupied_[Op] = _(Op).bbSide() + ~_(My).bbSide();
 
-    myAffected &= MY.sliders();
+    myAffected &= _(My).sliders();
     if (myAffected.isAny()) {
-        MY.updateSlidersCheckers(myAffected, bbBoth(My));
+        _(My).updateSlidersCheckers(myAffected, bbBoth(My));
     }
 }
 
@@ -21,9 +21,9 @@ void Position::updateSliderAttacks(PiMask myAffected, PiMask opAffected) {
 
     updateSliderAttacks<My>(myAffected);
 
-    opAffected &= OP.sliders();
+    opAffected &= _(Op).sliders();
     if (opAffected.isAny()) {
-        OP.updateSliders(opAffected, bbBoth(Op));
+        _(Op).updateSliders(opAffected, bbBoth(Op));
     }
 }
 
@@ -32,35 +32,35 @@ void Position::setLegalEnPassant(Square ep) {
     constexpr Side::_t Op{~My};
 
     assert (ep.isOn(Rank4));
-    assert (MY.isPawn(ep));
-    assert (!MY.hasEnPassant());
-    assert (!OP.hasEnPassant());
+    assert (_(My).isPawn(ep));
+    assert (!_(My).hasEnPassant());
+    assert (!_(Op).hasEnPassant());
 
     Square to{ep.file(), Rank3}; // attacking pawn destination square
 
     // check if there are any pawns to capture ep victim
-    Bb bbKillers{~OP.bbPawns() & ::attacksFrom(Pawn, to)};
+    Bb bbKillers{~_(Op).bbPawns() & ::attacksFrom(Pawn, to)};
     if (bbKillers.isNone()) { return; }
 
     // discovered check
-    if (MY.isPinned(bbBoth(My))) { assert ((MY.checkers() % PiMask{MY.pi(ep)}).isAny()); return; }
-    assert ((MY.checkers() % PiMask{MY.pi(ep)}).isNone());
+    if (_(My).isPinned(bbBoth(My))) { assert ((_(My).checkers() % PiMask{_(My).pi(ep)}).isAny()); return; }
+    assert ((_(My).checkers() % PiMask{_(My).pi(ep)}).isNone());
 
     for (Square from : bbKillers) {
         assert (from.isOn(Rank4));
 
-        if (!MY.isPinned(bbBoth(My) - Bb{from} + Bb{to} - Bb{ep})) {
-            MY.setEnPassantVictim(ep);
-            OP.setEnPassantKiller(~from);
+        if (!_(My).isPinned(bbBoth(My) - Bb{from} + Bb{to} - Bb{ep})) {
+            _(My).setEnPassantVictim(ep);
+            _(Op).setEnPassantKiller(~from);
         }
     }
 }
 
 inline void DualAcc::setup(const Position& pos) {
-    mirror[My] = pos.positionSide(My).sqKing().mirrorMask();
+    mirror[My] = pos._(My).sqKing().mirrorMask();
     side[My].setup<My>(pos, mirror[My]);
 
-    mirror[Op] = pos.positionSide(Op).sqKing().mirrorMask();
+    mirror[Op] = pos._(Op).sqKing().mirrorMask();
     side[Op].setup<Op>(pos, mirror[Op]);
 }
 
@@ -68,19 +68,19 @@ struct PiecesIndex : Index<PiecesIndex, 2*Pi::size()> { using Index::Index; };
 
 template <Side::_t AccMy>
 inline void Acc::setup(const Position& pos, Square mirror) {
-    assert (pos.positionSide(AccMy).sqKing().mirrorMask() == mirror);
+    assert (pos._(AccMy).sqKing().mirrorMask() == mirror);
 
     int count{0};
     array<Fi, PiecesIndex> fi;
 
-    auto& my{ pos.positionSide(AccMy) };
+    auto& my{ pos._(AccMy) };
     for (Pi pi : my.any()) {
         fi[PiecesIndex{count++}] = {My, my.piece(pi), my.sq(pi)^mirror};
     }
 
     //TRICK: flip pieces squares perspective for opposite side
     auto op_mirror = ~mirror;
-    auto& op{ pos.positionSide(~AccMy) };
+    auto& op{ pos._(~AccMy) };
     for (Pi pi : op.any()) {
         fi[PiecesIndex{count++}] = {Op, op.piece(pi), op.sq(pi)^op_mirror};
     }
@@ -136,40 +136,40 @@ bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
     constexpr Side::_t Op{~My};
 
     // assumes that the given move is valid and legal
-    assert (MY.checkers().isNone());
-    OP.clearCheckers();
+    assert (_(My).checkers().isNone());
+    _(Op).clearCheckers();
 
-    if (OP.hasEnPassant()) [[unlikely]] {
-        if (MY.isPawn(from) && from.isOn(Rank5) && to.isOn(Rank5)) [[unlikely]] {
+    if (_(Op).hasEnPassant()) [[unlikely]] {
+        if (_(My).isPawn(from) && from.isOn(Rank5) && to.isOn(Rank5)) [[unlikely]] {
             // en passant capture encoded as the pawn captures the pawn
             Square ep{to};
             to = {to.file(), Rank6};
 
             if constexpr (Flags & WithZobrist) {
-                zobrist_.opEnPassant(OP.sqEnPassant());
+                zobrist_.opEnPassant(_(Op).sqEnPassant());
                 zobrist_.move(Pawn, from, to);
                 zobrist_.opCapture(Pawn, ~ep);
                 flipPrefetch();
                 rule50_ = {}; zHash_ = {}; // ep capture resets rule50
             }
 
-            OP.capture(~ep); //TRICK: also clears en passant victim
-            MY.clearEnPassantKillers(); // can be two
-            MY.movePawn(from, to);
-            updateSliderAttacks<My>(MY.affectedBy(from, to, ep), OP.affectedBy(~from, ~to, ~ep));
+            _(Op).capture(~ep); //TRICK: also clears en passant victim
+            _(My).clearEnPassantKillers(); // can be two
+            _(My).movePawn(from, to);
+            updateSliderAttacks<My>(_(My).affectedBy(from, to, ep), _(Op).affectedBy(~from, ~to, ~ep));
             if constexpr (Flags & WithEval) { accumulator.ep(from, to, ep); }
             return true; // end of en passant capture move
         }
 
         // clear en passant status from the previous move
-        if constexpr (Flags & WithZobrist) { zobrist_.opEnPassant(OP.sqEnPassant()); }
-        MY.clearEnPassantKillers(); // can be two
-        OP.clearEnPassantVictim();
+        if constexpr (Flags & WithZobrist) { zobrist_.opEnPassant(_(Op).sqEnPassant()); }
+        _(My).clearEnPassantKillers(); // can be two
+        _(Op).clearEnPassantVictim();
     }
-    assert (!OP.hasEnPassant());
-    assert (!MY.hasEnPassant());
+    assert (!_(Op).hasEnPassant());
+    assert (!_(My).hasEnPassant());
 
-    if (MY.isPawn(from)) [[unlikely]] {
+    if (_(My).isPawn(from)) [[unlikely]] {
         if constexpr (Flags & WithZobrist) {
             rule50_ = {}; zHash_ = {}; // any pawn move resets rule50
         }
@@ -178,33 +178,33 @@ bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
             // simple pawn capture or noncapture, cannot be en passant capture
             if constexpr (Flags & WithZobrist) { zobrist_.move(Pawn, from, to); }
 
-            if (OP.has(~to)) {
-                NonKingPiece captured{*OP.pieceAt(~to)};
+            if (_(Op).has(~to)) {
+                NonKingPiece captured{*_(Op).pieceAt(~to)};
                 if constexpr (Flags & WithZobrist) {
                     zobrist_.opCapture(captured, ~to);
                     flipPrefetch();
                 }
 
-                OP.capture(~to);
-                MY.movePawn(from, to);
-                updateSliderAttacks<My>(MY.affectedBy(from), OP.affectedBy(~from));
+                _(Op).capture(~to);
+                _(My).movePawn(from, to);
+                updateSliderAttacks<My>(_(My).affectedBy(from), _(Op).affectedBy(~from));
                 if constexpr (Flags & WithEval) { accumulator.move(Pawn, from, to, captured); }
                 return true; // end of simple pawn capture move
             } else {
                 if (from.isOn(Rank2) && to.isOn(Rank4)) {
-                    MY.movePawn(from, to);
-                    updateSliderAttacks<My>(MY.affectedBy(from, to), OP.affectedBy(~from, ~to));
+                    _(My).movePawn(from, to);
+                    updateSliderAttacks<My>(_(My).affectedBy(from, to), _(Op).affectedBy(~from, ~to));
                     setLegalEnPassant<My>(to); //TRICK: updateSliderAttacks<My>() needed before
                     if constexpr (Flags & WithZobrist) {
-                        if (MY.hasEnPassant()) [[unlikely]] {
-                            zobrist_.enPassant(MY.sqEnPassant());
+                        if (_(My).hasEnPassant()) [[unlikely]] {
+                            zobrist_.enPassant(_(My).sqEnPassant());
                         }
                         flipPrefetch();
                     }
                 } else {
                     if constexpr (Flags & WithZobrist) { flipPrefetch(); }
-                    MY.movePawn(from, to);
-                    updateSliderAttacks<My>(MY.affectedBy(from, to), OP.affectedBy(~from, ~to));
+                    _(My).movePawn(from, to);
+                    updateSliderAttacks<My>(_(My).affectedBy(from, to), _(Op).affectedBy(~from, ~to));
                 }
                 if constexpr (Flags & WithEval) { accumulator.move(Pawn, from, to); }
                 return true; // end of simple pawn push move
@@ -216,55 +216,55 @@ bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
             to = {to.file(), Rank8}; //TRICK: correct move destination square
             if constexpr (Flags & WithZobrist) { zobrist_.promote(from, officer, to); }
 
-            if (OP.has(~to)) [[unlikely]] {
-                NonKingPiece captured{*OP.pieceAt(~to)};
+            if (_(Op).has(~to)) [[unlikely]] {
+                NonKingPiece captured{*_(Op).pieceAt(~to)};
                 if constexpr (Flags & WithZobrist) {
-                    if (OP.isCastling(~to)) [[unlikely]] { zobrist_.opCastling(~to); } // captured the rook with castling right
+                    if (_(Op).isCastling(~to)) [[unlikely]] { zobrist_.opCastling(~to); } // captured the rook with castling right
                     zobrist_.opCapture(captured, ~to);
                     flipPrefetch();
                 }
 
-                OP.capture(~to);
-                PiMask promoted{ MY.piPromoted(from, officer, to) }; // promoted piece index can differ from pawn piece index
-                updateSliderAttacks<My>(MY.affectedBy(from) | promoted, OP.affectedBy(~from));
+                _(Op).capture(~to);
+                PiMask promoted{ _(My).piPromoted(from, officer, to) }; // promoted piece index can differ from pawn piece index
+                updateSliderAttacks<My>(_(My).affectedBy(from) | promoted, _(Op).affectedBy(~from));
                 if constexpr (Flags & WithEval) { accumulator.promote(from, officer, to, captured); }
                 return true; // end of pawn promotion move with capture
             } else {
                 if constexpr (Flags & WithZobrist) { flipPrefetch(); }
 
-                PiMask promoted{ MY.piPromoted(from, officer, to) }; // promoted piece index can differ from pawn piece index
-                updateSliderAttacks<My>(MY.affectedBy(from, to) | promoted, OP.affectedBy(~from, ~to));
+                PiMask promoted{ _(My).piPromoted(from, officer, to) }; // promoted piece index can differ from pawn piece index
+                updateSliderAttacks<My>(_(My).affectedBy(from, to) | promoted, _(Op).affectedBy(~from, ~to));
                 if constexpr (Flags & WithEval) { accumulator.promote(from, officer, to); }
                 return true; // end of pawn promotion move without capture
             }
         } // promotion or not
     } // no pawn moves anymore
 
-    if (MY.isKing(from)) [[unlikely]] {
+    if (_(My).isKing(from)) [[unlikely]] {
         // king move is special case as it affects castling rights
         bool shouldResetZHash = false;
         if constexpr (Flags & WithZobrist) {
-            for (Pi piRook : MY.castlingRooks()) [[unlikely]] {
-                zobrist_.castling(MY.sq(piRook));
+            for (Pi piRook : _(My).castlingRooks()) [[unlikely]] {
+                zobrist_.castling(_(My).sq(piRook));
                 zHash_ = {}; shouldResetZHash = true; // king move changed castling rights
             }
             zobrist_.move(King, from, to);
         }
 
-        if (OP.has(~to)) {
-            NonKingPiece captured{*OP.pieceAt(~to)};
+        if (_(Op).has(~to)) {
+            NonKingPiece captured{*_(Op).pieceAt(~to)};
             if constexpr (Flags & WithZobrist) {
-                if (OP.isCastling(~to)) [[unlikely]] { zobrist_.opCastling(~to); } // captured the rook with castling right
+                if (_(Op).isCastling(~to)) [[unlikely]] { zobrist_.opCastling(~to); } // captured the rook with castling right
                 zobrist_.opCapture(captured, ~to);
                 flipPrefetch();
                 rule50_ = {}; zHash_ = {}; // capture resets rule50
             }
 
-            OP.capture(~to);
-            OP.setOpKing(~to);
-            MY.move(PiKing, from, to);
-            MY.updateMovedKing(to);
-            updateSliderAttacks<My>(MY.affectedBy(from)); // king cannot affect enemy attacks
+            _(Op).capture(~to);
+            _(Op).setOpKing(~to);
+            _(My).move(PiKing, from, to);
+            _(My).updateMovedKing(to);
+            updateSliderAttacks<My>(_(My).affectedBy(from)); // king cannot affect enemy attacks
             if constexpr (Flags & WithEval) { accumulator.moveKing(*this, from, to, captured); }
             return true; // end of king capture move
         } else {
@@ -273,21 +273,21 @@ bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
                 rule50_.next(); // zHash_ kept unless king move affected castling rights
             }
 
-            MY.move(PiKing, from, to);
-            MY.updateMovedKing(to);
-            OP.setOpKing(~to);
-            updateSliderAttacks<My>(MY.affectedBy(from, to)); // king cannot affect enemy attacks
+            _(My).move(PiKing, from, to);
+            _(My).updateMovedKing(to);
+            _(Op).setOpKing(~to);
+            updateSliderAttacks<My>(_(My).affectedBy(from, to)); // king cannot affect enemy attacks
             if constexpr (Flags & WithEval) { accumulator.moveKing(*this, from, to); }
             return shouldResetZHash; // end of king non-capture move
         }
     } // no king moves anymore
 
 // non-pawn non-king move (but can be castling):
-    Pi pi = MY.pi(from);
+    Pi pi = _(My).pi(from);
     bool shouldResetZHash = false;
 
-    if (MY.isCastling(pi)) [[unlikely]] {
-        if (MY.isKing(to)) [[likely]] {
+    if (_(My).isCastling(pi)) [[unlikely]] {
+        if (_(My).isKing(to)) [[likely]] {
             // castling move encoded as castling rook captures own king
             Square rookFrom{from};
             Square kingFrom{to};
@@ -295,19 +295,19 @@ bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
             Square rookTo{CastlingRules::castlingRookTo(kingFrom, rookFrom)};
 
             if constexpr (Flags & WithZobrist) {
-                for (Pi piRook : MY.castlingRooks()) [[likely]] { zobrist_.castling(MY.sq(piRook)); }
+                for (Pi piRook : _(My).castlingRooks()) [[likely]] { zobrist_.castling(_(My).sq(piRook)); }
                 zobrist_.castle(kingFrom, kingTo, rookFrom, rookTo);
                 flipPrefetch();
                 rule50_.next(); zHash_ = {}; // castling holds rule50, but not ZHash
             }
 
-            OP.setOpKing(~kingTo);
-            MY.castle(kingFrom, kingTo, pi, rookFrom, rookTo);
+            _(Op).setOpKing(~kingTo);
+            _(My).castle(kingFrom, kingTo, pi, rookFrom, rookTo);
 
             //TRICK: castling should not affect opponent's sliders, otherwise it is check or pin
             //TRICK: castling rook should attack 'kingFrom' square
             //TRICK: only first rank sliders can be affected
-            updateSliderAttacks<My>(MY.affectedBy(rookFrom, kingFrom) & MY.any(Rank1));
+            updateSliderAttacks<My>(_(My).affectedBy(rookFrom, kingFrom) & _(My).any(Rank1));
             if constexpr (Flags & WithEval) { accumulator.castle(*this, kingFrom, kingTo, rookFrom, rookTo); }
             return true; // end of castling move
         }
@@ -319,21 +319,21 @@ bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
         }
     }
 
-    Officer officer{*MY.piece(pi)}; // officers: Q, R, B, N
+    Officer officer{*_(My).piece(pi)}; // officers: Q, R, B, N
     if constexpr (Flags & WithZobrist) { zobrist_.move(officer, from, to); }
 
-    if (OP.has(~to)) {
-        NonKingPiece captured{*OP.pieceAt(~to)};
+    if (_(Op).has(~to)) {
+        NonKingPiece captured{*_(Op).pieceAt(~to)};
         if constexpr (Flags & WithZobrist) {
-            if (OP.isCastling(~to)) { zobrist_.opCastling(~to); } // captured the rook with castling right
+            if (_(Op).isCastling(~to)) { zobrist_.opCastling(~to); } // captured the rook with castling right
             zobrist_.opCapture(captured, ~to);
             flipPrefetch();
             rule50_ = {}; zHash_ = {}; // capture resets rule50
         }
 
-        OP.capture(~to);
-        MY.move(pi, officer, from, to);
-        updateSliderAttacks<My>(MY.affectedBy(from) | PiMask{pi}, OP.affectedBy(~from));
+        _(Op).capture(~to);
+        _(My).move(pi, officer, from, to);
+        updateSliderAttacks<My>(_(My).affectedBy(from) | PiMask{pi}, _(Op).affectedBy(~from));
         if constexpr (Flags & WithEval) { accumulator.move(officer, from, to, captured); }
         return true; // end of officer's capture
     } else {
@@ -342,8 +342,8 @@ bool Position::makeMove(Square from, Square to, auto&& flipPrefetch) {
             rule50_.next(); // zHash_ kept, unless moved rook with castling right
         }
 
-        MY.move(pi, officer, from, to);
-        updateSliderAttacks<My>(MY.affectedBy(from, to), OP.affectedBy(~from, ~to));
+        _(My).move(pi, officer, from, to);
+        updateSliderAttacks<My>(_(My).affectedBy(from, to), _(Op).affectedBy(~from, ~to));
         if constexpr (Flags & WithEval) { accumulator.move(officer, from, to); }
         return shouldResetZHash; // end of officers's noncapture move
     }
