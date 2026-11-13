@@ -95,22 +95,52 @@ fn main() {
     let data_loader = DirectSequentialDataLoader::new(data_set);
     let settings = LocalSettings { threads: CPU_THREADS/2, test_set: None, output_directory: "checkpoints", batch_queue_size: 256 };
 
-    const MW1: f32 = 32767.0 / QW1; // 2.559921875
-    trainer.optimiser.set_params_for_weight("l0w", AdamWParams{ decay: 0.005, min_weight: -4.0, max_weight: 4.0, ..Default::default() });
-    trainer.optimiser.set_params_for_weight("l1w", AdamWParams{ decay: 0.03,  min_weight: -MW1, max_weight: MW1, ..Default::default() });
+    trainer.load_from_checkpoint(&format!("./{}/{}-{}", &settings.output_directory, "1024-hm03", 360));
 
     let batch_size = 16_384 / 4;
     let batches_per_superbatch = 6_104 * 4;
 
-    let start_superbatch = 1;
-    let end_superbatch = 360;
-    let schedule = TrainingSchedule {
-        net_id: "1024-hm03".to_string(),
+    const MW1: f32 = 32767.0 / QW1; // 1.279960938
+    trainer.optimiser.set_params_for_weight("l0w", AdamWParams{ decay: 0.01, ..Default::default() });
+    trainer.optimiser.set_params_for_weight("l1w", AdamWParams{ decay: 0.03, min_weight: -MW1, max_weight: MW1, ..Default::default() });
+
+    let mut start_superbatch = 1;
+    let mut end_superbatch = 20;
+    let schedule1 = TrainingSchedule {
+        net_id: "0-s1".to_string(),
         eval_scale: data_set_eval_scale,
         steps: TrainingSteps { batch_size, batches_per_superbatch, start_superbatch, end_superbatch },
-        wdl_scheduler: wdl::RangedCosineDecayWDL { initial_wdl: 0.0, final_wdl: 0.2, start_superbatch, end_superbatch },
-        lr_scheduler: lr::RangedCosineDecayLR { initial_lr: 4e-4, final_lr: 4e-6, start_superbatch, end_superbatch },
+        wdl_scheduler: wdl::ConstantWDL { value: 0.0 },
+        lr_scheduler: lr::ConstantLR { value: 8e-4 },
         save_rate: 10,
     };
-    trainer.run(&schedule, &settings, &data_loader);
+    trainer.run(&schedule1, &settings, &data_loader);
+
+    trainer.optimiser.set_params_for_weight("l0w", AdamWParams{ ..Default::default() });
+
+    start_superbatch = end_superbatch + 1;
+    end_superbatch = 100;
+    let schedule2 = TrainingSchedule {
+        net_id: "0-s2".to_string(),
+        eval_scale: data_set_eval_scale,
+        steps: TrainingSteps { batch_size, batches_per_superbatch, start_superbatch, end_superbatch },
+        wdl_scheduler: wdl::RangedLinearDecayWDL { initial_wdl: 0.0, final_wdl: 0.1, start_superbatch, end_superbatch },
+        lr_scheduler: lr::RangedCosineDecayLR { initial_lr: 8e-4, final_lr: 2e-5, start_superbatch, end_superbatch },
+        save_rate: 10,
+    };
+    trainer.run(&schedule2, &settings, &data_loader);
+
+    trainer.optimiser.set_params_for_weight("l1w", AdamWParams{ min_weight: -MW1, max_weight: MW1, ..Default::default() });
+
+    start_superbatch = end_superbatch + 1;
+    end_superbatch = 120;
+    let schedule3 = TrainingSchedule {
+        net_id: "0-s3".to_string(),
+        eval_scale: data_set_eval_scale,
+        steps: TrainingSteps { batch_size, batches_per_superbatch, start_superbatch, end_superbatch },
+        wdl_scheduler: wdl::ConstantWDL { value: 0.1 },
+        lr_scheduler: lr::RangedLinearDecayLR { initial_lr: 2e-5, final_lr: 4e-6, start_superbatch, end_superbatch },
+        save_rate: 10,
+    };
+    trainer.run(&schedule3, &settings, &data_loader);
 }
