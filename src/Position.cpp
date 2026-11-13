@@ -8,13 +8,13 @@ Score Position::evaluate() const {
 void Position::flip(const Position& parent) {
     // copy from the parent position but swap sides
     accumulator.flip(parent.accumulator);
-    positionSide_[My] = parent.OP;
-    positionSide_[Op] = parent.MY;
+    positionSide_[My] = parent._(Op);
+    positionSide_[Op] = parent._(My);
     rule50_ = parent.rule50_;
 }
 
 void Position::makeMove(Square from, Square to) {
-    PositionSide::swap(MY, OP);
+    PositionSide::swap(_(My), _(Op));
     accumulator.swap();
 
     // the position just swapped its sides, so we make the move for the Op
@@ -32,10 +32,10 @@ void Position::makeNullMove(const Position& parent) {
     occupied_[Op] = parent.occupied_[My];
 
     // clear en passant status from the previous move
-    if (MY.hasEnPassant()) {
-        zobrist_.opEnPassant(MY.sqEnPassant());
-        OP.clearEnPassantKillers();
-        MY.clearEnPassantVictim();
+    if (_(My).hasEnPassant()) {
+        zobrist_.opEnPassant(_(My).sqEnPassant());
+        _(Op).clearEnPassantKillers();
+        _(My).clearEnPassantVictim();
     }
 
     zobrist_.flip();
@@ -52,7 +52,7 @@ void Position::makeMovePerft(const Position& parent, Square from, Square to) {
 bool Position::setEnPassant(File file) {
     Square ep{file, Rank4}; // not FEN ep square, but victim pawn location
 
-    if (!OP.isPawn(ep) || bbBoth(My).has({file, Rank6})) {
+    if (!_(Op).isPawn(ep) || bbBoth(My).has({file, Rank6})) {
         // pseudo legal test failed
         return false;
     }
@@ -63,33 +63,33 @@ bool Position::setEnPassant(File file) {
 }
 
 bool Position::dropValid(Side side, Piece piece, Square to) {
-    return positionSide(side).dropValid(piece, to);
+    return _(side).dropValid(piece, to);
 }
 
 bool Position::afterDrop() {
-    PositionSide::finalSetup(MY, OP);
-    updateSliderAttacks<Op>(OP.any(), MY.any());
+    PositionSide::finalSetup(_(My), _(Op));
+    updateSliderAttacks<Op>(_(Op).any(), _(My).any());
     accumulator.setup(*this);
     rule50_ = {};
 
     // opponent should not be in check
-    return MY.checkers().isNone();
+    return _(My).checkers().isNone();
 }
 
 Bb Position::bbPassedPawns() const {
-    Bb bbBlockers = ~(OP.bbPawns() | OP.bbPawnAttacks().forward());
+    Bb bbBlockers = ~(_(Op).bbPawns() | _(Op).bbPawnAttacks().forward());
     for (int i = 0; i < 5; ++i) {
         bbBlockers |= bbBlockers.backward();
     }
-    return MY.bbPawns() % bbBlockers;
+    return _(My).bbPawns() % bbBlockers;
 }
 
 template <Side::_t My>
 Zobrist Position::generateZobrist() const {
     Zobrist z{};
 
-    for (Pi pi : MY.any()) { z(MY.piece(pi), MY.sq(pi));}
-    for (Pi piRook : MY.castlingRooks()) { z.castling(MY.sq(piRook)); }
+    for (Pi pi : _(My).any()) { z(_(My).piece(pi), _(My).sq(pi));}
+    for (Pi piRook : _(My).castlingRooks()) { z.castling(_(My).sq(piRook)); }
 
     return z;
 }
@@ -98,7 +98,7 @@ Zobrist Position::generateZobrist() const {
     constexpr Side::_t Op{~My};
 
     Zobrist z{generateZobrist<My>(), generateZobrist<Op>()};
-    if (OP.hasEnPassant()) { z.opEnPassant(OP.sqEnPassant()); }
+    if (_(Op).hasEnPassant()) { z.opEnPassant(_(Op).sqEnPassant()); }
 
     return z;
 }
