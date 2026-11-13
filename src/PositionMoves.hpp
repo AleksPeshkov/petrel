@@ -26,7 +26,7 @@ class PositionMoves : public Position {
 
 protected:
     void setMoves(const decltype(moves_)& moves) { moves_ = moves; movesMade_ = 0; }
-    void clearMove(Square from, Square to) { moves_.clear(MY.pi(from), to); ++movesMade_; }
+    void clearMove(Square from, Square to) { moves_.clear(_(My).pi(from), to); ++movesMade_; }
 
 public:
     void generateMoves();
@@ -40,13 +40,13 @@ public:
     // count of already made legal (non-null) moves
     constexpr int movesMade() const { return movesMade_; }
 
-    constexpr MoveType moveType(Square from, Square to) const { return MY.moveType(from, to); }
+    constexpr MoveType moveType(Square from, Square to) const { return _(My).moveType(from, to); }
     constexpr Move toMove(TtMove ttMove) const { return Move{ttMove, moveType(ttMove.from(), ttMove.to())}; }
     constexpr Move toMove(Square from, Square to, CanBeKiller _canBeKiller = CanBeKiller::No) const { return toMove(TtMove{from, to, _canBeKiller}); }
-    constexpr bool isPseudoLegal(Move move) const { return MY.isPseudoLegal(move); }
+    constexpr bool isPseudoLegal(Move move) const { return _(My).isPseudoLegal(move); }
 
     // move is legal and not yet made
-    constexpr bool isPossibleMove(Square from, Square to) const { return MY.has(from) && moves_.has(MY.pi(from), to); }
+    constexpr bool isPossibleMove(Square from, Square to) const { return _(My).has(from) && moves_.has(_(My).pi(from), to); }
 
     // move is legal and not yet made
     constexpr bool isPossibleMove(Move move) const {
@@ -54,7 +54,7 @@ public:
     }
 
     // nor capture nor promotion move
-    constexpr bool isQuietMove(Pi pi, Square to) const { return !MY.isPromotable(pi) && !OP.bbSide().has(~to); }
+    constexpr bool isQuietMove(Pi pi, Square to) const { return !_(My).isPromotable(pi) && !_(Op).bbSide().has(~to); }
 
     // attacked squares by not side to move pieces (op)
     constexpr Bb bbAttacked() const { return bbAttacked_; }

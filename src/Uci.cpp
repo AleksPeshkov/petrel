@@ -419,13 +419,13 @@ public:
 };
 
 ostream& fen(ostream& os, const Position& pos, Color colorToMove, ChessVariant chessVariant, int fullMoveNumber) {
-    const auto& whitePieces = pos.positionSide(colorToMove.is(White) ? My : Op);
-    const auto& blackPieces = pos.positionSide(colorToMove.is(Black) ? My : Op);
+    const auto& whitePieces = pos._(colorToMove.is(White) ? My : Op);
+    const auto& blackPieces = pos._(colorToMove.is(Black) ? My : Op);
 
     return os << BoardToFen(whitePieces, blackPieces)
         << ' ' << colorToMove
         << ' ' << CastlingToFen{whitePieces, blackPieces, chessVariant}
-        << ' ' << EnPassantToFen{pos.positionSide(Op), colorToMove}
+        << ' ' << EnPassantToFen{pos._(Op), colorToMove}
         << ' ' << pos.rule50()
         << ' ' << fullMoveNumber;
 }
@@ -513,10 +513,10 @@ istream& UciPosition::readMove(istream& is, Square& from, Square& to) const {
 
     if (colorToMove_.is(Black)) { from = ~from; to = ~to; }
 
-    if (!MY.has(from)) { return io::fail_pos(is, before); }
+    if (!_(My).has(from)) { return io::fail_pos(is, before); }
 
     // convert special moves (castling, promotion, ep) to the internal move format
-    if (MY.isPawn(from)) {
+    if (_(My).isPawn(from)) {
         if (from.isOn(Rank7)) {
             Officer promoted{Queen}; // default
             is >> promoted;
@@ -525,7 +525,7 @@ istream& UciPosition::readMove(istream& is, Square& from, Square& to) const {
             return is;
         }
 
-        if (from.isOn(Rank5) && OP.hasEnPassant() && OP.fileEnPassant().is(to.file())) {
+        if (from.isOn(Rank5) && _(Op).hasEnPassant() && _(Op).fileEnPassant().is(to.file())) {
             to = {to.file(), Rank5};
             return is;
         }
@@ -534,21 +534,21 @@ istream& UciPosition::readMove(istream& is, Square& from, Square& to) const {
         return is;
     }
 
-    if (MY.isKing(from)) {
-        if (MY.has(to)) { // Chess960 castling encoding
-            if (!MY.isCastling(to)) { return io::fail_pos(is, before); }
+    if (_(My).isKing(from)) {
+        if (_(My).has(to)) { // Chess960 castling encoding
+            if (!_(My).isCastling(to)) { return io::fail_pos(is, before); }
 
             std::swap(from, to);
             return is;
         }
         if (from.is(E1) && to.is(G1)) {
-            if (!MY.has(H1) || !MY.isCastling(H1)) { return io::fail_pos(is, before); }
+            if (!_(My).has(H1) || !_(My).isCastling(H1)) { return io::fail_pos(is, before); }
 
             from = H1; to = E1;
             return is;
         }
         if (from.is(E1) && to.is(C1)) {
-            if (!MY.has(A1) || !MY.isCastling(A1)) { return io::fail_pos(is, before); }
+            if (!_(My).has(A1) || !_(My).isCastling(A1)) { return io::fail_pos(is, before); }
 
             from = A1; to = E1;
             return is;
@@ -616,12 +616,12 @@ istream& UciPosition::readCastling(istream& is) {
 
             CastlingSide castlingSide;
             if (castlingSide.from_char(c)) {
-                if (positionSide(side).setValidCastling(castlingSide)) { continue; }
+                if (_(side).setValidCastling(castlingSide)) { continue; }
             }
             else {
                 File file;
                 if (file.from_char(c)) {
-                    if (positionSide(side).setValidCastling(file)) { continue; }
+                    if (_(side).setValidCastling(file)) { continue; }
                 }
             }
         }
@@ -664,9 +664,9 @@ void UciPosition::readFen(istream& is) {
 
 // fast exit: return the first legal move found
 Move UciPosition::firstRootMove() const {
-    for (Pi pi : MY.any()) {
+    for (Pi pi : _(My).any()) {
         if (bbMovesOf(pi).isNone()) { continue; }
-        return toMove(MY.sq(pi), bbMovesOf(pi).first());
+        return toMove(_(My).sq(pi), bbMovesOf(pi).first());
     }
     return {};
 }
