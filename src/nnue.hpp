@@ -105,7 +105,6 @@ struct CACHE_ALIGN Nnue {
 
     using W0 = array<_t, Fi, AccIndex>; // QW0 = 2^10
     using W1 = DualAcc; // QW1 = 2^5 * WDL
-    using B1 = i32_t; // QB1 = 2^10 * WDL (WDL = ~400)
 
     i32_t evaluate(const DualAcc& dacc) const {
         i32x8_t sum10{};
@@ -119,7 +118,7 @@ struct CACHE_ALIGN Nnue {
                 sum10 += a10; // 2^10 * WDL
             }
         }
-        auto output10 = this->b1 + hadd_i32(sum10); // QB1 = 2^10 * WDL
+        auto output10 = hadd_i32(sum10); // 2^10 * WDL, bias = 0
         auto output = output10 >> 10; // WDL
         return output;
     }
@@ -157,10 +156,9 @@ struct CACHE_ALIGN Nnue {
     COLD void validate_embedded() const;
 
 private:
-    // total 1577024 bytes
+    // total 1576960 bytes
     W0 w0; // feature weights, 768*(64*32) = 1572864 bytes, feature biases embeded into kings weights
     W1 w1; // output weights, 2*(64*32) = 4096 bytes
-    B1 b1; // output bias (64 byte aligned)
 };
 extern constinit const Nnue& nnue;
 
