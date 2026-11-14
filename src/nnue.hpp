@@ -104,23 +104,23 @@ struct CACHE_ALIGN Nnue {
     using DualAcc = array<Acc, Side>;
 
     using W0 = array<_t, Fi, AccIndex>; // QW0 = 2^10
-    using W1 = DualAcc; // QW1 = 2^6 * WDL
-    using B1 = i32_t; // QB1 = 2^11 * WDL (WDL = ~400)
+    using W1 = DualAcc; // QW1 = 2^5 * WDL
+    using B1 = i32_t; // QB1 = 2^10 * WDL (WDL = ~400)
 
     i32_t evaluate(const DualAcc& dacc) const {
-        i32x8_t sum11{};
+        i32x8_t sum10{};
         for (auto side : range<Side>()) {
             for (auto n : range<AccIndex>()) {
                 auto x10 = dacc[side][n]; // QW0 = 2^10
                 auto c10 = clamp(x10, 0, 1024);
-                auto w6  = this->w1[side][n]; // QW1 = 2^6 * WDL
-                auto m1  = mulhrs_i16(c10, w6); // 2 * WDL
-                auto a11 = madd_i16(m1, c10); // 2^11 * WDL
-                sum11 += a11; // 2^11 * WDL
+                auto w5  = this->w1[side][n]; // QW1 = 2^5 * WDL
+                auto m0  = mulhrs_i16(c10, w5); // WDL
+                auto a10 = madd_i16(m0, c10); // 2^10 * WDL
+                sum10 += a10; // 2^10 * WDL
             }
         }
-        auto output11 = this->b1 + hadd_i32(sum11); // QB1 = 2^11 * WDL
-        auto output = output11 >> 11; // WDL
+        auto output10 = this->b1 + hadd_i32(sum10); // QB1 = 2^10 * WDL
+        auto output = output10 >> 10; // WDL
         return output;
     }
 
