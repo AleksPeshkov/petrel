@@ -800,8 +800,8 @@ void Uci::newGame() {
     go_.isNewGame = true;
 }
 
-void Uci::newSearch() {
-    the_tt.newSearch(the_ttMeta.writes > 0);
+void Uci::newSearch(bool isGo) {
+    the_tt.newSearch(the_ttMeta.writes > 0, isGo);
     the_ttMeta.newSearch();
 
     std::string bestmove; // empty
@@ -1399,7 +1399,7 @@ void Uci::isready() const {
 }
 
 void Uci::perft() {
-    newSearch();
+    newSearch(false);
 
     Ply depth{1};
     inputLine >> depth;

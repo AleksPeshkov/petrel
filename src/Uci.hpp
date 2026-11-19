@@ -125,7 +125,7 @@ private:
     void perft();
 
     void newGame();
-    void newSearch();
+    void newSearch(bool isGo = true);
     void readStartPos();
     void setPositionMoves();
     void setHash();
