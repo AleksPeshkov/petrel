@@ -47,7 +47,8 @@ public:
     friend constexpr Self operator % (Arg a, Arg b) { return Self{a} %= b; }
 
     friend constexpr bool operator == (Arg a, Arg b) { return Ops::equals(a.v_, b.v_); }
-    friend constexpr bool operator <  (Arg a, Arg b) { return !((a & b) == b); }
+    friend constexpr bool operator <= (Arg a, Arg b) { return (a & b) == a; }
+    friend constexpr bool operator >= (Arg a, Arg b) { return b <= a; }
 
     constexpr bool isNone() const { return cself() == none(); }
     constexpr bool isNone(Arg b) const { return (cself() & b).isNone(); }
