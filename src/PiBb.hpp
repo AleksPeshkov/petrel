@@ -5,78 +5,70 @@
 #include "Bb.hpp"
 #include "PiMask.hpp"
 
-class CACHE_ALIGN PiBb {
-    union {
-        u64x4_t u64x4[4];
-        array <Bb, Pi> bb_;
-    };
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpsabi"
 
-    constexpr void filter(u64_t bb) {
-        u64x4_t bb4 = splat<u64x4_t>(bb);
-        for (auto& v : u64x4) { v &= bb4; }
-    }
+class PiBb {
+    using _t = u64_t __attribute__((vector_size(128)));
+    _t v_{}; // array <Bb, Pi>
+
 public:
-    constexpr PiBb() { for (auto& v : u64x4) { v = splat<u64x4_t>(0); } }
-
-    void setAttacks(const PiBb& attacks) {
-        for (auto i : range<4>()) { u64x4[i] = attacks.u64x4[i]; }
+    constexpr Bb bb(Pi pi) const {
+        return Bb{ std::bit_cast<std::array<u64_t, 16>>(v_)[+pi] };
     }
 
-    constexpr Bb bb(Pi pi) const { return bb_[pi]; }
-    constexpr void set(Pi pi, Bb bb) { bb_[pi] = bb; }
+    constexpr void set(Pi pi, Bb bb) {
+        auto v = std::bit_cast<std::array<u64_t, 16>>(v_);
+        v[+pi] = bb.v();
+        v_ = std::bit_cast<_t>(v);
+        return;
+    }
 
-    constexpr bool has(Pi pi, Square sq) const { return bb_[pi].has(sq); }
-    constexpr void clear(Pi pi, Square sq) { bb_[pi] -= Bb{sq}; }
-    constexpr void add(Pi pi, Square sq) {bb_[pi] += Bb{sq}; }
+    constexpr bool has(Pi pi, Square sq) const { return bb(pi).has(sq); }
+    constexpr void clear(Pi pi, Square sq) { set(pi, bb(pi) - Bb{sq}); }
+    constexpr void add(Pi pi, Square sq) { set(pi, bb(pi) + Bb{sq}); }
 
-    constexpr void operator &= (Bb bb) { filter(bb.v()); }
-    constexpr void operator %= (Bb bb) { filter(~bb.v()); }
-    constexpr void filter(Pi pi, Bb bb) { bb_[pi] &= bb; }
+    constexpr void operator &= (Bb bb) { v_ &= splat<_t>(bb.v()); }
+    constexpr void operator %= (Bb bb) { v_ &= splat<_t>(~bb.v()); }
+    constexpr void filter(Pi pi, Bb b) { set(pi, bb(pi) & b); }
 
     PiMask piMask(Square sq) const {
-        Rank rank{sq.rank()};
+        auto bit{ splat<_t>(Bb{sq}.v()) };
+        auto mask{ (v_ & bit) == bit };
 
-        using i8x32_t =  i8_t __attribute__((vector_size(32)));
-        i8x32_t rankMask{
-            static_cast<i8_t>(+rank),
-            static_cast<i8_t>(+rank+8),
-            static_cast<i8_t>(+rank+16),
-            static_cast<i8_t>(+rank+24),
-            -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1
-        };
+        using u8x128_t = u8_t __attribute__((vector_size(128)));
+        auto bytes = std::bit_cast<u8x128_t>(mask);
 
-        auto a32 = cast256_128( shuffle(u64x4[0], rankMask) );
-        auto b32 = cast256_128( shuffle(u64x4[1], rankMask) );
-        auto c32 = cast256_128( shuffle(u64x4[2], rankMask) );
-        auto d32 = cast256_128( shuffle(u64x4[3], rankMask) );
+        u8x16_t pieces = __builtin_shufflevector(bytes, bytes,
+            0, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104, 112, 120
+        );
 
-        auto a64 = unpack2_lo32(a32, b32);
-        auto b64 = unpack2_lo32(c32, d32);
-        auto r16 = unpack2_lo64(a64, b64);
-
-        auto fileVector = splat<u8x16_t>(1 << +sq.file());
-        return PiMask{ (r16 & fileVector) == fileVector };
+        return PiMask{pieces};
     }
 
     constexpr int popcount() const {
         int sum = 0;
-        for (auto bb : bb_) { sum += bb.popcount(); }
+        for (auto bb : std::bit_cast<std::array<u64_t, 16>>(v_)) {
+            sum += Bb{bb}.popcount();
+        }
         return sum;
     }
 
 // used only in case of PiBb PositionSide::attacks_:
 
-    constexpr void clear(Pi pi) { bb_[pi] = {}; }
+    constexpr void clear(Pi pi) { set(pi, Bb{}); }
 
     Bb bb() const {
-        auto a64 = u64x4[0] | u64x4[1] | u64x4[2] | u64x4[3];
-
-#ifdef __clang__
-        return Bb{__builtin_reduce_or(a64)};
-#else
-        return Bb{a64[0] | a64[1] | a64[2] | a64[3]};
-#endif
+        #ifdef __clang__
+            return Bb{__builtin_reduce_or(v_)};
+        #else
+            return [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+                return Bb{(v[Is] | ...)};
+            }(std::make_index_sequence<16>{});
+        #endif
     }
 };
+
+#pragma GCC diagnostic pop
 
 #endif
