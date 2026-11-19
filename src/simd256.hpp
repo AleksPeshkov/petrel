@@ -12,6 +12,7 @@
 #include "simd.hpp"
 #include "simd128.hpp"
 
+using u8x32_t  =  u8_t __attribute__((vector_size(32)));
 using i16x16_t = i16_t __attribute__((vector_size(32)));
 using u16x16_t = u16_t __attribute__((vector_size(32)));
 using i32x8_t  = i32_t __attribute__((vector_size(32)));

@@ -117,7 +117,7 @@ void PositionMoves::generateCheckEvasions() {
 
         // check evasion moves of all pieces
         // (including invalid phantom pawn captures and missing pawn non-captures)
-        moves_.setAttacks(MY.attacks());
+        moves_ = MY.attacks();
         moves_ &= checkLine + Bb{checkFrom};
 
         // pawns moves are special case
@@ -150,8 +150,8 @@ void PositionMoves::generateMoves() {
 
     // create pseudolegal moves from piece attacks
     // (including invalid phantom pawn captures and missing pawn non-captures)
-    moves_.setAttacks(MY.attacks());
-    moves_ %= MY.bbSide();
+    moves_ = MY.attacks();
+    moves_ %=  MY.bbSide();
 
     // pawns moves treated separately
     generatePawnMoves<My>();
