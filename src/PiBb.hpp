@@ -1,32 +1,9 @@
 #ifndef PI_BB_H
 #define PI_BB_H
 
-#include "bitops256.hpp"
+#include "simd256.hpp"
 #include "Bb.hpp"
 #include "PiMask.hpp"
-
-using u32x4_t = u32_t __attribute__((vector_size(16)));
-
-inline u64x2_t unpack2_lo32(u32x4_t a, u32x4_t b) {
-    return __builtin_shufflevector(a, b, 0, 4, -1, -1 );
-}
-
-inline u8x16_t unpack2_lo64(u64x2_t a, u64x2_t b) {
-    return __builtin_shufflevector(a, b, 0, 2 );
-}
-
-inline u8x16_t cast256_128(u64x4_t i256) {
-#if USE_AVX2
-        return _mm256_castsi256_si128(i256);
-#else
-        union {
-            u64x4_t u64x4;
-            u8x16_t u8x16;
-        };
-        u64x4 = i256;
-        return u8x16;
-#endif
-}
 
 class CACHE_ALIGN PiBb {
     union {
@@ -35,11 +12,11 @@ class CACHE_ALIGN PiBb {
     };
 
     constexpr void filter(u64_t bb) {
-        u64x4_t bb4 = x4(bb);
+        u64x4_t bb4 = splat<u64x4_t>(bb);
         for (auto& v : u64x4) { v &= bb4; }
     }
 public:
-    constexpr PiBb() { for (auto& v : u64x4) { v = x4(0); } }
+    constexpr PiBb() { for (auto& v : u64x4) { v = splat<u64x4_t>(0); } }
 
     void setAttacks(const PiBb& attacks) {
         for (auto i : range<4>()) { u64x4[i] = attacks.u64x4[i]; }
@@ -77,7 +54,7 @@ public:
         auto b64 = unpack2_lo32(c32, d32);
         auto r16 = unpack2_lo64(a64, b64);
 
-        auto fileVector = u8x16x(1 << +sq.file());
+        auto fileVector = splat<u8x16_t>(1 << +sq.file());
         return PiMask{ (r16 & fileVector) == fileVector };
     }
 

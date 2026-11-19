@@ -9,12 +9,8 @@
 #endif
 
 #include "Index.hpp"
-#include "bitops128.hpp"
+#include "simd128.hpp"
 #include "BitArray.hpp"
-
-constexpr u8_t u8(u8x16_t v, int i) {
-    return std::bit_cast<std::array<u8_t, 16>>(v)[i];
-}
 
 #ifndef NEON_VECTOR
 
@@ -22,7 +18,7 @@ constexpr int mask(u8x16_t v) {
     if (std::is_constant_evaluated()) {
         int result = 0;
         for (int i = 0; i < 16; ++i) {
-            result |= (::u8(v, i) >> 7) << i;
+            result |= (extract(v, i) >> 7) << i;
         }
         return result;
     /*
@@ -145,7 +141,7 @@ public:
     constexpr explicit PiMask (_t v) : BitArray{v} { assertOk(); }
     constexpr explicit PiMask (Pi pi) : BitArray{piOneMask[pi]} {}
 
-    static constexpr _t none() { return ::u8x16x(0); }
+    static constexpr _t none() { return splat<_t>(0); }
 
     static constexpr PiMask any(_t v) { return PiMask{v != none()}; }
 
@@ -189,19 +185,18 @@ class PiSquare {
         u8x16_t u8x16;
     };
 
+    static constexpr auto splat(Square sq) { return ::splat<u8x16_t>(+sq); }
+    static constexpr auto none() { return ::splat<u8x16_t>(Square::null()); }
+
     constexpr void set(Pi pi, _t sq) { square[pi] = sq; }
 
     constexpr bool isNone(Pi pi) const { return square[pi] == Square::null(); }
-    constexpr PiMask at(_t sq) const { return PiMask{u8x16 == ::u8x16x(sq)}; }
+    constexpr PiMask at(_t sq) const { return PiMask{u8x16 == splat(sq)}; }
     constexpr bool has(_t sq) const { return at(sq).isAny(); }
     constexpr Pi pi(_t sq) const { assert (has(sq)); return at(sq).pi(); }
 
 public:
-    constexpr PiSquare () {
-        for (auto pi : range<Pi>()) {
-            square[pi] = Square::null();
-        }
-    }
+    constexpr PiSquare () { u8x16 = none(); }
 
     constexpr bool isOk(Pi _pi) const { return !isNone(_pi) && pi(square[_pi]) == _pi; }
 
@@ -236,12 +231,12 @@ public:
     constexpr Square sq(Pi pi) const { assertOk(pi); return square[pi]; }
     constexpr Pi pi(Square sq) const { return pi(*sq); }
 
-    constexpr PiMask any() const { return PiMask{u8x16 != ::u8x16x(Square::null())}; }
+    constexpr PiMask any() const { return PiMask{u8x16 != none()}; }
 
     constexpr PiMask any(Rank rank) const {
         return PiMask{
-            (u8x16 & ::u8x16x( static_cast<_t>(Square::null() ^ static_cast<_t>(File::mask())) ))
-            == ::u8x16x( *Square{static_cast<File::_t>(0), rank} )
+            (u8x16 & ::splat<u8x16_t>( Square::null() ^ static_cast<_t>(File::mask()) ))
+            == splat( Square{static_cast<File::_t>(0), rank} )
         };
     }
 };
@@ -273,18 +268,17 @@ class PiType {
         u8x16_t u8x16;
     };
 
+    static constexpr auto splat(element_type e) { return ::splat<u8x16_t>(e); }
+    static constexpr auto none() { return splat(None); }
+
     constexpr element_type element(Piece piece) const { return static_cast<element_type>(::singleton<u8_t>(+piece)); }
 
     constexpr bool has(Pi pi, element_type e) const { assertOk(pi); return (static_cast<u8_t>(type[pi]) & static_cast<u8_t>(e)) != 0; }
     constexpr bool is(Pi pi, Piece piece) const { assertOk(pi); return has(pi, element(piece)); }
-    constexpr PiMask any(element_type e) const { return PiMask::any(u8x16 & ::u8x16x(e)); }
+    constexpr PiMask any(element_type e) const { return PiMask::any(u8x16 & splat(e)); }
 
 public:
-    constexpr PiType () {
-        for (auto pi : range<Pi>()) {
-            type[pi] = None;
-        }
-    }
+    constexpr PiType () { u8x16 = none(); }
 
     constexpr bool isOk(Pi pi) const { return !isNone(pi) && ::isSingleton(static_cast<u8_t>(type[pi])); }
 
@@ -357,8 +351,11 @@ class PiTrait {
         u8x16_t u8x16;
     };
 
-    constexpr PiMask any(element_type e) const { return PiMask::any(u8x16 & ::u8x16x(static_cast<u8_t>(e))); }
-    constexpr void clear(element_type e) { u8x16 &= ::u8x16x(0xff ^ static_cast<u8_t>(e)); }
+    static constexpr auto splat(element_type e) { return ::splat<u8x16_t>(e); }
+    static constexpr auto none() { return splat(None); }
+
+    constexpr PiMask any(element_type e) const { return PiMask::any(u8x16 & splat(e)); }
+    constexpr void clear(element_type e) { u8x16 &= splat(static_cast<element_type>(0xff ^ e)); }
 
     constexpr bool has(Pi pi, element_type e) const {
         return (static_cast<u8_t>(trait[pi]) & static_cast<u8_t>(e)) != 0;
@@ -373,11 +370,7 @@ class PiTrait {
     }
 
 public:
-    constexpr PiTrait () {
-        for (auto pi : range<Pi>()) {
-            trait[pi] = None;
-        }
-    }
+    constexpr PiTrait () { u8x16 = none(); }
 
     constexpr void clear(Pi pi) { trait[pi] = None; }
     constexpr bool isNone(Pi pi) const { return trait[pi] == None; }
@@ -440,6 +433,8 @@ class PiOrder {
         u8x16_t u8x16;
     };
 
+    static constexpr auto splat(Pi pi) { return ::splat<u8x16_t>(+pi); }
+
     static constexpr ShuffleToFront shuffleToFront{};
     static constexpr u8x16_t ordered = shuffleToFront[Pi{static_cast<Pi::_t>(0)}];
 
@@ -447,7 +442,7 @@ class PiOrder {
         // check all values [0, 15] are represented
         u32_t mask = 0;
         for (int i = 0; i < 16; ++i) {
-            mask |= ::singleton<int>(::u8(u8x16, i));
+            mask |= ::singleton<int>(extract(u8x16, i));
         }
         return ::popcount(mask) == 16;
     }
@@ -465,7 +460,7 @@ public:
 
     PiOrder& forward(Pi pi) {
         // find index of pi in the shuffled vector
-        PiMask mask = PiMask{u8x16 == ::u8x16x(+pi)};
+        PiMask mask = PiMask{u8x16 == splat(pi)};
         // shuffle selected pi to the first position
         u8x16 = ::shuffle(u8x16, std::bit_cast<u8x16_t>(shuffleToFront[mask.pi()]));
         assertOk();

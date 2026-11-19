@@ -1,10 +1,8 @@
 #ifndef HYPERBOLA_HPP
 #define HYPERBOLA_HPP
 
-#include "bitops128.hpp"
+#include "simd128.hpp"
 #include "Bb.hpp"
-
-constexpr u64_t u64(u64x2_t v, int i = 0) { return std::bit_cast<std::array<u64_t, 2>>(v)[i]; }
 
 // bitreverse each byte
 constexpr u8x16_t bitSwap(u8x16_t v) {
@@ -103,7 +101,7 @@ public:
         // hyperbola({bb1, bb2}) == { bb1 ^ bitreverse64(bb2), bb2 ^ bitreverse64(bb1) }
         result = hyperbola(result);
 
-        return Bb{::u64(result)};
+        return Bb{ extract(result) };
     }
 };
 
