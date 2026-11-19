@@ -24,27 +24,25 @@ struct CACHE_ALIGN Nnue {
     using DualAcc = array<Acc, Side>;
 
     using W0 = array<_t, Fi, AccIndex>; // QW0 = 2^10
-    using W1 = DualAcc; // QW1 = 2^6 * WDL
-    using B1 = i32_t; // QB1 = 2^11 * WDL (WDL = ~400)
+    using W1 = DualAcc; // QW1 = 2^5 * WDL (WDL = 400)
 
     i32_t evaluate(const DualAcc& dacc) const {
-        i32x8_t sum11{};
+        i32x8_t sum10{};
         for (auto side : range<Side>()) {
             for (auto n : range<AccIndex>()) {
-                // W * min(x, 1024)
+                // W * x
                 auto x10 = dacc[side][n]; // QW0 = 2^10
-                auto m10 = min(x10, 1024);
-                auto w6  = this->w1[side][n]; // QW1 = 2^6 * WDL
-                auto p1  = mulhrs_i16(m10, w6); // product: WDL
+                auto w5  = this->w1[side][n]; // QW1 = 2^5 * WDL
+                auto p0  = mulhrs_i16(x10, w5); // product: WDL
 
-                // W * min(x, 1024) * clamp(x, 0, 1024) =  W * crelu(x)^2
-                auto r10 = relu(m10);
-                auto a11 = madd_i16(p1, r10); // activation: 2^11 * WDL
-                sum11 += a11; // 2^11 * WDL
+                // W * x * relu(x) = W * relu(x)^2
+                auto g10 = relu(x10); // gate: 2^10
+                auto a10 = madd_i16(p0, g10); // activation: 2^10 * WDL
+                sum10 += a10; // 2^10 * WDL
             }
         }
-        auto output11 = this->b1 + hadd(sum11); // QB1 = 2^11 * WDL
-        auto output = output11 >> 11; // WDL
+        auto output10 = hadd(sum10); // 2^10 * WDL, bias = 0
+        auto output = output10 >> 10; // WDL
         return output;
     }
 
@@ -81,10 +79,9 @@ struct CACHE_ALIGN Nnue {
     COLD void validate_embedded() const;
 
 private:
-    // total 1577024 bytes
+    // total 1576960 bytes
     W0 w0; // feature weights, 768*(64*32) = 1572864 bytes, feature biases embeded into kings weights
     W1 w1; // output weights, 2*(64*32) = 4096 bytes
-    B1 b1; // output bias (64 byte aligned)
 };
 extern constinit const Nnue& nnue;
 
