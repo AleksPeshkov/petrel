@@ -1,6 +1,6 @@
 #include "perft.hpp"
 
-#include "bitops128.hpp"
+#include "simd128.hpp"
 #include "Uci.hpp"
 #include "Position_impl.hpp"
 
