@@ -32,11 +32,6 @@ enum : node_count_t {
     NodeCountMax  = NodeCountNone - 1
 };
 
-template <typename T> [[nodiscard]] constexpr bool operator != (T a, T b) { return !(a == b); }
-template <typename T> [[nodiscard]] constexpr bool operator >  (T a, T b) { return b < a; }
-template <typename T> [[nodiscard]] constexpr bool operator >= (T a, T b) { return !(a < b); }
-template <typename T> [[nodiscard]] constexpr bool operator <= (T a, T b) { return !(b < a); }
-
 template <typename T>
 constexpr typename std::enable_if<std::is_integral<T>::value, T>::type
 universe() { return static_cast<T>(~static_cast<T>(0)); }

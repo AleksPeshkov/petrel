@@ -123,6 +123,18 @@ public:
     static constexpr Score mateLoss(Ply ply) { return Score{static_cast<_t>(MateLoss + +ply)}; } // MateLoss + ply
     static constexpr Score mateWin(Ply ply)  { return Score{static_cast<_t>(MateWin - +ply)}; } // MateWin - ply
 
+    friend constexpr bool operator == (Arg a, Arg b) {
+        assert (MateLoss <= a.v_); assert (a.v_ <= MateWin);
+        assert (MateLoss <= b.v_); assert (b.v_ <= MateWin);
+        return a.v_ == b.v_;
+    }
+
+    friend constexpr auto operator <=> (Arg a, Arg b) {
+        assert (MateLoss <= a.v_); assert (a.v_ <= MateWin);
+        assert (MateLoss <= b.v_); assert (b.v_ <= MateWin);
+        return a.v_ <=> b.v_;
+    }
+
     constexpr bool isNone() const { assert (v_ == NoScore || isAny()); return v_ == NoScore; }
     constexpr bool isAny() const { return MateLoss <= v_ && v_ <= MateWin; } // MateLoss <= v_ <= MateWin
     constexpr bool isEval() const { assert (isAny()); return MinEval <= v_ && v_ <= MaxEval; } // MinEval <= v_ <= MaxEval
@@ -151,18 +163,6 @@ public:
         assert (MinEval <= a.v_); assert (a.v_ <= MaxEval);
         assert (MinEval <= b.v_); assert (b.v_ <= MaxEval);
         return clampEval(a.v_ - b.v_);
-    }
-
-    friend constexpr bool operator == (Arg a, Arg b) {
-        assert (MateLoss <= a.v_); assert (a.v_ <= MateWin);
-        assert (MateLoss <= b.v_); assert (b.v_ <= MateWin);
-        return a.v_ == b.v_;
-    }
-
-    friend constexpr bool operator < (Arg a, Arg b) {
-        assert (MateLoss <= a.v_); assert (a.v_ <= MateWin);
-        assert (MateLoss <= b.v_); assert (b.v_ <= MateWin);
-        return a.v_ < b.v_;
     }
 
     constexpr Score tt(Ply ply) const {
