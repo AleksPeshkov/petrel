@@ -104,7 +104,7 @@ public:
     constexpr Self operator ~ () const { assertOk(); return Self{static_cast<_t>(v_ ^ mask())}; }
 
     friend constexpr bool operator == (Arg a, Arg b) { return +a == +b; }
-    friend constexpr bool operator <  (Arg a, Arg b) { return +a < +b; }
+    friend constexpr auto operator <=> (Arg a, Arg b) { return +a <=> +b; }
 };
 
 template <typename Enum>

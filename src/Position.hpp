@@ -29,8 +29,7 @@ public:
     constexpr bool isDraw() const { return v_ == Draw; }
 
     friend constexpr bool operator == (Rule50 rule50, Ply ply) { return rule50.v_ == +ply; }
-    friend constexpr bool operator <  (Rule50 rule50, Ply ply) { return rule50.v_ < +ply; }
-    friend constexpr bool operator >= (Rule50 rule50, Ply ply) { return rule50.v_ >= +ply; }
+    friend constexpr auto operator <=> (Rule50 rule50, Ply ply) { return rule50.v_ <=> +ply; }
 
     friend ostream& operator << (ostream& os, Rule50 rule50) { return os << rule50.v_; }
 
