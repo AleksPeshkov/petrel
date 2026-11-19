@@ -662,6 +662,15 @@ void UciPosition::readFen(istream& is) {
     generateMoves();
 }
 
+void UciPosition::setStartPos() {
+    static std::istringstream startpos{"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"};
+    readFen(startpos);
+
+    // rewind for next use:
+    startpos.clear();
+    startpos.seekg(0);
+}
+
 // fast exit: return the first legal move found
 Move UciPosition::firstRootMove() const {
     for (Pi pi : _(My).any()) {
@@ -688,6 +697,34 @@ void SearchLimits::stop() {
 
 void SearchLimits::ponderhit() {
     pondering_.store(false, std::memory_order_relaxed);
+}
+
+void UciLimits::readGo(istream& is) {
+    constexpr Color w{White};
+    constexpr Color b{Black};
+
+    time = {0ms, 0ms}; // `wtime`/`btime`
+    inc = {0ms, 0ms}; // `winc`/`binc`
+    movetime = {0ms};
+    nodes = NodeLimitNone;
+    movestogo = 0;
+    depth = Ply::last();
+    ponder = false;
+    infinite = false;
+
+    while (is >> std::ws, !is.eof()) {
+        if      (io::consume(is, "wtime"))    { is >> time[w]; }
+        else if (io::consume(is, "btime"))    { is >> time[b]; }
+        else if (io::consume(is, "winc"))     { is >> inc[w]; }
+        else if (io::consume(is, "binc"))     { is >> inc[b]; }
+        else if (io::consume(is, "movetime")) { is >> movetime; }
+        else if (io::consume(is, "nodes"))    { is >> nodes; }
+        else if (io::consume(is, "movestogo")){ is >> movestogo; if (movestogo < 0) { movestogo = 0; } }
+        else if (io::consume(is, "depth"))    { int d; is >> d;  if (Ply::isOk(d)) { depth = Ply{d}; } }
+        else if (io::consume(is, "ponder"))   { ponder = true; }
+        else if (io::consume(is, "infinite")) { infinite = true; }
+        else { break; }
+    }
 }
 
 bool SearchLimits::setLimits(const UciLimits& go, const UciPosition& position) {
@@ -800,6 +837,12 @@ void Uci::newGame() {
     go_.isNewGame = true;
 }
 
+void Uci::ucinewgame() {
+    newGame();
+    position_.setStartPos();
+    setPositionMoves();
+}
+
 void Uci::newSearch(bool isGo) {
     the_tt.newSearch(the_ttMeta.writes > 0, isGo);
     the_ttMeta.newSearch();
@@ -811,6 +854,194 @@ void Uci::newSearch(bool isGo) {
     lastInfoTime_ = lastNpsTime_ = limits.newSearch();
     lastInfoNodes_ = lastNpsNodes_ = 0;
     rootBestMoves = {};
+}
+
+void Uci::processInput(istream& is) {
+    std::string currentLine(1024, '\0'); // preallocate 1024 bytes (~100 full moves)
+    while (std::getline(is, currentLine)) {
+        if (debugOn_) { log('>', currentLine); }
+
+        inputLine.clear(); //clear previous errors
+        inputLine.str(currentLine);
+        inputLine >> std::ws;
+
+        if      (consume("go"))        { go(); }
+        else if (consume("position"))  { position(); }
+        else if (consume("stop"))      { stop(); }
+        else if (consume("ponderhit")) { ponderhit(); }
+        else if (consume("isready"))   { isready(); }
+        else if (consume("setoption")) { setoption(); }
+        else if (consume("set"))       { setoption(); }
+        else if (consume("ucinewgame")){ ucinewgame(); }
+        else if (consume("uci"))       { uciok(); }
+        else if (consume("debug"))     { setDebugOn(); }
+        else if (consume("perft"))     { perft(); }
+        else if (consume("bench"))     { bench(); }
+        else if (consume("wait"))      { wait(); }
+        else if (consume("quit"))      { break; }
+        else if (consume("exit"))      { break; }
+
+        if (leftUnparsedInput()) {
+            inputLine.clear();
+            auto errorPos{static_cast<size_t>(std::max<std::streamoff>(0, inputLine.tellg()))};
+            error("unparsed input->", currentLine.substr(errorPos));
+        }
+    }
+}
+
+void Uci::position() {
+    if (!leftUnparsedInput()) {
+        Output ob;
+        ob << "info" << position_.evaluate();
+        ob << " fen "; fen(ob, position_);
+        return;
+    }
+
+    wait();
+
+#ifndef NDEBUG
+    debugPosition = inputLine.str();
+#endif
+
+    if (consume("fen")) {
+        position_.readFen(inputLine);
+    } else if (consume("startpos")) {
+        position_.setStartPos();
+    }
+
+    setPositionMoves();
+}
+
+void Uci::setPositionMoves() {
+    repetitions = {};
+    repetitions.push(colorToMove(), position_.z());
+
+    if (consume("moves")) {
+        position_.playMoves(inputLine, repetitions);
+    }
+
+    do {
+        auto z = position_.z();
+        auto ttEntry = TtEntry::read( the_tt.addr<TtEntry>(z) );
+        if (ttEntry != z || ttEntry.isNone()) { break; }
+
+        auto ttMove = ttEntry.ttMove(z);
+        if (ttMove.isNone()) { break; }
+        if (!position_.isPossibleMove(ttMove.from(), ttMove.to())) { break; }
+
+        Score score{};
+        if (ttEntry.bound().is(ExactBound)) {
+            score = ttEntry.score(0_ply);
+        }
+
+        pv.init(position_.toMove(ttMove), score);
+        return;
+    } while (false);
+
+    // TT miss
+    pv.init(position_.firstRootMove(), {}); // some legal move in worst case
+}
+
+void Uci::savePv() {
+    // clone position
+    PositionMoves pos{position_};
+
+    Ply   depth = pv.depth();
+    Score score = pv.score();
+    auto pvSize = pv.size();
+
+    for (Ply ply{0}; ply < pvSize; ++ply) {
+        auto move = pv.getMove(ply);
+        assert (score.isOk(ply));
+        assert (pos.isPseudoLegal(move));
+
+        pos.generateMoves();
+        assert (pos.isPossibleMove(move));
+        auto eval = pos.inCheck() ? Score{} : pos.evaluate();
+
+        auto p_ttEntry = the_tt.addr<TtEntry>(pos.z());
+        TtEntry{ pos.z(), eval, score, ply, ExactBound, depth, move.ttMove() }.write(p_ttEntry);
+
+        pos.makeMove(move.from(), move.to());
+        score = -score;
+        depth -= 1_ply;
+    }
+}
+
+void Uci::stop() {
+    infinite_ = false;
+    outputBestMove();
+    limits.stop();
+    std::this_thread::yield();
+}
+
+void Uci::ponderhit() {
+    outputBestMove();
+    limits.ponderhit();
+    std::this_thread::yield();
+}
+
+void Uci::wait() {
+    mainSearchThread.waitNotBusy();
+}
+
+void Uci::go() {
+    newSearch();
+
+    do {
+        #ifndef NDEBUG
+            debugGo = inputLine.str();
+        #endif
+
+        if (position_.movesTotal() == 0) { break; } // nothing to search
+
+        go_.readGo(inputLine);
+        if (leftUnparsedInput()) { break; } // parsing error
+        infinite_ = go_.infinite;
+
+        if (position_.movesTotal() == 1) {
+            // immediate move, not an error case, optimization
+            //TODO: add ponder move
+            info_bestmove();
+            return;
+        } else if (limits.setLimits(go_, position_)) {
+            auto started = mainSearchThread.start([this] {
+                searchStack[0_ply].searchRoot(position_);
+                info_bestmove();
+            });
+            if (!started) { break; }
+
+            go_.isNewGame = false;
+            std::this_thread::yield();
+            return;
+        }
+    } while (false);
+
+    // error: search not started, report some bestmove without any search
+    {
+        Output ob;
+        ob << "bestmove"; move(ob, pv.getMove(0_ply));
+    }
+
+    std::string bestmove; // empty
+    swapBestMove(bestmove); // cleanup
+
+    if (bestmove.empty()) {
+        error("search not started");
+    } else {
+        error("search not started, bestmove was not empty: ", bestmove);
+    }
+}
+
+void Uci::swapBestMove(std::string& bestmove) {
+    std::scoped_lock lock{bestmoveMutex};
+    bestmove_.swap(bestmove);
+}
+
+void Uci::outputBestMove() {
+    std::string bestmove; // empty
+    swapBestMove(bestmove); // cleanup
+    output(bestmove); // usually empty and does nothing
 }
 
 void Uci::output(std::string_view message, bool flush) const {
@@ -866,29 +1097,9 @@ void Uci::log(io::char_type tag, std::string_view message) const {
     }
 }
 
-void Uci::move(ostream& os, Move move, Ply ply) const {
-    ::move(os, move, colorToMove(ply), chessVariant());
-}
-
-void Uci::fen(ostream& os, const Position& pos, Ply ply) const {
-    ::fen(os, pos, colorToMove(ply), chessVariant(), fullMoveNumber(ply));
-}
-
-ostream& Uci::info_pv(ostream& os) const {
-    os << pv.score();
-
-    auto pvSize{ pv.size() };
-    if (pvSize == 0_ply) { return os; } // empty PV (no legal moves at root)
-
-    os << " pv";
-    {
-        Color color{ colorToMove() };
-        for (Ply ply{0}; ply < pvSize; ++ply) {
-            ::move(os, pv.getMove(ply), color, chessVariant());
-            color = ~color;
-        }
-    }
-    return os;
+void Uci::info(std::string_view message) const {
+    if (message.empty()) { return; }
+    log('*', message);
 }
 
 void Uci::error(std::string_view prefix, std::string_view suffix) const {
@@ -929,42 +1140,139 @@ void Node::assert_fail(const char* assertion, const char* file, unsigned int lin
 }
 #endif
 
-void Uci::info(std::string_view message) const {
-    if (message.empty()) { return; }
-    log('*', message);
+void Uci::move(ostream& os, Move move, Ply ply) const {
+    ::move(os, move, colorToMove(ply), chessVariant());
 }
 
-void Uci::processInput(istream& is) {
-    std::string currentLine(1024, '\0'); // preallocate 1024 bytes (~100 full moves)
-    while (std::getline(is, currentLine)) {
-        if (debugOn_) { log('>', currentLine); }
+void Uci::fen(ostream& os, const Position& pos, Ply ply) const {
+    ::fen(os, pos, colorToMove(ply), chessVariant(), fullMoveNumber(ply));
+}
 
-        inputLine.clear(); //clear previous errors
-        inputLine.str(currentLine);
-        inputLine >> std::ws;
+ostream& Uci::info_pv(ostream& os) const {
+    os << pv.score();
 
-        if      (consume("go"))        { go(); }
-        else if (consume("position"))  { position(); }
-        else if (consume("stop"))      { stop(); }
-        else if (consume("ponderhit")) { ponderhit(); }
-        else if (consume("isready"))   { isready(); }
-        else if (consume("setoption")) { setoption(); }
-        else if (consume("set"))       { setoption(); }
-        else if (consume("ucinewgame")){ ucinewgame(); }
-        else if (consume("uci"))       { uciok(); }
-        else if (consume("debug"))     { setDebugOn(); }
-        else if (consume("perft"))     { perft(); }
-        else if (consume("bench"))     { bench(); }
-        else if (consume("wait"))      { wait(); }
-        else if (consume("quit"))      { break; }
-        else if (consume("exit"))      { break; }
+    auto pvSize{ pv.size() };
+    if (pvSize == 0_ply) { return os; } // empty PV (no legal moves at root)
 
-        if (leftUnparsedInput()) {
-            inputLine.clear();
-            auto errorPos{static_cast<size_t>(std::max<std::streamoff>(0, inputLine.tellg()))};
-            error("unparsed input->", currentLine.substr(errorPos));
+    os << " pv";
+    {
+        Color color{ colorToMove() };
+        for (Ply ply{0}; ply < pvSize; ++ply) {
+            ::move(os, pv.getMove(ply), color, chessVariant());
+            color = ~color;
         }
     }
+    return os;
+}
+
+template <bool Instant>
+ostream& Uci::info_nps(ostream& os) const {
+    auto nodes = limits.getNodes();
+    auto time = ::timeNow();
+
+    os << " nodes " << nodes;
+
+    auto elapsedTime = time - limits.searchStartTime();
+    if (elapsedTime >= 1ms) {
+        os << " time " << elapsedTime;
+
+        // for average nps
+        auto deltaNodes = nodes;
+        auto deltaTime = elapsedTime;
+
+        if constexpr (Instant) {
+            if (nodes - lastInfoNodes_ >= 1000 && time - lastInfoTime_ >= 1ms) {
+                // common case
+                lastNpsNodes_ = lastInfoNodes_;
+                lastNpsTime_ = lastInfoTime_;
+            }
+
+            // smooth nps by using larger interval
+            deltaNodes = nodes - lastNpsNodes_;
+            deltaTime = time - lastNpsTime_;
+        }
+
+        if (deltaNodes > 0) {
+            os << " nps " << ::nps(deltaNodes, deltaTime);
+        }
+    }
+
+    lastInfoNodes_ = nodes;
+    lastInfoTime_ = time;
+    return os;
+}
+
+void Uci::info_pv() const {
+#ifdef NDEBUG
+    bool flush = limits.getNodes() >= 1'000'000;
+#else
+    bool flush = true;
+#endif
+
+    Output ob{flush};
+    ob << "info depth " << pv.depth(); info_nps<true>(ob); info_pv(ob);
+}
+
+void Uci::isready() const {
+    Output ob;
+    ob << "readyok";
+    if (hasNewNodes()) {
+        ob << "\ninfo depth " << pv.depth(); info_nps<true>(ob); info_pv(ob);
+    }
+}
+
+void Uci::info_bestmove() {
+    Output ob;
+    auto delayed = limits.pondering() || infinite_;
+
+    if (limits.getNodes() > 0) {
+        ob << "info depth " << pv.depth(); info_nps(ob); info_pv(ob);
+        if (delayed) { ob.flush(); } else { ob << '\n'; }
+    }
+
+    ob << "bestmove"; move(ob, pv.getMove(0_ply));
+    if (go_.canPonder && pv.size() > 1_ply) {
+        ob << " ponder"; move(ob, pv.getMove(1_ply), 1_ply);
+    }
+
+    if (delayed) {
+        std::string bestmove{ ob.view() };
+        swapBestMove(bestmove); // save bestmove for later output
+        if (!bestmove.empty()) { error("old bestmove ignored: ", bestmove); }
+        ob.clear(); // prevent sending now
+    }
+}
+
+void Uci::perft() {
+    newSearch(false);
+
+    Ply depth{1};
+    inputLine >> depth;
+    depth = std::clamp(depth, 1_ply, 18_ply); // current Tt implementation limit
+
+    mainSearchThread.start([this, depth] {
+        NodePerft{position_, depth}.visitRoot();
+        info_perft_bestmove();
+    } );
+}
+
+void Uci::info_perft_bestmove() const {
+    Output ob;
+    if (hasNewNodes()) { ob << "info"; info_nps(ob) << '\n'; }
+    ob << "bestmove 0000";
+}
+
+void Uci::info_perft_depth(Ply depth, node_count_t perft) const {
+    Output ob;
+    ob << "info depth " << depth; info_nps(ob) << " perft " << perft;
+}
+
+void Uci::info_perft_currmove(int moveCount, Move currentMove, node_count_t perft) const {
+    Output ob;
+    ob << "info currmovenumber " << moveCount;
+    info_nps<true>(ob);
+    ob << " currmove"; move(ob, currentMove);
+    ob << " perft " << perft;
 }
 
 void Uci::uciok() const {
@@ -1119,314 +1427,6 @@ void Uci::setHash() {
 
     the_tt.setSize(quantity);
     newGame();
-}
-
-void Uci::ucinewgame() {
-    newGame();
-    readStartPos();
-    setPositionMoves();
-}
-
-void Uci::readStartPos() {
-    static std::istringstream startpos{"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"};
-    position_.readFen(startpos);
-
-    // rewind for next use:
-    startpos.clear();
-    startpos.seekg(0);
-}
-
-void Uci::position() {
-    if (!leftUnparsedInput()) {
-        Output ob;
-        ob << "info" << position_.evaluate();
-        ob << " fen "; fen(ob, position_);
-        return;
-    }
-
-    wait();
-
-#ifndef NDEBUG
-    debugPosition = inputLine.str();
-#endif
-
-    if (consume("fen")) {
-        position_.readFen(inputLine);
-    } else if (consume("startpos")) {
-        readStartPos();
-    }
-
-    setPositionMoves();
-}
-
-void Uci::setPositionMoves() {
-    repetitions = {};
-    repetitions.push(colorToMove(), position_.z());
-
-    if (consume("moves")) {
-        position_.playMoves(inputLine, repetitions);
-    }
-
-    do {
-        auto z = position_.z();
-        auto ttEntry = TtEntry::read( the_tt.addr<TtEntry>(z) );
-        if (ttEntry != z || ttEntry.isNone()) { break; }
-
-        auto ttMove = ttEntry.ttMove(z);
-        if (ttMove.isNone()) { break; }
-        if (!position_.isPossibleMove(ttMove.from(), ttMove.to())) { break; }
-
-        Score score{};
-        if (ttEntry.bound().is(ExactBound)) {
-            score = ttEntry.score(0_ply);
-        }
-
-        pv.init(position_.toMove(ttMove), score);
-        return;
-    } while (false);
-
-    // TT miss
-    pv.init(position_.firstRootMove(), {}); // some legal move in worst case
-}
-
-void Uci::savePv() {
-    // clone position
-    PositionMoves pos{position_};
-
-    Ply   depth = pv.depth();
-    Score score = pv.score();
-    auto pvSize = pv.size();
-
-    for (Ply ply{0}; ply < pvSize; ++ply) {
-        auto move = pv.getMove(ply);
-        assert (score.isOk(ply));
-        assert (pos.isPseudoLegal(move));
-
-        pos.generateMoves();
-        assert (pos.isPossibleMove(move));
-        auto eval = pos.inCheck() ? Score{} : pos.evaluate();
-
-        auto p_ttEntry = the_tt.addr<TtEntry>(pos.z());
-        TtEntry{ pos.z(), eval, score, ply, ExactBound, depth, move.ttMove() }.write(p_ttEntry);
-
-        pos.makeMove(move.from(), move.to());
-        score = -score;
-        depth -= 1_ply;
-    }
-}
-
-void Uci::go() {
-    newSearch();
-
-    do {
-        #ifndef NDEBUG
-            debugGo = inputLine.str();
-        #endif
-
-        if (position_.movesTotal() == 0) { break; } // nothing to search
-
-        go_.readGo(inputLine);
-        if (leftUnparsedInput()) { break; } // parsing error
-        infinite_ = go_.infinite;
-
-        if (position_.movesTotal() == 1) {
-            // immediate move, not an error case, optimization
-            //TODO: add ponder move
-            info_bestmove();
-            return;
-        } else if (limits.setLimits(go_, position_)) {
-            auto started = mainSearchThread.start([this] {
-                searchStack[0_ply].searchRoot(position_);
-                info_bestmove();
-            });
-            if (!started) { break; }
-
-            go_.isNewGame = false;
-            std::this_thread::yield();
-            return;
-        }
-    } while (false);
-
-    // error: search not started, report some bestmove without any search
-    {
-        Output ob;
-        ob << "bestmove"; move(ob, pv.getMove(0_ply));
-    }
-
-    std::string bestmove; // empty
-    swapBestMove(bestmove); // cleanup
-
-    if (bestmove.empty()) {
-        error("search not started");
-    } else {
-        error("search not started, bestmove was not empty: ", bestmove);
-    }
-}
-
-void UciLimits::readGo(istream& is) {
-    constexpr Color w{White};
-    constexpr Color b{Black};
-
-    time = {0ms, 0ms}; // `wtime`/`btime`
-    inc = {0ms, 0ms}; // `winc`/`binc`
-    movetime = {0ms};
-    nodes = NodeLimitNone;
-    movestogo = 0;
-    depth = Ply::last();
-    ponder = false;
-    infinite = false;
-
-    while (is >> std::ws, !is.eof()) {
-        if      (io::consume(is, "wtime"))    { is >> time[w]; }
-        else if (io::consume(is, "btime"))    { is >> time[b]; }
-        else if (io::consume(is, "winc"))     { is >> inc[w]; }
-        else if (io::consume(is, "binc"))     { is >> inc[b]; }
-        else if (io::consume(is, "movetime")) { is >> movetime; }
-        else if (io::consume(is, "nodes"))    { is >> nodes; }
-        else if (io::consume(is, "movestogo")){ is >> movestogo; if (movestogo < 0) { movestogo = 0; } }
-        else if (io::consume(is, "depth"))    { int d; is >> d;  if (Ply::isOk(d)) { depth = Ply{d}; } }
-        else if (io::consume(is, "ponder"))   { ponder = true; }
-        else if (io::consume(is, "infinite")) { infinite = true; }
-        else { break; }
-    }
-}
-
-void Uci::outputBestMove() {
-    std::string bestmove; // empty
-    swapBestMove(bestmove); // cleanup
-    output(bestmove); // usually empty and does nothing
-}
-
-void Uci::swapBestMove(std::string& bestmove) {
-    std::scoped_lock lock{bestmoveMutex};
-    bestmove_.swap(bestmove);
-}
-
-void Uci::stop() {
-    infinite_ = false;
-    outputBestMove();
-    limits.stop();
-    std::this_thread::yield();
-}
-
-void Uci::ponderhit() {
-    outputBestMove();
-    limits.ponderhit();
-    std::this_thread::yield();
-}
-
-void Uci::wait() {
-    mainSearchThread.waitNotBusy();
-}
-
-template <bool Instant>
-ostream& Uci::info_nps(ostream& os) const {
-    auto nodes = limits.getNodes();
-    auto time = ::timeNow();
-
-    os << " nodes " << nodes;
-
-    auto elapsedTime = time - limits.searchStartTime();
-    if (elapsedTime >= 1ms) {
-        os << " time " << elapsedTime;
-
-        // for average nps
-        auto deltaNodes = nodes;
-        auto deltaTime = elapsedTime;
-
-        if constexpr (Instant) {
-            if (nodes - lastInfoNodes_ >= 1000 && time - lastInfoTime_ >= 1ms) {
-                // common case
-                lastNpsNodes_ = lastInfoNodes_;
-                lastNpsTime_ = lastInfoTime_;
-            }
-
-            // smooth nps by using larger interval
-            deltaNodes = nodes - lastNpsNodes_;
-            deltaTime = time - lastNpsTime_;
-        }
-
-        if (deltaNodes > 0) {
-            os << " nps " << ::nps(deltaNodes, deltaTime);
-        }
-    }
-
-    lastInfoNodes_ = nodes;
-    lastInfoTime_ = time;
-    return os;
-}
-
-void Uci::info_pv() const {
-#ifdef NDEBUG
-    bool flush = limits.getNodes() >= 1'000'000;
-#else
-    bool flush = true;
-#endif
-
-    Output ob{flush};
-    ob << "info depth " << pv.depth(); info_nps<true>(ob); info_pv(ob);
-}
-
-void Uci::info_bestmove() {
-    Output ob;
-    auto delayed = limits.pondering() || infinite_;
-
-    if (limits.getNodes() > 0) {
-        ob << "info depth " << pv.depth(); info_nps(ob); info_pv(ob);
-        if (delayed) { ob.flush(); } else { ob << '\n'; }
-    }
-
-    ob << "bestmove"; move(ob, pv.getMove(0_ply));
-    if (go_.canPonder && pv.size() > 1_ply) {
-        ob << " ponder"; move(ob, pv.getMove(1_ply), 1_ply);
-    }
-
-    if (delayed) {
-        std::string bestmove{ ob.view() };
-        swapBestMove(bestmove); // save bestmove for later output
-        if (!bestmove.empty()) { error("old bestmove ignored: ", bestmove); }
-        ob.clear(); // prevent sending now
-    }
-}
-
-void Uci::isready() const {
-    Output ob;
-    ob << "readyok";
-    if (hasNewNodes()) {
-        ob << "\ninfo depth " << pv.depth(); info_nps<true>(ob); info_pv(ob);
-    }
-}
-
-void Uci::perft() {
-    newSearch(false);
-
-    Ply depth{1};
-    inputLine >> depth;
-    depth = std::clamp(depth, 1_ply, 18_ply); // current Tt implementation limit
-
-    mainSearchThread.start([this, depth] {
-        NodePerft{position_, depth}.visitRoot();
-        info_perft_bestmove();
-    } );
-}
-
-void Uci::info_perft_bestmove() const {
-    Output ob;
-    if (hasNewNodes()) { ob << "info"; info_nps(ob) << '\n'; }
-    ob << "bestmove 0000";
-}
-
-void Uci::info_perft_depth(Ply depth, node_count_t perft) const {
-    Output ob;
-    ob << "info depth " << depth; info_nps(ob) << " perft " << perft;
-}
-
-void Uci::info_perft_currmove(int moveCount, Move currentMove, node_count_t perft) const {
-    Output ob;
-    ob << "info currmovenumber " << moveCount;
-    info_nps<true>(ob);
-    ob << " currmove"; move(ob, currentMove);
-    ob << " perft " << perft;
 }
 
 void Uci::bench() {

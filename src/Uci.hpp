@@ -21,6 +21,9 @@ class UciPosition : public PositionMoves {
     istream& readMove(istream&, Square&, Square&) const;
 
 public:
+    UciPosition () { setStartPos(); }
+
+    void setStartPos();
     void readFen(istream&);
     void playMoves(istream&, Repetitions&);
 
@@ -126,7 +129,6 @@ private:
 
     void newGame();
     void newSearch(bool isGo = true);
-    void readStartPos();
     void setPositionMoves();
     void setHash();
     void setDebugOn();
@@ -141,9 +143,9 @@ private:
     template <bool = false> ostream& info_nps(ostream&) const;
     ostream& info_pv(ostream&) const;
 
-    void info(std::string_view) const; // output to log file
-    void log(io::char_type tag, std::string_view) const; // log messages to the logFile named by logFileName
     void _log(io::char_type tag, std::string_view, bool flush = true) const; // write into logFile without mutex and logFileName check
+    void log(io::char_type tag, std::string_view) const; // log messages to the logFile named by logFileName
+    void info(std::string_view) const; // output to log file
 
 public:
     Uci (ostream&);
@@ -158,11 +160,11 @@ public:
     constexpr Color colorToMove(Ply ply = 0_ply) const { return position_.colorToMove(ply); }
     constexpr auto fullMoveNumber(Ply ply = 0_ply) const { return position_.fullMoveNumber(ply); }
     constexpr const auto& moves() const { return position_.moves(); }
+    void savePv(); // update TT with latest PV (in case it have been overwritten)
 
     void info_pv() const;
     void info_perft_depth(Ply, node_count_t) const;
     void info_perft_currmove(int moveCount, Move currentMove, node_count_t) const;
-    void savePv(); // update TT with latest PV (in case it have been overwritten)
 
     void move(ostream&, Move, Ply = 0_ply) const;
     void fen(ostream&, const Position&, Ply = 0_ply) const;
