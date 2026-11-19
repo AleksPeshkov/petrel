@@ -17,7 +17,15 @@ public:
     constexpr size_t size() const { return size_; }
     void setSize(size_t bytes) { allocate(bytes); zeroFill(); }
     void newGame() { zeroFill(); }
-    void newSearch(bool isDirty) { if (isDirty) { zeroed_ = false; } }
+    void newSearch(bool isDirty, bool isGo) {
+        if (isDirty) { zeroed_ = false; }
+
+        // cleanup between 'go' and 'perft' commands
+        if (go_ != isGo) {
+            go_ = isGo;
+            newGame();
+        }
+    }
 
     template <typename T>
     constexpr T* addr(Z z) const {
@@ -40,6 +48,7 @@ private:
     void* allocated_{nullptr};
     size_t size_{0};
     bool zeroed_{false};
+    bool go_{false}; // previous search was go or perft
 
     template <size_t Align>
     constexpr void* addr(Z z) const {
