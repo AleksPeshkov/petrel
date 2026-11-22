@@ -20,8 +20,8 @@ public:
     constexpr bool none() const { return v_ == 0; }
     constexpr bool any() const { return !none(); }
 
-    constexpr bool is(TtAge age) const { return v_ == age.v_; }
-    constexpr bool isFresh(TtAge age) const { return is(age) || is(age.next()); }
+    constexpr bool is(TtAge age) const { assert(any()); return v_ == age.v_; }
+    constexpr bool isFresh(TtAge age) const { return age.any() && (is(age) || is(age.next())); }
 
     template <typename P, typename S>
     constexpr P pack(S shift) { return ::pack<P>(v_, shift); }
