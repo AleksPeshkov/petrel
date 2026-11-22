@@ -101,36 +101,76 @@ private:
 };
 extern Tt the_tt;
 
-// Valid age is [1, 2, 3]
-class TtAge {
+template <size_t BitWidth>
+class Age {
 public:
     using _t = unsigned;
 
     constexpr _t operator + () const { return v_; }
 
-    static constexpr int bit_width() { return 2; }
-    static constexpr _t mask() { return singleton(bit_width()) - 1u; }
+    static constexpr int bit_width() { return BitWidth; }
+    static constexpr _t mask() { return ::singleton<_t>(bit_width()) - 1u; }
 
-    constexpr TtAge () : v_{1} {}
-    constexpr TtAge next() const { return v_ == mask() ? TtAge{} : TtAge{v_ + 1}; }
+private:
+    static constexpr auto nextLut() {
+        constexpr auto next_lut_bit_width{ ::singleton(bit_width()) * bit_width() };
+        static_assert(next_lut_bit_width <= 64, "bit_width() is too large for 64-bit nextLut");
+        using next_lut_t = std::conditional_t<next_lut_bit_width >= 32, u64_t, u32_t>;
+
+        next_lut_t result{};
+        for (_t age = 0; age <= mask(); ++age) {
+            _t next_age{ age == mask() ? 1 : age + 1 };
+            result |= static_cast<next_lut_t>(next_age) << (age * bit_width());
+        }
+        return result;
+    }
+
+    static constexpr auto freshLut() {
+        constexpr auto fresh_lut_bit_width{ ::singleton(2 * bit_width()) };
+        static_assert(fresh_lut_bit_width <= 64, "TtAge::bit_width() is too large for 64-bit freshLut");
+        using fresh_lut_t = std::conditional_t<fresh_lut_bit_width >= 32, u64_t, u32_t>;
+
+        fresh_lut_t result{};
+        for (_t entry_age = 1; entry_age <= mask(); ++entry_age) {
+            _t next_entry_age = +Age{entry_age}.next();
+            for (_t this_age = 1; this_age <= mask(); ++this_age) {
+                if (entry_age == this_age || next_entry_age == this_age) {
+                    auto lut_index{ (entry_age << bit_width()) + this_age };
+                    result |= ::singleton<fresh_lut_t>(lut_index);
+                }
+            }
+        }
+        return result;
+    }
+
+public:
+    constexpr Age () : v_{1} {}
+    constexpr Age next() const { return Age{ static_cast<_t>(nextLut() >> (v_ * bit_width()) & mask()) }; }
 
     constexpr bool isNone() const { return v_ == 0; }
     constexpr bool isAny() const { return !isNone(); }
 
-    constexpr bool isSame(TtAge age) const { assert(isAny()); return v_ == age.v_; }
-    constexpr bool isFresh(TtAge age) const { return age.isAny() && ( isSame(age) || isSame(age.next()) ); }
+    constexpr bool isSame(Age age) const { assert(isAny()); return v_ == age.v_; }
+
+    // isFresh() is true if entryAge == this or previous (i.e. entry.next() == this) and both != 0
+    constexpr bool isFresh(Age entryAge) const {
+        assert(isAny());
+        auto lut_index{ (entryAge.v_ << bit_width()) + this->v_ };
+        return (freshLut() >> lut_index) & 1;
+    }
 
     template <typename P, typename S>
     constexpr P pack(S shift) { return ::pack<P>(v_, shift); }
 
     template <typename T, typename S>
-    static constexpr TtAge unpack(T packed, S shift) { return TtAge{::unpack(packed, shift, mask())}; }
+    static constexpr Age unpack(T packed, S shift) { return Age{::unpack(packed, shift, mask())}; }
 
 private:
     _t v_;
 
-    constexpr explicit TtAge (_t v) : v_{v} { assert (v <= mask()); }
+    constexpr explicit Age (_t v) : v_{v} { assert (v <= mask()); }
 };
+using TtAge = Age<2>; // Valid age is [1, 2, 3]
 
 class TtMeta {
 public:
