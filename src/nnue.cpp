@@ -19,7 +19,7 @@ void Nnue::validate_embedded() const {
 
         constexpr int W0_count = sizeof(W0) / sizeof(lane_t);
         const lane_t W0_top = 1536;
-        const lane_t W0_bottom = -2048;
+        const lane_t W0_bottom = -1536;
         int w0_at_top = 0;
         int w0_at_bottom = 0;
 
@@ -29,13 +29,15 @@ void Nnue::validate_embedded() const {
 
         for (auto f : range<Fi>()) {
             for (auto n : range<AccIndex>()) {
-                auto w = w0[f][n];
-                for (int lane = 0; lane < 16; ++lane) {
-                    if (w0_min > w[lane]) { w0_min = w[lane]; }
-                    if (w0_max < w[lane]) { w0_max = w[lane]; }
-                    if (w[lane] >= W0_top) { ++w0_at_top; }
-                    if (w[lane] <= W0_bottom) { ++w0_at_bottom; }
-                    w0_sum += std::abs(w[lane]);
+                for (auto u : range<UnitIndex>()) {
+                    auto w = w0[f][n][u];
+                    for (int lane = 0; lane < 16; ++lane) {
+                        if (w0_min > w[lane]) { w0_min = w[lane]; }
+                        if (w0_max < w[lane]) { w0_max = w[lane]; }
+                        if (w[lane] >= W0_top) { ++w0_at_top; }
+                        if (w[lane] <= W0_bottom) { ++w0_at_bottom; }
+                        w0_sum += std::abs(w[lane]);
+                    }
                 }
             }
         }
@@ -48,21 +50,30 @@ void Nnue::validate_embedded() const {
         int w1_max = -32767;
         int w1_over_16k = 0;
         i64_t w1_sum = 0;
+
         for (auto n : range<AccIndex>()) {
-            auto w1_my = abs(w1[My][n]);
-            auto w1_op = abs(w1[Op][n]);
-            auto w = max(w1_my, w1_op);
+            auto wx_my = abs(w1[My][n][SignalX]);
+            auto wy_my = abs(w1[My][n][SignalY]);
+            auto wx_op = abs(w1[Op][n][SignalX]);
+            auto wy_op = abs(w1[Op][n][SignalY]);
+
+            auto w_unit = max(max(wx_my, wy_my), max(wx_op, wy_op));
+
             for (int lane = 0; lane < 16; ++lane) {
-                if (w1_min > w[lane]) { w1_min = w[lane]; }
-                if (w1_max < w[lane]) { w1_max = w[lane]; }
-                if (w1_my[lane] > 16383) { ++w1_over_16k; }
-                if (w1_op[lane] > 16383) { ++w1_over_16k; }
-                w1_sum += w1_my[lane];
-                w1_sum += w1_op[lane];
+                if (w1_min > w_unit[lane]) { w1_min = w_unit[lane]; }
+                if (w1_max < w_unit[lane]) { w1_max = w_unit[lane]; }
+
+                if (wx_my[lane] > 16383) { ++w1_over_16k; }
+                if (wy_my[lane] > 16383) { ++w1_over_16k; }
+                if (wx_op[lane] > 16383) { ++w1_over_16k; }
+                if (wy_op[lane] > 16383) { ++w1_over_16k; }
+
+                w1_sum += wx_my[lane] + wy_my[lane] + wx_op[lane] + wy_op[lane];
             }
         }
-        std::cout << "min max(|w1_my|,|w1_op|) = " << w1_min << std::endl;
+
+        std::cout << "min max(|wx_my|,|wy_my|,|wx_op|,|wy_op|) = " << w1_min << std::endl;
         std::cout << "max |w1| = " << w1_max << ", > 16383: " << w1_over_16k << " out of " << W1_count << std::endl;
-        std::cout << "ave |w1| = " << (w1_sum + W1_count/2) / W1_count << std::endl;
+        std::cout << "ave |w1| = " << (w1_sum + W1_count / 2) / W1_count << std::endl;
     #endif
 }
