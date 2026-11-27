@@ -57,7 +57,7 @@ fn main() {
                 outputs
             }).quantise::<i16>(QW0),
 
-            SavedFormat::id("l1w").rescale::<i16>(QW1).transform(|_, inputs| {
+            SavedFormat::id("l1w").transform(|_, inputs| {
                 let mut outputs = vec![0.0; 2*ACC_NEURONS];
                 let mut odd = false;
 
@@ -65,9 +65,6 @@ fn main() {
                     let side_offset = side * ACC_NEURONS;
 
                     for u in 0..UNIT_SIZE {
-                        // encode minus sign for SignalY (u=1)
-                        let sign = if u == 0 { 1.0 } else { -1.0 };
-
                         let from = side_offset + u*ACC_UNITS;
 
                         for i in 0..ACC_UNITS {
@@ -78,7 +75,7 @@ fn main() {
                             // 1) _mm256_mulhrs_epi16 rounds positive product up, negative also up (towards zero)
                             // 2) rounding up happens only when _w_ lowest bit is one
                             // 3) compensate systematic odd _w_ upward error by rounding down each other odd _w_
-                            let mut w = (inputs[from + i] * sign).round() as i16;
+                            let mut w = (inputs[from + i] * QW1).round() as i16;
                             if (w & 1) != 0 {
                                 if odd { w -= 1; }
                                 odd = !odd;
@@ -114,35 +111,37 @@ fn main() {
             let l0xw = builder.new_weights("l0xw", Shape::new(ACC_UNITS, 768), InitSettings::Vector { vector: w0x });
             let l0yw = builder.new_weights("l0yw", Shape::new(ACC_UNITS, 768), InitSettings::Vector { vector: w0y });
 
-            // input signal
-            let rmx = l0xw.matmul(my_inputs).relu();
-            let rmy = l0yw.matmul(my_inputs).relu();
-            let rox = l0xw.matmul(op_inputs).relu();
-            let roy = l0yw.matmul(op_inputs).relu();
+            let mut l1w_init = vec![0.0; 2*ACC_NEURONS];
+            {
+                let w1 = 1.0 / 32.0;
+                let signs = [(w1, w1), (w1, -w1), (-w1, w1), (-w1, -w1)];
 
-            // bipolar gate
-            let grm = rmx - rmy;
-            let gro = rox - roy;
+                for i in 0..ACC_UNITS {
+                    let (wa, wb) = signs[i % 4];
+                    l1w_init[i] = wa;
+                    l1w_init[i + ACC_UNITS] = wb;
+                }
 
-            // gated signal
-            let amx =  grm * rmx;
-            let amy = -grm * rmy;
-            let aox =  gro * rox;
-            let aoy = -gro * roy;
+                // my/op antisymmetry
+                for i in 0..ACC_NEURONS {
+                    l1w_init[i + ACC_NEURONS] = -l1w_init[i];
+                }
+            }
+            let l1w = builder.new_weights("l1w", Shape::new(1, 2*ACC_NEURONS), InitSettings::Vector { vector: l1w_init });
 
-            // x * relu( x-relu(y) ) = relu(x) * relu( relu(x)-relu(y) ) = relu(relu(x) * ( relu(x)-relu(y) ))
-            let all = amx.concat(amy).concat(aox).concat(aoy).relu();
+            let rxm = l0xw.matmul(my_inputs).relu();
+            let rym = l0yw.matmul(my_inputs).relu();
+            let ram = rxm + (rym - rxm).relu(); // max(rxm, rym)
 
-            let w1 = 1.0 / 32.0;
-            let l1w = builder.new_weights("l1w", Shape::new(1, 2*ACC_NEURONS),
-                InitSettings::Vector{ vector: [
-                    vec![[ w1,-w1]; ACC_UNITS/2].concat(), // wmx
-                    vec![[-w1, w1]; ACC_UNITS/2].concat(), // wmy
-                    vec![[-w1, w1]; ACC_UNITS/2].concat(), // wox
-                    vec![[ w1,-w1]; ACC_UNITS/2].concat(), // woy
-                ].concat() }
-            );
-            l1w.matmul(all)
+            let rxo = l0xw.matmul(op_inputs).relu();
+            let ryo = l0yw.matmul(op_inputs).relu();
+            let rao = rxo + (ryo - rxo).relu(); // max(rxo, ryo)
+
+            let rm = ram.sqrrelu().concat(rxm * rym);
+            let ro = rao.sqrrelu().concat(rxo * ryo);
+
+            // A*max(rx,ry)^2 + B*rx*ry
+            l1w.matmul(rm.concat(ro))
         });
 
     let data_set_eval_scale: f32 = 800.0;
@@ -258,18 +257,18 @@ fn main() {
     );
 
     let cos_schedule = TrainingSchedule {
-        net_id: "u".to_string(),
+        net_id: "w".to_string(),
         eval_scale: data_set_eval_scale,
         steps: TrainingSteps { batch_size, batches_per_superbatch, start_superbatch, end_superbatch: exp_start_sb - 1 },
         wdl_scheduler: wdl::ConstantWDL { value: 0.0 },
         lr_scheduler: cos_lr_schedule,
         save_rate: 10,
     };
-    //trainer.load_from_checkpoint("checkpoints/t-12/");
+    //trainer.load_from_checkpoint("checkpoints/w-12/");
     trainer.run(&cos_schedule, &settings, &data_loader);
 
     let exp_schedule = TrainingSchedule {
-        net_id: "u".to_string(),
+        net_id: "w".to_string(),
         eval_scale: data_set_eval_scale,
         steps: TrainingSteps { batch_size, batches_per_superbatch, start_superbatch: exp_start_sb, end_superbatch: exp_final_sb - 1 },
         wdl_scheduler: wdl::ConstantWDL { value: 0.0 },
