@@ -131,17 +131,18 @@ fn main() {
 
             let rxm = l0xw.matmul(my_inputs).relu();
             let rym = l0yw.matmul(my_inputs).relu();
-            let ram = rxm + (rym - rxm).relu(); // max(rxm, rym)
+            let qam = rxm.sqrrelu();
+            let qbm = (rym + rxm).sqrrelu();
+            let qm = qam.concat(qbm);
 
             let rxo = l0xw.matmul(op_inputs).relu();
             let ryo = l0yw.matmul(op_inputs).relu();
-            let rao = rxo + (ryo - rxo).relu(); // max(rxo, ryo)
+            let qao = rxo.sqrrelu();
+            let qbo = (ryo + rxo).sqrrelu();
+            let qo = qao.concat(qbo);
 
-            let rm = ram.sqrrelu().concat(rxm * rym);
-            let ro = rao.sqrrelu().concat(rxo * ryo);
-
-            // A*max(rx,ry)^2 + B*rx*ry
-            l1w.matmul(rm.concat(ro))
+            // A*rx^2 + B*(rx+ry)^2
+            l1w.matmul(qm.concat(qo))
         });
 
     let data_set_eval_scale: f32 = 800.0;
@@ -257,18 +258,18 @@ fn main() {
     );
 
     let cos_schedule = TrainingSchedule {
-        net_id: "w".to_string(),
+        net_id: "c".to_string(),
         eval_scale: data_set_eval_scale,
         steps: TrainingSteps { batch_size, batches_per_superbatch, start_superbatch, end_superbatch: exp_start_sb - 1 },
         wdl_scheduler: wdl::ConstantWDL { value: 0.0 },
         lr_scheduler: cos_lr_schedule,
-        save_rate: 10,
+        save_rate: 1,
     };
-    //trainer.load_from_checkpoint("checkpoints/w-12/");
+    //trainer.load_from_checkpoint("checkpoints/b-12/");
     trainer.run(&cos_schedule, &settings, &data_loader);
 
     let exp_schedule = TrainingSchedule {
-        net_id: "w".to_string(),
+        net_id: "c".to_string(),
         eval_scale: data_set_eval_scale,
         steps: TrainingSteps { batch_size, batches_per_superbatch, start_superbatch: exp_start_sb, end_superbatch: exp_final_sb - 1 },
         wdl_scheduler: wdl::ConstantWDL { value: 0.0 },

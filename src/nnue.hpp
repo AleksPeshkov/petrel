@@ -30,28 +30,28 @@ struct CACHE_ALIGN Nnue {
     using W1 = array<_t, Side, AccIndex, UnitIndex>; // QW1 = 2^5 * WDL
 
     i32_t evaluate(const DualAcc& dacc) const {
-        i32x8_t sum10{};
+        i32x8_t suma10{};
+        i32x8_t sumb10{};
         for (auto side : range<Side>()) {
             for (auto n : range<AccIndex>()) {
                 auto x10 = dacc[side][n][UnitX]; // x: QW0 = 2^10
-                auto y10 = dacc[side][n][UnitY]; // y: QW0 = 2^10
-
-                auto a10 = max(x10, y10);
                 auto wa5 = w1[side][n][UnitX]; // Wa = Wmax: QW0 = 2^10
-                auto sa0 = mulhrs_i16(wa5, a10); // A * a : WDL
+                auto sa0 = mulhrs_i16(wa5, x10); // A * x : WDL
 
-                // A*max(rx,ry)^2 + B*rx*ry = max(rx,ry)*(A*max(x,y) + B*min(rx,ry))
-                auto b10 = min(x10, y10);
-                auto rb10 = relu(b10);
-                auto wb5 = w1[side][n][UnitY]; // Wb = Wmin: QW0 = 2^10
-                auto sb0 = mulhrs_i16(wb5, rb10); // B * rb : WDL
+                auto rx10 = relu(x10);
+                auto fa10 = madd_i16(sa0, rx10); // A * x*rx : 2^10 * WDL
+                suma10 += fa10; // 32 addends per side
 
-                auto ra10 = relu(a10);
-                auto s0  = adds_i16(sa0, sb0); // A*a + B*rb : WDL
-                auto f10 = madd_i16(ra10, s0); // ra * (A*a + B*rb): 2^10 * WDL
-                sum10 += f10; // 32 addends per side
+                auto y10 = dacc[side][n][UnitY]; // y: QW0 = 2^10
+                auto ry10 = relu(y10);
+                auto b10 = adds_i16(ry10, rx10);
+                auto wb5 = w1[side][n][UnitY]; // Wb = Wsum: QW0 = 2^10
+                auto sb0 = mulhrs_i16(wb5, b10); // B * (rx+ry) : WDL
+                auto fb10 = madd_i16(sb0, b10); // B * (rx+ry)^2 : 2^10 * WDL
+                sumb10 += fb10; // 32 addends per side
             }
         }
+        auto sum10 = suma10 + sumb10;
         auto output10 = hadd(sum10); // 2^10 * WDL, bias = 0
         auto output = output10 >> 10; // WDL
         return output;
